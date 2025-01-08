@@ -46,4 +46,28 @@ body {
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.dashboard {
+  padding: 2rem;
+}
+
+.dashboard h2 {
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+}
+
+.data-link {
+  padding: 0.75rem 1.5rem;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: var(--font-family-mono);
+  transition: all 0.2s;
+}
+
+.data-link:hover {
+  background-color: var(--hover-color);
 } 
