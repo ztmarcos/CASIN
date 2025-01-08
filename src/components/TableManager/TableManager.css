@@ -1,0 +1,75 @@
+.table-manager {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 1rem;
+  background-color: var(--bg-surface);
+  margin-bottom: 1rem;
+}
+
+.table-manager-header h3 {
+  font-family: var(--font-family-mono);
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+.table-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.table-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.table-item:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+.table-icon {
+  color: var(--text-muted);
+  font-family: var(--font-family-mono);
+}
+
+.table-name {
+  font-family: var(--font-family-mono);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.table-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-left: auto;
+}
+
+.new-table-form {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.table-input {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 0.875rem;
+}
+
+.table-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+} 
