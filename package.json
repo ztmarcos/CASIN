@@ -14,7 +14,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google-cloud/storage": "^7.15.0",
     "@vitejs/plugin-react": "^4.2.1",
+    "googleapis": "^144.0.0",
     "openai": "^4.77.4",
     "prop-types": "^15.8.1",
     "react": "^18.2.0",
