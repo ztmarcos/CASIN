@@ -1,24 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import databaseService from '../../services/data/database';
 import './TableManager.css';
 
 const TableManager = ({ onTableSelect }) => {
-  const [tables, setTables] = useState([
-    { id: 1, name: 'users', description: 'User information' },
-    { id: 2, name: 'products', description: 'Product catalog' },
-    { id: 3, name: 'orders', description: 'Customer orders' }
-  ]);
-
+  const [tables, setTables] = useState([]);
   const [newTable, setNewTable] = useState({ name: '', description: '' });
 
-  const handleTableSelect = (table) => {
-    onTableSelect(table);
+  useEffect(() => {
+    loadTables();
+  }, []);
+
+  const loadTables = async () => {
+    try {
+      const tablesData = await databaseService.getTables();
+      console.log('Loaded tables:', tablesData);
+      setTables(tablesData);
+    } catch (error) {
+      console.error('Error loading tables:', error);
+    }
   };
 
-  const handleNewTableSubmit = (e) => {
+  const handleTableSelect = async (tableName) => {
+    try {
+      const structure = await databaseService.getTableStructure(tableName);
+      const data = await databaseService.getData(tableName);
+      onTableSelect({ ...structure, data });
+    } catch (error) {
+      console.error('Error loading table data:', error);
+    }
+  };
+
+  const handleNewTableSubmit = async (e) => {
     e.preventDefault();
-    const tableId = tables.length + 1;
-    setTables([...tables, { ...newTable, id: tableId }]);
-    setNewTable({ name: '', description: '' });
+    if (!newTable.name.trim()) return;
+
+    try {
+      await databaseService.addTable(newTable.name, [
+        { name: 'id', type: 'INTEGER', isPrimary: true },
+        { name: 'name', type: 'VARCHAR(255)' },
+        { name: 'created_at', type: 'TIMESTAMP' }
+      ]);
+      setNewTable({ name: '', description: '' });
+      await loadTables();
+    } catch (error) {
+      console.error('Error adding table:', error);
+    }
   };
 
   return (
@@ -30,9 +56,9 @@ const TableManager = ({ onTableSelect }) => {
       <div className="table-list">
         {tables.map(table => (
           <div 
-            key={table.id} 
+            key={table.name} 
             className="table-item"
-            onClick={() => handleTableSelect(table)}
+            onClick={() => handleTableSelect(table.name)}
           >
             <span className="table-icon">└─</span>
             <span className="table-name">{table.name}</span>

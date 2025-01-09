@@ -1,20 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TableManager from '../TableManager/TableManager';
 import ColumnManager from '../ColumnManager/ColumnManager';
 import DataTable from '../DataDisplay/DataTable';
 import TableCardView from '../TableCardView/TableCardView';
+import AddEntryModal from './AddEntryModal';
+import databaseService from '../../services/data/database';
 import './DataSection.css';
 
 const DataSection = () => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [viewMode, setViewMode] = useState('table');
-  const [tableData] = useState([
-    { id: 1, name: 'John Doe', role: 'Developer', status: 'Active' },
-    { id: 2, name: 'Jane Smith', role: 'Designer', status: 'Active' },
-    { id: 3, name: 'Bob Johnson', role: 'Manager', status: 'Inactive' },
-  ]);
+  const [tableData, setTableData] = useState([]);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: '',
+    role: ''
+  });
 
-  const handleTableSelect = (table) => {
+  useEffect(() => {
+    if (selectedTable) {
+      loadTableData();
+    }
+  }, [selectedTable, filters]);
+
+  const loadTableData = async () => {
+    try {
+      const result = await databaseService.getData(selectedTable.name, filters);
+      setTableData(result.data);
+    } catch (error) {
+      console.error('Error loading table data:', error);
+    }
+  };
+
+  const handleTableSelect = async (table) => {
     setSelectedTable(table);
     console.log('Selected table:', table);
   };
@@ -27,7 +45,16 @@ const DataSection = () => {
     setViewMode(viewMode === 'table' ? 'card' : 'table');
   };
 
+  const handleFilterChange = (field, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleExport = () => {
+    if (!tableData.length) return;
+
     const csvContent = [
       Object.keys(tableData[0]).join(','),
       ...tableData.map(item => Object.values(item).join(','))
@@ -37,9 +64,25 @@ const DataSection = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'exported_data.csv';
+    a.download = `${selectedTable?.name || 'data'}_export.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
+  };
+
+  const handleAddEntry = () => {
+    setIsAddModalOpen(true);
+  };
+
+  const handleAddEntrySubmit = async (formData) => {
+    try {
+      await databaseService.insertData(selectedTable.name, formData);
+      setIsAddModalOpen(false);
+      await loadTableData(); // Reload table data after adding new entry
+    } catch (error) {
+      console.error('Error adding new entry:', error);
+      // TODO: Show error message to user
+      alert(error.message);
+    }
   };
 
   return (
@@ -71,6 +114,7 @@ const DataSection = () => {
             className="btn-secondary" 
             onClick={handleExport}
             title="Export as CSV"
+            disabled={!selectedTable}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M12 3v12M8 12l4 4 4-4" />
@@ -79,7 +123,9 @@ const DataSection = () => {
           </button>
           <button 
             className="btn-primary"
+            onClick={handleAddEntry}
             title="Add New Entry"
+            disabled={!selectedTable}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="12" cy="12" r="9" />
@@ -96,38 +142,59 @@ const DataSection = () => {
           <ColumnManager selectedTable={selectedTable} />
         </div>
 
-        <div className="data-filters">
-          <div className="filter-group">
-            <label>Status:</label>
-            <select className="filter-select">
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <label>Role:</label>
-            <select className="filter-select">
-              <option value="">All</option>
-              <option value="developer">Developer</option>
-              <option value="designer">Designer</option>
-              <option value="manager">Manager</option>
-            </select>
-          </div>
-        </div>
+        {selectedTable && (
+          <>
+            <div className="data-filters">
+              <div className="filter-group">
+                <label>Status:</label>
+                <select 
+                  className="filter-select"
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Role:</label>
+                <select 
+                  className="filter-select"
+                  value={filters.role}
+                  onChange={(e) => handleFilterChange('role', e.target.value)}
+                >
+                  <option value="">All</option>
+                  <option value="Developer">Developer</option>
+                  <option value="Designer">Designer</option>
+                  <option value="Manager">Manager</option>
+                </select>
+              </div>
+            </div>
 
-        {viewMode === 'table' ? (
-          <DataTable 
-            data={tableData}
-            onRowClick={handleRowClick}
-          />
-        ) : (
-          <TableCardView 
-            data={tableData}
-            onCardClick={handleRowClick}
-          />
+            {viewMode === 'table' ? (
+              <DataTable 
+                data={tableData}
+                onRowClick={handleRowClick}
+              />
+            ) : (
+              <TableCardView 
+                data={tableData}
+                onCardClick={handleRowClick}
+              />
+            )}
+          </>
         )}
       </div>
+
+      {selectedTable && (
+        <AddEntryModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          table={selectedTable}
+          onSubmit={handleAddEntrySubmit}
+        />
+      )}
     </div>
   );
 };
