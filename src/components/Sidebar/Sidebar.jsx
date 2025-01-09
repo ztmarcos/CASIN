@@ -3,64 +3,104 @@ import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 const Sidebar = () => {
+  const menuSections = [
+    {
+      title: "Main",
+      items: [
+        {
+          path: "/",
+          icon: "⌂",
+          label: "Dashboard"
+        },
+        {
+          path: "/data",
+          icon: "⚡",
+          label: "Data"
+        },
+        {
+          path: "/reports",
+          icon: "📊",
+          label: "Reports"
+        }
+      ]
+    },
+    {
+      title: "Tools",
+      items: [
+        {
+          path: "/datapool",
+          icon: "🗄️",
+          label: "Data Pool"
+        },
+        {
+          path: "/drive",
+          icon: "📁",
+          label: "Drive"
+        },
+        {
+          path: "/sharepoint",
+          icon: "💾",
+          label: "Sharepoint"
+        }
+      ]
+    },
+    {
+      title: "AI Tools",
+      items: [
+        {
+          path: "/test-gpt",
+          icon: "🤖",
+          label: "Test GPT"
+        }
+      ]
+    },
+    {
+      title: "Other",
+      items: [
+        {
+          path: "/birthdays",
+          icon: "🎂",
+          label: "Cumpleaños"
+        },
+        {
+          path: "/prospeccion",
+          icon: "🎯",
+          label: "Prospección"
+        }
+      ]
+    }
+  ];
+
   return (
     <div className="sidebar">
+      <div className="sidebar-header">
+        <div className="sidebar-title">Navigation</div>
+      </div>
+      
       <nav className="sidebar-nav">
-        <NavLink 
-          to="/dashboard" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Dashboard
-        </NavLink>
-        <NavLink 
-          to="/data" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Data
-        </NavLink>
-        <NavLink 
-          to="/sharepoint" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Sharepoint
-        </NavLink>
-        <NavLink 
-          to="/testgpt" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Test GPT
-        </NavLink>
-        <NavLink 
-          to="/reports" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Reports
-        </NavLink>
-        <NavLink 
-          to="/birthdays" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Birthdays
-        </NavLink>
-        <NavLink 
-          to="/drive" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Drive
-        </NavLink>
-        <NavLink 
-          to="/datapool" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Data Pool
-        </NavLink>
-        <NavLink 
-          to="/prospeccion" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-        >
-          Prospección
-        </NavLink>
+        {menuSections.map((section, index) => (
+          <div key={index} className="nav-section">
+            <div className="section-title">{section.title}</div>
+            <ul className="nav-items">
+              {section.items.map((item, itemIndex) => (
+                <li key={itemIndex}>
+                  <NavLink 
+                    to={item.path}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                  >
+                    <span className="nav-icon">{item.icon}</span>
+                    <span className="nav-label">{item.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
+
+      <div className="sidebar-footer">
+        <div className="version">v1.0.0</div>
+      </div>
     </div>
   );
 };
