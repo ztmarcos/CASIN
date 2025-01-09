@@ -14,12 +14,12 @@ const Sidebar = () => {
         },
         {
           path: "/data",
-          icon: "⚡",
+          icon: "≡",
           label: "Data"
         },
         {
           path: "/reports",
-          icon: "📊",
+          icon: "△",
           label: "Reports"
         }
       ]
@@ -29,17 +29,17 @@ const Sidebar = () => {
       items: [
         {
           path: "/datapool",
-          icon: "🗄️",
+          icon: "⌘",
           label: "Data Pool"
         },
         {
           path: "/drive",
-          icon: "📁",
+          icon: "⌹",
           label: "Drive"
         },
         {
           path: "/sharepoint",
-          icon: "💾",
+          icon: "⌗",
           label: "Sharepoint"
         }
       ]
@@ -49,7 +49,7 @@ const Sidebar = () => {
       items: [
         {
           path: "/test-gpt",
-          icon: "🤖",
+          icon: "∆",
           label: "Test GPT"
         }
       ]
@@ -59,12 +59,12 @@ const Sidebar = () => {
       items: [
         {
           path: "/birthdays",
-          icon: "🎂",
+          icon: "★",
           label: "Cumpleaños"
         },
         {
           path: "/prospeccion",
-          icon: "🎯",
+          icon: "→",
           label: "Prospección"
         }
       ]
