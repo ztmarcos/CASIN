@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard/Dashboard'
@@ -8,8 +8,12 @@ import Drive from './components/Drive/Drive'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
+import Sidebar from './components/Sidebar/Sidebar'
+import Sharepoint from './components/Sharepoint/Sharepoint'
 
 function App() {
+  const [currentUser] = useState("defaultUser")
+
   return (
     <ThemeProvider>
       <BrowserRouter>
@@ -34,7 +38,7 @@ function App() {
             } />
             <Route path="/sharepoint" element={
               <div className="section-container">
-                <h2>Sharepoint Section</h2>
+                <Sharepoint currentUser={currentUser} />
               </div>
             } />
             <Route path="/birthdays" element={

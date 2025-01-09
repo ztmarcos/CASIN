@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TableManager from '../TableManager/TableManager';
 import ColumnManager from '../ColumnManager/ColumnManager';
 import DataTable from '../DataDisplay/DataTable';
@@ -11,30 +11,35 @@ const DataSection = () => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [viewMode, setViewMode] = useState('table');
   const [tableData, setTableData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     role: ''
   });
 
-  useEffect(() => {
-    if (selectedTable) {
-      loadTableData();
+  const loadTableData = useCallback(async () => {
+    if (!selectedTable) return;
+    
+    setIsLoading(true);
+    try {
+      const result = await databaseService.getData(selectedTable.name, filters);
+      setTableData(result.data || []);
+    } catch (error) {
+      console.error('Error loading table data:', error);
+      setTableData([]);
+    } finally {
+      setIsLoading(false);
     }
   }, [selectedTable, filters]);
 
-  const loadTableData = async () => {
-    try {
-      const result = await databaseService.getData(selectedTable.name, filters);
-      setTableData(result.data);
-    } catch (error) {
-      console.error('Error loading table data:', error);
-    }
-  };
+  useEffect(() => {
+    loadTableData();
+  }, [loadTableData]);
 
   const handleTableSelect = async (table) => {
     setSelectedTable(table);
-    console.log('Selected table:', table);
+    setFilters({ status: '', role: '' }); // Reset filters on table change
   };
 
   const handleRowClick = (row) => {
@@ -94,6 +99,7 @@ const DataSection = () => {
             className="btn-secondary" 
             onClick={toggleViewMode}
             title={viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'}
+            disabled={isLoading}
           >
             {viewMode === 'table' ? (
               <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -114,7 +120,7 @@ const DataSection = () => {
             className="btn-secondary" 
             onClick={handleExport}
             title="Export as CSV"
-            disabled={!selectedTable}
+            disabled={!selectedTable || isLoading || !tableData.length}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M12 3v12M8 12l4 4 4-4" />
@@ -125,7 +131,7 @@ const DataSection = () => {
             className="btn-primary"
             onClick={handleAddEntry}
             title="Add New Entry"
-            disabled={!selectedTable}
+            disabled={!selectedTable || isLoading}
           >
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <circle cx="12" cy="12" r="9" />
@@ -139,7 +145,7 @@ const DataSection = () => {
       <div className="data-section-content">
         <div className="managers-container">
           <TableManager onTableSelect={handleTableSelect} />
-          <ColumnManager selectedTable={selectedTable} />
+          {selectedTable && <ColumnManager selectedTable={selectedTable} />}
         </div>
 
         {selectedTable && (
@@ -151,6 +157,7 @@ const DataSection = () => {
                   className="filter-select"
                   value={filters.status}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
+                  disabled={isLoading}
                 >
                   <option value="">All</option>
                   <option value="Active">Active</option>
@@ -163,6 +170,7 @@ const DataSection = () => {
                   className="filter-select"
                   value={filters.role}
                   onChange={(e) => handleFilterChange('role', e.target.value)}
+                  disabled={isLoading}
                 >
                   <option value="">All</option>
                   <option value="Developer">Developer</option>
@@ -172,7 +180,9 @@ const DataSection = () => {
               </div>
             </div>
 
-            {viewMode === 'table' ? (
+            {isLoading ? (
+              <div className="loading-state">Loading...</div>
+            ) : viewMode === 'table' ? (
               <DataTable 
                 data={tableData}
                 onRowClick={handleRowClick}

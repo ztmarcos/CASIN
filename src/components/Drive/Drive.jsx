@@ -1,142 +1,176 @@
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
+import axios from 'axios';
 import './Drive.css';
 
-const Drive = ({ currentUser }) => {
+const Drive = () => {
   const [files, setFiles] = useState([]);
+  const [currentFolder, setCurrentFolder] = useState(null);
+  const [folderStack, setFolderStack] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [driveStatus, setDriveStatus] = useState('Not Connected');
+  const [newFolderName, setNewFolderName] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState(null);
 
-  const fetchDriveFiles = async () => {
-    setLoading(true);
+  const fetchFiles = async (folderId = null) => {
     try {
-      const response = await fetch('http://localhost:3001/drive/files', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-      if (data.files) {
-        setFiles(data.files.map(file => ({
-          id: file.id,
-          name: file.name,
-          type: file.mimeType.includes('folder') ? 'folder' : file.mimeType.split('/').pop(),
-          modifiedDate: new Date(file.modifiedTime).toLocaleDateString()
-        })));
-      }
-    } catch (err) {
-      console.error('Failed to fetch files:', err);
-      setError('Failed to fetch files from Google Drive');
+      setLoading(true);
+      setError(null);
+      const response = await axios.get(`http://localhost:3001/drive/files${folderId ? `?folderId=${folderId}` : '?folderId=root'}`);
+      console.log('Fetched files:', response.data);
+      setFiles(response.data.files || []);
+    } catch (error) {
+      console.error('Error fetching files:', error);
+      setError('Failed to fetch files');
     } finally {
       setLoading(false);
     }
   };
 
   const testGoogleDrive = async () => {
-    setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/drive/test', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-      console.log('Google Drive test response:', data);
-      setDriveStatus(data.status || 'Connected');
-      if (data.status === 'Connected') {
-        fetchDriveFiles();
+      setLoading(true);
+      setError(null);
+      const response = await axios.get('http://localhost:3001/drive/test');
+      console.log('Google Drive test response:', response.data);
+      setConnectionStatus(response.data.status);
+      if (response.data.status === 'Connected') {
+        await fetchFiles();
       }
-    } catch (err) {
-      console.error('Google Drive test error:', err);
+    } catch (error) {
+      console.error('Error testing Google Drive:', error);
       setError('Failed to connect to Google Drive');
-      setDriveStatus('Connection Failed');
+      setConnectionStatus('Error');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    testGoogleDrive();
-  }, []);
+  const handleFolderClick = (folder) => {
+    setFolderStack([...folderStack, { id: currentFolder, name: folder.name }]);
+    setCurrentFolder(folder.id);
+  };
 
-  const getFileIcon = (type) => {
-    switch(type) {
-      case 'folder': return '📁';
-      case 'pdf': return '📄';
-      case 'text': return '📝';
-      case 'image': return '🖼️';
-      default: return '📄';
+  const handleBackClick = () => {
+    if (folderStack.length > 0) {
+      const newStack = [...folderStack];
+      const previousFolder = newStack.pop();
+      setFolderStack(newStack);
+      setCurrentFolder(previousFolder?.id || null);
     }
   };
 
-  const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      await axios.post('http://localhost:3001/drive/folders', {
+        name: newFolderName,
+        parentId: currentFolder
+      });
+      setNewFolderName('');
+      fetchFiles(currentFolder);
+    } catch (error) {
+      setError('Failed to create folder');
+      console.error('Error creating folder:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="drive-container">
       <div className="drive-header">
-        <h2>Google Drive Integration</h2>
-        <button onClick={testGoogleDrive} className="drive-button">
-          {loading ? 'Testing...' : 'Test Drive Connection'}
+        <h2>Google Drive Files</h2>
+        <div className="header-actions">
+          <button 
+            onClick={testGoogleDrive} 
+            disabled={loading}
+            className={`connection-button ${connectionStatus === 'Connected' ? 'connected' : ''}`}
+          >
+            {loading ? 'Connecting...' : connectionStatus === 'Connected' ? 'Connected ✓' : 'Test Connection'}
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="error-message">{error}</div>}
+
+      <div className="folder-navigation">
+        <button onClick={handleBackClick} disabled={!currentFolder || loading}>
+          ← Back
+        </button>
+        <div className="folder-path">
+          <span onClick={() => setCurrentFolder(null)} style={{ cursor: 'pointer' }}>Root</span>
+          {folderStack.map((folder, index) => (
+            <span key={index}>
+              {' > '}
+              <span
+                onClick={() => {
+                  setFolderStack(folderStack.slice(0, index));
+                  setCurrentFolder(folder.id);
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                {folder.name}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="new-folder-form">
+        <input
+          type="text"
+          value={newFolderName}
+          onChange={(e) => setNewFolderName(e.target.value)}
+          placeholder="New folder name"
+          disabled={loading || !connectionStatus}
+        />
+        <button 
+          onClick={handleCreateFolder} 
+          disabled={loading || !newFolderName.trim() || !connectionStatus}
+        >
+          Create Folder
         </button>
       </div>
-      
-      <div className="drive-content">
-        {error && (
-          <div className="drive-error">
-            {error}
-          </div>
-        )}
-        
-        <div className="drive-status">
-          <p>Current User: {currentUser}</p>
-          <p>Drive Status: {driveStatus}</p>
-          <p>Connection: {loading ? 'Testing...' : 'Ready'}</p>
-        </div>
 
-        <div className="drive-search">
-          <input
-            type="text"
-            placeholder="Search files..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="drive-search-input"
-          />
-        </div>
-
-        <div className="drive-files">
-          <div className="drive-files-header">
-            <span className="file-icon-header">Type</span>
-            <span className="file-name-header">Name</span>
-            <span className="file-date-header">Modified</span>
-          </div>
-          {filteredFiles.map(file => (
-            <div key={file.id} className="drive-file-item">
-              <span className="file-icon">{getFileIcon(file.type)}</span>
-              <span className="file-name">{file.name}</span>
-              <span className="file-date">{file.modifiedDate}</span>
+      {loading ? (
+        <div className="loading-state">Loading...</div>
+      ) : files.length > 0 ? (
+        <div className="files-grid">
+          {files.map((file) => (
+            <div key={file.id} className="file-item">
+              <div className="file-icon">
+                {file.mimeType === 'application/vnd.google-apps.folder' ? '📁' : 
+                 file.mimeType === 'application/pdf' ? '📄' : 
+                 file.mimeType === 'application/vnd.google-apps.spreadsheet' ? '📊' : '📎'}
+              </div>
+              <div className="file-details">
+                <div
+                  className="file-name"
+                  onClick={() => {
+                    if (file.mimeType === 'application/vnd.google-apps.folder') {
+                      handleFolderClick(file);
+                    } else if (file.webViewLink) {
+                      window.open(file.webViewLink, '_blank');
+                    }
+                  }}
+                >
+                  {file.name}
+                </div>
+                <div className="file-type">{file.mimeType.split('.').pop()}</div>
+              </div>
             </div>
           ))}
-          {filteredFiles.length === 0 && (
-            <div className="drive-no-files">
-              No files found
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        <div className="empty-state">
+          {connectionStatus === 'Connected' ? 'No files found' : 'Connect to Google Drive to view files'}
+        </div>
+      )}
     </div>
   );
-};
-
-Drive.propTypes = {
-  currentUser: PropTypes.string.isRequired,
 };
 
 export default Drive;

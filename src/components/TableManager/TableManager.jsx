@@ -4,7 +4,7 @@ import './TableManager.css';
 
 const TableManager = ({ onTableSelect }) => {
   const [tables, setTables] = useState([]);
-  const [newTable, setNewTable] = useState({ name: '', description: '' });
+  const [selectedTableName, setSelectedTableName] = useState(null);
 
   useEffect(() => {
     loadTables();
@@ -20,70 +20,32 @@ const TableManager = ({ onTableSelect }) => {
     }
   };
 
-  const handleTableSelect = async (tableName) => {
+  const handleTableSelect = async (table) => {
     try {
-      const structure = await databaseService.getTableStructure(tableName);
-      const data = await databaseService.getData(tableName);
-      onTableSelect({ ...structure, data });
+      setSelectedTableName(table.name);
+      onTableSelect(table);
     } catch (error) {
-      console.error('Error loading table data:', error);
-    }
-  };
-
-  const handleNewTableSubmit = async (e) => {
-    e.preventDefault();
-    if (!newTable.name.trim()) return;
-
-    try {
-      await databaseService.addTable(newTable.name, [
-        { name: 'id', type: 'INTEGER', isPrimary: true },
-        { name: 'name', type: 'VARCHAR(255)' },
-        { name: 'created_at', type: 'TIMESTAMP' }
-      ]);
-      setNewTable({ name: '', description: '' });
-      await loadTables();
-    } catch (error) {
-      console.error('Error adding table:', error);
+      console.error('Error selecting table:', error);
     }
   };
 
   return (
     <div className="table-manager">
-      <div className="table-manager-header">
-        <h3>┌─ Tables ─┐</h3>
-      </div>
-      
-      <div className="table-list">
-        {tables.map(table => (
-          <div 
-            key={table.name} 
-            className="table-item"
-            onClick={() => handleTableSelect(table.name)}
+      <h3>Tables</h3>
+      <div className="tables-list">
+        {tables.map((table) => (
+          <div
+            key={table.name}
+            className={`table-item ${selectedTableName === table.name ? 'selected' : ''}`}
+            onClick={() => handleTableSelect(table)}
           >
-            <span className="table-icon">└─</span>
-            <span className="table-name">{table.name}</span>
-            <span className="table-description">{table.description}</span>
+            {table.name}
           </div>
         ))}
+        {tables.length === 0 && (
+          <div className="no-tables">No tables available</div>
+        )}
       </div>
-
-      <form className="new-table-form" onSubmit={handleNewTableSubmit}>
-        <input
-          type="text"
-          placeholder="Table name"
-          value={newTable.name}
-          onChange={(e) => setNewTable({ ...newTable, name: e.target.value })}
-          className="table-input"
-        />
-        <input
-          type="text"
-          placeholder="Description"
-          value={newTable.description}
-          onChange={(e) => setNewTable({ ...newTable, description: e.target.value })}
-          className="table-input"
-        />
-        <button type="submit" className="btn-primary">Add Table</button>
-      </form>
     </div>
   );
 };
