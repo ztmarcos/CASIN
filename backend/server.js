@@ -5,6 +5,7 @@ const driveRoutes = require('./routes/driveRoutes');
 const dataRoutes = require('./routes/dataRoutes');
 const emailRoutes = require('./routes/emailRoutes');
 const prospeccionRoutes = require('./routes/prospeccionRoutes');
+const sharepointRoutes = require('./routes/sharepointRoutes');
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/drive', driveRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/prospeccion', prospeccionRoutes);
+app.use('/api/sharepoint', sharepointRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -44,4 +46,5 @@ app.listen(PORT, () => {
     console.log('- /api/data');
     console.log('- /api/email');
     console.log('- /api/prospeccion');
+    console.log('- /api/sharepoint');
 }); 

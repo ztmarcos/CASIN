@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import './Sharepoint.css';
+import { sharepointService } from '../../services/sharepointService';
 
 const customScrollbarStyles = `
   .custom-scrollbar::-webkit-scrollbar {
@@ -39,77 +40,51 @@ const Sharepoint = ({ currentUser = 'default_user' }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [newTask, setNewTask] = useState({
     title: "",
-    subtitle1: "Media",
-    subtitle1Label: "Prioridad",
-    subtitle2: "Pendiente",
-    subtitle2Label: "Estado",
-    fields: [
-      { label: "Asignado a", value: "" },
-      { label: "Fecha límite", value: "" },
-      { label: "Descripción", value: "" }
-    ]
+    priority: "Media",
+    status: "Pendiente",
+    assigned_to: "",
+    due_date: "",
+    description: "",
+    created_by: currentUser
   });
 
-  const [tasks, setTasks] = useState([
-    {
-      title: "Ejemplo de Tarea",
-      subtitle1: "Alta",
-      subtitle1Label: "Prioridad",
-      subtitle2: "En Progreso",
-      subtitle2Label: "Estado",
-      fields: [
-        { label: "Asignado a", value: "Juan Pérez" },
-        { label: "Fecha límite", value: "2024-02-01" },
-        { label: "Descripción", value: "Esta es una tarea de ejemplo para mostrar el formato" }
-      ]
-    }
-  ]);
-
-  const [tags, setTags] = useState([
-    { id: 1, name: 'urgente', color: 'red' },
-    { id: 2, name: 'proyecto', color: 'blue' },
-    { id: 3, name: 'reunión', color: 'green' },
-    { id: 4, name: 'documentación', color: 'purple' }
-  ]);
-
+  const [tasks, setTasks] = useState([]);
+  const [tags, setTags] = useState([]);
   const [selectedTags, setSelectedTags] = useState([]);
   const [newTagName, setNewTagName] = useState('');
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: 'reminder',
-      title: 'Tarea próxima a vencer',
-      message: 'La tarea "Ejemplo de Tarea" vence mañana',
-      time: '2024-02-01',
-      read: false
-    },
-    {
-      id: 2,
-      type: 'mention',
-      title: '@maria te mencionó',
-      message: 'Necesito que revises los últimos cambios en esta tarea',
-      time: '2024-01-31',
-      read: true
-    }
-  ]);
-
+  const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [collaborators] = useState([
-    { id: 1, name: 'Juan Pérez', avatar: 'JP', role: 'editor' },
-    { id: 2, name: 'María García', avatar: 'MG', role: 'viewer' },
-    { id: 3, name: 'Carlos López', avatar: 'CL', role: 'editor' }
-  ]);
+  const [collaborators, setCollaborators] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  // Load initial data
   useEffect(() => {
-    const savedTasks = localStorage.getItem(`tasks_${currentUser}`);
-    if (savedTasks) {
-      setTasks(JSON.parse(savedTasks));
-    }
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const tasksData = await sharepointService.getTasks(currentUser);
+        setTasks(tasksData);
+
+        const tagsData = await sharepointService.getTags();
+        setTags(tagsData);
+
+        const notificationsData = await sharepointService.getNotifications(currentUser);
+        setNotifications(notificationsData);
+
+        const collaboratorsData = await sharepointService.getCollaborators();
+        setCollaborators(collaboratorsData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setError('Error loading data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem(`tasks_${currentUser}`, JSON.stringify(tasks));
-  }, [tasks, currentUser]);
 
   const handleTaskClick = (task) => {
     setSelectedTask({ ...task });
@@ -117,51 +92,94 @@ const Sharepoint = ({ currentUser = 'default_user' }) => {
     setIsEditing(true);
   };
 
-  const handleCreateTask = () => {
-    setTasks(prev => [...prev, { ...newTask }]);
-    setIsCreating(false);
-    setNewTask({
-      title: "",
-      subtitle1: "Media",
-      subtitle1Label: "Prioridad",
-      subtitle2: "Pendiente",
-      subtitle2Label: "Estado",
-      fields: [
-        { label: "Asignado a", value: "" },
-        { label: "Fecha límite", value: "" },
-        { label: "Descripción", value: "" }
-      ]
-    });
-  };
+  const handleCreateTask = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  const handleDeleteTask = (taskToDelete) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-      setTasks(prev => prev.filter(task => task !== taskToDelete));
-      setSelectedTask(null);
+      // Validate required fields
+      if (!newTask.title) {
+        throw new Error('Title is required');
+      }
+
+      const taskData = {
+        ...newTask,
+        tags: selectedTags
+      };
+      
+      const createdTask = await sharepointService.createTask(taskData);
+      setTasks(prev => [...prev, createdTask]);
+      setIsCreating(false);
+      
+      // Reset form
+      setNewTask({
+        title: "",
+        priority: "Media",
+        status: "Pendiente",
+        assigned_to: "",
+        due_date: "",
+        description: "",
+        created_by: currentUser
+      });
+      setSelectedTags([]);
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setError(error.message || 'Error creating task. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleUpdateTask = () => {
-    setTasks(prev => prev.map(task => 
-      task === selectedTask ? editingTask : task
-    ));
-    setIsEditing(false);
-    setEditingTask(null);
-    setSelectedTask(null);
+  const handleDeleteTask = async (taskToDelete) => {
+    try {
+      const confirmed = window.confirm('¿Estás seguro de que quieres eliminar esta tarea?\nEsta acción no se puede deshacer.');
+      if (confirmed) {
+        setIsLoading(true);
+        await sharepointService.deleteTask(taskToDelete.id);
+        setTasks(prev => prev.filter(task => task.id !== taskToDelete.id));
+        setSelectedTask(null);
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError('Error deleting task. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleStatusChange = (task, newStatus) => {
-    const updatedTask = {
-      ...task,
-      subtitle2: newStatus
-    };
-    setTasks(prev => prev.map(t => t === task ? updatedTask : t));
+  const handleUpdateTask = async () => {
+    try {
+      await sharepointService.updateTask(editingTask.id, editingTask);
+      setTasks(prev => prev.map(task => 
+        task.id === editingTask.id ? editingTask : task
+      ));
+      setIsEditing(false);
+      setEditingTask(null);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
   };
 
-  const filteredTasks = tasks.filter(task => 
-    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.fields.some(field => field.value.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const handleStatusChange = async (task, newStatus) => {
+    try {
+      const updatedTask = {
+        ...task,
+        status: newStatus
+      };
+      await sharepointService.updateTask(task.id, updatedTask);
+      setTasks(prev => prev.map(t => t.id === task.id ? updatedTask : t));
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    }
+  };
+
+  const filteredTasks = tasks?.filter(task => 
+    task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || [];
 
   const handleAddTag = () => {
     if (newTagName.trim()) {
@@ -183,217 +201,146 @@ const Sharepoint = ({ currentUser = 'default_user' }) => {
 
   return (
     <div className={`sharepoint-container ${isExpanded ? 'expanded' : ''}`}>
-      <div className="sharepoint-header">
-        <div className="header-main">
-          <div className="header-left">
-            <h2>Sharepoint</h2>
-            <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
-              <svg
-                className={`expand-icon ${isExpanded ? '' : 'collapsed'}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-          {isExpanded && (
-            <div className="header-actions">
-              <div className="view-toggles">
-                <button
-                  onClick={() => setViewMode('cards')}
-                  className={`view-toggle ${viewMode === 'cards' ? 'active' : ''}`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`view-toggle ${viewMode === 'table' ? 'active' : ''}`}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      {isLoading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : error ? (
+        <div className="error-message">{error}</div>
+      ) : (
+        <>
+          <div className="sharepoint-header">
+            <div className="header-main">
+              <div className="header-left">
+                <h2>Sharepoint</h2>
+                <button onClick={() => setIsExpanded(!isExpanded)} className="expand-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
                   </svg>
                 </button>
               </div>
-              <button
-                onClick={() => setIsCreating(true)}
-                className="create-task-button"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Nueva Tarea
-              </button>
-              <div className="notifications-container">
-                <button
-                  onClick={() => setShowNotifications(!showNotifications)}
-                  className="notifications-button"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {notifications.some(n => !n.read) && (
-                    <span className="notification-badge"></span>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-        {isExpanded && (
-          <div className="search-section">
-            <div className="search-container">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar tareas..."
-                className="search-input"
-              />
-              <svg
-                className="search-icon"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <div className="tags-container">
-              {tags.map(tag => (
-                <button
-                  key={tag.id}
-                  onClick={() => {
-                    setSelectedTags(prev => 
-                      prev.includes(tag.name) 
-                        ? prev.filter(t => t !== tag.name)
-                        : [...prev, tag.name]
-                    );
-                  }}
-                  className={`tag ${selectedTags.includes(tag.name) ? 'selected' : ''}`}
-                >
-                  #{tag.name}
-                </button>
-              ))}
-              <button onClick={handleAddTag} className="add-tag-button">
-                + Nueva etiqueta
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {isExpanded && (
-        <div className="tasks-container custom-scrollbar">
-          {viewMode === 'cards' ? (
-            <div className="tasks-grid">
-              {filteredTasks.map((task, index) => (
-                <div 
-                  key={index} 
-                  className="task-card"
-                  onClick={() => handleTaskClick(task)}
-                >
-                  <div className="task-card-header">
-                    <h3>{task.title}</h3>
-                    <div className="task-card-actions">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditClick(task);
-                        }}
-                        className="edit-button"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteTask(task);
-                        }}
-                        className="delete-button"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
+              {isExpanded && (
+                <div className="header-actions">
+                  <div className="view-toggles">
+                    <button
+                      onClick={() => setViewMode('cards')}
+                      className={`view-toggle ${viewMode === 'cards' ? 'active' : ''}`}
+                      title="Card View"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="3" width="7" height="7"></rect>
+                        <rect x="14" y="14" width="7" height="7"></rect>
+                        <rect x="3" y="14" width="7" height="7"></rect>
+                      </svg>
+                      <span className="tooltip">Card View</span>
+                    </button>
+                    <button
+                      onClick={() => setViewMode('table')}
+                      className={`view-toggle ${viewMode === 'table' ? 'active' : ''}`}
+                      title="Table View"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                      </svg>
+                      <span className="tooltip">Table View</span>
+                    </button>
                   </div>
-                  <div className="task-card-content">
-                    <div className="task-labels">
-                      <span className="priority-label">{task.subtitle1}</span>
-                      <select
-                        value={task.subtitle2}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          handleStatusChange(task, e.target.value);
-                        }}
-                        className="status-select"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <option value="Pendiente">Pendiente</option>
-                        <option value="En Progreso">En Progreso</option>
-                        <option value="Completado">Completado</option>
-                      </select>
-                    </div>
-                    <div className="task-fields">
-                      {task.fields.map((field, fieldIndex) => (
-                        <div key={fieldIndex} className="task-field">
-                          <span className="field-label">{field.label}:</span>
-                          <span className="field-value">{field.value}</span>
-                        </div>
-                      ))}
-                    </div>
+                  <button
+                    onClick={() => setIsCreating(true)}
+                    className="create-task-button"
+                    title="Create New Task"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"></line>
+                      <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Nueva Tarea</span>
+                    <span className="tooltip">Create New Task</span>
+                  </button>
+                  <div className="notifications-container">
+                    <button
+                      onClick={() => setShowNotifications(!showNotifications)}
+                      className="notifications-button"
+                      title="Notifications"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                      </svg>
+                      {notifications.some(n => !n.read) && (
+                        <span className="notification-badge"></span>
+                      )}
+                      <span className="tooltip">Notifications</span>
+                    </button>
                   </div>
                 </div>
-              ))}
+              )}
             </div>
-          ) : (
-            <div className="tasks-table-container">
-              <table className="tasks-table">
-                <thead>
-                  <tr>
-                    <th>Título</th>
-                    <th>Prioridad</th>
-                    <th>Estado</th>
-                    <th>Asignado a</th>
-                    <th>Fecha límite</th>
-                    <th>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
+            {isExpanded && (
+              <div className="search-section">
+                <div className="search-container">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar tareas..."
+                    className="search-input"
+                  />
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="search-icon">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+                <div className="tags-container">
+                  {tags.map(tag => (
+                    <button
+                      key={tag.id}
+                      onClick={() => {
+                        setSelectedTags(prev => 
+                          prev.includes(tag.name) 
+                            ? prev.filter(t => t !== tag.name)
+                            : [...prev, tag.name]
+                        );
+                      }}
+                      className={`tag ${selectedTags.includes(tag.name) ? 'selected' : ''}`}
+                    >
+                      #{tag.name}
+                    </button>
+                  ))}
+                  <button onClick={handleAddTag} className="add-tag-button">
+                    + Nueva etiqueta
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {isExpanded && (
+            <div className="tasks-container custom-scrollbar">
+              {viewMode === 'cards' ? (
+                <div className="tasks-grid">
                   {filteredTasks.map((task, index) => (
-                    <tr 
-                      key={index}
+                    <div 
+                      key={index} 
+                      className="task-card"
                       onClick={() => handleTaskClick(task)}
                     >
-                      <td>{task.title}</td>
-                      <td>
-                        <span className="priority-label">{task.subtitle1}</span>
-                      </td>
-                      <td>
-                        <select
-                          value={task.subtitle2}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(task, e.target.value);
-                          }}
-                          className="status-select"
-                          onClick={e => e.stopPropagation()}
-                        >
-                          <option value="Pendiente">Pendiente</option>
-                          <option value="En Progreso">En Progreso</option>
-                          <option value="Completado">Completado</option>
-                        </select>
-                      </td>
-                      <td>{task.fields.find(f => f.label === "Asignado a")?.value}</td>
-                      <td>{task.fields.find(f => f.label === "Fecha límite")?.value}</td>
-                      <td>
-                        <div className="table-actions">
+                      <div className="task-card-header">
+                        <h3>{task.title}</h3>
+                        <div className="task-card-actions">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditClick(task);
+                            }}
+                            className="edit-button"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -401,205 +348,339 @@ const Sharepoint = ({ currentUser = 'default_user' }) => {
                             }}
                             className="delete-button"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="18" y1="6" x2="6" y2="18"></line>
+                              <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="task-card-content">
+                        <div className="task-labels">
+                          <span className="priority-label">{task.priority}</span>
+                          <select
+                            value={task.status}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(task, e.target.value);
+                            }}
+                            className="status-select"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <option value="Pendiente">Pendiente</option>
+                            <option value="En Progreso">En Progreso</option>
+                            <option value="Completado">Completado</option>
+                          </select>
+                        </div>
+                        <div className="task-details">
+                          {task.description && (
+                            <div className="task-description">
+                              <span className="detail-label">Description:</span>
+                              <span className="detail-value">{task.description}</span>
+                            </div>
+                          )}
+                          {task.assigned_to && (
+                            <div className="task-assignee">
+                              <span className="detail-label">Assigned to:</span>
+                              <span className="detail-value">{task.assigned_to}</span>
+                            </div>
+                          )}
+                          {task.due_date && (
+                            <div className="task-due-date">
+                              <span className="detail-label">Due date:</span>
+                              <span className="detail-value">{task.due_date}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="tasks-table-container">
+                  <table className="tasks-table">
+                    <thead>
+                      <tr>
+                        <th>Título</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th>Asignado a</th>
+                        <th>Fecha límite</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTasks.map((task, index) => (
+                        <tr 
+                          key={index}
+                          onClick={() => handleTaskClick(task)}
+                        >
+                          <td>{task.title}</td>
+                          <td>
+                            <span className="priority-label">{task.priority}</span>
+                          </td>
+                          <td>
+                            <select
+                              value={task.status}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(task, e.target.value);
+                              }}
+                              className="status-select"
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <option value="Pendiente">Pendiente</option>
+                              <option value="En Progreso">En Progreso</option>
+                              <option value="Completado">Completado</option>
+                            </select>
+                          </td>
+                          <td>{task.assigned_to}</td>
+                          <td>{task.due_date}</td>
+                          <td>
+                            <div className="table-actions">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTask(task);
+                                }}
+                                className="delete-button"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Task Creation Modal */}
-      {isCreating && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h3>Nueva Tarea</h3>
-              <button onClick={() => setIsCreating(false)} className="close-button">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="modal-content">
-              <div className="form-group">
-                <label>Título</label>
-                <input
-                  type="text"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="form-input"
-                />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Prioridad</label>
-                  <select
-                    value={newTask.subtitle1}
-                    onChange={(e) => setNewTask({ ...newTask, subtitle1: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Alta">Alta</option>
-                  </select>
+          {/* Task Creation Modal */}
+          {isCreating && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <div className="modal-header">
+                  <h3>Nueva Tarea</h3>
+                  <button onClick={() => setIsCreating(false)} className="close-button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
                 </div>
-                <div className="form-group">
-                  <label>Estado</label>
-                  <select
-                    value={newTask.subtitle2}
-                    onChange={(e) => setNewTask({ ...newTask, subtitle2: e.target.value })}
-                    className="form-select"
-                  >
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En Progreso">En Progreso</option>
-                    <option value="Completado">Completado</option>
-                  </select>
-                </div>
-              </div>
-              {newTask.fields.map((field, index) => (
-                <div key={index} className="form-group">
-                  <label>{field.label}</label>
-                  {field.label === "Descripción" ? (
-                    <textarea
-                      value={field.value}
-                      onChange={(e) => {
-                        const newFields = [...newTask.fields];
-                        newFields[index].value = e.target.value;
-                        setNewTask({ ...newTask, fields: newFields });
-                      }}
-                      className="form-textarea"
-                    />
-                  ) : (
+                <div className="modal-content">
+                  <div className="form-group">
+                    <label>Título <span className="required">*</span></label>
                     <input
-                      type={field.label === "Fecha límite" ? "date" : "text"}
-                      value={field.value}
-                      onChange={(e) => {
-                        const newFields = [...newTask.fields];
-                        newFields[index].value = e.target.value;
-                        setNewTask({ ...newTask, fields: newFields });
-                      }}
+                      type="text"
+                      value={newTask.title}
+                      onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                      className="form-input"
+                      placeholder="Enter task title"
+                    />
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Prioridad</label>
+                      <select
+                        value={newTask.priority}
+                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                        className="form-select"
+                      >
+                        <option value="Baja">Baja</option>
+                        <option value="Media">Media</option>
+                        <option value="Alta">Alta</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Estado</label>
+                      <select
+                        value={newTask.status}
+                        onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                        className="form-select"
+                      >
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En Progreso">En Progreso</option>
+                        <option value="Completado">Completado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Asignado a</label>
+                    <input
+                      type="text"
+                      value={newTask.assigned_to}
+                      onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                      className="form-input"
+                      placeholder="Enter assignee name"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Fecha límite</label>
+                    <input
+                      type="date"
+                      value={newTask.due_date}
+                      onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
                       className="form-input"
                     />
-                  )}
+                  </div>
+                  <div className="form-group">
+                    <label>Descripción</label>
+                    <textarea
+                      value={newTask.description}
+                      onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                      className="form-textarea"
+                      placeholder="Enter task description"
+                      rows={4}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Tags</label>
+                    <div className="tags-input">
+                      {tags.map(tag => (
+                        <label key={tag.id} className="tag-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.includes(tag.name)}
+                            onChange={() => {
+                              setSelectedTags(prev => 
+                                prev.includes(tag.name)
+                                  ? prev.filter(t => t !== tag.name)
+                                  : [...prev, tag.name]
+                              );
+                            }}
+                          />
+                          <span className="tag-label">{tag.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="modal-footer">
-              <button onClick={() => setIsCreating(false)} className="cancel-button">
-                Cancelar
-              </button>
-              <button onClick={handleCreateTask} className="create-button">
-                Crear Tarea
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Task Edit Modal */}
-      {isEditing && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <input
-                type="text"
-                value={editingTask.title}
-                onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                className="edit-title-input"
-              />
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditingTask(null);
-                  setSelectedTask(null);
-                }}
-                className="close-button"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="modal-content">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Prioridad</label>
-                  <select
-                    value={editingTask.subtitle1}
-                    onChange={(e) => setEditingTask({ ...editingTask, subtitle1: e.target.value })}
-                    className="form-select"
+                <div className="modal-footer">
+                  <button 
+                    onClick={() => setIsCreating(false)} 
+                    className="cancel-button"
+                    disabled={isLoading}
                   >
-                    <option value="Baja">Baja</option>
-                    <option value="Media">Media</option>
-                    <option value="Alta">Alta</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Estado</label>
-                  <select
-                    value={editingTask.subtitle2}
-                    onChange={(e) => setEditingTask({ ...editingTask, subtitle2: e.target.value })}
-                    className="form-select"
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleCreateTask} 
+                    className="create-button"
+                    disabled={isLoading || !newTask.title}
                   >
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En Progreso">En Progreso</option>
-                    <option value="Completado">Completado</option>
-                  </select>
+                    {isLoading ? 'Creating...' : 'Crear Tarea'}
+                  </button>
                 </div>
               </div>
-              {editingTask.fields.map((field, index) => (
-                <div key={index} className="form-group">
-                  <label>{field.label}</label>
-                  {field.label === "Descripción" ? (
-                    <textarea
-                      value={field.value}
-                      onChange={(e) => {
-                        const newFields = [...editingTask.fields];
-                        newFields[index].value = e.target.value;
-                        setEditingTask({ ...editingTask, fields: newFields });
-                      }}
-                      className="form-textarea"
-                    />
-                  ) : (
+            </div>
+          )}
+
+          {/* Task Edit Modal */}
+          {isEditing && (
+            <div className="modal-overlay">
+              <div className="modal">
+                <div className="modal-header">
+                  <input
+                    type="text"
+                    value={editingTask.title}
+                    onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                    className="edit-title-input"
+                  />
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingTask(null);
+                      setSelectedTask(null);
+                    }}
+                    className="close-button"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+                <div className="modal-content">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Prioridad</label>
+                      <select
+                        value={editingTask.priority}
+                        onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
+                        className="form-select"
+                      >
+                        <option value="Baja">Baja</option>
+                        <option value="Media">Media</option>
+                        <option value="Alta">Alta</option>
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label>Estado</label>
+                      <select
+                        value={editingTask.status}
+                        onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
+                        className="form-select"
+                      >
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="En Progreso">En Progreso</option>
+                        <option value="Completado">Completado</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Asignado a</label>
                     <input
-                      type={field.label === "Fecha límite" ? "date" : "text"}
-                      value={field.value}
-                      onChange={(e) => {
-                        const newFields = [...editingTask.fields];
-                        newFields[index].value = e.target.value;
-                        setEditingTask({ ...editingTask, fields: newFields });
-                      }}
+                      type="text"
+                      value={editingTask.assigned_to || ''}
+                      onChange={(e) => setEditingTask({ ...editingTask, assigned_to: e.target.value })}
                       className="form-input"
                     />
-                  )}
+                  </div>
+                  <div className="form-group">
+                    <label>Fecha límite</label>
+                    <input
+                      type="date"
+                      value={editingTask.due_date || ''}
+                      onChange={(e) => setEditingTask({ ...editingTask, due_date: e.target.value })}
+                      className="form-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Descripción</label>
+                    <textarea
+                      value={editingTask.description || ''}
+                      onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                      className="form-textarea"
+                      rows={4}
+                    />
+                  </div>
                 </div>
-              ))}
+                <div className="modal-footer">
+                  <button
+                    onClick={() => {
+                      setIsEditing(false);
+                      setEditingTask(null);
+                      setSelectedTask(null);
+                    }}
+                    className="cancel-button"
+                  >
+                    Cancelar
+                  </button>
+                  <button onClick={handleUpdateTask} className="save-button">
+                    Guardar Cambios
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="modal-footer">
-              <button
-                onClick={() => {
-                  setIsEditing(false);
-                  setEditingTask(null);
-                  setSelectedTask(null);
-                }}
-                className="cancel-button"
-              >
-                Cancelar
-              </button>
-              <button onClick={handleUpdateTask} className="save-button">
-                Guardar Cambios
-              </button>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
     </div>
   );

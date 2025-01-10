@@ -15,6 +15,20 @@ class MySQLDatabaseService {
     }
   }
 
+  async executeQuery(query, values = []) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const [results] = await connection.execute(query, values);
+      return results;
+    } catch (error) {
+      console.error('Error executing query:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
   async getTables() {
     let connection;
     try {
