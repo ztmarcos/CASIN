@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import OpenAI from 'openai';
 import databaseService from '../../services/data/database';
 import './TestGPT.css';
+import { sendWelcomeEmail } from '../../services/emailService';
 
 const TestGPT = () => {
   const [input, setInput] = useState('');
@@ -51,23 +52,45 @@ const TestGPT = () => {
 
     setLoading(true);
     try {
-      let prompt = input;
+      let systemPrompt = `Eres un asistente especializado en seguros que genera contenidos para emails de bienvenida.
+      Genera el contenido siguiendo esta estructura:
       
-      // If table data is selected, include it in the prompt
+      1. Saludo personalizado
+      2. Mensaje de bienvenida
+      3. Explicación detallada del seguro y sus beneficios
+      4. Conclusión y próximos pasos
+      
+      Usa el siguiente formato para resaltar elementos importantes:
+      - Usa **texto en negrita** para títulos y elementos importantes
+      - Usa *texto en cursiva* para énfasis moderado
+      - Usa guiones (-) para listas de beneficios o pasos
+      
+      El contenido debe ser en español, profesional pero cálido, y enfocado en el valor del seguro para el cliente.
+      
+      Asegúrate de dejar espacios entre párrafos usando doble salto de línea para mejor legibilidad.`;
+
+      let userPrompt = input;
+      
       if (tableData && tableData.data.length > 0) {
-        const dataContext = `Database table '${selectedTable}' contains the following data:\n${JSON.stringify(tableData.data, null, 2)}\n\nBased on this data, please answer: `;
-        prompt = dataContext + input;
+        userPrompt = `Base de datos '${selectedTable}' contiene: ${JSON.stringify(tableData.data, null, 2)}\n\nBasado en estos datos, ${input}`;
       }
 
       const completion = await openai.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
         model: "gpt-4o-mini",
       });
 
-      setResponse(completion.choices[0].message.content);
+      const gptResponse = completion.choices[0].message.content;
+      setResponse(gptResponse);
+
+      // Send email with GPT response
+      await sendWelcomeEmail(gptResponse);
     } catch (error) {
       console.error('Error:', error);
-      setResponse('Error: Unable to get response from GPT');
+      setResponse('Error: No se pudo obtener respuesta de GPT');
     } finally {
       setLoading(false);
     }
@@ -76,18 +99,19 @@ const TestGPT = () => {
   return (
     <div className="testgpt-container">
       <div className="testgpt-header">
-        <h2>Test GPT</h2>
+        <h2>Asistente de Emails de Seguros</h2>
+        <p className="subtitle">Genera contenido personalizado para emails de seguros</p>
       </div>
       <div className="testgpt-content">
         <div className="table-selector">
-          <label htmlFor="table-select">Include data from table:</label>
+          <label htmlFor="table-select">Incluir datos de tabla:</label>
           <select
             id="table-select"
             value={selectedTable}
             onChange={handleTableSelect}
             className="table-select"
           >
-            <option value="">None</option>
+            <option value="">Ninguna</option>
             {tables.map(table => (
               <option key={table.name} value={table.name}>
                 {table.name}
@@ -98,7 +122,7 @@ const TestGPT = () => {
         
         {tableData && (
           <div className="data-preview">
-            <h3>Selected Table Data:</h3>
+            <h3>Datos Seleccionados:</h3>
             <pre className="data-content">
               {JSON.stringify(tableData.data, null, 2)}
             </pre>
@@ -107,10 +131,12 @@ const TestGPT = () => {
 
         <form onSubmit={handleSubmit} className="testgpt-form">
           <div className="input-group">
+            <label htmlFor="prompt-input">¿Qué tipo de contenido necesitas?</label>
             <textarea
+              id="prompt-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Enter your prompt here..."
+              placeholder="Ejemplo: Genera un mensaje de bienvenida para un cliente de seguro de vida..."
               rows={4}
               className="testgpt-input"
             />
@@ -120,15 +146,33 @@ const TestGPT = () => {
             className="testgpt-submit"
             disabled={loading || !input.trim()}
           >
-            {loading ? 'Processing...' : 'Send'}
+            {loading ? 'Generando...' : 'Generar Contenido'}
           </button>
         </form>
         {response && (
           <div className="testgpt-response">
-            <h3>Response:</h3>
-            <div className="response-content">
-              {response}
-            </div>
+            <h3>Contenido Generado:</h3>
+            <textarea
+              value={response}
+              readOnly
+              className="response-content"
+              rows={10}
+            />
+            <button 
+              onClick={async () => {
+                try {
+                  await sendWelcomeEmail(response);
+                  alert('Email enviado nuevamente con éxito');
+                } catch (error) {
+                  console.error('Error al reenviar email:', error);
+                  alert('Error al reenviar el email');
+                }
+              }}
+              className="testgpt-submit"
+              style={{ marginTop: '10px' }}
+            >
+              Enviar Email Nuevamente
+            </button>
           </div>
         )}
       </div>

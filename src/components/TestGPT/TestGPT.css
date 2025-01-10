@@ -6,12 +6,20 @@
 
 .testgpt-header {
   margin-bottom: 2rem;
+  text-align: center;
 }
 
 .testgpt-header h2 {
   color: var(--text-primary);
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-family: var(--font-family-mono);
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  margin: 0;
 }
 
 .testgpt-content {
@@ -32,6 +40,7 @@
   color: var(--text-primary);
   font-family: var(--font-family-mono);
   font-size: 0.9rem;
+  min-width: 150px;
 }
 
 .table-select {
@@ -41,7 +50,8 @@
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   font-family: var(--font-family-mono);
-  min-width: 200px;
+  flex: 1;
+  max-width: 300px;
 }
 
 .data-preview {
@@ -84,6 +94,12 @@
   gap: 0.5rem;
 }
 
+.input-group label {
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 0.9rem;
+}
+
 .testgpt-input {
   width: 100%;
   padding: 1rem;
@@ -117,6 +133,7 @@
 
 .testgpt-submit:hover:not(:disabled) {
   background-color: var(--accent-color-hover);
+  transform: translateY(-1px);
 }
 
 .testgpt-submit:disabled {
@@ -145,30 +162,28 @@
   font-family: var(--font-family-mono);
   white-space: pre-wrap;
   line-height: 1.5;
+  margin-bottom: 1rem;
+  width: 100%;
+  border: 1px solid var(--border-color);
 }
 
-/* Loading state */
-.testgpt-submit.loading {
-  position: relative;
-  padding-right: 2.5rem;
+.response-content.editable {
+  resize: vertical;
+  min-height: 200px;
+  transition: border-color 0.2s;
 }
 
-.testgpt-submit.loading::after {
-  content: '';
-  position: absolute;
-  right: 1rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1rem;
-  height: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.response-content.editable:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1);
 }
 
-@keyframes spin {
-  to {
-    transform: translateY(-50%) rotate(360deg);
-  }
+.email-button {
+  margin-top: 1rem;
+  background-color: #28a745;
+}
+
+.email-button:hover:not(:disabled) {
+  background-color: #218838;
 } 
