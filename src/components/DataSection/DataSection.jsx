@@ -3,7 +3,9 @@ import TableManager from '../TableManager/TableManager';
 import ColumnManager from '../ColumnManager/ColumnManager';
 import DataTable from '../DataDisplay/DataTable';
 import TableCardView from '../TableCardView/TableCardView';
-import databaseService from '../../services/data/database';
+import TableImport from '../TableImport/TableImport';
+import AddEntryModal from './AddEntryModal';
+import tableService from '../../services/data/tableService';
 import './DataSection.css';
 
 const DataSection = () => {
@@ -11,6 +13,8 @@ const DataSection = () => {
   const [viewMode, setViewMode] = useState('table');
   const [tableData, setTableData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddEntryModal, setShowAddEntryModal] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     role: ''
@@ -21,7 +25,7 @@ const DataSection = () => {
     
     setIsLoading(true);
     try {
-      const result = await databaseService.getData(selectedTable.name, filters);
+      const result = await tableService.getData(selectedTable.name, filters);
       setTableData(result.data || []);
     } catch (error) {
       console.error('Error loading table data:', error);
@@ -72,43 +76,97 @@ const DataSection = () => {
     window.URL.revokeObjectURL(url);
   };
 
+  const handleImportData = async (data) => {
+    if (!selectedTable || !data.length) return;
+    
+    setIsLoading(true);
+    try {
+      // Here you would typically send the data to your backend
+      // await tableService.importData(selectedTable.name, data);
+      await Promise.all(data.map(row => tableService.insertData(selectedTable.name, row)));
+      loadTableData(); // Reload the table data after import
+      setShowImportModal(false);
+    } catch (error) {
+      console.error('Error importing data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddEntry = async (formData) => {
+    if (!selectedTable) return;
+    
+    try {
+      await tableService.insertData(selectedTable.name, formData);
+      loadTableData(); // Reload the table data after adding new entry
+      setShowAddEntryModal(false);
+    } catch (error) {
+      console.error('Error adding entry:', error);
+      throw error; // Let the AddEntryModal handle the error
+    }
+  };
+
   return (
     <div className="data-section">
       <div className="data-section-header">
         <h2>Data Management</h2>
         <div className="header-actions">
-          <button 
-            className="btn-secondary" 
-            onClick={toggleViewMode}
-            title={viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'}
-            disabled={isLoading}
-          >
-            {viewMode === 'table' ? (
-              <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <rect x="4" y="4" width="7" height="7" rx="1" />
-                <rect x="13" y="4" width="7" height="7" rx="1" />
-                <rect x="4" y="13" width="7" height="7" rx="1" />
-                <rect x="13" y="13" width="7" height="7" rx="1" />
-              </svg>
-            ) : (
-              <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <line x1="4" y1="6" x2="20" y2="6" />
-                <line x1="4" y1="12" x2="20" y2="12" />
-                <line x1="4" y1="18" x2="20" y2="18" />
-              </svg>
-            )}
-          </button>
-          <button 
-            className="btn-secondary" 
-            onClick={handleExport}
-            title="Export as CSV"
-            disabled={!selectedTable || isLoading || !tableData.length}
-          >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path d="M12 3v12M8 12l4 4 4-4" />
-              <path d="M20 16v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3" />
-            </svg>
-          </button>
+          {selectedTable && (
+            <>
+              <button 
+                className="btn-primary" 
+                onClick={() => setShowAddEntryModal(true)}
+                disabled={isLoading}
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Add Entry
+              </button>
+              <button 
+                className="btn-primary" 
+                onClick={() => setShowImportModal(true)}
+                disabled={isLoading}
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Import
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={toggleViewMode}
+                title={viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'}
+                disabled={isLoading}
+              >
+                {viewMode === 'table' ? (
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <rect x="4" y="4" width="7" height="7" rx="1" />
+                    <rect x="13" y="4" width="7" height="7" rx="1" />
+                    <rect x="4" y="13" width="7" height="7" rx="1" />
+                    <rect x="13" y="13" width="7" height="7" rx="1" />
+                  </svg>
+                ) : (
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <line x1="4" y1="6" x2="20" y2="6" />
+                    <line x1="4" y1="12" x2="20" y2="12" />
+                    <line x1="4" y1="18" x2="20" y2="18" />
+                  </svg>
+                )}
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={handleExport}
+                title="Export as CSV"
+                disabled={!selectedTable || isLoading || !tableData.length}
+              >
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 3v12M8 12l4 4 4-4" />
+                  <path d="M20 16v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -166,6 +224,36 @@ const DataSection = () => {
           </>
         )}
       </div>
+
+      {/* Import Modal */}
+      {showImportModal && selectedTable && (
+        <div className="modal-overlay" onClick={() => setShowImportModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Import Data to {selectedTable.name}</h3>
+              <button 
+                className="close-button" 
+                onClick={() => setShowImportModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <TableImport onFileData={handleImportData} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Entry Modal */}
+      {showAddEntryModal && selectedTable && (
+        <AddEntryModal
+          isOpen={showAddEntryModal}
+          onClose={() => setShowAddEntryModal(false)}
+          table={selectedTable}
+          onSubmit={handleAddEntry}
+        />
+      )}
     </div>
   );
 };

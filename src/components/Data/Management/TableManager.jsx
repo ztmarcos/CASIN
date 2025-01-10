@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import databaseService from '../../../services/data/database';
+import tableService from '../../../services/data/tableService';
 import './TableManager.css';
 
 const TableManager = () => {
@@ -14,7 +14,7 @@ const TableManager = () => {
 
   const loadTables = async () => {
     try {
-      const tablesData = await databaseService.getTables();
+      const tablesData = await tableService.getTables();
       setTables(tablesData);
       console.log('Loaded tables:', tablesData); // Debug log
     } catch (error) {
@@ -24,9 +24,9 @@ const TableManager = () => {
 
   const handleTableSelect = async (tableName) => {
     try {
-      const structure = await databaseService.getTableStructure(tableName);
+      const structure = await tableService.getTableStructure(tableName);
       setSelectedTable(structure);
-      const data = await databaseService.getData(tableName);
+      const data = await tableService.getData(tableName);
       setTableData(data);
       console.log('Selected table data:', data); // Debug log
     } catch (error) {
@@ -39,7 +39,7 @@ const TableManager = () => {
     if (!newTableName.trim()) return;
 
     try {
-      await databaseService.addTable(newTableName, [
+      await tableService.addTable(newTableName, [
         { name: 'id', type: 'INTEGER', isPrimary: true },
         { name: 'name', type: 'VARCHAR(255)' },
         { name: 'created_at', type: 'TIMESTAMP' }

@@ -7,6 +7,7 @@ import TestGPT from './components/TestGPT/TestGPT'
 import Drive from './components/Drive/Drive'
 import PDFParser from './components/PDFParser/PDFParser'
 import Prospeccion from './components/Prospeccion/Prospeccion'
+import Datapool from './components/Datapool/Datapool'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
@@ -40,7 +41,7 @@ function App() {
             } />
             <Route path="/datapool" element={
               <div className="section-container">
-                <h2>Data Pool Section</h2>
+                <Datapool />
               </div>
             } />
             <Route path="/sharepoint" element={

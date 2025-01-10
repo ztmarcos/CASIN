@@ -1,51 +1,215 @@
 .table-manager {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 1rem;
+  gap: 20px;
+  padding: 20px;
 }
 
-.table-manager h3 {
+.tables-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tables-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.tables-header h3 {
   margin: 0;
-  color: var(--text-primary);
-  font-size: 1.1rem;
+  color: #333;
+}
+
+.create-table-btn {
+  padding: 8px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.create-table-btn:hover {
+  background-color: #0056b3;
+}
+
+.create-table-form {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 4px;
+  margin-top: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  color: #495057;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.columns-section {
+  margin-top: 20px;
+}
+
+.columns-section h4 {
+  margin: 0 0 15px 0;
+  color: #495057;
+}
+
+.column-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+}
+
+.column-row input[type="text"],
+.column-row input[type="number"],
+.column-row select {
+  padding: 6px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+}
+
+.column-row input[type="text"] {
+  flex: 2;
+}
+
+.column-row select {
+  flex: 1;
+}
+
+.column-row input[type="number"] {
+  width: 80px;
+}
+
+.column-row label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.remove-column-btn {
+  padding: 6px 12px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.remove-column-btn:hover {
+  background-color: #c82333;
+}
+
+.add-column-btn {
+  width: 100%;
+  padding: 8px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.add-column-btn:hover {
+  background-color: #218838;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.submit-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .tables-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-height: 300px;
-  overflow-y: auto;
+  gap: 10px;
 }
 
 .table-item {
-  padding: 0.75rem 1rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
+  padding: 10px 15px;
   border-radius: 4px;
-  color: var(--text-secondary);
+  background: #f8f9fa;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .table-item:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+  background: #e9ecef;
 }
 
 .table-item.selected {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
-  border-color: var(--accent-color);
+  background: #007bff;
+  color: white;
+}
+
+.import-section {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.import-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.loading {
+  margin-top: 10px;
+  color: #666;
+}
+
+.error {
+  margin-top: 10px;
+  color: #dc3545;
+  padding: 10px;
+  background: #f8d7da;
+  border-radius: 4px;
 }
 
 .no-tables {
-  padding: 1rem;
+  color: #666;
+  padding: 10px;
   text-align: center;
-  color: var(--text-secondary);
-  font-style: italic;
+  background: #f8f9fa;
+  border-radius: 4px;
 } 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import OpenAI from 'openai';
-import databaseService from '../../services/data/database';
+import tableService from '../../services/data/tableService';
 import './TestGPT.css';
 import { sendWelcomeEmail } from '../../services/emailService';
 
@@ -29,7 +29,7 @@ const TestGPT = () => {
 
   const loadTables = async () => {
     try {
-      const tablesData = await databaseService.getTables();
+      const tablesData = await tableService.getTables();
       setTables(tablesData);
     } catch (error) {
       console.error('Error loading tables:', error);
@@ -53,7 +53,7 @@ const TestGPT = () => {
     setSelectedCard(''); // Clear selected card when table is selected
     if (tableName) {
       try {
-        const data = await databaseService.getData(tableName);
+        const data = await tableService.getData(tableName);
         setTableData(data);
       } catch (error) {
         console.error('Error loading table data:', error);

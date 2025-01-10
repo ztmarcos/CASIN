@@ -1,15 +1,9 @@
 const mysql = require('mysql2/promise');
-require('dotenv').config();
+const dbConfig = require('../config/database');
 
 class MySQLDatabaseService {
   constructor() {
-    this.config = {
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'crud_db',
-      port: process.env.DB_PORT || 3306
-    };
+    this.config = dbConfig;
   }
 
   async getConnection() {
@@ -102,6 +96,42 @@ class MySQLDatabaseService {
       };
     } catch (error) {
       console.error('Error inserting data:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async createTable(tableDefinition) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Always add id as primary key
+      let query = `CREATE TABLE \`${tableDefinition.name}\` (
+        \`id\` INTEGER NOT NULL AUTO_INCREMENT,`;
+      
+      // Convert user's simple column names into proper MySQL columns
+      const columnDefinitions = tableDefinition.columns.map(column => {
+        // Default all fields to VARCHAR(255) for simplicity
+        return `\`${column.name}\` VARCHAR(255)`;
+      });
+      
+      // Add all columns and primary key
+      query += columnDefinitions.join(', ');
+      query += ', PRIMARY KEY (`id`))';
+
+      console.log('Creating table with query:', query);
+
+      // Execute the query
+      await connection.execute(query);
+      
+      return {
+        success: true,
+        message: `Table ${tableDefinition.name} created successfully`
+      };
+    } catch (error) {
+      console.error('Error creating table:', error);
       throw error;
     } finally {
       if (connection) await connection.end();
