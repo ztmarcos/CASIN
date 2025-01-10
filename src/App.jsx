@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard/Dashboard'
 import DataSection from './components/DataSection/DataSection'
 import TestGPT from './components/TestGPT/TestGPT'
 import Drive from './components/Drive/Drive'
+import PDFParser from './components/PDFParser/PDFParser'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
@@ -29,6 +30,11 @@ function App() {
             <Route path="/reports" element={
               <div className="section-container">
                 <h2>Reports Section</h2>
+              </div>
+            } />
+            <Route path="/pdf-parser" element={
+              <div className="section-container">
+                <PDFParser />
               </div>
             } />
             <Route path="/datapool" element={
