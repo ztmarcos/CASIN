@@ -12,7 +12,7 @@ const TableCardView = ({ data, onCardClick }) => {
         >
           <div className="card-header">
             <span className="card-id">#{item.id}</span>
-            <span className={`card-status status-${item.status.toLowerCase()}`}>
+            <span className={`card-status status-${item.status?.toLowerCase()}`}>
               {item.status}
             </span>
           </div>

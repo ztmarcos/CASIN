@@ -15,7 +15,7 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`http://localhost:3001/drive/files${folderId ? `?folderId=${folderId}` : '?folderId=root'}`);
+      const response = await axios.get(`http://localhost:3001/api/drive/files${folderId ? `?folderId=${folderId}` : '?folderId=root'}`);
       console.log('Fetched files:', response.data);
       setFiles(response.data.files || []);
     } catch (error) {
@@ -30,7 +30,7 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get('http://localhost:3001/drive/test');
+      const response = await axios.get('http://localhost:3001/api/drive/test');
       console.log('Google Drive test response:', response.data);
       setConnectionStatus(response.data.status);
       if (response.data.status === 'Connected') {
@@ -65,7 +65,7 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.post('http://localhost:3001/drive/folders', {
+      await axios.post('http://localhost:3001/api/drive/folders', {
         name: newFolderName,
         parentId: currentFolder
       });

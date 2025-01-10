@@ -29,21 +29,27 @@
   padding: 1.5rem;
 }
 
-.table-selector {
+.data-selector {
   margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.selector-group {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.table-selector label {
+.selector-group label {
   color: var(--text-primary);
   font-family: var(--font-family-mono);
   font-size: 0.9rem;
   min-width: 150px;
 }
 
-.table-select {
+.data-select {
   padding: 0.5rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
@@ -52,6 +58,11 @@
   font-family: var(--font-family-mono);
   flex: 1;
   max-width: 300px;
+}
+
+.data-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .data-preview {
@@ -163,27 +174,35 @@
   white-space: pre-wrap;
   line-height: 1.5;
   margin-bottom: 1rem;
-  width: 100%;
   border: 1px solid var(--border-color);
-}
-
-.response-content.editable {
-  resize: vertical;
-  min-height: 200px;
-  transition: border-color 0.2s;
-}
-
-.response-content.editable:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1);
 }
 
 .email-button {
   margin-top: 1rem;
-  background-color: #28a745;
+  background-color: var(--success-color);
 }
 
 .email-button:hover:not(:disabled) {
-  background-color: #218838;
+  background-color: var(--success-color-hover);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .testgpt-container {
+    padding: 1rem;
+  }
+
+  .selector-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .selector-group label {
+    min-width: auto;
+  }
+
+  .data-select {
+    max-width: none;
+  }
 } 

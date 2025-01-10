@@ -3,7 +3,6 @@ import TableManager from '../TableManager/TableManager';
 import ColumnManager from '../ColumnManager/ColumnManager';
 import DataTable from '../DataDisplay/DataTable';
 import TableCardView from '../TableCardView/TableCardView';
-import AddEntryModal from './AddEntryModal';
 import databaseService from '../../services/data/database';
 import './DataSection.css';
 
@@ -12,7 +11,6 @@ const DataSection = () => {
   const [viewMode, setViewMode] = useState('table');
   const [tableData, setTableData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     role: ''
@@ -74,22 +72,6 @@ const DataSection = () => {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleAddEntry = () => {
-    setIsAddModalOpen(true);
-  };
-
-  const handleAddEntrySubmit = async (formData) => {
-    try {
-      await databaseService.insertData(selectedTable.name, formData);
-      setIsAddModalOpen(false);
-      await loadTableData(); // Reload table data after adding new entry
-    } catch (error) {
-      console.error('Error adding new entry:', error);
-      // TODO: Show error message to user
-      alert(error.message);
-    }
-  };
-
   return (
     <div className="data-section">
       <div className="data-section-header">
@@ -125,18 +107,6 @@ const DataSection = () => {
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M12 3v12M8 12l4 4 4-4" />
               <path d="M20 16v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3" />
-            </svg>
-          </button>
-          <button 
-            className="btn-primary"
-            onClick={handleAddEntry}
-            title="Add New Entry"
-            disabled={!selectedTable || isLoading}
-          >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="9" />
-              <line x1="12" y1="8" x2="12" y2="16" />
-              <line x1="8" y1="12" x2="16" y2="12" />
             </svg>
           </button>
         </div>
@@ -196,15 +166,6 @@ const DataSection = () => {
           </>
         )}
       </div>
-
-      {selectedTable && (
-        <AddEntryModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          table={selectedTable}
-          onSubmit={handleAddEntrySubmit}
-        />
-      )}
     </div>
   );
 };

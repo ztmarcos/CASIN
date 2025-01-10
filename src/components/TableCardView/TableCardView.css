@@ -6,61 +6,56 @@
 }
 
 .data-card {
+  background: var(--background-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background-color: var(--bg-surface);
-  overflow: hidden;
+  border-radius: 8px;
+  padding: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .data-card:hover {
-  border-color: var(--accent-color);
   transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-secondary);
+  margin-bottom: 1rem;
 }
 
 .card-id {
-  font-family: var(--font-family-mono);
-  color: var(--text-muted);
-  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 
 .card-status {
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .status-active {
-  background-color: var(--accent-color);
-  color: white;
+  background: var(--success-light);
+  color: var(--success);
 }
 
 .status-inactive {
-  background-color: var(--text-muted);
-  color: white;
+  background: var(--warning-light);
+  color: var(--warning);
 }
 
-.card-content {
-  padding: 1rem;
+.status-pending {
+  background: var(--info-light);
+  color: var(--info);
 }
 
 .card-title {
-  font-family: var(--font-family-mono);
-  font-size: 1.125rem;
+  font-size: 1.1rem;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 1rem 0;
 }
@@ -73,17 +68,23 @@
 
 .card-detail-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  font-family: var(--font-family-mono);
-  font-size: 0.875rem;
+  font-size: 0.9rem;
 }
 
 .detail-label {
-  color: var(--text-muted);
-  min-width: 100px;
+  color: var(--text-secondary);
 }
 
 .detail-value {
   color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-card-view {
+    grid-template-columns: 1fr;
+  }
 } 

@@ -1,7 +1,7 @@
 class DatabaseService {
   constructor() {
     this.apiUrl = 'http://localhost:3001/api/data';
-    // Keep the in-memory database for other tables
+    // Keep the in-memory database for demo tables
     this.database = {
       tables: {
         products: {
@@ -15,18 +15,6 @@ class DatabaseService {
             { id: 1, name: 'Product A', price: 99.99, status: 'In Stock' },
             { id: 2, name: 'Product B', price: 149.99, status: 'Out of Stock' }
           ]
-        },
-        orders: {
-          columns: [
-            { name: 'id', type: 'INTEGER', isPrimary: true },
-            { name: 'user_id', type: 'INTEGER' },
-            { name: 'total', type: 'DECIMAL(10,2)' },
-            { name: 'status', type: 'VARCHAR(50)' }
-          ],
-          data: [
-            { id: 1, user_id: 1, total: 99.99, status: 'Completed' },
-            { id: 2, user_id: 2, total: 149.99, status: 'Pending' }
-          ]
         }
       }
     };
@@ -34,58 +22,66 @@ class DatabaseService {
 
   async getTables() {
     try {
-      // Get MySQL tables
+      // Get MySQL tables first
       const response = await fetch(`${this.apiUrl}/tables`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const mysqlTables = await response.json();
-      console.log('MySQL Tables Response:', mysqlTables);
       
-      // Combine with in-memory tables
+      // Add in-memory tables
       const inMemoryTables = Object.keys(this.database.tables).map(tableName => ({
         name: tableName,
-        ...this.database.tables[tableName]
+        columns: this.database.tables[tableName].columns
       }));
       
-      const allTables = [...mysqlTables, ...inMemoryTables];
-      console.log('All Tables:', allTables);
-      return allTables;
+      return [...mysqlTables, ...inMemoryTables];
     } catch (error) {
       console.error('Error fetching tables:', error);
-      throw error;
+      // If MySQL fails, return just in-memory tables
+      return Object.keys(this.database.tables).map(tableName => ({
+        name: tableName,
+        columns: this.database.tables[tableName].columns
+      }));
     }
   }
 
   async getData(tableName, filters = {}) {
     try {
-      if (tableName === 'users') {
-        // Use MySQL for users table
+      // Check if it's a MySQL table
+      if (tableName === 'users' || tableName === 'prospeccion_cards') {
         const queryParams = new URLSearchParams(filters).toString();
         const response = await fetch(`${this.apiUrl}/${tableName}?${queryParams}`);
-        const data = await response.json();
-        console.log('MySQL Data Response:', data);
-        return data;
-      } else {
-        // Use in-memory for other tables
-        const table = this.database.tables[tableName];
-        if (!table) throw new Error(`Table ${tableName} not found`);
-        
-        let data = [...table.data];
-        
-        if (Object.keys(filters).length > 0) {
-          data = data.filter(row => {
-            return Object.entries(filters).every(([key, value]) => {
-              if (!value) return true;
-              return row[key] === value;
-            });
-          });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
-        return {
-          table: tableName,
-          columns: table.columns,
-          data,
-          timestamp: new Date().toISOString()
-        };
+        return await response.json();
       }
+      
+      // Use in-memory for other tables
+      const table = this.database.tables[tableName];
+      if (!table) {
+        throw new Error(`Table ${tableName} not found`);
+      }
+      
+      let data = [...table.data];
+      
+      // Apply filters
+      if (Object.keys(filters).length > 0) {
+        data = data.filter(row => {
+          return Object.entries(filters).every(([key, value]) => {
+            if (!value) return true;
+            return row[key] === value;
+          });
+        });
+      }
+      
+      return {
+        table: tableName,
+        columns: table.columns,
+        data,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
       console.error('Error fetching data:', error);
       throw error;
@@ -94,8 +90,8 @@ class DatabaseService {
 
   async insertData(tableName, data) {
     try {
-      if (tableName === 'users') {
-        // Use MySQL for users table
+      // Check if it's a MySQL table
+      if (tableName === 'users' || tableName === 'prospeccion_cards') {
         const response = await fetch(`${this.apiUrl}/${tableName}`, {
           method: 'POST',
           headers: {
@@ -103,50 +99,26 @@ class DatabaseService {
           },
           body: JSON.stringify(data)
         });
-        return await response.json();
-      } else {
-        // Use in-memory for other tables
-        const table = this.database.tables[tableName];
-        if (!table) throw new Error(`Table ${tableName} not found`);
-
-        const validatedData = {};
-        for (const column of table.columns) {
-          if (column.isPrimary) {
-            validatedData[column.name] = Math.max(0, ...table.data.map(row => row[column.name])) + 1;
-            continue;
-          }
-
-          const value = data[column.name];
-          if (value === undefined) {
-            throw new Error(`Missing value for column ${column.name}`);
-          }
-
-          switch (column.type.toUpperCase().split('(')[0]) {
-            case 'INTEGER':
-              validatedData[column.name] = parseInt(value);
-              if (isNaN(validatedData[column.name])) {
-                throw new Error(`Invalid integer value for column ${column.name}`);
-              }
-              break;
-
-            case 'DECIMAL':
-              validatedData[column.name] = parseFloat(value);
-              if (isNaN(validatedData[column.name])) {
-                throw new Error(`Invalid decimal value for column ${column.name}`);
-              }
-              break;
-
-            default:
-              validatedData[column.name] = String(value);
-          }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        table.data.push(validatedData);
-        return {
-          success: true,
-          data: validatedData
-        };
+        return await response.json();
       }
+      
+      // Use in-memory for other tables
+      const table = this.database.tables[tableName];
+      if (!table) {
+        throw new Error(`Table ${tableName} not found`);
+      }
+
+      const newId = Math.max(0, ...table.data.map(row => row.id)) + 1;
+      const newRow = { id: newId, ...data };
+      table.data.push(newRow);
+      
+      return {
+        success: true,
+        data: newRow
+      };
     } catch (error) {
       console.error('Error inserting data:', error);
       throw error;

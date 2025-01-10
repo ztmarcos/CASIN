@@ -1,10 +1,8 @@
 .data-table-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  width: 100%;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -13,6 +11,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
+  background: var(--background-primary);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -26,51 +25,41 @@
   padding: 0.5rem;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  background-color: var(--bg-surface);
+  background: var(--background-secondary);
   color: var(--text-primary);
 }
 
 .table-stats {
+  font-size: 0.9rem;
   color: var(--text-secondary);
-  font-size: 0.875rem;
 }
 
 .table-wrapper {
-  overflow: auto;
-  min-height: 0;
+  overflow-x: auto;
+  max-height: calc(100vh - 300px);
 }
 
 .data-table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--background-secondary);
 }
 
 .data-table th {
-  padding: 0.75rem 1rem;
+  position: sticky;
+  top: 0;
+  background: var(--background-primary);
+  padding: 1rem;
   text-align: left;
-  color: var(--text-secondary);
-  font-weight: 500;
-  background-color: var(--bg-surface);
-  border-bottom: 2px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-primary);
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .data-table th:hover {
-  color: var(--text-primary);
-}
-
-.data-table th.sorted-asc,
-.data-table th.sorted-desc {
-  color: var(--text-primary);
-  background-color: var(--bg-surface-hover);
-}
-
-.sort-indicator {
-  display: inline-block;
-  margin-left: 0.5rem;
-  font-size: 0.75rem;
+  background: var(--background-hover);
 }
 
 .data-table td {
@@ -80,16 +69,42 @@
 }
 
 .table-row {
-  cursor: pointer;
   transition: background-color 0.2s;
 }
 
-.table-row:hover td {
-  background-color: var(--bg-surface-hover);
+.table-row:hover {
+  background: var(--background-hover);
+  cursor: pointer;
+}
+
+.sort-indicator {
+  margin-left: 0.5rem;
+  color: var(--primary-color);
+}
+
+.sorted-asc, .sorted-desc {
+  color: var(--primary-color);
 }
 
 .no-data {
   text-align: center;
+  padding: 2rem;
   color: var(--text-secondary);
-  padding: 2rem !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.5rem;
+  }
 } 

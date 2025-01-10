@@ -1,58 +1,84 @@
 const express = require('express');
 const router = express.Router();
 const { google } = require('googleapis');
-const credentials = require('../pdfcasin-1091c7357015.json');
+const path = require('path');
+require('dotenv').config();
 
 // Initialize Google Drive API
 const initializeDrive = () => {
   try {
-    console.log('Initializing Google Drive with credentials:', {
+    console.log('Starting Drive initialization...');
+    
+    // Load credentials from file
+    const credentialsPath = path.join(__dirname, '..', 'pdfcasin-1091c7357015.json');
+    const credentials = require(credentialsPath);
+    
+    console.log('Credentials loaded:', {
       client_email: credentials.client_email,
       project_id: credentials.project_id
     });
 
+    // Verify required environment variables
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!folderId) {
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID environment variable is not set');
+    }
+
     const auth = new google.auth.GoogleAuth({
-      credentials: credentials,
-      scopes: ['https://www.googleapis.com/auth/drive'],
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
     });
 
-    console.log('Auth created successfully');
+    console.log('Auth object created');
     const drive = google.drive({ version: 'v3', auth });
-    console.log('Drive client created successfully');
+    console.log('Drive client created');
     return drive;
   } catch (error) {
-    console.error('Drive initialization error:', error);
+    console.error('Drive initialization error:', error.message);
+    console.error('Error stack:', error.stack);
     return null;
   }
 };
 
 // Test connection endpoint
 router.get('/test', async (req, res) => {
-  console.log('Testing Google Drive connection...');
+  console.log('Starting drive test...');
   try {
     const drive = initializeDrive();
     if (!drive) {
-      throw new Error('Failed to initialize Google Drive');
+      throw new Error('Drive initialization failed');
     }
 
-    console.log('Listing files...');
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    console.log('Using folder ID:', folderId);
+
+    console.log('Attempting to list files...');
     const response = await drive.files.list({
+      q: `'${folderId}' in parents`,
       pageSize: 10,
       fields: 'files(id, name, mimeType)',
     });
-    console.log('Files listed successfully:', response.data);
 
+    console.log('Files list response:', response.data);
     res.json({ 
       status: 'Connected', 
       message: 'Successfully connected to Google Drive',
-      files: response.data.files
+      files: response.data.files,
+      folderId: folderId
     });
   } catch (error) {
-    console.error('Drive test error:', error);
+    console.error('Drive test detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      errors: error.errors
+    });
+    
     res.status(500).json({ 
       status: 'Error', 
       message: 'Failed to connect to Google Drive',
-      error: error.message 
+      error: error.message,
+      details: error.errors
     });
   }
 });
