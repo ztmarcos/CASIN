@@ -21,6 +21,57 @@
   padding: 1.5rem;
 }
 
+.table-selector {
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.table-selector label {
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 0.9rem;
+}
+
+.table-select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-family-mono);
+  min-width: 200px;
+}
+
+.data-preview {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--bg-secondary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.data-preview h3 {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  font-family: var(--font-family-mono);
+}
+
+.data-content {
+  font-family: var(--font-family-mono);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.75rem;
+  background-color: var(--bg-surface);
+  border-radius: 4px;
+}
+
 .testgpt-form {
   display: flex;
   flex-direction: column;
