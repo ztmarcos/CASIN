@@ -1,0 +1,56 @@
+.gpt-analysis {
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 20px;
+}
+
+.analyze-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px 0;
+}
+
+.analyze-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+.error-message {
+    color: #dc3545;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #f8d7da;
+    border-radius: 4px;
+}
+
+.analysis-results {
+    margin-top: 20px;
+}
+
+.result-section {
+    margin: 15px 0;
+}
+
+.result-section h5 {
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.result-section ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.result-section li {
+    margin: 5px 0;
+    padding: 8px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+} 

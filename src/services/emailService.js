@@ -1,19 +1,20 @@
-const sendWelcomeEmail = async (emailContent) => {
+const sendWelcomeEmail = async (gptResponse, data) => {
   try {
-    const response = await fetch('http://localhost:3000/api/email/send-welcome', {
+    const response = await fetch('http://localhost:3001/api/email/send-welcome', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        content: emailContent,
-        from: 'empresas@cambiandohistorias.com.mx',
         to: 'ztmarcos@gmail.com',
+        gptResponse,
+        ...data
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to send email');
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send email');
     }
 
     const result = await response.json();

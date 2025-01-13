@@ -4,7 +4,7 @@ import tableService from '../../services/data/tableService';
 import './TestGPT.css';
 import { sendWelcomeEmail } from '../../services/emailService';
 
-const API_URL = 'http://localhost:3000/api';
+const API_URL = 'http://localhost:3001/api';
 
 const TestGPT = () => {
   const [input, setInput] = useState('');
@@ -122,7 +122,21 @@ const TestGPT = () => {
 
       // If we're working with a table, send email
       if (selectedTable) {
-        await sendWelcomeEmail(gptResponse);
+        await sendWelcomeEmail(gptResponse, {
+          clientName: tableData?.data[0]?.nombre || 'Cliente',
+          policyNumber: tableData?.data[0]?.poliza || 'POL-' + new Date().getTime(),
+          insuranceType: tableData?.data[0]?.tipo || 'Seguro',
+          startDate: new Date().toLocaleDateString('es-MX'),
+          coverage: tableData?.data[0]?.cobertura || 'Por definir',
+          insuranceCompany: 'Cambiando Historias',
+          emergencyPhone: '800-123-4567',
+          supportEmail: 'soporte@cambiandohistorias.com.mx',
+          policyUrl: '#',
+          companyAddress: 'Av. Reforma 123, CDMX, México',
+          companyName: 'Cambiando Historias',
+          currentYear: new Date().getFullYear(),
+          gptResponse: gptResponse
+        });
       }
       // If we're working with a prospeccion card, update its analysis
       else if (selectedCard) {
@@ -137,7 +151,11 @@ const TestGPT = () => {
       }
     } catch (error) {
       console.error('Error:', error);
-      setResponse('Error: No se pudo obtener respuesta de GPT');
+      setResponse(`Error: ${error.message || 'No se pudo obtener respuesta de GPT'}`);
+      if (error.response) {
+        console.error('Error response:', error.response.data);
+        setResponse(`Error: ${error.response.data.error || error.message}`);
+      }
     } finally {
       setLoading(false);
     }
