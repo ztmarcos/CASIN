@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const mysqlDatabase = require('./services/mysqlDatabase');
 const prospeccionRoutes = require('./routes/prospeccionRoutes');
+const fileRoutes = require('./routes/fileRoutes');
+const dataRoutes = require('./routes/dataRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -12,6 +14,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/prospeccion', prospeccionRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/data', dataRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

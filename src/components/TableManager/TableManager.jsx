@@ -9,6 +9,9 @@ const TableManager = ({ onTableSelect }) => {
   const [newTableName, setNewTableName] = useState('');
   const [columnNames, setColumnNames] = useState(['']);
   const [error, setError] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     loadTables();
@@ -81,6 +84,82 @@ const TableManager = ({ onTableSelect }) => {
       console.error('Error creating table:', err);
       setError('Failed to create table');
     }
+  };
+
+  const handleFileUpload = async (event, recordId) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      await tableService.uploadFile(selectedTable.name, recordId, file);
+      loadFilesForRecord(recordId);
+      setError(null);
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      setError('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const loadFilesForRecord = async (recordId) => {
+    try {
+      const filesData = await tableService.getFilesForRecord(selectedTable.name, recordId);
+      setFiles(filesData);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading files:', err);
+      setError('Failed to load files');
+    }
+  };
+
+  const handleDeleteFile = async (fileId) => {
+    try {
+      await tableService.deleteFile(fileId);
+      setFiles(files.filter(f => f.id !== fileId));
+      setError(null);
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      setError('Failed to delete file');
+    }
+  };
+
+  const renderFileSection = () => {
+    if (!selectedRecord) return null;
+
+    return (
+      <div className="files-section">
+        <h3>Files</h3>
+        <div className="file-upload">
+          <input
+            type="file"
+            onChange={(e) => handleFileUpload(e, selectedRecord.id)}
+            disabled={isUploading}
+          />
+          {isUploading && <span>Uploading...</span>}
+        </div>
+        
+        <div className="files-list">
+          {files.map(file => (
+            <div key={file.id} className="file-item">
+              <a href={file.url} target="_blank" rel="noopener noreferrer">
+                {file.original_name}
+              </a>
+              <button
+                onClick={() => handleDeleteFile(file.id)}
+                className="btn-icon"
+                title="Delete file"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -176,6 +255,7 @@ const TableManager = ({ onTableSelect }) => {
               </div>
             ))}
           </div>
+          {renderFileSection()}
         </div>
       )}
     </div>

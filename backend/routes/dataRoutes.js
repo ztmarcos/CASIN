@@ -13,17 +13,6 @@ router.get('/tables', async (req, res) => {
   }
 });
 
-// Create new table
-router.post('/tables', async (req, res) => {
-  try {
-    const result = await mysqlDatabase.createTable(req.body);
-    res.json(result);
-  } catch (error) {
-    console.error('Error creating table:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Get table data
 router.get('/:tableName', async (req, res) => {
   try {
@@ -42,6 +31,17 @@ router.post('/:tableName', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error inserting data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create new table
+router.post('/tables', async (req, res) => {
+  try {
+    const result = await mysqlDatabase.createTable(req.body);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating table:', error);
     res.status(500).json({ error: error.message });
   }
 });
