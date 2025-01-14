@@ -94,25 +94,36 @@ class MySQLDatabaseService {
   }
 
   async insertData(tableName, data) {
-    let connection;
     try {
-      connection = await this.getConnection();
-      const columns = Object.keys(data).join(', ');
-      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      // Remove id if it's null or empty string
+      if (data.id === null || data.id === '') {
+        delete data.id;
+      }
+
+      // Clean numeric values
+      const numericColumns = ['prima_neta', 'derecho_de_p__liza', 'i_v_a__16_', 
+        'recargo_por_pago_fraccionado', 'importe_total_a_pagar', 'monto_parcial'];
+      
+      for (const column of numericColumns) {
+        if (column in data) {
+          data[column] = data[column].replace(/[^0-9.]/g, '');
+        }
+      }
+
+      const columns = Object.keys(data);
       const values = Object.values(data);
-
-      const query = `INSERT INTO ${tableName} (${columns}) VALUES (${placeholders})`;
-      const [result] = await connection.execute(query, values);
-
+      const placeholders = columns.map(() => '?').join(',');
+      
+      const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
+      const [result] = await this.connection.execute(query, values);
+      
       return {
         success: true,
-        data: { ...data, id: result.insertId }
+        insertId: result.insertId
       };
     } catch (error) {
-      console.error('Error inserting data:', error);
+      console.error('Database error:', error);
       throw error;
-    } finally {
-      if (connection) await connection.end();
     }
   }
 

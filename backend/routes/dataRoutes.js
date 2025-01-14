@@ -27,8 +27,16 @@ router.get('/:tableName', async (req, res) => {
 // Insert data into table
 router.post('/:tableName', async (req, res) => {
   try {
-    const result = await mysqlDatabase.insertData(req.params.tableName, req.body);
-    res.json(result);
+    const { tableName } = req.params;
+    const data = req.body;
+    
+    // Remove id field for auto-increment
+    if ('id' in data) {
+      delete data.id;
+    }
+    
+    const result = await mysqlDatabase.insertData(tableName, data);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error inserting data:', error);
     res.status(500).json({ error: error.message });
