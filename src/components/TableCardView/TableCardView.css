@@ -144,4 +144,24 @@
   .table-card-view {
     grid-template-columns: 1fr;
   }
+}
+
+.data-card.birthday-card {
+  border-left: 4px solid var(--accent-color);
+}
+
+.data-card.birthday-card .card-source-table {
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.data-card .card-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.status-senior {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
 } 

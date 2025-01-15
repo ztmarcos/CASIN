@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TableCardView from '../TableCardView/TableCardView';
 import tableService from '../../services/data/tableService';
+import { fetchBirthdays } from '../../services/birthdayService';
 import './Datapool.css';
 
 const Datapool = () => {
@@ -24,13 +25,23 @@ const Datapool = () => {
           const result = await tableService.getData(table.name);
           return result.data.map(item => ({
             ...item,
-            _sourceTable: table.name // Add source table info to each item
+            _sourceTable: table.name
           }));
         })
       );
 
-      // Flatten all data into a single array
-      const flattenedData = allTableData.flat();
+      // Fetch birthdays
+      const birthdaysData = await fetchBirthdays();
+      const formattedBirthdays = birthdaysData.map(birthday => ({
+        ...birthday,
+        _sourceTable: 'birthdays',
+        name: birthday.name,
+        details: `${birthday.formattedDate} (${birthday.age} años)`,
+        status: birthday.age >= 60 ? 'Senior' : 'Active'
+      }));
+
+      // Combine all data
+      const flattenedData = [...allTableData.flat(), ...formattedBirthdays];
       setAllData(flattenedData);
       setError(null);
     } catch (err) {
@@ -42,8 +53,12 @@ const Datapool = () => {
   };
 
   const handleCardClick = (item) => {
-    console.log('Selected item:', item);
-    // You can implement additional functionality here
+    if (item._sourceTable === 'birthdays') {
+      // Handle birthday card click differently if needed
+      console.log('Birthday card clicked:', item);
+    } else {
+      console.log('Selected item:', item);
+    }
   };
 
   if (isLoading) {

@@ -17,6 +17,59 @@ const TableCardView = ({ data, onCardClick }) => {
     });
   };
 
+  const renderCardContent = (item, isExpanded) => {
+    if (item._sourceTable === 'birthdays') {
+      return (
+        <>
+          <h3 className="card-title">{item.name}</h3>
+          <div className="card-subtitle">{item.details}</div>
+          {isExpanded && (
+            <div className="card-details">
+              <div className="card-detail-item">
+                <span className="detail-label">└─ RFC:</span>
+                <span className="detail-value">{item.rfc}</span>
+              </div>
+              {item.details && (
+                <div className="card-detail-item">
+                  <span className="detail-label">└─ Detalles:</span>
+                  <span className="detail-value">{item.details}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <h3 className="card-title">{item.name || 'Untitled'}</h3>
+        {isExpanded && (
+          <div className="card-details">
+            {Object.entries(item).map(([key, value]) => {
+              if (key !== 'id' && 
+                  key !== 'name' && 
+                  key !== 'status' && 
+                  key !== '_sourceTable' &&
+                  value !== null && 
+                  value !== undefined) {
+                return (
+                  <div key={key} className="card-detail-item">
+                    <span className="detail-label">└─ {key}:</span>
+                    <span className="detail-value">
+                      {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
     <div className="table-card-view">
       {data.map((item, index) => {
@@ -26,7 +79,7 @@ const TableCardView = ({ data, onCardClick }) => {
         return (
           <div 
             key={cardId}
-            className="data-card"
+            className={`data-card ${item._sourceTable === 'birthdays' ? 'birthday-card' : ''}`}
             onClick={() => onCardClick(item)}
           >
             <div className="card-header">
@@ -55,29 +108,7 @@ const TableCardView = ({ data, onCardClick }) => {
             </div>
             
             <div className={`card-content ${isExpanded ? 'expanded' : ''}`}>
-              <h3 className="card-title">{item.name || 'Untitled'}</h3>
-              {isExpanded && (
-                <div className="card-details">
-                  {Object.entries(item).map(([key, value]) => {
-                    if (key !== 'id' && 
-                        key !== 'name' && 
-                        key !== 'status' && 
-                        key !== '_sourceTable' &&
-                        value !== null && 
-                        value !== undefined) {
-                      return (
-                        <div key={key} className="card-detail-item">
-                          <span className="detail-label">└─ {key}:</span>
-                          <span className="detail-value">
-                            {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
-                          </span>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              )}
+              {renderCardContent(item, isExpanded)}
             </div>
           </div>
         );
