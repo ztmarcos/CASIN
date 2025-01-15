@@ -94,10 +94,16 @@ class MySQLDatabaseService {
   }
 
   async insertData(tableName, data) {
+    let connection;
     try {
+      connection = await this.getConnection();
+
+      // Create a copy of data to avoid modifying the original
+      const cleanedData = { ...data };
+
       // Remove id if it's null or empty string
-      if (data.id === null || data.id === '') {
-        delete data.id;
+      if (cleanedData.id === null || cleanedData.id === '') {
+        delete cleanedData.id;
       }
 
       // Clean numeric values
@@ -105,17 +111,41 @@ class MySQLDatabaseService {
         'recargo_por_pago_fraccionado', 'importe_total_a_pagar', 'monto_parcial'];
       
       for (const column of numericColumns) {
-        if (column in data) {
-          data[column] = data[column].replace(/[^0-9.]/g, '');
+        if (column in cleanedData) {
+          let value = cleanedData[column];
+          
+          // Skip null values
+          if (value === null) {
+            cleanedData[column] = 0;
+            continue;
+          }
+
+          // Convert to string if it's a number
+          if (typeof value === 'number') {
+            value = value.toString();
+          }
+
+          // Only try to clean if it's a string
+          if (typeof value === 'string') {
+            // Remove currency symbols and commas
+            const cleanValue = value.replace(/[$,]/g, '');
+            cleanedData[column] = parseFloat(cleanValue) || 0;
+          } else {
+            // For any other type, set to 0
+            cleanedData[column] = 0;
+          }
         }
       }
 
-      const columns = Object.keys(data);
-      const values = Object.values(data);
+      const columns = Object.keys(cleanedData);
+      const values = Object.values(cleanedData);
       const placeholders = columns.map(() => '?').join(',');
       
       const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
-      const [result] = await this.connection.execute(query, values);
+      console.log('Insert query:', query);
+      console.log('Values:', values);
+      
+      const [result] = await connection.execute(query, values);
       
       return {
         success: true,
@@ -124,6 +154,8 @@ class MySQLDatabaseService {
     } catch (error) {
       console.error('Database error:', error);
       throw error;
+    } finally {
+      if (connection) await connection.end();
     }
   }
 

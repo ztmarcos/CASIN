@@ -1,7 +1,6 @@
 class TableService {
   constructor() {
-    this.apiUrl = 'http://localhost:3001/api/data';
-    this.fileApiUrl = 'http://localhost:3001/api/files';
+    this.apiUrl = 'http://192.168.1.125:3001/api/data';
   }
 
   async getTables() {
@@ -33,6 +32,9 @@ class TableService {
 
   async insertData(tableName, data) {
     try {
+      console.log(`Inserting data into table: ${tableName}`);
+      console.log('Data to insert:', data);
+
       const response = await fetch(`${this.apiUrl}/${tableName}`, {
         method: 'POST',
         headers: {
@@ -40,12 +42,18 @@ class TableService {
         },
         body: JSON.stringify(data)
       });
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        throw new Error(errorText || `Failed to insert data into ${tableName}`);
       }
-      return await response.json();
+
+      const result = await response.json();
+      console.log('Insert response:', result);
+      return result;
     } catch (error) {
-      console.error('Error inserting data:', error);
+      console.error('Error in insertData:', error);
       throw error;
     }
   }
@@ -65,54 +73,6 @@ class TableService {
       return await response.json();
     } catch (error) {
       console.error('Error creating table:', error);
-      throw error;
-    }
-  }
-
-  async uploadFile(tableName, recordId, file) {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const response = await fetch(`${this.fileApiUrl}/upload/${tableName}/${recordId}`, {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      throw error;
-    }
-  }
-
-  async getFilesForRecord(tableName, recordId) {
-    try {
-      const response = await fetch(`${this.fileApiUrl}/${tableName}/${recordId}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error getting files:', error);
-      throw error;
-    }
-  }
-
-  async deleteFile(fileId) {
-    try {
-      const response = await fetch(`${this.fileApiUrl}/${fileId}`, {
-        method: 'DELETE'
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error('Error deleting file:', error);
       throw error;
     }
   }

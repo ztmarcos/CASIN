@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import tableService from '../../services/data/tableService';
 import './GPTAnalysis.css';
 
 const GPTAnalysis = ({ parsedData, tables }) => {
@@ -8,15 +9,14 @@ const GPTAnalysis = ({ parsedData, tables }) => {
     const [dbTables, setDbTables] = useState([]);
     const [selectedTable, setSelectedTable] = useState('');
     const [mappedData, setMappedData] = useState(null);
+    const [message, setMessage] = useState(null);
 
     // Fetch available tables and their columns
     useEffect(() => {
         const fetchTables = async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/data/tables');
-                if (!response.ok) throw new Error('Failed to fetch tables');
-                const data = await response.json();
-                setDbTables(data);
+                const tables = await tableService.getTables();
+                setDbTables(tables);
             } catch (err) {
                 console.error('Error fetching tables:', err);
                 setError('Failed to fetch database tables');
@@ -24,6 +24,11 @@ const GPTAnalysis = ({ parsedData, tables }) => {
         };
         fetchTables();
     }, []);
+
+    const handleTableSelect = (tableName) => {
+        console.log('Selected table name:', tableName);
+        setSelectedTable(tableName);
+    };
 
     const analyzeContent = async () => {
         if (!selectedTable) {
@@ -69,9 +74,15 @@ const GPTAnalysis = ({ parsedData, tables }) => {
             setAnalysis(result);
             if (result.mappedData) {
                 console.log('Mapped Data:', result.mappedData); // Debug log
-                setMappedData(result.mappedData);
+                // Ensure mappedData is an object with column keys
+                if (typeof result.mappedData === 'object' && !Array.isArray(result.mappedData)) {
+                    setMappedData(result.mappedData);
+                } else {
+                    console.error('Invalid mapped data format:', result.mappedData);
+                    throw new Error('Invalid mapped data format received');
+                }
             } else {
-                console.error('Missing mapped data in result:', result); // Debug log
+                console.error('Missing mapped data in result:', result);
                 throw new Error('No mapped data received from analysis');
             }
         } catch (err) {
@@ -86,33 +97,37 @@ const GPTAnalysis = ({ parsedData, tables }) => {
         }
     };
 
-    const insertData = async () => {
-        if (!mappedData || !selectedTable) {
-            setError('No data to insert');
-            return;
-        }
-
+    const handleDataInsertion = async (data) => {
         try {
-            const response = await fetch(`http://localhost:3001/api/data/${selectedTable}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(mappedData),
+            // Clean numeric values
+            const numericFields = ['prima_neta', 'derecho_de_p__liza', 'i_v_a__16_', 
+                'recargo_por_pago_fraccionado', 'importe_total_a_pagar', 'monto_parcial'];
+            
+            const cleanData = { ...data };
+            
+            // Clean numeric values
+            Object.entries(cleanData).forEach(([key, value]) => {
+                if (numericFields.includes(key) && value !== null && value !== '') {
+                    // Remove currency symbols and commas
+                    const numStr = value.toString().replace(/[$,]/g, '');
+                    const numValue = parseFloat(numStr) || 0;
+                    cleanData[key] = numValue;
+                }
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to insert data');
-            }
+            console.log('Selected table:', selectedTable);
+            console.log('Cleaned data for insertion:', cleanData);
 
-            const result = await response.json();
-            alert('Data inserted successfully!');
-            // Clear the mapped data after successful insertion
-            setMappedData(null);
+            // Insert the data
+            const result = await tableService.insertData(selectedTable, cleanData);
+            console.log('Data insertion result:', result);
+            
+            setMessage('Data inserted successfully');
+            setError(null);
         } catch (err) {
-            setError('Failed to insert data: ' + err.message);
             console.error('Error inserting data:', err);
+            setError(err.message || 'Failed to insert data');
+            setMessage(null);
         }
     };
 
@@ -123,7 +138,7 @@ const GPTAnalysis = ({ parsedData, tables }) => {
             <div className="table-selection">
                 <select 
                     value={selectedTable}
-                    onChange={(e) => setSelectedTable(e.target.value)}
+                    onChange={(e) => handleTableSelect(e.target.value)}
                     className="table-select"
                 >
                     <option value="">Select Target Table</option>
@@ -220,7 +235,7 @@ const GPTAnalysis = ({ parsedData, tables }) => {
                     </div>
                     <div className="button-container">
                         <button 
-                            onClick={insertData}
+                            onClick={() => handleDataInsertion(mappedData)}
                             className="insert-button"
                             disabled={!mappedData}
                         >
