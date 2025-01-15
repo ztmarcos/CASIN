@@ -1,94 +1,180 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import EditColumn from '../EditColumn/EditColumn';
+import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
 
-const ColumnManager = ({ selectedTable }) => {
-  const [columns, setColumns] = useState([
-    { id: 1, name: 'id', type: 'INTEGER', isPrimary: true },
-    { id: 2, name: 'name', type: 'VARCHAR', length: 255 },
-    { id: 3, name: 'created_at', type: 'TIMESTAMP' }
-  ]);
+const SortableItem = ({ id, column }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
 
-  const [newColumn, setNewColumn] = useState({
-    name: '',
-    type: 'VARCHAR',
-    length: '',
-    isPrimary: false
-  });
-
-  const dataTypes = [
-    'INTEGER',
-    'VARCHAR',
-    'TEXT',
-    'TIMESTAMP',
-    'BOOLEAN',
-    'DECIMAL'
-  ];
-
-  const handleNewColumnSubmit = (e) => {
-    e.preventDefault();
-    const columnId = columns.length + 1;
-    setColumns([...columns, { ...newColumn, id: columnId }]);
-    setNewColumn({ name: '', type: 'VARCHAR', length: '', isPrimary: false });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
   };
 
   return (
+    <span
+      ref={setNodeRef}
+      style={style}
+      className="column-tag"
+      {...attributes}
+      {...listeners}
+    >
+      {id === 'col-id' ? '🔑 ' : ''}{column}
+    </span>
+  );
+};
+
+const ColumnManager = ({ selectedTable, onOrderChange }) => {
+  const [columns, setColumns] = useState([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const loadColumns = async () => {
+    try {
+      setIsLoading(true);
+      const response = await tableService.getData(selectedTable.name, { limit: 1 });
+      if (response.data && response.data.length > 0) {
+        const columnNames = Object.keys(response.data[0]);
+        setColumns(columnNames);
+      } else {
+        setColumns([]);
+      }
+    } catch (error) {
+      console.error('Error loading columns:', error);
+      setError('Failed to load columns');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTable) {
+      loadColumns();
+    }
+  }, [selectedTable]);
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    // Remove 'col-' prefix to get actual column names
+    const oldIndex = columns.findIndex(col => `col-${col}` === active.id);
+    const newIndex = columns.findIndex(col => `col-${col}` === over.id);
+
+    const newColumns = arrayMove(columns, oldIndex, newIndex);
+    
+    try {
+      // Update local state first for immediate feedback
+      setColumns(newColumns);
+      
+      // Update in the database
+      await tableService.updateColumnOrder(selectedTable.name, newColumns);
+      
+      // Refresh to ensure we're showing the current database state
+      await loadColumns();
+
+      // Notify parent to refresh data
+      if (onOrderChange) {
+        onOrderChange();
+      }
+    } catch (error) {
+      console.error('Failed to update column order:', error);
+      // Revert on error
+      setColumns(columns);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <EditColumn 
+        columns={columns} 
+        onSave={(updatedColumns) => {
+          setColumns(updatedColumns);
+          setIsEditing(false);
+        }}
+        onCancel={() => setIsEditing(false)}
+      />
+    );
+  }
+
+  return (
     <div className="column-manager">
-      <div className="column-manager-header">
-        <h3>┌─ Columns: {selectedTable?.name || 'No table selected'} ─┐</h3>
+      <div className="section-header">
+        <h3>
+          <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
+            {isCollapsed ? '▶' : '▼'}
+          </span>
+          Columns {columns.length > 0 && `(${columns.length})`}
+        </h3>
+        <button className="edit-btn" onClick={() => setIsEditing(true)}>
+          Edit
+        </button>
       </div>
 
-      <div className="column-list">
-        {columns.map(column => (
-          <div key={column.id} className="column-item">
-            <span className="column-icon">└─</span>
-            <span className="column-name">{column.name}</span>
-            <span className="column-type">
-              {column.type}
-              {column.length ? `(${column.length})` : ''}
-            </span>
-            {column.isPrimary && (
-              <span className="column-primary">PK</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <form className="new-column-form" onSubmit={handleNewColumnSubmit}>
-        <input
-          type="text"
-          placeholder="Column name"
-          value={newColumn.name}
-          onChange={(e) => setNewColumn({ ...newColumn, name: e.target.value })}
-          className="column-input"
-        />
-        <select
-          value={newColumn.type}
-          onChange={(e) => setNewColumn({ ...newColumn, type: e.target.value })}
-          className="column-input"
-        >
-          {dataTypes.map(type => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-        {newColumn.type === 'VARCHAR' && (
-          <input
-            type="number"
-            placeholder="Length"
-            value={newColumn.length}
-            onChange={(e) => setNewColumn({ ...newColumn, length: e.target.value })}
-            className="column-input column-length"
-          />
-        )}
-        <label className="column-primary-label">
-          <input
-            type="checkbox"
-            checked={newColumn.isPrimary}
-            onChange={(e) => setNewColumn({ ...newColumn, isPrimary: e.target.checked })}
-          />
-          Primary Key
-        </label>
-        <button type="submit" className="btn-primary">Add Column</button>
-      </form>
+      {!isCollapsed && (
+        <div className="columns-list">
+          {!selectedTable ? (
+            <div className="no-table-message">Select a table</div>
+          ) : columns.length === 0 ? (
+            <div className="no-columns-message">No columns</div>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={columns.map(col => `col-${col}`)}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="columns-tags">
+                  {columns.map((column) => (
+                    <SortableItem 
+                      key={`col-${column}`}
+                      id={`col-${column}`}
+                      column={column}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      )}
     </div>
   );
 };

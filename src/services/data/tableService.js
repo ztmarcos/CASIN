@@ -32,9 +32,6 @@ class TableService {
 
   async insertData(tableName, data) {
     try {
-      console.log(`Inserting data into table: ${tableName}`);
-      console.log('Data to insert:', data);
-
       const response = await fetch(`${this.apiUrl}/${tableName}`, {
         method: 'POST',
         headers: {
@@ -45,37 +42,51 @@ class TableService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Server error response:', errorText);
         throw new Error(errorText || `Failed to insert data into ${tableName}`);
       }
 
-      const result = await response.json();
-      console.log('Insert response:', result);
-      return result;
+      return await response.json();
     } catch (error) {
-      console.error('Error in insertData:', error);
+      console.error('Error inserting data:', error);
       throw error;
     }
   }
 
-  async createTable(tableDefinition) {
+  async getTableStructure(tableName) {
     try {
-      const response = await fetch(`${this.apiUrl}/tables`, {
-        method: 'POST',
+      const response = await fetch(`${this.apiUrl}/${tableName}/structure`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Table structure response:', data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching table structure:', error);
+      throw error;
+    }
+  }
+
+  async updateColumnOrder(tableName, columnOrder) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/order`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(tableDefinition)
+        body: JSON.stringify({ columnOrder })
       });
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       return await response.json();
     } catch (error) {
-      console.error('Error creating table:', error);
+      console.error('Error updating column order:', error);
       throw error;
     }
   }
 }
 
-export default new TableService(); 
+const tableService = new TableService();
+export default tableService; 

@@ -106,6 +106,19 @@ const DataSection = () => {
     }
   };
 
+  const handleColumnOrderChange = async () => {
+    // Force a refresh of the table data
+    setIsLoading(true);
+    try {
+      const result = await tableService.getData(selectedTable.name, filters);
+      setTableData(result.data || []);
+    } catch (error) {
+      console.error('Error refreshing table data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="data-section">
       <div className="data-section-header">
@@ -173,7 +186,12 @@ const DataSection = () => {
       <div className="data-section-content">
         <div className="managers-container">
           <TableManager onTableSelect={handleTableSelect} />
-          {selectedTable && <ColumnManager selectedTable={selectedTable} />}
+          {selectedTable && (
+            <ColumnManager 
+              selectedTable={selectedTable} 
+              onOrderChange={handleColumnOrderChange}
+            />
+          )}
         </div>
 
         {selectedTable && (

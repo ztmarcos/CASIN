@@ -54,4 +54,34 @@ router.post('/tables', async (req, res) => {
   }
 });
 
+// Update column order
+router.put('/tables/:tableName/columns/order', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const { columnOrder } = req.body;
+    
+    if (!columnOrder || !Array.isArray(columnOrder)) {
+      return res.status(400).json({ error: 'Column order must be an array' });
+    }
+
+    const result = await mysqlDatabase.updateColumnOrder(tableName, columnOrder);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating column order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Modify table structure
+router.post('/tables/:tableName/structure', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const result = await mysqlDatabase.modifyTableStructure(tableName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error modifying table structure:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

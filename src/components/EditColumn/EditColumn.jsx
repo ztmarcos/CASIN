@@ -1,152 +1,128 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import './EditColumn.css';
 
-const EditColumn = ({ selectedTable, onColumnsUpdate }) => {
-  const [columns, setColumns] = useState([]);
+const SortableItem = ({ id, column, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id });
 
-  useEffect(() => {
-    if (selectedTable && selectedTable.columns) {
-      setColumns(selectedTable.columns.map((col, index) => ({
-        ...col,
-        id: col.id || String(index + 1)
-      })));
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`column-item ${column.isPrimary ? 'primary' : ''}`}
+      {...attributes}
+    >
+      <span className="drag-handle" {...listeners}>⋮⋮</span>
+      <input
+        type="text"
+        className="column-input name-input"
+        value={column.name}
+        disabled={column.isPrimary}
+      />
+      <select
+        className="column-input type-select"
+        value={column.type}
+        disabled={column.isPrimary}
+      >
+        <option value="VARCHAR">VARCHAR</option>
+        <option value="INTEGER">INTEGER</option>
+        <option value="DECIMAL">DECIMAL</option>
+        <option value="DATE">DATE</option>
+        <option value="BOOLEAN">BOOLEAN</option>
+      </select>
+      {column.isPrimary ? (
+        <span className="primary-badge">Primary Key</span>
+      ) : (
+        <button className="delete-btn" onClick={() => onDelete(column.name)}>×</button>
+      )}
+    </div>
+  );
+};
+
+const EditColumn = ({ columns, onSave, onCancel }) => {
+  const [editableColumns, setEditableColumns] = useState(columns);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (active.id !== over.id) {
+      setEditableColumns((items) => {
+        const oldIndex = items.findIndex(item => `col-${item.name}` === active.id);
+        const newIndex = items.findIndex(item => `col-${item.name}` === over.id);
+        
+        return arrayMove(items, oldIndex, newIndex);
+      });
     }
-  }, [selectedTable]);
-
-  const handleDragEnd = (result) => {
-    if (!result.destination) return;
-    const reorderedColumns = Array.from(columns);
-    const [removed] = reorderedColumns.splice(result.source.index, 1);
-    reorderedColumns.splice(result.destination.index, 0, removed);
-    setColumns(reorderedColumns);
-    onColumnsUpdate?.(reorderedColumns);
   };
 
-  const handleDelete = (id) => {
-    const updatedColumns = columns.filter(column => column.id !== id);
-    setColumns(updatedColumns);
-    onColumnsUpdate?.(updatedColumns);
+  const handleDelete = (columnName) => {
+    setEditableColumns(columns => columns.filter(col => col.name !== columnName));
   };
-
-  const handleEdit = (id, field, value) => {
-    const updatedColumns = columns.map(column => {
-      if (column.id === id) {
-        return { ...column, [field]: value };
-      }
-      return column;
-    });
-    setColumns(updatedColumns);
-    onColumnsUpdate?.(updatedColumns);
-  };
-
-  const handleAddColumn = () => {
-    const newColumn = { 
-      id: Date.now().toString(), 
-      name: `New Column`, 
-      type: 'VARCHAR',
-      length: '255',
-      isPrimary: false
-    };
-    const updatedColumns = [...columns, newColumn];
-    setColumns(updatedColumns);
-    onColumnsUpdate?.(updatedColumns);
-  };
-
-  const DATA_TYPES = ['VARCHAR', 'INTEGER', 'TEXT', 'TIMESTAMP', 'BOOLEAN', 'DATE', 'JSON'];
-
-  if (!selectedTable) return null;
 
   return (
     <div className="edit-column-container">
       <div className="edit-column-header">
-        <h3>Edit Columns: {selectedTable.name}</h3>
-        <button className="btn-primary" onClick={handleAddColumn}>
-          <span className="btn-icon">+</span> Add Column
-        </button>
+        <h3>Edit Columns</h3>
+        <div>
+          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
+          <button className="btn-primary" onClick={() => onSave(editableColumns)}>Save</button>
+        </div>
       </div>
 
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <Droppable droppableId="columns">
-          {(provided) => (
-            <ul 
-              className="columns-list"
-              {...provided.droppableProps} 
-              ref={provided.innerRef}
-            >
-              {columns.map((column, index) => (
-                <Draggable 
-                  key={column.id} 
-                  draggableId={column.id} 
-                  index={index}
-                  isDragDisabled={column.isPrimary}
-                >
-                  {(provided, snapshot) => (
-                    <li 
-                      className={`column-item ${snapshot.isDragging ? 'dragging' : ''} ${column.isPrimary ? 'primary' : ''}`}
-                      ref={provided.innerRef} 
-                      {...provided.draggableProps}
-                    >
-                      <div 
-                        className="drag-handle"
-                        {...provided.dragHandleProps}
-                      >
-                        ⋮⋮
-                      </div>
-                      
-                      <input
-                        type="text"
-                        className="column-input name-input"
-                        value={column.name}
-                        onChange={(e) => handleEdit(column.id, 'name', e.target.value)}
-                        placeholder="Column name"
-                        disabled={column.isPrimary}
-                      />
-
-                      <select
-                        className="column-input type-select"
-                        value={column.type.split('(')[0]}
-                        onChange={(e) => handleEdit(column.id, 'type', e.target.value)}
-                        disabled={column.isPrimary}
-                      >
-                        {DATA_TYPES.map(type => (
-                          <option key={type} value={type}>{type}</option>
-                        ))}
-                      </select>
-
-                      {column.type.startsWith('VARCHAR') && (
-                        <input
-                          type="number"
-                          className="column-input length-input"
-                          value={column.type.match(/\((\d+)\)/)?.[1] || '255'}
-                          onChange={(e) => handleEdit(column.id, 'type', `VARCHAR(${e.target.value})`)}
-                          placeholder="Length"
-                          min="1"
-                          max="255"
-                          disabled={column.isPrimary}
-                        />
-                      )}
-
-                      {column.isPrimary ? (
-                        <span className="primary-badge">PK</span>
-                      ) : (
-                        <button 
-                          className="btn-icon delete-btn"
-                          onClick={() => handleDelete(column.id)}
-                          title="Delete column"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </li>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </ul>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={editableColumns.map(col => `col-${col.name}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="columns-list">
+            {editableColumns.map((column) => (
+              <SortableItem
+                key={`col-${column.name}`}
+                id={`col-${column.name}`}
+                column={column}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 };
