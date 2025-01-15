@@ -7,6 +7,13 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     host: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false
+      }
+    },
     watch: {
       usePolling: true,
       interval: 1000,
