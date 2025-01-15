@@ -6,6 +6,7 @@ const Birthdays = () => {
   const [birthdays, setBirthdays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadBirthdays = async () => {
@@ -23,8 +24,18 @@ const Birthdays = () => {
     loadBirthdays();
   }, []);
 
+  // Filter birthdays based on search term
+  const filteredBirthdays = birthdays.filter(birthday => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      birthday.name?.toLowerCase().includes(searchLower) ||
+      birthday.rfc?.toLowerCase().includes(searchLower) ||
+      birthday.details?.toLowerCase().includes(searchLower)
+    );
+  });
+
   // Group birthdays by month
-  const groupedBirthdays = birthdays.reduce((groups, birthday) => {
+  const groupedBirthdays = filteredBirthdays.reduce((groups, birthday) => {
     const month = birthday.date.toLocaleString('es-MX', { month: 'long' });
     if (!groups[month]) {
       groups[month] = [];
@@ -38,6 +49,29 @@ const Birthdays = () => {
       <div className="birthdays-header">
         <h2>Cumpleaños</h2>
         <div className="header-actions">
+          <div className="search-container">
+            <input
+              type="text"
+              className="search-input"
+              placeholder="Buscar por nombre, RFC o póliza..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <svg 
+              className="search-icon" 
+              xmlns="http://www.w3.org/2000/svg" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              strokeWidth={1.5} 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" 
+              />
+            </svg>
+          </div>
           <button className="btn-primary">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -51,9 +85,13 @@ const Birthdays = () => {
         <div className="loading-state">Cargando...</div>
       ) : error ? (
         <div className="error-state">{error}</div>
-      ) : birthdays.length === 0 ? (
+      ) : filteredBirthdays.length === 0 ? (
         <div className="empty-state">
-          <p>No hay cumpleaños registrados</p>
+          {searchTerm ? (
+            <p>No se encontraron resultados para "{searchTerm}"</p>
+          ) : (
+            <p>No hay cumpleaños registrados</p>
+          )}
         </div>
       ) : (
         <div className="birthdays-content">
