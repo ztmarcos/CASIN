@@ -222,6 +222,111 @@ class TableService {
     }
   }
 
+  async addColumn(tableName, columnData) {
+    try {
+      // Clean the table name
+      const cleanTableName = tableName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase()
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      const response = await fetch(`${this.apiUrl}/tables/${cleanTableName}/columns/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: columnData.name.trim()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9_]/g, '_')
+            .toLowerCase()
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, ''),
+          type: columnData.type
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Failed to add column ${columnData.name} to ${tableName}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error adding column:', error);
+      throw error;
+    }
+  }
+
+  async deleteColumn(tableName, columnName) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${columnName}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete column');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error deleting column:', error);
+      throw error;
+    }
+  }
+
+  async renameColumn(tableName, oldName, newName) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${oldName}/rename`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ newName })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to rename column');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error renaming column:', error);
+      throw error;
+    }
+  }
+
+  async setColumnTag(tableName, columnName, tag) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${columnName}/tag`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tag })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to set column tag');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error setting column tag:', error);
+      throw error;
+    }
+  }
+
   // Helper method to infer column types from data
   inferColumnTypes(data) {
     if (!data || !Array.isArray(data) || data.length === 0) {

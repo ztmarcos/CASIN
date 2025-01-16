@@ -287,6 +287,113 @@ class MySQLDatabaseService {
       }
     }
   }
+
+  async addColumn(tableName, columnData) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      const query = `ALTER TABLE ${tableName} ADD COLUMN \`${columnData.name}\` ${columnData.type}`;
+      console.log('Executing query:', query);
+      
+      await connection.execute(query);
+      
+      return {
+        success: true,
+        message: `Column ${columnData.name} added successfully to ${tableName}`
+      };
+    } catch (error) {
+      console.error('Error adding column:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async deleteColumn(tableName, columnName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const query = `ALTER TABLE ${tableName} DROP COLUMN ${columnName}`;
+      await connection.execute(query);
+      return { success: true, message: `Column ${columnName} deleted successfully` };
+    } catch (error) {
+      console.error('Error deleting column:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  }
+
+  async renameColumn(tableName, oldName, newName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // First get the column type and other properties
+      const [columns] = await connection.execute(
+        'SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ?',
+        [tableName, oldName]
+      );
+      
+      if (columns.length === 0) {
+        throw new Error(`Column ${oldName} not found in table ${tableName}`);
+      }
+      
+      const column = columns[0];
+      const nullable = column.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL';
+      const defaultValue = column.COLUMN_DEFAULT ? `DEFAULT ${column.COLUMN_DEFAULT}` : '';
+      const extra = column.EXTRA ? column.EXTRA : '';
+      
+      const query = `ALTER TABLE ${tableName} CHANGE COLUMN ${oldName} ${newName} ${column.COLUMN_TYPE} ${nullable} ${defaultValue} ${extra}`.trim();
+      await connection.execute(query);
+      
+      return { success: true, message: `Column renamed from ${oldName} to ${newName} successfully` };
+    } catch (error) {
+      console.error('Error renaming column:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  }
+
+  async setColumnTag(tableName, columnName, tag) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // First check if the column exists
+      const [columns] = await connection.execute(
+        'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ?',
+        [tableName, columnName]
+      );
+      
+      if (columns.length === 0) {
+        throw new Error(`Column ${columnName} not found in table ${tableName}`);
+      }
+      
+      // Store the tag in a metadata table
+      await connection.execute(
+        `INSERT INTO column_metadata (table_name, column_name, tag) 
+         VALUES (?, ?, ?) 
+         ON DUPLICATE KEY UPDATE tag = ?`,
+        [tableName, columnName, tag, tag]
+      );
+      
+      return { success: true, message: `Tag set for column ${columnName} successfully` };
+    } catch (error) {
+      console.error('Error setting column tag:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  }
 }
 
 module.exports = new MySQLDatabaseService(); 

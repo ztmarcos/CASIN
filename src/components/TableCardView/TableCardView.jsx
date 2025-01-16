@@ -21,8 +21,8 @@ const TableCardView = ({ data, onCardClick }) => {
     if (item._sourceTable === 'birthdays') {
       return (
         <>
-          <h3 className="card-title">{item.name}</h3>
-          <div className="card-subtitle">{item.details}</div>
+          <h3 className="card-title">{item.title || item.name}</h3>
+          <div className="card-subtitle">{item.subtitle || item.details}</div>
           {isExpanded && (
             <div className="card-details">
               <div className="card-detail-item">
@@ -43,12 +43,14 @@ const TableCardView = ({ data, onCardClick }) => {
 
     return (
       <>
-        <h3 className="card-title">{item.name || 'Untitled'}</h3>
+        <h3 className="card-title">{item.title || 'Sin contratante'}</h3>
+        <div className="card-subtitle">{item.subtitle || ''}</div>
         {isExpanded && (
           <div className="card-details">
             {Object.entries(item).map(([key, value]) => {
               if (key !== 'id' && 
-                  key !== 'name' && 
+                  key !== 'title' && 
+                  key !== 'subtitle' &&
                   key !== 'status' && 
                   key !== '_sourceTable' &&
                   value !== null && 

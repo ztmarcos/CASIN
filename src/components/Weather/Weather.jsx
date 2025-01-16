@@ -12,10 +12,10 @@ const Weather = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `https://api.weatherapi.com/v1/current.json?q=${city}`, {
+          `https://api.weatherapi.com/v1/current.json?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${city}`, {
           method: 'GET',
           headers: {
-            'X-RapidAPI-Host': 'weatherapi-ninjas.p.rapidapi.com',
+            'Content-Type': 'application/json'
           }
         });
 
@@ -25,12 +25,13 @@ const Weather = () => {
 
         const data = await response.json();
         setWeather({
-          temp: data.temp,
-          humidity: data.humidity,
-          windSpeed: data.wind_speed,
-          feelsLike: data.feels_like
+          temp: data.current.temp_c,
+          humidity: data.current.humidity,
+          windSpeed: data.current.wind_kph,
+          feelsLike: data.current.feelslike_c
         });
       } catch (err) {
+        console.error('Weather API error:', err);
         setError("Unable to fetch weather data");
       } finally {
         setLoading(false);

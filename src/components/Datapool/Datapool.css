@@ -1,7 +1,5 @@
 .datapool-container {
   padding: 20px;
-  height: 100%;
-  overflow-y: auto;
 }
 
 .datapool-header {
@@ -9,40 +7,49 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e0e0e0;
 }
 
-.datapool-header h2 {
-  margin: 0;
-  color: #333;
-  font-size: 1.5rem;
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 300px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
 .datapool-count {
-  background-color: #f0f0f0;
-  padding: 5px 10px;
-  border-radius: 15px;
-  font-size: 0.9rem;
   color: #666;
+  font-size: 14px;
 }
 
 .datapool-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  font-size: 1.2rem;
+  text-align: center;
+  padding: 20px;
   color: #666;
 }
 
 .datapool-error {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #dc3545;
-  font-size: 1.1rem;
   text-align: center;
   padding: 20px;
+  color: #dc3545;
+}
+
+/* Card styles */
+.card-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 4px;
 } 

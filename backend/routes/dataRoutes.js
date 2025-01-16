@@ -117,4 +117,75 @@ router.patch('/:tableName/:id', async (req, res) => {
   }
 });
 
+// Add new column to table
+router.post('/tables/:tableName/columns/add', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const { name, type } = req.body;
+    
+    if (!name || !type) {
+      return res.status(400).json({ error: 'Column name and type are required' });
+    }
+    
+    const result = await mysqlDatabase.addColumn(tableName, { name, type });
+    res.json(result);
+  } catch (error) {
+    console.error('Error adding column:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete column
+router.delete('/tables/:tableName/columns/:columnName', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    
+    if (!tableName || !columnName) {
+      return res.status(400).json({ error: 'Table name and column name are required' });
+    }
+    
+    const result = await mysqlDatabase.deleteColumn(tableName, columnName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting column:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rename column
+router.patch('/tables/:tableName/columns/:columnName/rename', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    const { newName } = req.body;
+    
+    if (!tableName || !columnName || !newName) {
+      return res.status(400).json({ error: 'Table name, column name, and new name are required' });
+    }
+    
+    const result = await mysqlDatabase.renameColumn(tableName, columnName, newName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error renaming column:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set column tag
+router.put('/tables/:tableName/columns/:columnName/tag', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    const { tag } = req.body;
+    
+    if (!tableName || !columnName || !tag) {
+      return res.status(400).json({ error: 'Table name, column name, and tag are required' });
+    }
+    
+    const result = await mysqlDatabase.setColumnTag(tableName, columnName, tag);
+    res.json(result);
+  } catch (error) {
+    console.error('Error setting column tag:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 
