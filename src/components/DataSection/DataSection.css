@@ -79,42 +79,40 @@
 /* Button styles */
 .btn-primary,
 .btn-secondary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border: none;
   border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
+  border: none;
   font-size: 0.875rem;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .btn-primary {
-  background: var(--accent-color);
+  background-color: var(--primary-color);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-color-dark);
+  background-color: var(--primary-color-dark);
 }
 
 .btn-secondary {
-  background: var(--background-secondary);
+  background-color: var(--background-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--background-hover);
-  border-color: var(--border-hover);
+  background-color: var(--background-hover);
 }
 
 .btn-primary:disabled,
 .btn-secondary:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
@@ -127,57 +125,55 @@
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
-  animation: fade-in 0.2s ease-out;
 }
 
 .modal-content {
   background-color: var(--background-primary);
   border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 100%;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 90%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: slide-up 0.3s ease-out;
+  animation: slide-up 0.2s ease;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.25rem;
+  padding: 1rem;
   border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h3 {
   margin: 0;
-  color: var(--text-primary);
   font-size: 1.25rem;
-  font-weight: 600;
-}
-
-.modal-body {
-  padding: 1.25rem;
+  color: var(--text-primary);
 }
 
 .close-button {
   background: none;
   border: none;
-  color: var(--text-secondary);
   font-size: 1.5rem;
+  color: var(--text-secondary);
   cursor: pointer;
-  padding: 0.5rem;
-  line-height: 1;
-  border-radius: 4px;
-  transition: all 0.2s;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
 }
 
 .close-button:hover {
-  background-color: var(--background-hover);
   color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 1rem;
 }
 
 @keyframes fade-in {

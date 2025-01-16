@@ -107,56 +107,30 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
-      // Create a copy of data to avoid modifying the original
-      const cleanedData = { ...data };
-
-      // Always remove id field to let AUTO_INCREMENT handle it
-      delete cleanedData.id;
-
-      // Clean numeric values
-      const numericColumns = ['prima_neta', 'derecho_de_p__liza', 'i_v_a__16_', 
-        'recargo_por_pago_fraccionado', 'importe_total_a_pagar', 'monto_parcial'];
+      // Handle both single object and array of objects
+      const dataArray = Array.isArray(data) ? data : [data];
       
-      for (const column of numericColumns) {
-        if (column in cleanedData) {
-          let value = cleanedData[column];
-          
-          // Skip null values
-          if (value === null) {
-            cleanedData[column] = 0;
-            continue;
-          }
+      for (const item of dataArray) {
+        // Create a copy of data to avoid modifying the original
+        const cleanedData = { ...item };
 
-          // Convert to string if it's a number
-          if (typeof value === 'number') {
-            value = value.toString();
-          }
+        // Always remove id field to let AUTO_INCREMENT handle it
+        delete cleanedData.id;
 
-          // Only try to clean if it's a string
-          if (typeof value === 'string') {
-            // Remove currency symbols and commas
-            const cleanValue = value.replace(/[$,]/g, '');
-            cleanedData[column] = parseFloat(cleanValue) || 0;
-          } else {
-            // For any other type, set to 0
-            cleanedData[column] = 0;
-          }
-        }
+        const columns = Object.keys(cleanedData);
+        const values = Object.values(cleanedData);
+        const placeholders = columns.map(() => '?').join(',');
+        
+        const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
+        console.log('Insert query:', query);
+        console.log('Values:', values);
+        
+        await connection.execute(query, values);
       }
-
-      const columns = Object.keys(cleanedData);
-      const values = Object.values(cleanedData);
-      const placeholders = columns.map(() => '?').join(',');
-      
-      const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
-      console.log('Insert query:', query);
-      console.log('Values:', values);
-      
-      const [result] = await connection.execute(query, values);
       
       return {
         success: true,
-        insertId: result.insertId
+        message: `Data inserted successfully into ${tableName}`
       };
     } catch (error) {
       console.error('Database error:', error);
@@ -171,23 +145,21 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       
-      // Always add id as primary key
-      let query = `CREATE TABLE \`${tableDefinition.name}\` (
-        \`id\` INTEGER NOT NULL AUTO_INCREMENT,`;
+      // Build the CREATE TABLE query
+      let query = `CREATE TABLE IF NOT EXISTS \`${tableDefinition.name}\` (
+        \`id\` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,`;
       
-      // Convert user's simple column names into proper MySQL columns
+      // Add column definitions
       const columnDefinitions = tableDefinition.columns.map(column => {
-        // Default all fields to VARCHAR(255) for simplicity
-        return `\`${column.name}\` VARCHAR(255)`;
+        return `\`${column.name}\` ${column.type}`;
       });
       
-      // Add all columns and primary key
-      query += columnDefinitions.join(', ');
-      query += ', PRIMARY KEY (`id`))';
-
+      query += columnDefinitions.join(',\n');
+      query += '\n)';
+      
       console.log('Creating table with query:', query);
 
-      // Execute the query
+      // Create the table
       await connection.execute(query);
       
       return {
@@ -278,6 +250,41 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) await connection.end();
+    }
+  }
+
+  /**
+   * Updates a single cell value in a table
+   * @param {string} tableName - The name of the table
+   * @param {number} id - The ID of the record to update
+   * @param {string} column - The column to update
+   * @param {any} value - The new value
+   * @returns {Promise<Object>} Result of the update operation
+   */
+  async updateData(tableName, id, column, value) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Clean numeric values
+      if (typeof value === 'string' && !isNaN(value)) {
+        value = parseFloat(value);
+      }
+      
+      const query = `UPDATE ${tableName} SET ${column} = ? WHERE id = ?`;
+      const [result] = await connection.execute(query, [value, id]);
+      
+      return {
+        success: true,
+        affectedRows: result.affectedRows
+      };
+    } catch (error) {
+      console.error('Error updating data:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        connection.release();
+      }
     }
   }
 }

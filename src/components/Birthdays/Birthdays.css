@@ -177,6 +177,80 @@
   align-self: flex-start;
 }
 
+.view-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.view-toggle:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.view-toggle.active {
+  background-color: var(--accent-color-10);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.birthdays-table-view {
+  margin-top: 1rem;
+  overflow-x: auto;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.birthdays-table-view table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.birthdays-table-view th,
+.birthdays-table-view td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.birthdays-table-view th {
+  background-color: var(--bg-surface-hover);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.birthdays-table-view td {
+  color: var(--text-secondary);
+}
+
+.birthdays-table-view tr:last-child td {
+  border-bottom: none;
+}
+
+.birthdays-table-view tr:hover td {
+  background-color: var(--bg-surface-hover);
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .birthdays-container {
@@ -208,5 +282,32 @@
 
   .btn-primary span {
     display: none;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .view-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .view-toggle {
+    flex: 1;
+    max-width: 150px;
+  }
+
+  .birthdays-table-view {
+    margin: 0.5rem -0.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .birthdays-table-view th,
+  .birthdays-table-view td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
   }
 } 

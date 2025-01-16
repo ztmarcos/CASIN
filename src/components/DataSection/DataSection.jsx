@@ -15,6 +15,7 @@ const DataSection = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddEntryModal, setShowAddEntryModal] = useState(false);
+  const [showCreateTableModal, setShowCreateTableModal] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     role: ''
@@ -119,11 +120,63 @@ const DataSection = () => {
     }
   };
 
+  const handleCellUpdate = async (id, column, value) => {
+    if (!selectedTable) return;
+    
+    try {
+      await tableService.updateData(selectedTable.name, id, column, value);
+      // Update the local data to reflect the change
+      setTableData(prevData => 
+        prevData.map(row => 
+          row.id === id ? { ...row, [column]: value } : row
+        )
+      );
+    } catch (error) {
+      console.error('Error updating cell:', error);
+      throw error; // Let DataTable handle the error
+    }
+  };
+
+  const handleCreateTable = async (data, tableName) => {
+    if (!data || !data.length) {
+      console.error('No data provided');
+      return;
+    }
+
+    if (!tableName) {
+      console.error('Table name is required');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // Create the table with the preview data
+      await tableService.createTable(tableName, data);
+      setShowCreateTableModal(false);
+      // Refresh the table list in TableManager
+      // This will be handled by the TableManager component's useEffect
+    } catch (error) {
+      console.error('Error creating table:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="data-section">
       <div className="data-section-header">
         <h2>Data Management</h2>
         <div className="header-actions">
+          <button 
+            className="btn-primary" 
+            onClick={() => setShowCreateTableModal(true)}
+            disabled={isLoading}
+          >
+            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Create Table
+          </button>
           {selectedTable && (
             <>
               <button 
@@ -232,6 +285,7 @@ const DataSection = () => {
               <DataTable 
                 data={tableData}
                 onRowClick={handleRowClick}
+                onCellUpdate={handleCellUpdate}
               />
             ) : (
               <TableCardView 
@@ -271,6 +325,26 @@ const DataSection = () => {
           table={selectedTable}
           onSubmit={handleAddEntry}
         />
+      )}
+
+      {/* Create Table Modal */}
+      {showCreateTableModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateTableModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Create New Table</h3>
+              <button 
+                className="close-button" 
+                onClick={() => setShowCreateTableModal(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <TableImport onFileData={handleCreateTable} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

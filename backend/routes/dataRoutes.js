@@ -13,6 +13,32 @@ router.get('/tables', async (req, res) => {
   }
 });
 
+// Create new table
+router.post('/tables', async (req, res) => {
+  try {
+    const { name, columns } = req.body;
+    
+    if (!name || !columns || !Array.isArray(columns)) {
+      return res.status(400).json({ error: 'Name and columns array are required' });
+    }
+    
+    // Create the table directly in MySQL
+    await mysqlDatabase.createTable({ 
+      name: name.toLowerCase().trim(),
+      columns 
+    });
+
+    // Return success response
+    res.json({ 
+      success: true,
+      message: `Table ${name} created successfully`
+    });
+  } catch (error) {
+    console.error('Error creating table:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get table data
 router.get('/:tableName', async (req, res) => {
   try {
@@ -43,17 +69,6 @@ router.post('/:tableName', async (req, res) => {
   }
 });
 
-// Create new table
-router.post('/tables', async (req, res) => {
-  try {
-    const result = await mysqlDatabase.createTable(req.body);
-    res.json(result);
-  } catch (error) {
-    console.error('Error creating table:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Update column order
 router.put('/tables/:tableName/columns/order', async (req, res) => {
   try {
@@ -80,6 +95,24 @@ router.post('/tables/:tableName/structure', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error modifying table structure:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update cell data
+router.patch('/:tableName/:id', async (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    const { column, value } = req.body;
+    
+    if (!column || value === undefined) {
+      return res.status(400).json({ error: 'Column and value are required' });
+    }
+
+    const result = await mysqlDatabase.updateData(tableName, id, column, value);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating data:', error);
     res.status(500).json({ error: error.message });
   }
 });

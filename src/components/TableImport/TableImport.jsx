@@ -81,10 +81,13 @@ const TableImport = ({ onFileData }) => {
       reader.onload = (e) => {
         try {
           const data = e.target.result;
-          const workbook = read(data, { type: 'array' });
+          const workbook = read(data, { type: 'array', codepage: 65001 });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          const jsonData = utils.sheet_to_json(worksheet);
+          const jsonData = utils.sheet_to_json(worksheet, {
+            raw: false,
+            defval: ''
+          });
           resolve(jsonData);
         } catch (err) {
           reject(err);
@@ -109,68 +112,9 @@ const TableImport = ({ onFileData }) => {
 
     try {
       setIsProcessing(true);
-
-      // Get column names from the first row and infer types
-      const columns = Object.entries(previewData[0]).map(([key, value]) => {
-        const cleanName = key.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-        let type = 'VARCHAR(255)';
-
-        // Infer column type based on value
-        if (typeof value === 'number') {
-          if (Number.isInteger(value)) {
-            type = 'INT';
-          } else {
-            type = 'DECIMAL(10,2)';
-          }
-        } else if (value instanceof Date) {
-          type = 'DATE';
-        } else if (typeof value === 'boolean') {
-          type = 'BOOLEAN';
-        } else if (typeof value === 'string') {
-          if (value.length > 255) {
-            type = 'TEXT';
-          }
-          // Try to parse as date
-          const dateValue = new Date(value);
-          if (!isNaN(dateValue.getTime()) && value.includes('-')) {
-            type = 'DATE';
-          }
-        }
-
-        return {
-          name: cleanName,
-          type
-        };
-      });
-
-      // Create table definition
-      const tableDefinition = {
-        name: tableName.trim().toLowerCase().replace(/[^a-zA-Z0-9_]/g, '_'),
-        columns
-      };
-
-      // Create the table
-      await tableService.createTable(tableDefinition);
-
-      // Insert the data
-      for (const row of previewData) {
-        const cleanedRow = {};
-        Object.entries(row).forEach(([key, value]) => {
-          const cleanName = key.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
-          // Handle date values
-          if (value && columns.find(col => col.name === cleanName)?.type === 'DATE') {
-            const dateValue = new Date(value);
-            if (!isNaN(dateValue.getTime())) {
-              cleanedRow[cleanName] = dateValue.toISOString().split('T')[0];
-            } else {
-              cleanedRow[cleanName] = null;
-            }
-          } else {
-            cleanedRow[cleanName] = value;
-          }
-        });
-        await tableService.insertData(tableDefinition.name, cleanedRow);
-      }
+      
+      // Pass both the preview data and table name to the callback
+      await onFileData(previewData, tableName.trim().toLowerCase());
 
       setError('');
       setTableName('');

@@ -8,6 +8,8 @@ import Drive from './components/Drive/Drive'
 import PDFParser from './components/PDFParser_new/PDFParser'
 import Prospeccion from './components/Prospeccion/Prospeccion'
 import Datapool from './components/Datapool/Datapool'
+import Birthdays from './components/Birthdays/Birthdays'
+import Reports from './components/Reports/Reports'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
@@ -31,7 +33,7 @@ function App() {
             } />
             <Route path="/reports" element={
               <div className="section-container">
-                <h2>Reports Section</h2>
+                <Reports />
               </div>
             } />
             <Route path="/pdf-parser" element={
@@ -51,7 +53,7 @@ function App() {
             } />
             <Route path="/birthdays" element={
               <div className="section-container">
-                <h2>Cumpleaños Section</h2>
+                <Birthdays />
               </div>
             } />
             <Route path="/prospeccion" element={
