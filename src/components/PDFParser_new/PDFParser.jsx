@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import pdfService from '../../services/pdfService';
+import tableService from '../../services/data/tableService';
 import GPTAnalysis from './GPTAnalysis';
 import './PDFParser.css';
 
@@ -8,6 +9,22 @@ const PDFParser = () => {
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [dbTables, setDbTables] = useState([]);
+  const [selectedTable, setSelectedTable] = useState('');
+
+  // Fetch available tables on component mount
+  useEffect(() => {
+    const fetchTables = async () => {
+      try {
+        const tables = await tableService.getTables();
+        setDbTables(tables);
+      } catch (err) {
+        console.error('Error fetching tables:', err);
+        setError('Failed to fetch database tables');
+      }
+    };
+    fetchTables();
+  }, []);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -15,6 +32,11 @@ const PDFParser = () => {
 
     if (file.type !== 'application/pdf') {
       setError('Please upload a PDF file');
+      return;
+    }
+
+    if (!selectedTable) {
+      setError('Please select a target table first');
       return;
     }
 
@@ -29,6 +51,7 @@ const PDFParser = () => {
       // Extract tables
       const extractedTables = await pdfService.extractTables(file);
       setTables(extractedTables);
+
     } catch (err) {
       setError('Error parsing PDF: ' + err.message);
       console.error('Error parsing PDF:', err);
@@ -42,12 +65,27 @@ const PDFParser = () => {
       <h2>PDF Parser</h2>
       
       <div className="upload-section">
+        <div className="table-select">
+          <select 
+            value={selectedTable}
+            onChange={(e) => setSelectedTable(e.target.value)}
+            className="table-dropdown"
+          >
+            <option value="">Select Target Table</option>
+            {dbTables.map((table) => (
+              <option key={table.name} value={table.name}>
+                {table.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <label className="file-input-label">
           <input
             type="file"
             accept=".pdf"
             onChange={handleFileUpload}
-            disabled={loading}
+            disabled={loading || !selectedTable}
             className="file-input"
           />
           <span className="file-input-text">
@@ -66,34 +104,12 @@ const PDFParser = () => {
 
       {parsedData && (
         <div className="parsed-content">
-          <h3>Parsed Content:</h3>
-          <div className="text-content">
-            <pre>{parsedData.text}</pre>
-          </div>
-
-          {tables.length > 0 && (
-            <div className="tables-section">
-              <h3>Extracted Tables:</h3>
-              {tables.map((table, index) => (
-                <div key={index} className="table-container">
-                  <h4>Table {index + 1}</h4>
-                  <table>
-                    <tbody>
-                      {table.map((row, rowIndex) => (
-                        <tr key={rowIndex}>
-                          {row.map((cell, cellIndex) => (
-                            <td key={cellIndex}>{cell}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <GPTAnalysis parsedData={parsedData} tables={tables} />
+          <GPTAnalysis 
+            parsedData={parsedData} 
+            tables={tables} 
+            selectedTable={selectedTable}
+            autoAnalyze={true}
+          />
         </div>
       )}
     </div>

@@ -1,220 +1,91 @@
 .gpt-analysis {
     padding: 20px;
-    background-color: #f8f9fa;
+    background: #fff;
     border-radius: 8px;
-    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.table-selection {
+.loading {
+    color: #666;
     margin: 20px 0;
-    padding: 15px;
-    background-color: white;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-}
-
-.table-select {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 16px;
-    margin-bottom: 10px;
-}
-
-.column-info {
-    margin-top: 15px;
-}
-
-.column-info ul {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-}
-
-.column-info li {
-    padding: 5px 0;
-    color: #495057;
-}
-
-.analyze-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    margin: 10px 0;
-}
-
-.analyze-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+    text-align: center;
 }
 
 .error-message {
     color: #dc3545;
-    margin: 10px 0;
     padding: 10px;
-    background-color: #f8d7da;
-    border-radius: 4px;
+    margin: 10px 0;
+    border-left: 4px solid #dc3545;
+    background: #fff;
+}
+
+.message {
+    color: #28a745;
+    padding: 10px;
+    margin: 10px 0;
+    border-left: 4px solid #28a745;
+    background: #fff;
 }
 
 .analysis-results {
     margin-top: 20px;
 }
 
-.result-section {
-    margin: 15px 0;
-}
-
-.result-section h5 {
-    color: #495057;
-    margin-bottom: 8px;
-}
-
-.result-section ul {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-.result-section li {
-    margin: 5px 0;
-    padding: 8px;
-    background-color: white;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.mapped-data-section {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: white;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
-}
-
-.mapped-data-preview {
-    overflow-x: auto;
-    margin: 10px 0;
-}
-
-.mapped-data-preview table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.mapped-data-preview th,
-.mapped-data-preview td {
-    padding: 8px;
-    border: 1px solid #dee2e6;
-    text-align: left;
-}
-
-.mapped-data-preview th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-}
-
-.button-container {
-    margin-top: 20px;
-    text-align: center;
-}
-
-.insert-button {
-    background-color: #28a745;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    min-width: 200px;
-}
-
-.insert-button:hover:not(:disabled) {
-    background-color: #218838;
-    transform: translateY(-1px);
-}
-
-.insert-button:disabled {
-    background-color: #ccc;
-    cursor: not-allowed;
+.analysis-results h3 {
+    color: #333;
+    margin-bottom: 15px;
 }
 
 .table-preview {
-    margin: 15px 0;
     overflow-x: auto;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    background: white;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .table-preview table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px;
-}
-
-.table-preview th, .table-preview td {
-    padding: 12px;
-    text-align: left;
-    border: 1px solid #e0e0e0;
+    background: #fff;
 }
 
 .table-preview th {
-    background-color: #f5f5f5;
+    background: #f8f9fa;
+    padding: 12px;
+    text-align: left;
     font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
 }
 
-.column-type {
-    font-size: 0.8em;
-    color: #666;
-    font-weight: normal;
+.table-preview td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    color: #212529;
 }
 
-.empty-cell {
-    color: #999;
+.table-preview .null-value {
+    color: #6c757d;
     font-style: italic;
-}
-
-.null-value {
-    color: #999;
-    font-style: italic;
-}
-
-.mapped-data-section {
-    margin-top: 20px;
-    padding: 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    background: #f9f9f9;
-}
-
-.button-container {
-    margin-top: 15px;
-    text-align: right;
 }
 
 .insert-button {
-    background-color: #4CAF50;
+    background: #007bff;
     color: white;
-    padding: 10px 20px;
     border: none;
+    padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.3s;
+    transition: background-color 0.2s;
 }
 
-.insert-button:hover:not(:disabled) {
-    background-color: #45a049;
+.insert-button:hover {
+    background: #0056b3;
 }
 
 .insert-button:disabled {
-    background-color: #cccccc;
+    background: #6c757d;
     cursor: not-allowed;
 } 

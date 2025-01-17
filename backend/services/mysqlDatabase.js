@@ -107,9 +107,19 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
+      // First, modify the table to ensure id is AUTO_INCREMENT if it's not
+      try {
+        await connection.execute(
+          `ALTER TABLE ${tableName} MODIFY id INT NOT NULL AUTO_INCREMENT PRIMARY KEY`
+        );
+      } catch (err) {
+        console.log('Table already has AUTO_INCREMENT or other issue:', err);
+      }
+
       // Handle both single object and array of objects
       const dataArray = Array.isArray(data) ? data : [data];
       
+      const results = [];
       for (const item of dataArray) {
         // Create a copy of data to avoid modifying the original
         const cleanedData = { ...item };
@@ -125,12 +135,14 @@ class MySQLDatabaseService {
         console.log('Insert query:', query);
         console.log('Values:', values);
         
-        await connection.execute(query, values);
+        const [result] = await connection.execute(query, values);
+        results.push(result);
       }
       
       return {
         success: true,
-        message: `Data inserted successfully into ${tableName}`
+        message: `Data inserted successfully into ${tableName}`,
+        results
       };
     } catch (error) {
       console.error('Database error:', error);

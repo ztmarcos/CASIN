@@ -7,6 +7,7 @@ const TableManager = ({ onTableSelect }) => {
   const [selectedTable, setSelectedTable] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     loadTables();
@@ -35,33 +36,40 @@ const TableManager = ({ onTableSelect }) => {
 
   return (
     <div className="table-manager">
-      <div className="tables-section">
-        <div className="section-header">
-          <h3>Tables</h3>
-          {isLoading && <div className="loading-spinner">Loading...</div>}
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="tables-list">
-          {tables.length === 0 && !isLoading ? (
-            <div className="no-tables-message">No tables available</div>
-          ) : (
-            tables.map(table => (
-              <div
-                key={table.name}
-                className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
-                onClick={() => handleTableSelect(table)}
-              >
-                <span className="table-name">{table.name}</span>
-                {table.count !== undefined && (
-                  <span className="table-count">{table.count} rows</span>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+      <div className="section-header">
+        <h3>
+          <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
+            {isCollapsed ? '›' : '⌄'}
+          </span>
+          Tables {tables.length > 0 && `(${tables.length})`}
+        </h3>
+        {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
+
+      {!isCollapsed && (
+        <>
+          {error && <div className="error-message">{error}</div>}
+
+          <div className="tables-list">
+            {tables.length === 0 && !isLoading ? (
+              <div className="no-tables-message">No tables available</div>
+            ) : (
+              tables.map(table => (
+                <div
+                  key={table.name}
+                  className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
+                  onClick={() => handleTableSelect(table)}
+                >
+                  <span className="table-name">{table.name}</span>
+                  {table.count !== undefined && (
+                    <span className="table-count">{table.count}</span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
