@@ -4,8 +4,6 @@ import './DataTable.css';
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [pendingEdit, setPendingEdit] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [sortedData, setSortedData] = useState([]);
@@ -68,84 +66,42 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
     }
   }, [onRefresh]);
 
-  // Global keyboard handler for confirmation dialog
-  useEffect(() => {
-    const handleGlobalKeyDown = async (e) => {
-      if (showConfirm && e.key === 'Enter') {
-        e.preventDefault();
-        await handleConfirmEdit();
-      } else if (showConfirm && e.key === 'Escape') {
-        handleCancelEdit();
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [showConfirm, pendingEdit]);
-
   if (!data || data.length === 0) {
     return <div className="no-data">No data available</div>;
   }
 
   const columns = Object.keys(data[0]);
 
-  const handleDoubleClick = (rowIndex, column, value) => {
-    setEditingCell({ rowIndex, column });
-    setEditValue(value);
+  const handleCellClick = (rowIndex, column, value) => {
+    setEditingCell({ rowIndex, column, value });
+    setEditValue(value !== null ? String(value) : '');
   };
 
   const handleCancelEdit = () => {
-    setShowConfirm(false);
     setEditingCell(null);
-    setPendingEdit(null);
     setEditValue('');
   };
 
   const handleConfirmEdit = async () => {
-    if (pendingEdit) {
-      const { rowIndex, column, newValue } = pendingEdit;
-      const row = data[rowIndex];
-      
-      try {
-        await onCellUpdate(row.id, column, newValue);
-        handleCancelEdit();
-        await refreshData();
-      } catch (error) {
-        console.error('Failed to update cell:', error);
-        setEditValue(row[column]);
-        handleCancelEdit();
-      }
-    }
-  };
+    if (!editingCell) return;
 
-  const handleBlur = (rowIndex, column) => {
-    if (editingCell) {
-      const row = data[rowIndex];
-      const oldValue = row[column];
-      
-      if (editValue !== oldValue) {
-        setPendingEdit({ rowIndex, column, newValue: editValue });
-        setShowConfirm(true);
-      } else {
-        handleCancelEdit();
-      }
+    const { rowIndex, column } = editingCell;
+    const row = data[rowIndex];
+    
+    try {
+      await onCellUpdate(row.id, column, editValue);
+      handleCancelEdit();
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to update cell:', error);
     }
   };
 
   // Input field keyboard handler
-  const handleInputKeyDown = (e, rowIndex, column) => {
+  const handleInputKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      e.stopPropagation(); // Prevent global handler from catching this
-      const row = data[rowIndex];
-      const oldValue = row[column];
-      
-      if (editValue !== oldValue) {
-        setPendingEdit({ rowIndex, column, newValue: editValue });
-        setShowConfirm(true);
-      } else {
-        handleCancelEdit();
-      }
+      handleConfirmEdit();
     } else if (e.key === 'Escape') {
       handleCancelEdit();
     }
@@ -153,26 +109,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
 
   return (
     <div className="data-table-container">
-      {showConfirm && (
-        <div className="confirmation-dialog">
-          <p>Are you sure you want to update this cell?</p>
-          <div className="confirmation-actions">
-            <button 
-              className="cancel-btn" 
-              onClick={handleCancelEdit}
-            >
-              Cancel (Esc)
-            </button>
-            <button 
-              className="confirm-btn" 
-              onClick={handleConfirmEdit}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? 'Refreshing data...' : 'Confirm (Enter)'}
-            </button>
-          </div>
-        </div>
-      )}
       <div className={`table-wrapper ${isRefreshing ? 'refreshing' : ''}`}>
         <table className="data-table">
           <thead>
@@ -194,33 +130,47 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
           <tbody>
             {sortedData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
-                {columns.map(column => {
-                  const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
-                  return (
-                    <td
-                      key={`${rowIndex}-${column}`}
-                      onDoubleClick={() => handleDoubleClick(rowIndex, column, row[column])}
-                    >
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          onBlur={() => handleBlur(rowIndex, column)}
-                          onKeyDown={(e) => handleInputKeyDown(e, rowIndex, column)}
-                          autoFocus
-                        />
-                      ) : (
-                        row[column]
-                      )}
-                    </td>
-                  );
-                })}
+                {columns.map(column => (
+                  <td
+                    key={`${rowIndex}-${column}`}
+                    onClick={() => handleCellClick(rowIndex, column, row[column])}
+                    className="editable-cell"
+                  >
+                    {row[column] !== null ? String(row[column]) : '-'}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Edit Cell Popup */}
+      {editingCell && (
+        <div className="edit-cell-popup">
+          <div className="edit-cell-content" onClick={e => e.stopPropagation()}>
+            <h4>Edit Cell</h4>
+            <div className="edit-cell-info">
+              <p>Column: {editingCell.column}</p>
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+                autoFocus
+              />
+            </div>
+            <div className="edit-cell-actions">
+              <button onClick={handleCancelEdit} className="cancel-btn">
+                Cancel
+              </button>
+              <button onClick={handleConfirmEdit} className="confirm-btn">
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
