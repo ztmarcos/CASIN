@@ -119,7 +119,7 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
             {id !== 'col-id' && (
               <>
                 <button onClick={() => setShowDeleteConfirm(true)} className="action-btn delete-btn">
-                  —
+                  ×
                 </button>
                 {showDeleteConfirm && (
                   <div className="confirmation-dialog">
