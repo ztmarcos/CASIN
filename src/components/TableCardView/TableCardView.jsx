@@ -17,44 +17,78 @@ const TableCardView = ({ data, onCardClick }) => {
     });
   };
 
-  const renderCardContent = (item, isExpanded) => {
-    if (item._sourceTable === 'birthdays') {
-      return (
-        <>
-          <h3 className="card-title">{item.title || item.name}</h3>
-          <div className="card-subtitle">{item.subtitle || item.details}</div>
-          {isExpanded && (
-            <div className="card-details">
-              <div className="card-detail-item">
-                <span className="detail-label">└─ RFC:</span>
-                <span className="detail-value">{item.rfc}</span>
-              </div>
-              {item.details && (
-                <div className="card-detail-item">
-                  <span className="detail-label">└─ Detalles:</span>
-                  <span className="detail-value">{item.details}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      );
+  const getDisplayTitle = (item) => {
+    // Buscar el campo más apropiado para el título
+    const titleFields = [
+      'title',
+      'name',
+      'nombre',
+      'contratante',
+      'nombre_contratante',
+      'poliza',
+      'numero_poliza'
+    ];
+    
+    for (const field of titleFields) {
+      if (item[field] && typeof item[field] === 'string') {
+        return item[field];
+      }
     }
+    
+    // Si no se encuentra ningún campo específico, usar el primer campo no nulo
+    const firstNonNullField = Object.entries(item)
+      .find(([key, value]) => 
+        value !== null && 
+        value !== undefined && 
+        key !== 'id' && 
+        key !== '_sourceTable' &&
+        key !== 'status'
+      );
+    
+    return firstNonNullField ? firstNonNullField[1].toString() : 'Sin título';
+  };
+
+  const getDisplaySubtitle = (item) => {
+    // Buscar el campo más apropiado para el subtítulo
+    const subtitleFields = [
+      'subtitle',
+      'details',
+      'description',
+      'descripcion',
+      'detalles',
+      'rfc',
+      'email',
+      'telefono'
+    ];
+    
+    for (const field of subtitleFields) {
+      if (item[field] && typeof item[field] === 'string') {
+        return item[field];
+      }
+    }
+    
+    return '';
+  };
+
+  const renderCardContent = (item, isExpanded) => {
+    const title = getDisplayTitle(item);
+    const subtitle = getDisplaySubtitle(item);
 
     return (
       <>
-        <h3 className="card-title">{item.title || 'Sin contratante'}</h3>
-        <div className="card-subtitle">{item.subtitle || ''}</div>
+        <h3 className="card-title">{title}</h3>
+        {subtitle && <div className="card-subtitle">{subtitle}</div>}
         {isExpanded && (
           <div className="card-details">
             {Object.entries(item).map(([key, value]) => {
               if (key !== 'id' && 
-                  key !== 'title' && 
-                  key !== 'subtitle' &&
-                  key !== 'status' && 
                   key !== '_sourceTable' &&
+                  key !== 'status' &&
                   value !== null && 
-                  value !== undefined) {
+                  value !== undefined &&
+                  // No mostrar campos que ya están en el título o subtítulo
+                  value.toString() !== title &&
+                  value.toString() !== subtitle) {
                 return (
                   <div key={key} className="card-detail-item">
                     <span className="detail-label">└─ {key}:</span>
@@ -75,13 +109,13 @@ const TableCardView = ({ data, onCardClick }) => {
   return (
     <div className="table-card-view">
       {data.map((item, index) => {
-        const cardId = `${item._sourceTable}-${item.id || index}`;
+        const cardId = `${item._sourceTable || 'table'}-${item.id || index}`;
         const isExpanded = expandedCards.has(cardId);
 
         return (
           <div 
             key={cardId}
-            className={`data-card ${item._sourceTable === 'birthdays' ? 'birthday-card' : ''}`}
+            className="data-card"
             onClick={() => onCardClick(item)}
           >
             <div className="card-header">
