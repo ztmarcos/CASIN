@@ -24,6 +24,8 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
   const [editedName, setEditedName] = useState(column);
   const [showTagInput, setShowTagInput] = useState(false);
   const [tag, setTag] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
 
   const {
     attributes,
@@ -41,8 +43,15 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
   const handleEditSubmit = (e) => {
     e.preventDefault();
     if (editedName.trim() && editedName !== column) {
-      onEdit(column, editedName.trim());
+      setShowEditConfirm(true);
+    } else {
+      setIsEditing(false);
     }
+  };
+
+  const handleConfirmEdit = () => {
+    onEdit(column, editedName.trim());
+    setShowEditConfirm(false);
     setIsEditing(false);
   };
 
@@ -57,22 +66,36 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
 
   if (isEditing) {
     return (
-      <form onSubmit={handleEditSubmit} className="column-edit-form">
-        <input
-          type="text"
-          value={editedName}
-          onChange={(e) => setEditedName(e.target.value)}
-          autoFocus
-          onBlur={() => setIsEditing(false)}
-        />
-      </form>
+      <>
+        <form onSubmit={handleEditSubmit} className="column-edit-form">
+          <input
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            autoFocus
+            onBlur={() => !showEditConfirm && setIsEditing(false)}
+          />
+        </form>
+        {showEditConfirm && (
+          <div className="confirmation-dialog">
+            <p>Are you sure you want to rename this column?</p>
+            <div className="confirmation-actions">
+              <button className="cancel-btn" onClick={() => {
+                setShowEditConfirm(false);
+                setIsEditing(false);
+              }}>Cancel</button>
+              <button className="confirm-btn" onClick={handleConfirmEdit}>Confirm</button>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
   return (
     <div ref={setNodeRef} style={style} className="column-tag-container">
       <span className="column-tag" {...attributes} {...listeners}>
-        {id === 'col-id' ? '🔑 ' : ''}{column}
+        {id === 'col-id' ? '•' : ''}{column}
         {tag && <span className="column-tag-label">{tag}</span>}
       </span>
       <div className="column-actions">
@@ -89,16 +112,27 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
           </form>
         ) : (
           <>
-            <button onClick={() => setShowTagInput(true)} className="action-btn tag-btn">
-              🏷️
-            </button>
             <button onClick={() => setIsEditing(true)} className="action-btn edit-btn">
-              ✏️
+              ✎
             </button>
             {id !== 'col-id' && (
-              <button onClick={() => onDelete(column)} className="action-btn delete-btn">
-                🗑️
-              </button>
+              <>
+                <button onClick={() => setShowDeleteConfirm(true)} className="action-btn delete-btn">
+                  —
+                </button>
+                {showDeleteConfirm && (
+                  <div className="confirmation-dialog">
+                    <p>Delete this column?</p>
+                    <div className="confirmation-actions">
+                      <button className="cancel-btn" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+                      <button className="confirm-btn" onClick={() => {
+                        onDelete(column);
+                        setShowDeleteConfirm(false);
+                      }}>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -218,14 +252,20 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     if (window.confirm(`Are you sure you want to delete the column "${columnName}"?`)) {
       try {
         setIsLoading(true);
+        console.log(`Deleting column: ${columnName}`);
+        
+        // Optimistically update the UI
+        setColumns((prevColumns) => prevColumns.filter((col) => col !== columnName));
+
         await tableService.deleteColumn(selectedTable.name, columnName);
-        await loadColumns();
+        await loadColumns(); // Ensure data is refreshed from the server
         if (onOrderChange) {
           onOrderChange();
         }
       } catch (err) {
         console.error('Failed to delete column:', err);
         setError('Failed to delete column');
+        await loadColumns(); // Revert changes if there's an error
       } finally {
         setIsLoading(false);
       }
@@ -235,14 +275,22 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const handleEditColumnName = async (oldName, newName) => {
     try {
       setIsLoading(true);
+      console.log(`Renaming column from ${oldName} to ${newName}`);
+      
+      // Optimistically update the UI
+      setColumns((prevColumns) => 
+        prevColumns.map((col) => (col === oldName ? newName : col))
+      );
+
       await tableService.renameColumn(selectedTable.name, oldName, newName);
-      await loadColumns();
+      await loadColumns(); // Ensure data is refreshed from the server
       if (onOrderChange) {
         onOrderChange();
       }
     } catch (err) {
       console.error('Failed to rename column:', err);
       setError('Failed to rename column');
+      await loadColumns(); // Revert changes if there's an error
     } finally {
       setIsLoading(false);
     }
@@ -282,16 +330,16 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       <div className="section-header">
         <h3>
           <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
-            {isCollapsed ? '▶' : '▼'}
+            {isCollapsed ? '›' : '⌄'}
           </span>
           Columns {columns.length > 0 && `(${columns.length})`}
         </h3>
         <div className="header-buttons">
           <button className="create-btn" onClick={() => setShowCreateForm(!showCreateForm)}>
-            {showCreateForm ? 'Cancel' : 'Create'}
+            {showCreateForm ? '—' : '+'}
           </button>
           <button className="edit-btn" onClick={() => setIsEditing(true)}>
-            Edit
+            ✎
           </button>
         </div>
       </div>
