@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import EditColumn from '../EditColumn/EditColumn';
+import PDFParser from '../PDFParser_new/PDFParser';
 import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
 
@@ -151,6 +152,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [newColumnType, setNewColumnType] = useState('text');
+  const [showPDFParser, setShowPDFParser] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -341,8 +343,29 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           <button className="edit-btn" onClick={() => setIsEditing(true)}>
             ✎
           </button>
+          <button className="pdf-btn" onClick={() => setShowPDFParser(true)}>
+            <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M16 13H8" />
+              <path d="M16 17H8" />
+              <path d="M10 9H8" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {/* PDF Parser Modal */}
+      {showPDFParser && (
+        <div className="modal-overlay" onClick={() => setShowPDFParser(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <button className="close-button" onClick={() => setShowPDFParser(false)}>×</button>
+            </div>
+            <PDFParser />
+          </div>
+        </div>
+      )}
 
       {!isCollapsed && (
         <>

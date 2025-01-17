@@ -7,6 +7,53 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingEdit, setPendingEdit] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+  const [sortedData, setSortedData] = useState([]);
+
+  useEffect(() => {
+    setSortedData(data);
+  }, [data]);
+
+  const handleSort = (column) => {
+    let direction = 'asc';
+    if (sortConfig.key === column && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    } else if (sortConfig.key === column && sortConfig.direction === 'desc') {
+      direction = null;
+    }
+
+    setSortConfig({ key: direction ? column : null, direction });
+
+    if (!direction) {
+      setSortedData([...data]);
+      return;
+    }
+
+    const sorted = [...sortedData].sort((a, b) => {
+      if (a[column] === null) return 1;
+      if (b[column] === null) return -1;
+      
+      let comparison = 0;
+      if (typeof a[column] === 'number') {
+        comparison = a[column] - b[column];
+      } else {
+        comparison = String(a[column]).localeCompare(String(b[column]));
+      }
+      
+      return direction === 'asc' ? comparison : -comparison;
+    });
+
+    setSortedData(sorted);
+  };
+
+  const getSortIcon = (column) => {
+    if (sortConfig.key !== column) {
+      return <span className="sort-icon">↕</span>;
+    }
+    return sortConfig.direction === 'asc' ? 
+      <span className="sort-icon active">↑</span> : 
+      <span className="sort-icon active">↓</span>;
+  };
 
   const refreshData = useCallback(async () => {
     if (onRefresh) {
@@ -131,12 +178,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
           <thead>
             <tr>
               {columns.map(column => (
-                <th key={column}>{column}</th>
+                <th 
+                  key={column}
+                  onClick={() => handleSort(column)}
+                  className={`sortable-header ${sortConfig.key === column ? 'active' : ''}`}
+                >
+                  <div className="header-content">
+                    <span>{column}</span>
+                    {getSortIcon(column)}
+                  </div>
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {data.map((row, rowIndex) => (
+            {sortedData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
                 {columns.map(column => {
                   const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.column === column;
