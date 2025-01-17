@@ -7,24 +7,24 @@
 
 .loading {
     color: #666;
-    margin: 20px 0;
+    padding: 1rem;
     text-align: center;
 }
 
 .error-message {
-    color: #dc3545;
-    padding: 10px;
-    margin: 10px 0;
-    border-left: 4px solid #dc3545;
-    background: #fff;
+    color: #ef4444;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    background: #fee2e2;
+    border-radius: 4px;
 }
 
 .message {
-    color: #28a745;
-    padding: 10px;
-    margin: 10px 0;
-    border-left: 4px solid #28a745;
-    background: #fff;
+    color: #059669;
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    background: #d1fae5;
+    border-radius: 4px;
 }
 
 .analysis-results {
@@ -37,55 +37,71 @@
 }
 
 .table-preview {
+    margin: 1rem 0;
     overflow-x: auto;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .table-preview table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: white;
+}
+
+.table-preview th,
+.table-preview td {
+    padding: 8px;
+    border: 1px solid #eaeaea;
+    text-align: left;
 }
 
 .table-preview th {
-    background: #f8f9fa;
-    padding: 12px;
-    text-align: left;
+    background: #f8f8f8;
     font-weight: 600;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
-    white-space: nowrap;
+    font-size: 0.9rem;
 }
 
 .table-preview td {
-    padding: 12px;
-    border-bottom: 1px solid #dee2e6;
-    color: #212529;
+    font-size: 0.9rem;
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
 }
 
-.table-preview .null-value {
-    color: #6c757d;
+.table-preview td:hover {
+    background-color: #f8f8f8;
+}
+
+.table-preview td.null-value {
+    color: #999;
     font-style: italic;
 }
 
+.table-preview td.editing {
+    padding: 0;
+    background: #fff;
+}
+
+.table-preview td input {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid #3b82f6;
+    border-radius: 2px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
 .insert-button {
-    background: #007bff;
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: #000;
     color: white;
     border: none;
-    padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
+    font-size: 0.9rem;
+    transition: opacity 0.2s;
 }
 
 .insert-button:hover {
-    background: #0056b3;
-}
-
-.insert-button:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
+    opacity: 0.8;
 } 

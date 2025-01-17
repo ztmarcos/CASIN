@@ -7,7 +7,15 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [mappedData, setMappedData] = useState(null);
+    const [editedData, setEditedData] = useState(null);
     const [message, setMessage] = useState(null);
+    const [editingCell, setEditingCell] = useState(null);
+
+    useEffect(() => {
+        if (mappedData && !editedData) {
+            setEditedData({...mappedData});
+        }
+    }, [mappedData]);
 
     // Trigger analysis automatically when data is available and autoAnalyze is true
     useEffect(() => {
@@ -147,6 +155,19 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
         }
     };
 
+    const handleCellEdit = (column, value) => {
+        setEditedData(prev => ({
+            ...prev,
+            [column]: value
+        }));
+    };
+
+    const handleKeyDown = (e, column) => {
+        if (e.key === 'Enter') {
+            setEditingCell(null);
+        }
+    };
+
     return (
         <div className="gpt-analysis">
             {loading && <div className="loading">Analyzing content...</div>}
@@ -157,7 +178,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 </div>
             )}
 
-            {mappedData && (
+            {mappedData && editedData && (
                 <div className="analysis-results">
                     <h3>Extracted Data Preview</h3>
                     <div className="table-preview">
@@ -171,9 +192,27 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                             </thead>
                             <tbody>
                                 <tr>
-                                    {Object.values(mappedData).map((value, index) => (
-                                        <td key={index} className={value === null ? 'null-value' : ''}>
-                                            {value !== null ? String(value) : '-'}
+                                    {Object.keys(editedData).map((column) => (
+                                        <td 
+                                            key={column} 
+                                            className={`
+                                                ${editedData[column] === null ? 'null-value' : ''}
+                                                ${editingCell === column ? 'editing' : ''}
+                                            `}
+                                            onClick={() => setEditingCell(column)}
+                                        >
+                                            {editingCell === column ? (
+                                                <input
+                                                    type="text"
+                                                    value={editedData[column] !== null ? String(editedData[column]) : ''}
+                                                    onChange={(e) => handleCellEdit(column, e.target.value)}
+                                                    onKeyDown={(e) => handleKeyDown(e, column)}
+                                                    onBlur={() => setEditingCell(null)}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                editedData[column] !== null ? String(editedData[column]) : '-'
+                                            )}
                                         </td>
                                     ))}
                                 </tr>
@@ -182,7 +221,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                     </div>
                     
                     <button 
-                        onClick={() => handleDataInsertion(mappedData)}
+                        onClick={() => handleDataInsertion(editedData)}
                         className="insert-button"
                     >
                         Insert into Database
