@@ -283,7 +283,7 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) {
-        connection.release();
+        await connection.end();
       }
     }
   }
@@ -322,7 +322,7 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) {
-        connection.release();
+        await connection.end();
       }
     }
   }
@@ -356,7 +356,7 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) {
-        connection.release();
+        await connection.end();
       }
     }
   }
@@ -390,7 +390,7 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) {
-        connection.release();
+        await connection.end();
       }
     }
   }
