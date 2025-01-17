@@ -121,9 +121,17 @@
 }
 
 .data-table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+}
+
+.data-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
 }
 
 .data-table th {
@@ -164,28 +172,28 @@
 
 /* Column widths */
 .data-table th:nth-child(1),
-.data-table td:nth-child(1) { width: 50px; min-width: 50px; max-width: 50px; } /* id */
+.data-table td:nth-child(1) { width: 50px; min-width: 50px; } /* id */
 
 .data-table th:nth-child(2),
-.data-table td:nth-child(2) { width: 80px; min-width: 80px; max-width: 80px; } /* numero poliza */
+.data-table td:nth-child(2) { width: 80px; min-width: 80px; } /* numero poliza */
 
 .data-table th:nth-child(3),
-.data-table td:nth-child(3) { width: 150px; min-width: 150px; max-width: 150px; } /* contratante */
+.data-table td:nth-child(3) { width: 150px; min-width: 150px; } /* contratante */
 
 .data-table th:nth-child(4),
-.data-table td:nth-child(4) { width: 100px; min-width: 100px; max-width: 100px; } /* rfc */
+.data-table td:nth-child(4) { width: 100px; min-width: 100px; } /* rfc */
 
 .data-table th:nth-child(5),
-.data-table td:nth-child(5) { width: 150px; min-width: 150px; max-width: 150px; } /* nombre */
+.data-table td:nth-child(5) { width: 150px; min-width: 150px; } /* nombre */
 
 .data-table th:nth-child(6),
-.data-table td:nth-child(6) { width: 200px; min-width: 200px; max-width: 200px; } /* direccion */
+.data-table td:nth-child(6) { width: 200px; min-width: 200px; } /* direccion */
 
 .data-table th:nth-child(7),
-.data-table td:nth-child(7) { width: 80px; min-width: 80px; max-width: 80px; } /* telefono */
+.data-table td:nth-child(7) { width: 80px; min-width: 80px; } /* telefono */
 
 .data-table th:nth-child(8),
-.data-table td:nth-child(8) { width: 80px; min-width: 80px; max-width: 80px; } /* codigo */
+.data-table td:nth-child(8) { width: 80px; min-width: 80px; } /* codigo */
 
 /* Address cell specific styling */
 .data-table td.address-cell {
