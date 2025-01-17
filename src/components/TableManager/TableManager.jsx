@@ -8,6 +8,9 @@ const TableManager = ({ onTableSelect }) => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [newTableName, setNewTableName] = useState('');
+  const [showConfirmDelete, setShowConfirmDelete] = useState(null);
 
   useEffect(() => {
     loadTables();
@@ -34,12 +37,55 @@ const TableManager = ({ onTableSelect }) => {
     }
   };
 
+  const handleEditClick = (e, table) => {
+    e.stopPropagation();
+    setEditingTable(table);
+    setNewTableName(table.name);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingTable || !newTableName.trim()) return;
+
+    try {
+      await tableService.renameTable(editingTable.name, newTableName.trim());
+      await loadTables();
+      setEditingTable(null);
+      setNewTableName('');
+    } catch (err) {
+      console.error('Error renaming table:', err);
+      setError('Failed to rename table. Please try again.');
+    }
+  };
+
+  const handleDeleteClick = (e, table) => {
+    e.stopPropagation();
+    setShowConfirmDelete(table);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!showConfirmDelete) return;
+
+    try {
+      await tableService.deleteTable(showConfirmDelete.name);
+      await loadTables();
+      setShowConfirmDelete(null);
+      if (selectedTable?.name === showConfirmDelete.name) {
+        setSelectedTable(null);
+        onTableSelect(null);
+      }
+    } catch (err) {
+      console.error('Error deleting table:', err);
+      setError('Failed to delete table. Please try again.');
+    }
+  };
+
   return (
     <div className="table-manager">
       <div className="section-header">
         <h3>
           <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
-            {isCollapsed ? '›' : '⌄'}
+            {isCollapsed ? '>' : 'v'}
           </span>
           Tables {tables.length > 0 && `(${tables.length})`}
         </h3>
@@ -60,14 +106,70 @@ const TableManager = ({ onTableSelect }) => {
                   className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
                   onClick={() => handleTableSelect(table)}
                 >
-                  <span className="table-name">{table.name}</span>
-                  {table.count !== undefined && (
-                    <span className="table-count">{table.count}</span>
-                  )}
+                  <div className="table-info">
+                    {editingTable?.name === table.name ? (
+                      <form onSubmit={handleEditSubmit} className="edit-form">
+                        <input
+                          type="text"
+                          value={newTableName}
+                          onChange={(e) => setNewTableName(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                        <button type="submit" onClick={(e) => e.stopPropagation()}>✓</button>
+                        <button type="button" onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTable(null);
+                        }}>✕</button>
+                      </form>
+                    ) : (
+                      <>
+                        <span className="table-name">{table.name}</span>
+                        {table.count !== undefined && (
+                          <span className="table-count">{table.count}</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="table-actions">
+                    <button
+                      className="action-btn edit-btn"
+                      onClick={(e) => handleEditClick(e, table)}
+                      title="Edit Name"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="action-btn delete-btn"
+                      onClick={(e) => handleDeleteClick(e, table)}
+                      title="Delete Table"
+                    >
+                      X
+                    </button>
+                  </div>
                 </div>
               ))
             )}
           </div>
+
+          {/* Delete Confirmation Modal */}
+          {showConfirmDelete && (
+            <div className="modal-overlay">
+              <div className="modal-content">
+                <h4>Delete Table</h4>
+                <p>Are you sure you want to delete the table "{showConfirmDelete.name}"?</p>
+                <p className="warning">This action cannot be undone!</p>
+                <div className="modal-actions">
+                  <button onClick={handleConfirmDelete} className="danger-btn">
+                    Delete
+                  </button>
+                  <button onClick={() => setShowConfirmDelete(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
