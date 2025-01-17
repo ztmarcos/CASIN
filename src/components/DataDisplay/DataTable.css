@@ -1,7 +1,11 @@
 .data-table-container {
   position: relative;
   width: 100%;
-  overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
 }
 
 .confirmation-dialog {
@@ -55,15 +59,6 @@
   background: #f5f5f5;
 }
 
-.data-table-container {
-  width: 100%;
-  height: calc(100vh - 120px);
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-}
-
 .table-header {
   display: flex;
   justify-content: space-between;
@@ -111,13 +106,10 @@
 }
 
 .table-wrapper {
-  width: 100%;
-  height: calc(100vh - 120px);
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
+  position: relative;
 }
 
 .data-table {
@@ -125,6 +117,7 @@
   min-width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
+  background: #ffffff;
 }
 
 .data-table thead {
