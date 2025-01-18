@@ -16,10 +16,7 @@ const DataSection = () => {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showAddEntryModal, setShowAddEntryModal] = useState(false);
   const [showCreateTableModal, setShowCreateTableModal] = useState(false);
-  const [filters, setFilters] = useState({
-    status: '',
-    role: ''
-  });
+  const [filters, setFilters] = useState({});
 
   const loadTableData = useCallback(async () => {
     if (!selectedTable) return;
@@ -42,7 +39,7 @@ const DataSection = () => {
 
   const handleTableSelect = async (table) => {
     setSelectedTable(table);
-    setFilters({ status: '', role: '' }); // Reset filters on table change
+    setFilters({}); // Reset filters on table change
   };
 
   const handleRowClick = (row) => {
@@ -168,67 +165,61 @@ const DataSection = () => {
         <h2>Data Management</h2>
         <div className="header-actions">
           <button 
-            className="btn-primary" 
+            className="btn-primary create-btn" 
             onClick={() => setShowCreateTableModal(true)}
             disabled={isLoading}
           >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            Create Table
+            Crear Tabla
           </button>
           {selectedTable && (
             <>
               <button 
-                className="btn-primary" 
+                className="btn-primary add-btn" 
                 onClick={() => setShowAddEntryModal(true)}
                 disabled={isLoading}
               >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                Add Entry
+                Agregar Entrada
               </button>
               <button 
-                className="btn-primary" 
+                className="btn-primary import-btn" 
                 onClick={() => setShowImportModal(true)}
                 disabled={isLoading}
               >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-9-1.5h7.5m-7.5 3h7.5m3-3v3m0 0v3m0-3h-3m3 0h3M3 9l3-3m0 0l3 3m-3-3v12" />
                 </svg>
-                Import
+                Importar
               </button>
               <button 
-                className="btn-secondary" 
+                className="btn-icon-only" 
                 onClick={toggleViewMode}
                 title={viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'}
                 disabled={isLoading}
               >
                 {viewMode === 'table' ? (
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <rect x="4" y="4" width="7" height="7" rx="1" />
-                    <rect x="13" y="4" width="7" height="7" rx="1" />
-                    <rect x="4" y="13" width="7" height="7" rx="1" />
-                    <rect x="13" y="13" width="7" height="7" rx="1" />
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                   </svg>
                 ) : (
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <line x1="4" y1="6" x2="20" y2="6" />
-                    <line x1="4" y1="12" x2="20" y2="12" />
-                    <line x1="4" y1="18" x2="20" y2="18" />
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
                   </svg>
                 )}
               </button>
               <button 
-                className="btn-secondary" 
+                className="btn-icon-only" 
                 onClick={handleExport}
                 title="Export as CSV"
                 disabled={!selectedTable || isLoading || !tableData.length}
               >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path d="M12 3v12M8 12l4 4 4-4" />
-                  <path d="M20 16v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-3" />
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               </button>
             </>
@@ -248,37 +239,7 @@ const DataSection = () => {
         </div>
 
         {selectedTable && (
-          <>
-            <div className="data-filters">
-              <div className="filter-group">
-                <label>Status:</label>
-                <select 
-                  className="filter-select"
-                  value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
-                  disabled={isLoading}
-                >
-                  <option value="">All</option>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Role:</label>
-                <select 
-                  className="filter-select"
-                  value={filters.role}
-                  onChange={(e) => handleFilterChange('role', e.target.value)}
-                  disabled={isLoading}
-                >
-                  <option value="">All</option>
-                  <option value="Developer">Developer</option>
-                  <option value="Designer">Designer</option>
-                  <option value="Manager">Manager</option>
-                </select>
-              </div>
-            </div>
-
+          <div className="data-display-container">
             {isLoading ? (
               <div className="loading-state">Loading...</div>
             ) : viewMode === 'table' ? (
@@ -293,7 +254,7 @@ const DataSection = () => {
                 onCardClick={handleRowClick}
               />
             )}
-          </>
+          </div>
         )}
       </div>
 

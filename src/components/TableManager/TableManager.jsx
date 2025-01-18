@@ -144,7 +144,7 @@ const TableManager = ({ onTableSelect }) => {
                       onClick={(e) => handleDeleteClick(e, table)}
                       title="Delete Table"
                     >
-                      X
+                      ×
                     </button>
                   </div>
                 </div>

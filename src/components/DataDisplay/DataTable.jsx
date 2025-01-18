@@ -152,12 +152,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
             <h4>Edit Cell</h4>
             <div className="edit-cell-info">
               <p>Column: {editingCell.column}</p>
-              <input
-                type="text"
+              <textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 onKeyDown={handleInputKeyDown}
                 autoFocus
+                rows={3}
+                className="edit-cell-textarea"
               />
             </div>
             <div className="edit-cell-actions">

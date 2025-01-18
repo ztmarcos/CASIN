@@ -15,12 +15,11 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import EditColumn from '../EditColumn/EditColumn';
 import PDFParser from '../PDFParser_new/PDFParser';
 import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
 
-const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
+const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, isPdfEnabled }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(column);
   const [showTagInput, setShowTagInput] = useState(false);
@@ -100,6 +99,19 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange }) => {
         {tag && <span className="column-tag-label">{tag}</span>}
       </span>
       <div className="column-actions">
+        <button 
+          onClick={() => onPdfToggle(column)} 
+          className={`action-btn pdf-toggle ${isPdfEnabled ? 'active' : ''}`}
+          title={isPdfEnabled ? 'PDF enabled' : 'PDF disabled'}
+        >
+          <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+        </button>
         {showTagInput ? (
           <form onSubmit={handleTagSubmit} className="tag-input-form">
             <input
@@ -146,13 +158,13 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [columns, setColumns] = useState([]);
   const [columnTags, setColumnTags] = useState({});
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [newColumnType, setNewColumnType] = useState('text');
   const [showPDFParser, setShowPDFParser] = useState(false);
+  const [pdfEnabledColumns, setPdfEnabledColumns] = useState({});
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -314,18 +326,27 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
   };
 
-  if (isEditing) {
-    return (
-      <EditColumn 
-        columns={columns} 
-        onSave={(updatedColumns) => {
-          setColumns(updatedColumns);
-          setIsEditing(false);
-        }}
-        onCancel={() => setIsEditing(false)}
-      />
-    );
-  }
+  const handlePdfToggle = async (columnName) => {
+    try {
+      setIsLoading(true);
+      setPdfEnabledColumns(prev => ({
+        ...prev,
+        [columnName]: !prev[columnName]
+      }));
+      // Here you would typically update this in your backend
+      await tableService.updateColumnPdfStatus(selectedTable.name, columnName, !pdfEnabledColumns[columnName]);
+    } catch (err) {
+      console.error('Failed to toggle PDF status:', err);
+      setError('Failed to toggle PDF status');
+      // Revert the change if there's an error
+      setPdfEnabledColumns(prev => ({
+        ...prev,
+        [columnName]: !prev[columnName]
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="column-manager">
@@ -339,9 +360,6 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         <div className="header-buttons">
           <button className="create-btn" onClick={() => setShowCreateForm(!showCreateForm)}>
             {showCreateForm ? '—' : '+'}
-          </button>
-          <button className="edit-btn" onClick={() => setIsEditing(true)}>
-            ✎
           </button>
           <button className="pdf-btn" onClick={() => setShowPDFParser(true)}>
             <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -417,6 +435,8 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
                         onDelete={handleDeleteColumn}
                         onEdit={handleEditColumnName}
                         onTagChange={handleTagChange}
+                        onPdfToggle={handlePdfToggle}
+                        isPdfEnabled={pdfEnabledColumns[column]}
                       />
                     ))}
                   </div>
