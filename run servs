@@ -1,0 +1,4 @@
+cd backend && npm start
+
+cd src && npm start
+npm run dev

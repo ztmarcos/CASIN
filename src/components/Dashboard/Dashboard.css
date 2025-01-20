@@ -3,40 +3,90 @@
 }
 
 .dashboard-title {
-  font-size: 1.5rem;
-  color: var(--text-primary);
   margin-bottom: 2rem;
-  font-family: var(--font-family-mono);
+  color: var(--text-primary);
+  font-size: 1.75rem;
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
 .dashboard-card {
   background-color: var(--bg-surface);
   border-radius: 8px;
-  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
 .card-header {
   padding: 1rem;
   border-bottom: 1px solid var(--border-color);
-  background-color: var(--bg-surface);
 }
 
 .card-header h3 {
   margin: 0;
-  font-size: 1rem;
   color: var(--text-primary);
-  font-family: var(--font-family-mono);
+  font-size: 1.1rem;
 }
 
 .card-content {
   padding: 1rem;
+  min-height: 200px;
+}
+
+/* Birthday List Styles */
+.birthday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.birthday-item {
+  padding: 0.75rem;
+  border-radius: 6px;
+  background-color: var(--bg-surface-hover);
+  transition: transform 0.2s;
+}
+
+.birthday-item:hover {
+  transform: translateX(4px);
+}
+
+.birthday-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.birthday-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.birthday-date {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.birthday-age {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.no-birthdays {
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 2rem 0;
+}
+
+.error-message {
+  color: var(--text-error);
+  text-align: center;
+  margin: 2rem 0;
 }
 
 /* Stats Grid */
@@ -60,8 +110,9 @@
 }
 
 .stat-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
 }
 
 /* Activity List */
@@ -181,7 +232,30 @@
   transition: width 0.3s ease;
 }
 
+/* Loading Spinner */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 2rem auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Responsive adjustments */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard {
     padding: 1rem;
@@ -190,4 +264,75 @@
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.expiration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.expiration-item {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.expiration-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expiration-type {
+  background-color: #e9ecef;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.expiration-policy {
+  font-size: 0.9rem;
+  color: #6c757d;
+}
+
+.expiration-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.expiration-name {
+  font-weight: 500;
+  color: #212529;
+}
+
+.expiration-date {
+  font-size: 0.9rem;
+  color: #dc3545;
+}
+
+.no-expirations {
+  text-align: center;
+  color: #6c757d;
+  padding: 1rem;
+}
+
+.view-all {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.view-all:hover {
+  text-decoration: underline;
 } 

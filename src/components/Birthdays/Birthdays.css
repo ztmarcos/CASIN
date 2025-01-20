@@ -251,6 +251,87 @@
   background-color: var(--bg-surface-hover);
 }
 
+.birthday-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.birthday-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #0066cc;
+}
+
+.email-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.birthday-source {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.birthday-metadata {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.birthday-source,
+.birthday-source-type {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.birthday-source {
+  background-color: var(--accent-color-10);
+  color: var(--accent-color);
+}
+
+.birthday-source-type {
+  background-color: #f0f0f0;
+  color: #666;
+  cursor: help;
+}
+
+.email-status {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.email-status.success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #34d399;
+}
+
+.email-status.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .birthdays-container {

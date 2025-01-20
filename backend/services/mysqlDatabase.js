@@ -107,15 +107,6 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
-      // First, modify the table to ensure id is AUTO_INCREMENT if it's not
-      try {
-        await connection.execute(
-          `ALTER TABLE ${tableName} MODIFY id INT NOT NULL AUTO_INCREMENT PRIMARY KEY`
-        );
-      } catch (err) {
-        console.log('Table already has AUTO_INCREMENT or other issue:', err);
-      }
-
       // Handle both single object and array of objects
       const dataArray = Array.isArray(data) ? data : [data];
       
@@ -123,30 +114,35 @@ class MySQLDatabaseService {
       for (const item of dataArray) {
         // Create a copy of data to avoid modifying the original
         const cleanedData = { ...item };
+        delete cleanedData.id;  // Ensure id is not included
 
-        // Always remove id field to let AUTO_INCREMENT handle it
-        delete cleanedData.id;
-
+        // Get only the columns that exist in the data
         const columns = Object.keys(cleanedData);
         const values = Object.values(cleanedData);
         const placeholders = columns.map(() => '?').join(',');
         
-        const query = `INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${placeholders})`;
+        // Use backticks to properly escape column names
+        const query = `INSERT INTO \`${tableName}\` (\`${columns.join('`,`')}\`) VALUES (${placeholders})`;
         console.log('Insert query:', query);
         console.log('Values:', values);
         
         const [result] = await connection.execute(query, values);
-        results.push(result);
+        results.push({
+          ...result,
+          insertId: result.insertId
+        });
       }
       
       return {
         success: true,
         message: `Data inserted successfully into ${tableName}`,
-        results
+        results,
+        insertedIds: results.map(r => r.insertId)
       };
     } catch (error) {
       console.error('Database error:', error);
-      throw error;
+      // Return a cleaner error message
+      throw new Error(error.message || 'Error inserting data');
     } finally {
       if (connection) await connection.end();
     }
@@ -159,7 +155,7 @@ class MySQLDatabaseService {
       
       // Build the CREATE TABLE query
       let query = `CREATE TABLE IF NOT EXISTS \`${tableDefinition.name}\` (
-        \`id\` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,`;
+        \`id\` INT NOT NULL AUTO_INCREMENT,`;
       
       // Add column definitions
       const columnDefinitions = tableDefinition.columns.map(column => {
@@ -167,7 +163,7 @@ class MySQLDatabaseService {
       });
       
       query += columnDefinitions.join(',\n');
-      query += '\n)';
+      query += ',\nPRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
       
       console.log('Creating table with query:', query);
 
@@ -239,18 +235,32 @@ class MySQLDatabaseService {
       );
 
       if (columns.length === 0) {
-        throw new Error('id column not found');
-      }
-
-      const idColumn = columns[0];
-      if (!idColumn.EXTRA.includes('auto_increment')) {
-        // Drop primary key if it exists
-        await connection.execute(`ALTER TABLE ${tableName} DROP PRIMARY KEY`);
-        
-        // Modify id column to be AUTO_INCREMENT
+        // If id column doesn't exist, add it
         await connection.execute(
-          `ALTER TABLE ${tableName} MODIFY COLUMN id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY`
+          `ALTER TABLE \`${tableName}\` 
+           ADD COLUMN \`id\` INT NOT NULL AUTO_INCREMENT FIRST,
+           ADD PRIMARY KEY (\`id\`)`
         );
+        console.log(`Added id column to table ${tableName}`);
+      } else {
+        const idColumn = columns[0];
+        if (!idColumn.EXTRA.includes('auto_increment')) {
+          // Drop primary key if it exists
+          try {
+            await connection.execute(`ALTER TABLE \`${tableName}\` DROP PRIMARY KEY`);
+          } catch (e) {
+            // Primary key might not exist, continue
+            console.log('No primary key to drop');
+          }
+          
+          // Modify id column to be AUTO_INCREMENT
+          await connection.execute(
+            `ALTER TABLE \`${tableName}\` 
+             MODIFY COLUMN \`id\` INT NOT NULL AUTO_INCREMENT FIRST,
+             ADD PRIMARY KEY (\`id\`)`
+          );
+          console.log(`Modified id column in table ${tableName} to be AUTO_INCREMENT`);
+        }
       }
       
       return {

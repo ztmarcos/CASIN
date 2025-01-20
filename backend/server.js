@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const cron = require('node-cron');
+const birthdayService = require('./services/birthdayService');
 
 // Import routes
 const driveRoutes = require('./routes/driveRoutes');
@@ -10,6 +12,7 @@ const emailRoutes = require('./routes/emailRoutes');
 const prospeccionRoutes = require('./routes/prospeccionRoutes');
 const sharepointRoutes = require('./routes/sharepointRoutes');
 const gptRoutes = require('./routes/gptRoutes');
+const birthdayRoutes = require('./routes/birthdayRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -29,6 +32,17 @@ app.use('/api/email', emailRoutes);
 app.use('/api/prospeccion', prospeccionRoutes);
 app.use('/api/sharepoint', sharepointRoutes);
 app.use('/api/gpt', gptRoutes);
+app.use('/api/birthday', birthdayRoutes);
+
+// Schedule birthday check every day at 9:00 AM
+cron.schedule('0 9 * * *', async () => {
+    console.log('Running scheduled birthday check...');
+    try {
+        await birthdayService.checkAndSendBirthdayEmails();
+    } catch (error) {
+        console.error('Error in scheduled birthday check:', error);
+    }
+});
 
 // Print available routes
 console.log('Available routes:');
@@ -38,6 +52,7 @@ console.log('- /api/email');
 console.log('- /api/prospeccion');
 console.log('- /api/sharepoint');
 console.log('- /api/gpt');
+console.log('- /api/birthday');
 
 // Start server with error handling
 const startServer = (port) => {

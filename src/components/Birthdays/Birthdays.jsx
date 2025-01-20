@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchBirthdays } from '../../services/birthdayService';
+import { fetchBirthdays, triggerBirthdayEmails } from '../../services/birthdayService';
 import './Birthdays.css';
 
 const Birthdays = () => {
@@ -8,22 +8,40 @@ const Birthdays = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
+  const [emailStatus, setEmailStatus] = useState(null);
 
   useEffect(() => {
-    const loadBirthdays = async () => {
-      try {
-        setLoading(true);
-        const data = await fetchBirthdays();
-        setBirthdays(data);
-      } catch (err) {
-        setError('Error loading birthdays: ' + err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadBirthdays();
   }, []);
+
+  const loadBirthdays = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchBirthdays();
+      // Convert date strings to Date objects
+      const processedData = data.map(birthday => ({
+        ...birthday,
+        date: new Date(birthday.date)
+      }));
+      setBirthdays(processedData);
+    } catch (err) {
+      console.error('Error loading birthdays:', err);
+      setError('Error loading birthdays: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSendEmails = async () => {
+    try {
+      setEmailStatus({ loading: true });
+      const result = await triggerBirthdayEmails();
+      setEmailStatus({ success: true, message: `Se enviaron ${result.emailsSent} correos de cumpleaños.` });
+      setTimeout(() => setEmailStatus(null), 5000); // Clear message after 5 seconds
+    } catch (err) {
+      setEmailStatus({ error: true, message: 'Error al enviar correos: ' + err.message });
+    }
+  };
 
   // Filter birthdays based on search term
   const filteredBirthdays = birthdays.filter(birthday => {
@@ -31,12 +49,14 @@ const Birthdays = () => {
     return (
       birthday.name?.toLowerCase().includes(searchLower) ||
       birthday.rfc?.toLowerCase().includes(searchLower) ||
+      birthday.email?.toLowerCase().includes(searchLower) ||
       birthday.details?.toLowerCase().includes(searchLower)
     );
   });
 
   // Group birthdays by month
   const groupedBirthdays = filteredBirthdays.reduce((groups, birthday) => {
+    if (!birthday.date) return groups;
     const month = birthday.date.toLocaleString('es-MX', { month: 'long' });
     if (!groups[month]) {
       groups[month] = [];
@@ -45,45 +65,44 @@ const Birthdays = () => {
     return groups;
   }, {});
 
+  const formatDate = (date) => {
+    if (!date) return 'Fecha no disponible';
+    try {
+      return date.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+    } catch (err) {
+      console.error('Error formatting date:', err);
+      return 'Error en fecha';
+    }
+  };
+
   return (
     <div className="birthdays-container">
       <div className="birthdays-header">
         <h2>Cumpleaños</h2>
         <div className="header-actions">
           <div className="search-container">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
             <input
               type="text"
               className="search-input"
-              placeholder="Buscar por nombre, RFC o póliza..."
+              placeholder="Buscar por nombre, RFC, email o póliza..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <svg 
-              className="search-icon" 
-              xmlns="http://www.w3.org/2000/svg" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              strokeWidth={1.5} 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" 
-              />
-            </svg>
           </div>
           <div className="view-actions">
-            <button 
+            <button
               className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`}
               onClick={() => setViewMode('grid')}
-              title="Vista de cuadrícula"
+              title="Vista de tarjetas"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
               </svg>
             </button>
-            <button 
+            <button
               className={`view-toggle ${viewMode === 'table' ? 'active' : ''}`}
               onClick={() => setViewMode('table')}
               title="Vista de tabla"
@@ -93,14 +112,24 @@ const Birthdays = () => {
               </svg>
             </button>
           </div>
-          <button className="btn-primary">
+          <button 
+            className="btn-primary" 
+            onClick={handleSendEmails}
+            disabled={emailStatus?.loading}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
-            Agregar Cumpleaños
+            Enviar Correos de Cumpleaños
           </button>
         </div>
       </div>
+
+      {emailStatus && (
+        <div className={`email-status ${emailStatus.error ? 'error' : 'success'}`}>
+          {emailStatus.message}
+        </div>
+      )}
 
       {loading ? (
         <div className="loading-state">Cargando...</div>
@@ -121,14 +150,30 @@ const Birthdays = () => {
               <h3 className="month-title">{month}</h3>
               <div className="birthdays-grid">
                 {monthBirthdays.map((birthday) => (
-                  <div key={birthday.id} className="birthday-card">
+                  <div key={birthday.id || birthday.rfc} className="birthday-card">
                     <div className="birthday-info">
                       <span className="birthday-date">
-                        {birthday.formattedDate} ({birthday.age} años)
+                        {formatDate(birthday.date)} ({birthday.age} años)
                       </span>
                       <h3 className="birthday-name">{birthday.name}</h3>
                       <p className="birthday-details">{birthday.details}</p>
-                      <span className="birthday-rfc">{birthday.rfc}</span>
+                      <div className="birthday-contact">
+                        <span className="birthday-rfc">{birthday.rfc}</span>
+                        {birthday.email && (
+                          <span className="birthday-email">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="email-icon">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                            {birthday.email}
+                          </span>
+                        )}
+                      </div>
+                      <div className="birthday-metadata">
+                        <span className="birthday-source">{birthday.source}</span>
+                        <span className="birthday-source-type" title="Fuente de la fecha de nacimiento">
+                          {birthday.birthdaySource}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -143,19 +188,25 @@ const Birthdays = () => {
               <tr>
                 <th>Fecha</th>
                 <th>Nombre</th>
+                <th>Email</th>
                 <th>RFC</th>
                 <th>Detalles</th>
                 <th>Edad</th>
+                <th>Fuente</th>
+                <th>Origen Fecha</th>
               </tr>
             </thead>
             <tbody>
               {filteredBirthdays.map((birthday) => (
-                <tr key={birthday.id}>
-                  <td>{birthday.formattedDate}</td>
+                <tr key={birthday.id || birthday.rfc}>
+                  <td>{formatDate(birthday.date)}</td>
                   <td>{birthday.name}</td>
-                  <td>{birthday.rfc}</td>
+                  <td>{birthday.email || '-'}</td>
+                  <td>{birthday.rfc || '-'}</td>
                   <td>{birthday.details}</td>
                   <td>{birthday.age} años</td>
+                  <td>{birthday.source}</td>
+                  <td title="Fuente de la fecha de nacimiento">{birthday.birthdaySource}</td>
                 </tr>
               ))}
             </tbody>

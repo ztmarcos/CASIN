@@ -70,6 +70,38 @@ ${data.companyAddress}`;
         }
     }
 
+    async sendBirthdayEmail(to, data) {
+        try {
+            console.log('\n=== Email Service: Sending Birthday Email ===');
+            
+            const text = `
+¡Feliz Cumpleaños ${data.nombre}!
+
+En este día tan especial, queremos desearte un muy feliz cumpleaños.
+Gracias por confiar en nosotros para proteger lo que más te importa.
+
+Que este nuevo año de vida esté lleno de bendiciones y éxitos.
+
+Atentamente,
+El equipo de ${data.companyName}
+${data.companyAddress}`;
+
+            const mailOptions = {
+                from: process.env.GMAIL_USER,
+                to,
+                subject: '¡Feliz Cumpleaños!',
+                text
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+            console.log('Birthday email sent successfully:', result);
+            return { success: true, messageId: result.messageId };
+        } catch (error) {
+            console.error('Email service: Error sending birthday email:', error);
+            throw error;
+        }
+    }
+
     // Method to verify email connection
     async verifyConnection() {
         try {

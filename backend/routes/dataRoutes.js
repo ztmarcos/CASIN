@@ -56,12 +56,17 @@ router.post('/:tableName', async (req, res) => {
     const { tableName } = req.params;
     const data = req.body;
     
-    // Remove id field for auto-increment
-    if ('id' in data) {
-      delete data.id;
-    }
+    // Get table structure first
+    const [columns] = await mysqlDatabase.executeQuery(
+      `SHOW COLUMNS FROM \`${tableName}\``,
+      []
+    );
     
-    const result = await mysqlDatabase.insertData(tableName, data);
+    // Filter out the id field from the data if it exists
+    const cleanData = { ...data };
+    delete cleanData.id;
+    
+    const result = await mysqlDatabase.insertData(tableName, cleanData);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error inserting data:', error);

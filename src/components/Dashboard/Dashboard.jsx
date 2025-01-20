@@ -1,173 +1,184 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
+import { fetchBirthdays } from '../../services/birthdayService';
+import tableService from '../../services/data/tableService';
 import './Dashboard.css';
 
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+const formatearFecha = (fecha) => {
+  const date = new Date(fecha);
+  const dia = date.getDate();
+  const mes = MESES[date.getMonth()];
+  const año = date.getFullYear();
+  return `${dia} de ${mes} ${año}`;
+};
+
 const Dashboard = () => {
+  const [birthdays, setBirthdays] = useState([]);
+  const [expirations, setExpirations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        setLoading(true);
+        // Fetch birthdays
+        const birthdayData = await fetchBirthdays();
+        
+        // Filter birthdays for current month
+        const currentMonth = new Date().getMonth();
+        const thisMonthBirthdays = birthdayData.filter(birthday => 
+          birthday.date.getMonth() === currentMonth
+        ).sort((a, b) => a.date.getDate() - b.date.getDate());
+        
+        setBirthdays(thisMonthBirthdays);
+
+        // Fetch policies data
+        const [gmmResponse, autosResponse] = await Promise.all([
+          tableService.getData('gmm'),
+          tableService.getData('autos')
+        ]);
+
+        // Normalize and combine the data
+        const currentDate = new Date();
+
+        const gmmPolicies = (gmmResponse.data || []).map(policy => ({
+          numero_poliza: policy.n__mero_de_p__liza,
+          contratante: policy.contratante,
+          fecha_fin: policy.vigencia__fin_,
+          aseguradora: policy.aseguradora,
+          tipo: 'GMM'
+        }));
+
+        const autosPolicies = (autosResponse.data || []).map(policy => ({
+          numero_poliza: policy.numero_de_poliza,
+          contratante: policy.nombre_contratante,
+          fecha_fin: policy.vigencia_fin,
+          aseguradora: policy.aseguradora,
+          tipo: 'Auto'
+        }));
+
+        // Combine and filter policies expiring this month
+        const allPolicies = [...gmmPolicies, ...autosPolicies];
+        const monthlyExpirations = allPolicies.filter(policy => {
+          const expiryDate = new Date(policy.fecha_fin);
+          return expiryDate.getMonth() === currentMonth;
+        }).sort((a, b) => new Date(a.fecha_fin) - new Date(b.fecha_fin));
+
+        setExpirations(monthlyExpirations);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error loading dashboard data:', err);
+        setError('Error al cargar los datos del dashboard');
+        setLoading(false);
+      }
+    };
+
+    loadDashboardData();
+  }, []);
+
   return (
     <div className="dashboard">
       <h1 className="dashboard-title">Dashboard</h1>
       
       <div className="dashboard-grid">
-        {/* Section 1 - Weather */}
+        {/* Sección 1 - Clima */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Weather</h3>
+            <h3>Clima</h3>
           </div>
           <div className="card-content">
             <Weather />
           </div>
         </div>
 
-        {/* Section 2 - Quick Stats */}
+        {/* Sección 2 - Cumpleaños del Mes */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Quick Stats</h3>
+            <h3>Cumpleaños del Mes</h3>
           </div>
-          <div className="card-content stats-grid">
-            <div className="stat-item">
-              <span className="stat-value">128</span>
-              <span className="stat-label">Total Records</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">64</span>
-              <span className="stat-label">Active</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-value">32</span>
-              <span className="stat-label">Pending</span>
-            </div>
+          <div className="card-content">
+            {loading ? (
+              <div className="loading-spinner"></div>
+            ) : error ? (
+              <div className="error-message">{error}</div>
+            ) : birthdays.length === 0 ? (
+              <p className="no-birthdays">No hay cumpleaños este mes</p>
+            ) : (
+              <div className="birthday-list">
+                {birthdays.map((birthday) => (
+                  <div key={birthday.rfc} className="birthday-item">
+                    <div className="birthday-info">
+                      <span className="birthday-name">{birthday.name}</span>
+                      <span className="birthday-date">{formatearFecha(birthday.date)}</span>
+                    </div>
+                    <div className="birthday-age">
+                      Cumple: {birthday.age + 1} años
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Section 3 - Recent Activity */}
+        {/* Sección 3 - Vencimientos del Mes */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Recent Activity</h3>
+            <h3>Vencimientos del Mes</h3>
+          </div>
+          <div className="card-content">
+            {loading ? (
+              <div className="loading-spinner"></div>
+            ) : error ? (
+              <div className="error-message">{error}</div>
+            ) : expirations.length === 0 ? (
+              <p className="no-expirations">No hay vencimientos este mes</p>
+            ) : (
+              <div className="expiration-list">
+                {expirations.slice(0, 5).map((policy) => (
+                  <div key={`${policy.tipo}-${policy.numero_poliza}`} className="expiration-item">
+                    <div className="expiration-info">
+                      <span className="expiration-type">{policy.tipo}</span>
+                      <span className="expiration-policy">{policy.numero_poliza}</span>
+                    </div>
+                    <div className="expiration-details">
+                      <span className="expiration-name">{policy.contratante}</span>
+                      <span className="expiration-date">
+                        Vence: {formatearFecha(policy.fecha_fin)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sección 4 - Actividad Reciente */}
+        <div className="dashboard-card">
+          <div className="card-header">
+            <h3>Actividad Reciente</h3>
           </div>
           <div className="card-content">
             <div className="activity-list">
               <div className="activity-item">
-                <span className="activity-time">2m ago</span>
-                <span className="activity-text">New record added</span>
+                <span className="activity-time">2m atrás</span>
+                <span className="activity-text">Nuevo registro añadido</span>
               </div>
               <div className="activity-item">
-                <span className="activity-time">1h ago</span>
-                <span className="activity-text">Data updated</span>
+                <span className="activity-time">1h atrás</span>
+                <span className="activity-text">Datos actualizados</span>
               </div>
               <div className="activity-item">
-                <span className="activity-time">3h ago</span>
-                <span className="activity-text">System backup</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4 - System Status */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>System Status</h3>
-          </div>
-          <div className="card-content">
-            <div className="status-item">
-              <span className="status-label">Database</span>
-              <span className="status-badge success">Online</span>
-            </div>
-            <div className="status-item">
-              <span className="status-label">API</span>
-              <span className="status-badge success">Online</span>
-            </div>
-            <div className="status-item">
-              <span className="status-label">Storage</span>
-              <span className="status-badge warning">85% Used</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 5 - Quick Actions */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Quick Actions</h3>
-          </div>
-          <div className="card-content">
-            <div className="actions-grid">
-              <button className="action-button">New Entry</button>
-              <button className="action-button">Export</button>
-              <button className="action-button">Reports</button>
-              <button className="action-button">Settings</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 6 - Notifications */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Notifications</h3>
-          </div>
-          <div className="card-content">
-            <div className="notification-list">
-              <div className="notification-item">
-                <div className="notification-dot warning"></div>
-                <span>System update available</span>
-              </div>
-              <div className="notification-item">
-                <div className="notification-dot success"></div>
-                <span>Backup completed</span>
-              </div>
-              <div className="notification-item">
-                <div className="notification-dot error"></div>
-                <span>Storage space low</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 7 - Data Summary */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>Data Summary</h3>
-          </div>
-          <div className="card-content">
-            <div className="summary-list">
-              <div className="summary-item">
-                <span className="summary-label">Total Tables</span>
-                <span className="summary-value">12</span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Total Records</span>
-                <span className="summary-value">1,234</span>
-              </div>
-              <div className="summary-item">
-                <span className="summary-label">Last Update</span>
-                <span className="summary-value">2h ago</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 8 - System Resources */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h3>System Resources</h3>
-          </div>
-          <div className="card-content">
-            <div className="resource-list">
-              <div className="resource-item">
-                <span className="resource-label">CPU Usage</span>
-                <div className="progress-bar">
-                  <div className="progress" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-              <div className="resource-item">
-                <span className="resource-label">Memory</span>
-                <div className="progress-bar">
-                  <div className="progress" style={{ width: '60%' }}></div>
-                </div>
-              </div>
-              <div className="resource-item">
-                <span className="resource-label">Disk</span>
-                <div className="progress-bar">
-                  <div className="progress" style={{ width: '75%' }}></div>
-                </div>
+                <span className="activity-time">3h atrás</span>
+                <span className="activity-text">Respaldo del sistema</span>
               </div>
             </div>
           </div>
