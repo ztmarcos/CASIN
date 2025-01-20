@@ -1,6 +1,7 @@
 import { extractBirthdayFromRFC, formatBirthday, calculateAge } from '../utils/rfcUtils';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:30011';
+const API_URL = `${BASE_URL}/api`;
 
 /**
  * Fetches birthday data from the server
@@ -8,6 +9,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
  */
 export const fetchBirthdays = async () => {
   try {
+    console.log('Fetching birthdays from:', `${API_URL}/birthday`);
     const response = await fetch(`${API_URL}/birthday`);
     if (!response.ok) throw new Error('Failed to fetch birthdays');
     

@@ -1,26 +1,15 @@
 import { useState, useEffect } from 'react';
 import './Reports.css';
 import tableService from '../../services/data/tableService';
+import { sendReportEmail } from '../../services/reportEmailService';
+import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUtils';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const MESES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-];
-
 const REPORT_TYPES = ['Vencimientos', 'Pagos Parciales'];
-
-const formatearFecha = (fecha) => {
-  const date = new Date(fecha);
-  const dia = date.getDate();
-  const mes = MESES[date.getMonth()];
-  const año = date.getFullYear();
-  return `${dia} de ${mes} ${año}`;
-};
 
 export default function Reports() {
   const [viewMode, setViewMode] = useState('table');
@@ -31,6 +20,9 @@ export default function Reports() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateFormat, setDateFormat] = useState('long-es');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
 
   // Helper function to normalize policy data from different tables
   const normalizePolicy = (policy, source) => {
@@ -41,6 +33,7 @@ export default function Reports() {
         contratante: policy.contratante,
         asegurado: policy.nombre_del_asegurado,
         rfc: policy.rfc,
+        email: policy.e_mail || policy.email,
         fecha_inicio: policy.vigencia__inicio_,
         fecha_fin: policy.vigencia__fin_,
         prima_total: parseFloat(policy.prima_neta || 0),
@@ -52,7 +45,7 @@ export default function Reports() {
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
         aseguradora: policy.aseguradora,
-        status: 'Vigente', // You might want to calculate this based on dates
+        status: 'Vigente',
         tipo: 'GMM'
       };
     } else if (source === 'autos') {
@@ -60,8 +53,9 @@ export default function Reports() {
         id: policy.id,
         numero_poliza: policy.numero_de_poliza,
         contratante: policy.nombre_contratante,
-        asegurado: policy.nombre_contratante, // Assuming same as contratante for autos
+        asegurado: policy.nombre_contratante,
         rfc: policy.rfc,
+        email: policy.e_mail || policy.email,
         fecha_inicio: policy.vigencia_inicio,
         fecha_fin: policy.vigencia_fin,
         prima_total: parseFloat(policy.prima_neta || 0),
@@ -73,7 +67,7 @@ export default function Reports() {
         pagos_fraccionados: null,
         pago_parcial: null,
         aseguradora: policy.aseguradora,
-        status: 'Vigente', // You might want to calculate this based on dates
+        status: 'Vigente',
         tipo: 'Auto'
       };
     }
@@ -85,13 +79,11 @@ export default function Reports() {
       setIsLoading(true);
       setError(null);
       try {
-        // Fetch data from both GMM and autos tables
         const [gmmResponse, autosResponse] = await Promise.all([
           tableService.getData('gmm'),
           tableService.getData('autos')
         ]);
 
-        // Normalize and combine the data
         const gmmPolicies = (gmmResponse.data || [])
           .map(policy => normalizePolicy(policy, 'gmm'))
           .filter(Boolean);
@@ -153,7 +145,6 @@ export default function Reports() {
     const filtered = policies.filter(policy => {
       if (!policy) return false;
 
-      // If there's a search term, search across all fields without any filters
       if (searchTerm.trim()) {
         return (
           matchesSearch(policy.numero_poliza, searchTerm) ||
@@ -166,25 +157,71 @@ export default function Reports() {
         );
       }
 
-      // Only apply filters if there's no search term
       if (selectedType === 'Vencimientos') {
-        const expiryDate = new Date(policy.fecha_fin);
-        return !isNaN(expiryDate.getTime()) && expiryDate.getMonth() === selectedMonth;
+        const expiryDate = parseDate(policy.fecha_fin);
+        
+        console.log('Checking policy:', {
+          policy_number: policy.numero_poliza,
+          fecha_fin: policy.fecha_fin,
+          parsed_date: expiryDate,
+          month: expiryDate?.getMonth(),
+          selectedMonth,
+          matches: expiryDate?.getMonth() === selectedMonth
+        });
+        
+        if (!expiryDate) {
+          console.warn('Invalid or missing date for policy:', policy.numero_poliza, policy.fecha_fin);
+          return false;
+        }
+        
+        return expiryDate.getMonth() === selectedMonth;
       } else {
         const nextPayment = calculateNextPayment(policy.fecha_inicio, policy.forma_pago);
         return nextPayment && nextPayment.getMonth() === selectedMonth;
       }
     });
 
-    // Sort results by fecha_fin for better readability
     const sortedFiltered = filtered.sort((a, b) => {
-      const dateA = new Date(a.fecha_fin);
-      const dateB = new Date(b.fecha_fin);
+      const dateA = parseDate(a.fecha_fin);
+      const dateB = parseDate(b.fecha_fin);
+      if (!dateA || !dateB) return 0;
       return dateA - dateB;
     });
 
+    console.log('Filtered policies:', sortedFiltered.map(p => ({
+      numero_poliza: p.numero_poliza,
+      fecha_fin: p.fecha_fin,
+      tipo: p.tipo,
+      parsed_date: parseDate(p.fecha_fin)
+    })));
+
     setFilteredPolicies(sortedFiltered);
   }, [selectedMonth, selectedType, policies, searchTerm]);
+
+  const handleSendEmail = async () => {
+    if (filteredPolicies.length === 0) {
+      setEmailStatus({ type: 'error', message: 'No hay pólizas para enviar' });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    setEmailStatus(null);
+
+    try {
+      await sendReportEmail(filteredPolicies, selectedType);
+      setEmailStatus({ 
+        type: 'success', 
+        message: `Reporte de ${selectedType} enviado exitosamente` 
+      });
+    } catch (error) {
+      setEmailStatus({ 
+        type: 'error', 
+        message: 'Error al enviar el reporte por email' 
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   return (
     <div className="reports-container">
@@ -214,7 +251,6 @@ export default function Reports() {
               ▤ Tarjetas
             </button>
           </div>
-          {/* Only show filters when not searching */}
           {!searchTerm.trim() && (
             <div className="filters">
               <select
@@ -235,14 +271,38 @@ export default function Reports() {
                   <option key={month} value={index}>{month}</option>
                 ))}
               </select>
+              <select
+                className="filter-select"
+                value={dateFormat}
+                onChange={(e) => setDateFormat(e.target.value)}
+              >
+                {getDateFormatOptions().map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           )}
+          <button
+            className="send-email-btn"
+            onClick={handleSendEmail}
+            disabled={isSendingEmail || filteredPolicies.length === 0}
+          >
+            {isSendingEmail ? 'Enviando...' : 'Enviar por Email'}
+          </button>
         </div>
       </div>
 
       {error && (
         <div className="error-message">
           {error}
+        </div>
+      )}
+
+      {emailStatus && (
+        <div className={`email-status ${emailStatus.type}`}>
+          {emailStatus.message}
         </div>
       )}
 
@@ -258,6 +318,7 @@ export default function Reports() {
                 <th>Tipo</th>
                 <th>Póliza</th>
                 <th>Contratante</th>
+                <th>Email</th>
                 <th>Aseguradora</th>
                 <th>Fecha Inicio</th>
                 <th>Fecha Fin</th>
@@ -269,7 +330,7 @@ export default function Reports() {
             <tbody>
               {filteredPolicies.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="no-data">
+                  <td colSpan={10} className="no-data">
                     No se encontraron pólizas
                   </td>
                 </tr>
@@ -283,9 +344,10 @@ export default function Reports() {
                     </td>
                     <td>{policy.numero_poliza}</td>
                     <td>{policy.contratante}</td>
+                    <td>{policy.email || 'No disponible'}</td>
                     <td>{policy.aseguradora}</td>
-                    <td>{formatearFecha(policy.fecha_inicio)}</td>
-                    <td>{formatearFecha(policy.fecha_fin)}</td>
+                    <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
+                    <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
                     <td>${policy.prima_total.toLocaleString()}</td>
                     <td>{policy.forma_pago}</td>
                     <td>
@@ -325,8 +387,9 @@ export default function Reports() {
                     </span>
                   </div>
                   <div className="card-details">
-                    <p>Inicio: {formatearFecha(policy.fecha_inicio)}</p>
-                    <p>Vencimiento: {formatearFecha(policy.fecha_fin)}</p>
+                    <p>Email: {policy.email || 'No disponible'}</p>
+                    <p>Inicio: {formatDate(policy.fecha_inicio, dateFormat)}</p>
+                    <p>Vencimiento: {formatDate(policy.fecha_fin, dateFormat)}</p>
                     <p>Forma de Pago: {policy.forma_pago}</p>
                     <p className="card-amount">Prima Total: ${policy.prima_total.toLocaleString()}</p>
                   </div>
@@ -338,4 +401,4 @@ export default function Reports() {
       )}
     </div>
   );
-} 
+}

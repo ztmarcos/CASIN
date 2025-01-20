@@ -48,11 +48,13 @@
   padding: 0.75rem;
   border-radius: 6px;
   background-color: var(--bg-surface-hover);
-  transition: transform 0.2s;
+  transition: all 0.2s;
+  border-left: 3px solid var(--accent-color);
 }
 
 .birthday-item:hover {
   transform: translateX(4px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .birthday-info {
@@ -72,9 +74,23 @@
   color: var(--text-secondary);
 }
 
+.birthday-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.email-icon {
+  font-size: 1rem;
+}
+
 .birthday-age {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-weight: 500;
+  color: var(--accent-color);
+  font-size: 0.875rem;
 }
 
 .no-birthdays {
@@ -335,4 +351,20 @@
 
 .view-all:hover {
   text-decoration: underline;
+}
+
+.view-more-link {
+  display: block;
+  text-align: center;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-top: 1px solid var(--border-color);
+  transition: color 0.2s;
+}
+
+.view-more-link:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface-hover);
 } 

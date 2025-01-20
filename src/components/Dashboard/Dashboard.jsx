@@ -3,20 +3,8 @@ import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
 import { fetchBirthdays } from '../../services/birthdayService';
 import tableService from '../../services/data/tableService';
+import { formatDate } from '../../utils/dateUtils';
 import './Dashboard.css';
-
-const MESES = [
-  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
-  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
-];
-
-const formatearFecha = (fecha) => {
-  const date = new Date(fecha);
-  const dia = date.getDate();
-  const mes = MESES[date.getMonth()];
-  const año = date.getFullYear();
-  return `${dia} de ${mes} ${año}`;
-};
 
 const Dashboard = () => {
   const [birthdays, setBirthdays] = useState([]);
@@ -28,16 +16,27 @@ const Dashboard = () => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
+        // Get current date once
+        const currentDate = new Date();
+        
         // Fetch birthdays
         const birthdayData = await fetchBirthdays();
         
-        // Filter birthdays for current month
-        const currentMonth = new Date().getMonth();
-        const thisMonthBirthdays = birthdayData.filter(birthday => 
-          birthday.date.getMonth() === currentMonth
-        ).sort((a, b) => a.date.getDate() - b.date.getDate());
+        // Filter birthdays for today
+        const todaysBirthdays = birthdayData
+          .filter(birthday => {
+            const birthdayDate = new Date(birthday.date);
+            return birthdayDate && 
+                   birthdayDate.getDate() === currentDate.getDate() && 
+                   birthdayDate.getMonth() === currentDate.getMonth();
+          })
+          .sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateA.getDate() - dateB.getDate();
+          });
         
-        setBirthdays(thisMonthBirthdays);
+        setBirthdays(todaysBirthdays);
 
         // Fetch policies data
         const [gmmResponse, autosResponse] = await Promise.all([
@@ -46,8 +45,6 @@ const Dashboard = () => {
         ]);
 
         // Normalize and combine the data
-        const currentDate = new Date();
-
         const gmmPolicies = (gmmResponse.data || []).map(policy => ({
           numero_poliza: policy.n__mero_de_p__liza,
           contratante: policy.contratante,
@@ -64,14 +61,38 @@ const Dashboard = () => {
           tipo: 'Auto'
         }));
 
-        // Combine and filter policies expiring this month
+        // Combine and filter policies expiring this week (including today)
         const allPolicies = [...gmmPolicies, ...autosPolicies];
-        const monthlyExpirations = allPolicies.filter(policy => {
+        const weeklyExpirations = allPolicies.filter(policy => {
           const expiryDate = new Date(policy.fecha_fin);
-          return expiryDate.getMonth() === currentMonth;
-        }).sort((a, b) => new Date(a.fecha_fin) - new Date(b.fecha_fin));
+          const currentDate = new Date();
+          
+          // Reset hours to compare just the dates
+          expiryDate.setHours(0, 0, 0, 0);
+          currentDate.setHours(0, 0, 0, 0);
+          
+          // Get start and end of current week
+          const startOfWeek = new Date(currentDate);
+          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Start of week (Sunday)
+          
+          const endOfWeek = new Date(startOfWeek);
+          endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+          
+          // Include if date is between start of week and end of week (inclusive)
+          return expiryDate >= startOfWeek && expiryDate <= endOfWeek;
+        }).sort((a, b) => {
+          const dateA = new Date(a.fecha_fin);
+          const dateB = new Date(b.fecha_fin);
+          return dateA - dateB;
+        });
 
-        setExpirations(monthlyExpirations);
+        console.log('Vencimientos encontrados:', weeklyExpirations.map(p => ({
+          poliza: p.numero_poliza,
+          fecha: p.fecha_fin,
+          contratante: p.contratante
+        })));
+
+        setExpirations(weeklyExpirations);
         setLoading(false);
       } catch (err) {
         console.error('Error loading dashboard data:', err);
@@ -98,10 +119,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Sección 2 - Cumpleaños del Mes */}
+        {/* Sección 2 - Cumpleaños del Día */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Cumpleaños del Mes</h3>
+            <h3>Cumpleaños del Día</h3>
           </div>
           <div className="card-content">
             {loading ? (
@@ -109,29 +130,42 @@ const Dashboard = () => {
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : birthdays.length === 0 ? (
-              <p className="no-birthdays">No hay cumpleaños este mes</p>
+              <p className="no-birthdays">No hay cumpleaños hoy</p>
             ) : (
               <div className="birthday-list">
-                {birthdays.map((birthday) => (
-                  <div key={birthday.rfc} className="birthday-item">
+                {birthdays.slice(0, 2).map((birthday) => (
+                  <div key={birthday.id || birthday.rfc} className="birthday-item">
                     <div className="birthday-info">
                       <span className="birthday-name">{birthday.name}</span>
-                      <span className="birthday-date">{formatearFecha(birthday.date)}</span>
+                      <span className="birthday-age">
+                        Cumple: {birthday.age + 1} años
+                      </span>
                     </div>
-                    <div className="birthday-age">
-                      Cumple: {birthday.age + 1} años
+                    {birthday.email && (
+                      <div className="birthday-email">
+                        <span className="email-icon">📧</span>
+                        {birthday.email}
+                      </div>
+                    )}
+                    <div className="birthday-source">
+                      {birthday.source} - {birthday.birthdaySource}
                     </div>
                   </div>
                 ))}
+                {birthdays.length > 2 && (
+                  <Link to="/birthdays" className="view-more-link">
+                    Ver más ({birthdays.length - 2} más)
+                  </Link>
+                )}
               </div>
             )}
           </div>
         </div>
 
-        {/* Sección 3 - Vencimientos del Mes */}
+        {/* Sección 3 - Vencimientos de la Semana */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Vencimientos del Mes</h3>
+            <h3>Vencimientos de la Semana</h3>
           </div>
           <div className="card-content">
             {loading ? (
@@ -139,10 +173,10 @@ const Dashboard = () => {
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : expirations.length === 0 ? (
-              <p className="no-expirations">No hay vencimientos este mes</p>
+              <p className="no-expirations">No hay vencimientos esta semana</p>
             ) : (
               <div className="expiration-list">
-                {expirations.slice(0, 5).map((policy) => (
+                {expirations.slice(0, 2).map((policy) => (
                   <div key={`${policy.tipo}-${policy.numero_poliza}`} className="expiration-item">
                     <div className="expiration-info">
                       <span className="expiration-type">{policy.tipo}</span>
@@ -151,11 +185,16 @@ const Dashboard = () => {
                     <div className="expiration-details">
                       <span className="expiration-name">{policy.contratante}</span>
                       <span className="expiration-date">
-                        Vence: {formatearFecha(policy.fecha_fin)}
+                        Vence: {formatDate(policy.fecha_fin, 'long-es')}
                       </span>
                     </div>
                   </div>
                 ))}
+                {expirations.length > 2 && (
+                  <Link to="/expirations" className="view-more-link">
+                    Ver más ({expirations.length - 2} más)
+                  </Link>
+                )}
               </div>
             )}
           </div>

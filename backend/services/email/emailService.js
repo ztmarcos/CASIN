@@ -102,6 +102,27 @@ ${data.companyAddress}`;
         }
     }
 
+    async sendReportEmail(to, subject, html) {
+        try {
+            console.log('\n=== Email Service: Sending Report Email ===');
+            console.log('Sending to:', to);
+            
+            const mailOptions = {
+                from: process.env.GMAIL_USER,
+                to,
+                subject,
+                html
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+            console.log('Report email sent successfully:', result);
+            return { success: true, messageId: result.messageId };
+        } catch (error) {
+            console.error('Email service: Error sending report email:', error);
+            throw error;
+        }
+    }
+
     // Method to verify email connection
     async verifyConnection() {
         try {
@@ -111,6 +132,29 @@ ${data.companyAddress}`;
             return true;
         } catch (error) {
             console.error('Email connection verification failed:', error);
+            throw error;
+        }
+    }
+
+    // Generic email sending method
+    async sendEmail({ to, subject, html, text }) {
+        try {
+            console.log('\n=== Email Service: Sending Generic Email ===');
+            console.log('Sending to:', to);
+            
+            const mailOptions = {
+                from: process.env.GMAIL_USER,
+                to,
+                subject,
+                ...(html && { html }),
+                ...(text && { text })
+            };
+
+            const result = await this.transporter.sendMail(mailOptions);
+            console.log('Generic email sent successfully:', result);
+            return { success: true, messageId: result.messageId };
+        } catch (error) {
+            console.error('Email service: Error sending generic email:', error);
             throw error;
         }
     }
