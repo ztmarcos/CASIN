@@ -15,7 +15,14 @@ const TestGPT = () => {
   const [tableData, setTableData] = useState(null);
   const [prospeccionCards, setProspeccionCards] = useState([]);
   const [selectedCard, setSelectedCard] = useState('');
+  const [emailConfig, setEmailConfig] = useState({
+    to: '',
+    subject: '',
+    showConfig: false
+  });
   const userId = "defaultUser";
+  const [searchFilter, setSearchFilter] = useState('');
+  const [filteredData, setFilteredData] = useState(null);
 
   const openai = new OpenAI({
     apiKey: import.meta.env.VITE_OPENAI_API_KEY,
@@ -50,7 +57,9 @@ const TestGPT = () => {
   const handleTableSelect = async (e) => {
     const tableName = e.target.value;
     setSelectedTable(tableName);
-    setSelectedCard(''); // Clear selected card when table is selected
+    setSelectedCard('');
+    setSearchFilter(''); // Reset search filter
+    setFilteredData(null);
     if (tableName) {
       try {
         const data = await tableService.getData(tableName);
@@ -69,6 +78,28 @@ const TestGPT = () => {
     setSelectedCard(cardId);
     setSelectedTable(''); // Clear selected table when card is selected
     setTableData(null);
+  };
+
+  const handleSearch = (value) => {
+    setSearchFilter(value);
+    if (!tableData || !tableData.data) return;
+
+    if (!value.trim()) {
+      setFilteredData(null);
+      return;
+    }
+
+    // Filter data based on search term
+    const searchTerms = value.toLowerCase().split(' ');
+    const filtered = tableData.data.filter(row => {
+      return searchTerms.every(term => 
+        Object.values(row).some(val => 
+          String(val).toLowerCase().includes(term)
+        )
+      );
+    });
+
+    setFilteredData({ ...tableData, data: filtered });
   };
 
   const handleSubmit = async (e) => {
@@ -100,8 +131,11 @@ const TestGPT = () => {
 
       let userPrompt = input;
       
-      if (tableData && tableData.data.length > 0) {
-        userPrompt = `Base de datos '${selectedTable}' contiene: ${JSON.stringify(tableData.data, null, 2)}\n\nBasado en estos datos, ${input}`;
+      // Use filtered data if available, otherwise use full data
+      const dataToUse = filteredData || tableData;
+      
+      if (dataToUse && dataToUse.data.length > 0) {
+        userPrompt = `Base de datos '${selectedTable}' contiene: ${JSON.stringify(dataToUse.data, null, 2)}\n\nBasado en estos datos, ${input}`;
       } else if (selectedCard) {
         const card = prospeccionCards.find(c => c.id === parseInt(selectedCard));
         if (card) {
@@ -120,26 +154,9 @@ const TestGPT = () => {
       const gptResponse = completion.choices[0].message.content;
       setResponse(gptResponse);
 
-      // If we're working with a table, send email
-      if (selectedTable) {
-        await sendWelcomeEmail(gptResponse, {
-          clientName: tableData?.data[0]?.nombre || 'Cliente',
-          policyNumber: tableData?.data[0]?.poliza || 'POL-' + new Date().getTime(),
-          insuranceType: tableData?.data[0]?.tipo || 'Seguro',
-          startDate: new Date().toLocaleDateString('es-MX'),
-          coverage: tableData?.data[0]?.cobertura || 'Por definir',
-          insuranceCompany: 'Cambiando Historias',
-          emergencyPhone: '800-123-4567',
-          supportEmail: 'soporte@cambiandohistorias.com.mx',
-          policyUrl: '#',
-          companyAddress: 'Av. Reforma 123, CDMX, México',
-          companyName: 'Cambiando Historias',
-          currentYear: new Date().getFullYear(),
-          gptResponse: gptResponse
-        });
-      }
-      // If we're working with a prospeccion card, update its analysis
-      else if (selectedCard) {
+      // Remove automatic email sending
+      // Only update prospeccion card if selected
+      if (selectedCard) {
         await fetch(`${API_URL}/prospeccion/${userId}/${selectedCard}/analyze`, {
           method: 'POST',
           headers: {
@@ -147,7 +164,7 @@ const TestGPT = () => {
           },
           body: JSON.stringify({ analysis: gptResponse }),
         });
-        loadProspeccionCards(); // Reload cards to get updated analysis
+        loadProspeccionCards();
       }
     } catch (error) {
       console.error('Error:', error);
@@ -159,6 +176,82 @@ const TestGPT = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailConfig.to || !emailConfig.subject) {
+      alert('Por favor completa el destinatario y asunto del email');
+      return;
+    }
+
+    try {
+      await sendWelcomeEmail(response, {
+        to: emailConfig.to,
+        subject: emailConfig.subject,
+        clientName: tableData?.data[0]?.nombre || 'Cliente',
+        policyNumber: tableData?.data[0]?.poliza || 'POL-' + new Date().getTime(),
+        insuranceType: tableData?.data[0]?.tipo || 'Seguro',
+        startDate: new Date().toLocaleDateString('es-MX'),
+        coverage: tableData?.data[0]?.cobertura || 'Por definir',
+        insuranceCompany: 'Cambiando Historias',
+        emergencyPhone: '800-123-4567',
+        supportEmail: 'soporte@cambiandohistorias.com.mx',
+        policyUrl: '#',
+        companyAddress: 'Av. Reforma 123, CDMX, México',
+        companyName: 'Cambiando Historias',
+        currentYear: new Date().getFullYear(),
+        gptResponse: response
+      });
+      alert('Email enviado con éxito');
+      setEmailConfig({ ...emailConfig, showConfig: false });
+    } catch (error) {
+      console.error('Error al enviar email:', error);
+      alert('Error al enviar el email');
+    }
+  };
+
+  const handleClear = () => {
+    setInput('');
+    setResponse('');
+    setSelectedTable('');
+    setSelectedCard('');
+    setTableData(null);
+    setEmailConfig({
+      to: '',
+      subject: '',
+      showConfig: false
+    });
+  };
+
+  const renderTablePreview = (data) => {
+    if (!data || !data.length) return null;
+    
+    const columns = Object.keys(data[0]);
+    
+    return (
+      <div className="table-preview-wrapper">
+        <table className="preview-table">
+          <thead>
+            <tr>
+              {columns.map(column => (
+                <th key={column}>{column}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, index) => (
+              <tr key={index}>
+                {columns.map(column => (
+                  <td key={`${index}-${column}`}>
+                    {row[column] !== null ? String(row[column]) : '-'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   return (
@@ -176,7 +269,6 @@ const TestGPT = () => {
               value={selectedTable}
               onChange={handleTableSelect}
               className="data-select"
-              disabled={selectedCard !== ''}
             >
               <option value="">Ninguna</option>
               {tables.map(table => (
@@ -194,7 +286,6 @@ const TestGPT = () => {
               value={selectedCard}
               onChange={handleCardSelect}
               className="data-select"
-              disabled={selectedTable !== ''}
             >
               <option value="">Ninguna</option>
               {prospeccionCards.map(card => (
@@ -208,10 +299,29 @@ const TestGPT = () => {
         
         {tableData && (
           <div className="data-preview">
-            <h3>Datos de Tabla:</h3>
-            <pre className="data-content">
-              {JSON.stringify(tableData.data, null, 2)}
-            </pre>
+            <div className="data-preview-header">
+              <h3>Datos de Tabla:</h3>
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Buscar en los datos..."
+                className="data-search-input"
+              />
+            </div>
+            {filteredData && (
+              <>
+                {renderTablePreview(filteredData.data)}
+                <div className="data-filter-info">
+                  Mostrando {filteredData.data.length} de {tableData.data.length} registros
+                </div>
+              </>
+            )}
+            {!filteredData && (
+              <div className="search-prompt">
+                <p>Realiza una búsqueda en los datos para ver resultados 👆 </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -224,28 +334,39 @@ const TestGPT = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="testgpt-form">
-          <div className="input-group">
-            <label htmlFor="prompt-input">¿Qué análisis necesitas?</label>
-            <textarea
-              id="prompt-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={selectedTable ? 
-                "Ejemplo: Genera un mensaje de bienvenida basado en estos datos..." :
-                "Ejemplo: Analiza esta información de prospección y sugiere próximos pasos..."}
-              rows={4}
-              className="testgpt-input"
-            />
-          </div>
-          <button 
-            type="submit" 
-            className="testgpt-submit"
-            disabled={loading || !input.trim() || (!selectedTable && !selectedCard)}
-          >
-            {loading ? 'Procesando...' : 'Analizar'}
-          </button>
-        </form>
+        {(filteredData || selectedCard) && (
+          <form onSubmit={handleSubmit} className="testgpt-form">
+            <div className="input-group">
+              <label htmlFor="prompt-input">¿Qué análisis necesitas?</label>
+              <textarea
+                id="prompt-input"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={selectedTable ? 
+                  "Ejemplo: Genera un mensaje de bienvenida basado en estos datos..." :
+                  "Ejemplo: Analiza esta información de prospección y sugiere próximos pasos..."}
+                rows={4}
+                className="testgpt-input"
+              />
+            </div>
+            <div className="button-group">
+              <button 
+                type="submit" 
+                className="testgpt-submit"
+                disabled={loading || !input.trim()}
+              >
+                {loading ? 'Procesando...' : 'Analizar'}
+              </button>
+              <button 
+                type="button"
+                onClick={handleClear}
+                className="testgpt-clear"
+              >
+                Limpiar
+              </button>
+            </div>
+          </form>
+        )}
 
         {response && (
           <div className="testgpt-response">
@@ -253,22 +374,48 @@ const TestGPT = () => {
             <div className="response-content">
               {response}
             </div>
-            {selectedTable && (
+            <div className="email-section">
               <button 
-                onClick={async () => {
-                  try {
-                    await sendWelcomeEmail(response);
-                    alert('Email enviado con éxito');
-                  } catch (error) {
-                    console.error('Error al enviar email:', error);
-                    alert('Error al enviar el email');
-                  }
-                }}
-                className="testgpt-submit email-button"
+                onClick={() => setEmailConfig({ ...emailConfig, showConfig: !emailConfig.showConfig })}
+                className="testgpt-submit email-toggle-btn"
               >
-                Enviar por Email
+                {emailConfig.showConfig ? 'Ocultar Configuración Email' : 'Configurar Email'}
               </button>
-            )}
+
+              {emailConfig.showConfig && (
+                <div className="email-config">
+                  <div className="email-input-group">
+                    <label htmlFor="email-to">Destinatario:</label>
+                    <input
+                      id="email-to"
+                      type="email"
+                      value={emailConfig.to}
+                      onChange={(e) => setEmailConfig({ ...emailConfig, to: e.target.value })}
+                      placeholder="correo@ejemplo.com"
+                      className="email-input"
+                    />
+                  </div>
+                  <div className="email-input-group">
+                    <label htmlFor="email-subject">Asunto:</label>
+                    <input
+                      id="email-subject"
+                      type="text"
+                      value={emailConfig.subject}
+                      onChange={(e) => setEmailConfig({ ...emailConfig, subject: e.target.value })}
+                      placeholder="Asunto del email"
+                      className="email-input"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleSendEmail}
+                    className="testgpt-submit send-email-btn"
+                    disabled={!emailConfig.to || !emailConfig.subject}
+                  >
+                    Enviar Email
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

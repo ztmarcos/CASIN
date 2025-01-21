@@ -199,8 +199,42 @@ export default function Reports() {
   }, [selectedMonth, selectedType, policies, searchTerm]);
 
   const handleSendEmail = async () => {
-    if (filteredPolicies.length === 0) {
-      setEmailStatus({ type: 'error', message: 'No hay pólizas para enviar' });
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Filter policies that are due today with proper date validation
+    const duePolicies = filteredPolicies.filter(policy => {
+      try {
+        if (!policy.fecha_fin) {
+          console.warn('Missing fecha_fin for policy:', policy.numero_poliza);
+          return false;
+        }
+        
+        const policyDate = parseDate(policy.fecha_fin);
+        if (!policyDate || isNaN(policyDate.getTime())) {
+          console.warn('Invalid fecha_fin for policy:', policy.numero_poliza, policy.fecha_fin);
+          return false;
+        }
+
+        const policyDateStr = policyDate.toISOString().split('T')[0];
+        return policyDateStr === todayStr;
+      } catch (error) {
+        console.error('Error processing policy date:', policy.numero_poliza, error);
+        return false;
+      }
+    });
+
+    console.log('Due policies:', duePolicies.map(p => ({
+      numero_poliza: p.numero_poliza,
+      fecha_fin: p.fecha_fin,
+      parsed_date: parseDate(p.fecha_fin)
+    })));
+
+    if (duePolicies.length === 0) {
+      setEmailStatus({ 
+        type: 'error', 
+        message: 'No hay pólizas que venzan hoy para enviar recordatorios' 
+      });
       return;
     }
 
@@ -208,15 +242,16 @@ export default function Reports() {
     setEmailStatus(null);
 
     try {
-      await sendReportEmail(filteredPolicies, selectedType);
+      await sendReportEmail(duePolicies, selectedType);
       setEmailStatus({ 
         type: 'success', 
-        message: `Reporte de ${selectedType} enviado exitosamente` 
+        message: `Recordatorios enviados exitosamente a ${duePolicies.length} titular(es)` 
       });
     } catch (error) {
+      console.error('Error sending emails:', error);
       setEmailStatus({ 
         type: 'error', 
-        message: 'Error al enviar el reporte por email' 
+        message: 'Error al enviar los recordatorios por email: ' + error.message 
       });
     } finally {
       setIsSendingEmail(false);

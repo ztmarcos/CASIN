@@ -416,6 +416,44 @@ class MySQLDatabaseService {
       }
     }
   }
+
+  async deleteRow(tableName, id) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const query = `DELETE FROM ${tableName} WHERE id = ?`;
+      const [result] = await connection.execute(query, [id]);
+      
+      return {
+        success: true,
+        affectedRows: result.affectedRows
+      };
+    } catch (error) {
+      console.error('Error deleting row:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
+    }
+  }
+
+  async deleteTable(tableName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const query = `DROP TABLE IF EXISTS \`${tableName}\``;
+      await connection.execute(query);
+      return { success: true, message: `Table ${tableName} deleted successfully` };
+    } catch (error) {
+      console.error('Error deleting table:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
+    }
+  }
 }
 
 module.exports = new MySQLDatabaseService(); 

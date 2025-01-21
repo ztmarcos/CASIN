@@ -367,4 +367,49 @@
 .view-more-link:hover {
   color: var(--text-primary);
   background-color: var(--bg-surface-hover);
+}
+
+.toggle-view-btn {
+  width: 100%;
+  padding: 8px;
+  margin-top: 10px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.toggle-view-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.expiration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.expiration-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.expiration-list::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+
+.expiration-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 5px;
+}
+
+.expiration-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 } 

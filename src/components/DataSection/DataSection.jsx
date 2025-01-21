@@ -247,6 +247,8 @@ const DataSection = () => {
                 data={tableData}
                 onRowClick={handleRowClick}
                 onCellUpdate={handleCellUpdate}
+                onRefresh={loadTableData}
+                tableName={selectedTable.name}
               />
             ) : (
               <TableCardView 

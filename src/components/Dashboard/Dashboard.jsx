@@ -11,6 +11,7 @@ const Dashboard = () => {
   const [expirations, setExpirations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAllExpirations, setShowAllExpirations] = useState(false);
 
   useEffect(() => {
     const loadDashboardData = async () => {
@@ -71,15 +72,15 @@ const Dashboard = () => {
           expiryDate.setHours(0, 0, 0, 0);
           currentDate.setHours(0, 0, 0, 0);
           
-          // Get start and end of current week
-          const startOfWeek = new Date(currentDate);
-          startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Start of week (Sunday)
+          // Get start and end dates for the range (30 days before and after current date)
+          const startDate = new Date(currentDate);
+          startDate.setDate(currentDate.getDate() - 30); // 30 days before
           
-          const endOfWeek = new Date(startOfWeek);
-          endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+          const endDate = new Date(currentDate);
+          endDate.setDate(currentDate.getDate() + 30); // 30 days after
           
-          // Include if date is between start of week and end of week (inclusive)
-          return expiryDate >= startOfWeek && expiryDate <= endOfWeek;
+          // Include if date is within the range
+          return expiryDate >= startDate && expiryDate <= endDate;
         }).sort((a, b) => {
           const dateA = new Date(a.fecha_fin);
           const dateB = new Date(b.fecha_fin);
@@ -124,7 +125,7 @@ const Dashboard = () => {
           <div className="card-header">
             <h3>Cumpleaños del Día</h3>
           </div>
-          <div className="card-content">
+          <div className="card-content">∫
             {loading ? (
               <div className="loading-spinner"></div>
             ) : error ? (
@@ -165,7 +166,7 @@ const Dashboard = () => {
         {/* Sección 3 - Vencimientos de la Semana */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Vencimientos de la Semana</h3>
+            <h3>Vencimientos del mes</h3>
           </div>
           <div className="card-content">
             {loading ? (
@@ -176,7 +177,7 @@ const Dashboard = () => {
               <p className="no-expirations">No hay vencimientos esta semana</p>
             ) : (
               <div className="expiration-list">
-                {expirations.slice(0, 2).map((policy) => (
+                {(showAllExpirations ? expirations : expirations.slice(0, 2)).map((policy) => (
                   <div key={`${policy.tipo}-${policy.numero_poliza}`} className="expiration-item">
                     <div className="expiration-info">
                       <span className="expiration-type">{policy.tipo}</span>
@@ -191,9 +192,12 @@ const Dashboard = () => {
                   </div>
                 ))}
                 {expirations.length > 2 && (
-                  <Link to="/expirations" className="view-more-link">
-                    Ver más ({expirations.length - 2} más)
-                  </Link>
+                  <button 
+                    onClick={() => setShowAllExpirations(!showAllExpirations)}
+                    className="toggle-view-btn"
+                  >
+                    {showAllExpirations ? 'Ver menos' : `Ver más (${expirations.length - 2} más)`}
+                  </button>
                 )}
               </div>
             )}

@@ -32,8 +32,8 @@ const Layout = ({ children }) => {
             </svg>
           </button>
           <div className="logo">
-            <span className="logo-text">Dashboard</span>
-            <span className="logo-version">v1.0</span>
+            <span className="logo-text">C-H</span>
+            <span className="logo-version">Cambiando Historias</span>
           </div>
         </div>
         <div className="right-section">

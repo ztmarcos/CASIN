@@ -193,4 +193,21 @@ router.put('/tables/:tableName/columns/:columnName/tag', async (req, res) => {
   }
 });
 
+// Delete table
+router.delete('/tables/:tableName', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    
+    if (!tableName) {
+      return res.status(400).json({ error: 'Table name is required' });
+    }
+    
+    await mysqlDatabase.deleteTable(tableName);
+    res.json({ success: true, message: `Table ${tableName} deleted successfully` });
+  } catch (error) {
+    console.error('Error deleting table:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

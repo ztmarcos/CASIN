@@ -7,6 +7,8 @@ const Prospeccion = () => {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedCard, setExpandedCard] = useState(null);
+  const [editingTitle, setEditingTitle] = useState(null);
   const userId = "defaultUser"; // This should come from your auth context
 
   useEffect(() => {
@@ -29,12 +31,16 @@ const Prospeccion = () => {
 
   const handleTextChange = async (cardId, newContent) => {
     try {
+      const currentCard = cards.find(card => card.id === cardId);
       const response = await fetch(`${API_URL}/prospeccion/${userId}/${cardId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ content: newContent }),
+        body: JSON.stringify({
+          title: currentCard.title,
+          content: newContent
+        }),
       });
       
       if (!response.ok) throw new Error('Failed to update card');
@@ -90,6 +96,64 @@ const Prospeccion = () => {
     }
   };
 
+  const handleCardDoubleClick = (cardId) => {
+    setExpandedCard(expandedCard === cardId ? null : cardId);
+  };
+
+  const handleTitleChange = async (cardId, newTitle) => {
+    if (!newTitle.trim()) {
+      setEditingTitle(null);
+      return;
+    }
+
+    try {
+      const currentCard = cards.find(card => card.id === cardId);
+      const response = await fetch(`${API_URL}/prospeccion/${userId}/${cardId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: newTitle,
+          content: currentCard?.content || ''
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update card title');
+      }
+
+      const updatedCard = await response.json();
+      
+      setCards(prevCards => prevCards.map(card => 
+        card.id === cardId ? { ...card, ...updatedCard } : card
+      ));
+
+      // Forzar la actualización del estado
+      await loadCards();
+    } catch (err) {
+      console.error('Error updating card title:', err);
+      setError(`Error al actualizar título: ${err.message}`);
+    } finally {
+      setEditingTitle(null);
+    }
+  };
+
+  const handleTitleKeyDown = async (e, cardId, currentTitle) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const newTitle = e.target.value.trim();
+      if (newTitle && newTitle !== currentTitle) {
+        await handleTitleChange(cardId, newTitle);
+      }
+      setEditingTitle(null);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingTitle(null);
+    }
+  };
+
   if (loading) return <div className="loading">Loading cards...</div>;
   if (error) return <div className="error">{error}</div>;
 
@@ -104,24 +168,53 @@ const Prospeccion = () => {
       
       <div className="cards-grid">
         {cards.map(card => (
-          <div key={card.id} className="card">
+          <div 
+            key={card.id} 
+            className={`card ${expandedCard === card.id ? 'expanded' : ''}`}
+            onDoubleClick={() => handleCardDoubleClick(card.id)}
+          >
             <div className="card-header">
-              <span className="card-title">{card.title}</span>
-              <button 
-                onClick={() => analyzeWithGPT(card.id)}
-                className="analyze-btn"
-                disabled={!card.content}
-              >
-                Analizar con GPT
-              </button>
+              {editingTitle === card.id ? (
+                <input
+                  type="text"
+                  className="card-title-input"
+                  defaultValue={card.title}
+                  autoFocus
+                  onBlur={async (e) => {
+                    const newTitle = e.target.value.trim();
+                    if (newTitle && newTitle !== card.title) {
+                      await handleTitleChange(card.id, newTitle);
+                    }
+                    setEditingTitle(null);
+                  }}
+                  onKeyDown={(e) => handleTitleKeyDown(e, card.id, card.title)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <span 
+                  className="card-title"
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTitle(card.id);
+                  }}
+                >
+                  {card.title}
+                </span>
+              )}
+              {card.gpt_analysis && (
+                <span className="analysis-indicator" title="Análisis GPT disponible">
+                  🤖
+                </span>
+              )}
             </div>
             <textarea
               className="card-editor"
               value={card.content || ''}
               onChange={(e) => handleTextChange(card.id, e.target.value)}
               placeholder="Escribe tu contenido aquí..."
+              onClick={(e) => e.stopPropagation()}
             />
-            {card.gpt_analysis && (
+            {expandedCard === card.id && card.gpt_analysis && (
               <div className="analysis-section">
                 <h4>Análisis GPT</h4>
                 <div className="analysis-content">
