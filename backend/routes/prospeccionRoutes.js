@@ -31,7 +31,10 @@ router.put('/:userId/:cardId', async (req, res) => {
     const card = await prospeccionService.updateCard(
       req.params.cardId,
       req.params.userId,
-      req.body.content
+      {
+        title: req.body.title,
+        content: req.body.content
+      }
     );
     res.json(card);
   } catch (error) {

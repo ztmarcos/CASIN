@@ -35,15 +35,15 @@ class ProspeccionService {
     }
   }
 
-  async updateCard(cardId, userId, content) {
-    console.log('Updating card:', { cardId, userId, content });
+  async updateCard(cardId, userId, data) {
+    console.log('Updating card:', { cardId, userId, data });
     const connection = await mysqlDatabase.getConnection();
     try {
       const [result] = await connection.execute(
         `UPDATE prospeccion_cards 
-         SET content = ?, updated_at = CURRENT_TIMESTAMP
+         SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP
          WHERE id = ? AND user_id = ?`,
-        [content, cardId, userId]
+        [data.title, data.content, cardId, userId]
       );
       console.log('Update result:', result);
       if (result.affectedRows === 0) {
