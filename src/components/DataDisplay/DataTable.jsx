@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import pdfService from '../../services/pdfService';
+import CellPDFParser from '../PDFParser/CellPDFParser';
 import './DataTable.css';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
@@ -7,6 +9,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
   const [sortedData, setSortedData] = useState([]);
+  const [showPdfUpload, setShowPdfUpload] = useState(false);
+  const [customPrompt, setCustomPrompt] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     setSortedData(data);
@@ -107,6 +112,66 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
     }
   };
 
+  const handlePdfUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !editingCell) return;
+
+    if (file.type !== 'application/pdf') {
+      console.error('Please upload a PDF file');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // Parse PDF content
+      const data = await pdfService.parsePDF(file);
+      
+      // Create prompt for GPT
+      const prompt = {
+        text: data.text,
+        metadata: data.metadata,
+        targetColumns: [editingCell.column],
+        tableName: 'current_table',
+        instructions: customPrompt || `
+          Please analyze the document and extract the following information:
+          - ${editingCell.column}: Find the exact value in the text
+          
+          Important rules:
+          1. Extract EXACT values from the document
+          2. Return null if a value cannot be found
+          3. For dates, maintain the format as shown in the document
+          4. For currency values, include the full amount with decimals
+          5. For text fields, extract the complete text as shown
+        `
+      };
+
+      // Call GPT analysis endpoint
+      const response = await fetch('http://localhost:3001/api/gpt/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(prompt),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze PDF');
+      }
+
+      const result = await response.json();
+      
+      if (result.mappedData && result.mappedData[editingCell.column] !== undefined) {
+        setEditValue(result.mappedData[editingCell.column] || '');
+      }
+      
+      setShowPdfUpload(false);
+    } catch (err) {
+      console.error('Error analyzing PDF:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   return (
     <div className="data-table-container">
       <div className={`table-wrapper ${isRefreshing ? 'refreshing' : ''}`}>
@@ -160,6 +225,30 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
                 rows={3}
                 className="edit-cell-textarea"
               />
+              
+              {/* PDF Upload Section */}
+              <div className="pdf-upload-section">
+                <button 
+                  onClick={() => setShowPdfUpload(!showPdfUpload)}
+                  className="pdf-toggle-btn"
+                  title="Extract from PDF"
+                >
+                  <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <path d="M14 2v6h6" />
+                    <path d="M16 13H8" />
+                    <path d="M16 17H8" />
+                    <path d="M10 9H8" />
+                  </svg>
+                </button>
+              </div>
+
+              {showPdfUpload && (
+                <CellPDFParser
+                  columnName={editingCell.column}
+                  onValueExtracted={setEditValue}
+                />
+              )}
             </div>
             <div className="edit-cell-actions">
               <button onClick={handleCancelEdit} className="cancel-btn">
