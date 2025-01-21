@@ -6,6 +6,10 @@
   flex-direction: column;
   background: #ffffff;
   border: 1px solid #e0e0e0;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .confirmation-dialog {
@@ -108,8 +112,10 @@
 .table-wrapper {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   position: relative;
+  width: 100%;
 }
 
 .data-table {
@@ -128,8 +134,7 @@
 }
 
 .data-table th {
-  position: sticky;
-  top: 0;
+  position: relative;
   background: white;
   z-index: 10;
   border-bottom: 2px solid #eaeaea;
@@ -161,32 +166,45 @@
   white-space: nowrap;
   height: 32px;
   vertical-align: middle;
+  user-select: none; /* Prevent text selection while dragging */
 }
 
-/* Column widths */
-.data-table th:nth-child(1),
-.data-table td:nth-child(1) { width: 50px; min-width: 50px; } /* id */
+/* Regular styling for ID cells */
+.data-table td.id-cell {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-align: center;
+  white-space: nowrap;
+  width: 60px;
+  min-width: 60px;
+  background: #ffffff;
+}
 
+/* Column widths - ensure total width is enough for scrolling */
 .data-table th:nth-child(2),
-.data-table td:nth-child(2) { width: 80px; min-width: 80px; } /* numero poliza */
+.data-table td:nth-child(2) { min-width: 120px; } /* numero poliza */
 
 .data-table th:nth-child(3),
-.data-table td:nth-child(3) { width: 150px; min-width: 150px; } /* contratante */
+.data-table td:nth-child(3) { min-width: 200px; } /* contratante */
 
 .data-table th:nth-child(4),
-.data-table td:nth-child(4) { width: 100px; min-width: 100px; } /* rfc */
+.data-table td:nth-child(4) { min-width: 120px; } /* rfc */
 
 .data-table th:nth-child(5),
-.data-table td:nth-child(5) { width: 150px; min-width: 150px; } /* nombre */
+.data-table td:nth-child(5) { min-width: 200px; } /* nombre */
 
 .data-table th:nth-child(6),
-.data-table td:nth-child(6) { width: 200px; min-width: 200px; } /* direccion */
+.data-table td:nth-child(6) { min-width: 300px; } /* direccion */
 
 .data-table th:nth-child(7),
-.data-table td:nth-child(7) { width: 80px; min-width: 80px; } /* telefono */
+.data-table td:nth-child(7) { min-width: 120px; } /* telefono */
 
 .data-table th:nth-child(8),
-.data-table td:nth-child(8) { width: 80px; min-width: 80px; } /* codigo */
+.data-table td:nth-child(8) { min-width: 120px; } /* codigo */
+
+.data-table th:last-child,
+.data-table td:last-child { min-width: 100px; } /* acciones */
 
 /* Address cell specific styling */
 .data-table td.address-cell {
@@ -211,30 +229,18 @@
   text-align: center;
 }
 
-/* ID cell specific styling */
-.data-table td.id-cell {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.75rem;
-  text-align: center;
-}
-
 /* Row styling */
 .table-row {
   height: 32px;
 }
 
 .table-row:hover td {
-  background-color: #f8fafc;
+  background-color: #ffe4cc !important; /* Slightly darker orange */
 }
 
 .table-row.duplicate td {
   background-color: #fafbfc;
   border-top: 1px dashed #e2e8f0;
-}
-
-/* Zebra striping */
-.table-row:nth-child(even) td {
-  background-color: #fafafa;
 }
 
 /* Sort indicator */
@@ -369,21 +375,6 @@
   background-color: #fafbfc;
 }
 
-/* Zebra striping for better row distinction */
-.table-row:nth-child(even) {
-  background-color: #fafafa;
-}
-
-/* ID column specific styling */
-.data-table td.id-cell {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-align: center;
-  white-space: nowrap;
-  max-width: 60px;
-}
-
 /* RFC column specific styling */
 .data-table td.rfc-cell {
   font-family: 'Roboto Mono', monospace;
@@ -483,8 +474,9 @@
 
 /* Add hover effect to indicate editable cells */
 .data-table td:hover {
-  background-color: #f8fafc;
+  background-color: #fff3e6 !important; /* Light orange */
   cursor: cell;
+  transition: background-color 0.2s ease;
 }
 
 /* Add at the top with other container styles */
@@ -642,12 +634,34 @@
 }
 
 .editable-cell {
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  cursor: cell;
+  position: relative;
 }
 
+.editable-cell::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.editable-cell:hover::after {
+  opacity: 1;
+}
+
+[data-theme='dark'] .editable-cell::after {
+  background-color: #4a5568;
+}
+
+/* Update hover cursor to indicate double-click */
 .editable-cell:hover {
-  background-color: #f8fafc !important;
+  cursor: cell;
 }
 
 .edit-cell-textarea {
@@ -719,7 +733,7 @@
 }
 
 [data-theme='dark'] .table-row:hover td {
-  background-color: #2D3748 !important;
+  background-color: #3d2e1e !important; /* Darker orange */
 }
 
 [data-theme='dark'] .table-row.selected td {
@@ -932,4 +946,97 @@
   [data-theme='dark'] .table-header {
     background-color: #111827;
   }
+}
+
+/* PDF Upload Section */
+.pdf-upload-section {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pdf-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.pdf-toggle-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.pdf-icon {
+  width: 24px;
+  height: 24px;
+  color: #374151;
+}
+
+.pdf-upload-form {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border-radius: 4px;
+}
+
+.prompt-textarea {
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  resize: vertical;
+}
+
+.file-input-label {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background-color: #000;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+}
+
+.file-input-label:hover {
+  opacity: 0.8;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.file-input-text {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Selection styles */
+.selected-cell {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+  border: 1px solid #3b82f6 !important;
+}
+
+[data-theme='dark'] .selected-cell {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+  border: 1px solid #60a5fa !important;
+}
+
+/* Allow text selection when copying */
+.data-table-container.copying {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
 } 

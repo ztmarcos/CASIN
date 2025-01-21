@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import pdfService from '../../services/pdfService';
+import tableService from '../../services/data/tableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
 import './DataTable.css';
 
-const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
+const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -12,6 +13,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
   const [showPdfUpload, setShowPdfUpload] = useState(false);
   const [customPrompt, setCustomPrompt] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedCells, setSelectedCells] = useState([]);
+  const [selectionStart, setSelectionStart] = useState(null);
 
   useEffect(() => {
     setSortedData(data);
@@ -78,6 +81,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
   const columns = Object.keys(data[0]);
 
   const handleCellClick = (rowIndex, column, value) => {
+    // Remove single click handler functionality
+  };
+
+  const handleCellDoubleClick = (rowIndex, column, value) => {
     setEditingCell({ rowIndex, column, value });
     setEditValue(value !== null ? String(value) : '');
   };
@@ -172,6 +179,90 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
     }
   };
 
+  // Add selection handlers
+  const handleCellSelection = (event, rowIndex, column, value) => {
+    event.preventDefault();
+    
+    // Handle double click for editing
+    if (event.detail === 2) {
+      handleCellDoubleClick(rowIndex, column, value);
+      return;
+    }
+
+    const cellKey = `${rowIndex}-${column}`;
+    
+    if (event.shiftKey && selectionStart) {
+      // Calculate range selection
+      const startRow = Math.min(selectionStart.rowIndex, rowIndex);
+      const endRow = Math.max(selectionStart.rowIndex, rowIndex);
+      const startColIndex = columns.indexOf(selectionStart.column);
+      const endColIndex = columns.indexOf(column);
+      const startCol = Math.min(startColIndex, endColIndex);
+      const endCol = Math.max(startColIndex, endColIndex);
+      
+      const newSelection = [];
+      for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+          newSelection.push(`${r}-${columns[c]}`);
+        }
+      }
+      setSelectedCells(newSelection);
+    } else if ((event.metaKey || event.ctrlKey)) {
+      // Toggle individual cell selection
+      setSelectedCells(prev => 
+        prev.includes(cellKey) 
+          ? prev.filter(key => key !== cellKey)
+          : [...prev, cellKey]
+      );
+    } else {
+      // Single cell selection
+      setSelectedCells([cellKey]);
+      setSelectionStart({ rowIndex, column });
+    }
+  };
+
+  // Add copy handler
+  useEffect(() => {
+    const handleCopy = (event) => {
+      if (selectedCells.length === 0) return;
+      
+      // Create a matrix of selected cells
+      const cellMatrix = {};
+      let minRow = Infinity, maxRow = -Infinity;
+      let minCol = Infinity, maxCol = -Infinity;
+      
+      selectedCells.forEach(cellKey => {
+        const [rowIndex, column] = cellKey.split('-');
+        const row = parseInt(rowIndex);
+        const col = columns.indexOf(column);
+        
+        minRow = Math.min(minRow, row);
+        maxRow = Math.max(maxRow, row);
+        minCol = Math.min(minCol, col);
+        maxCol = Math.max(maxCol, col);
+        
+        if (!cellMatrix[row]) cellMatrix[row] = {};
+        cellMatrix[row][col] = data[row][column];
+      });
+      
+      // Convert matrix to TSV format
+      let copyText = '';
+      for (let row = minRow; row <= maxRow; row++) {
+        const rowData = [];
+        for (let col = minCol; col <= maxCol; col++) {
+          rowData.push(cellMatrix[row]?.[col] ?? '');
+        }
+        copyText += rowData.join('\t') + '\n';
+      }
+      
+      event.clipboardData.setData('text/plain', copyText.trim());
+      event.preventDefault();
+    };
+
+    document.addEventListener('copy', handleCopy);
+    return () => document.removeEventListener('copy', handleCopy);
+  }, [selectedCells, data, columns]);
+
   return (
     <div className="data-table-container">
       <div className={`table-wrapper ${isRefreshing ? 'refreshing' : ''}`}>
@@ -198,8 +289,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh }) => {
                 {columns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
-                    onClick={() => handleCellClick(rowIndex, column, row[column])}
-                    className="editable-cell"
+                    onMouseDown={(e) => handleCellSelection(e, rowIndex, column, row[column])}
+                    onDoubleClick={() => handleCellDoubleClick(rowIndex, column, row[column])}
+                    className={`editable-cell ${column === 'id' ? 'id-cell' : ''} ${
+                      selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''
+                    }`}
                   >
                     {row[column] !== null ? String(row[column]) : '-'}
                   </td>
