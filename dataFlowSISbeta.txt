@@ -1,0 +1,185 @@
+# X3 Project Documentation
+Version 1.0
+Last Updated: [Current Date]
+
+===========================================
+TABLE OF CONTENTS
+===========================================
+1. Core Data Flow
+2. Server Architecture
+3. Routes Structure
+4. Frontend Components
+5. GPT Integration
+6. Best Practices
+
+===========================================
+1. CORE DATA FLOW
+===========================================
+
+## Backend Routes Structure
+
+### Data Routes (/backend/routes/dataRoutes.js)
+- Table Management Endpoints:
+  * GET /tables - Retrieves all available tables
+  * POST /tables - Creates new tables with specified columns
+  * GET /:tableName - Fetches data from a specific table
+- Database Integration:
+  * Direct MySQL interface through mysqlDatabase service
+  * Handles table creation and data retrieval operations
+
+### Prospeccion Routes (/backend/routes/prospeccionRoutes.js)
+- Card Management Endpoints:
+  * GET /:userId - Retrieves all cards for a specific user
+  * POST /:userId - Creates a new card for a user
+  * PUT /:userId/:cardId - Updates an existing card
+  * DELETE /:userId/:cardId - Deletes a specific card
+- User-Specific Operations:
+  * All operations are user-scoped
+  * Managed through prospeccionService
+
+===========================================
+2. SERVER ARCHITECTURE
+===========================================
+
+## Main Servers
+
+1. Frontend Server
+   - React application (Vite)
+   - Default port (typically 5173)
+   - Handles UI rendering and client-side logic
+
+2. Backend Server
+   - Express.js server
+   - Port 3001
+   - Handles API routes and database operations
+
+## API Integration Points
+- Base URL: http://localhost:3001/api
+- RESTful communication between frontend and backend
+
+===========================================
+3. ROUTES STRUCTURE
+===========================================
+
+## Frontend Structure (src/App.jsx)
+- Route Configuration:
+  * / → Dashboard component
+  * /data → DataSection component
+  * /drive → Drive component
+  * /reports → Reports component
+  * /pdf-parser → PDFParser component
+  * /datapool → Datapool component
+  * /sharepoint → Sharepoint component
+
+## Backend Routes
+1. Data Routes (/api/data/)
+   - Table management
+   - Data retrieval and manipulation
+
+2. Prospeccion Routes (/api/prospeccion/)
+   - Card management
+   - User-specific operations
+
+3. GPT Routes (/api/gpt/)
+   - Document analysis
+   - AI-powered data extraction
+
+===========================================
+4. FRONTEND COMPONENTS
+===========================================
+
+## Key Components
+1. Dashboard
+   - Main entry point
+   - System functionality overview
+
+2. DataSection
+   - Data management and visualization
+   - Data routes interface
+
+3. Prospeccion
+   - Card-based interface
+   - User-specific data management
+
+===========================================
+5. GPT INTEGRATION
+===========================================
+
+## GPT Component (src/components/TestGPT/TestGPT.jsx)
+- Features:
+  * Direct OpenAI API integration
+  * Table data analysis
+  * Email integration
+  * Prospeccion card management
+
+## GPT Routes (backend/routes/gptRoutes.js)
+- Endpoints:
+  * POST /analyze - Document analysis endpoint
+    - Uses GPT-4o-mini model
+    - Extracts specific information
+    - Handles metadata and context
+
+## AI Analysis Flow
+1. Document Processing:
+   - Frontend upload → GPT route
+   - AI analysis with specific rules
+   - Structured JSON response
+   - UI update with results
+
+2. Integration with Database:
+   - AI analysis results → Data storage
+   - Table updates with extracted information
+   - Prospeccion card updates if needed
+
+===========================================
+6. BEST PRACTICES
+===========================================
+
+## Data Operations
+1. Create Flow:
+   - Frontend → API Request → Data Routes → MySQL Service → Database
+   - Error handling at each layer
+   - Validation before database operations
+
+2. Read Flow:
+   - Component Request → Backend Route → Database Query → Response Transform → UI Update
+   - Pagination and filtering at database level
+
+3. Update/Delete Flow:
+   - User Action → API Call → Route Handler → Database Operation → Response → UI Refresh
+
+## Security
+1. API Keys and Environment:
+   - OpenAI API key management
+   - Frontend: Vite environment variables
+   - Backend: dotenv configuration
+
+2. Protection Measures:
+   - User-scoped operations
+   - Input validation
+   - Route protection
+
+## Performance
+1. Database:
+   - Query optimization
+   - Transaction management
+   - Consistent data access patterns
+
+2. Frontend:
+   - State management
+   - Component-based architecture
+   - Efficient rendering
+
+## AI Integration
+1. Model Selection:
+   - GPT-4o-mini for optimal performance
+   - Specialized system prompts
+
+2. Error Handling:
+   - Graceful API failure handling
+   - Clear error messages
+   - Debug logging
+
+===========================================
+END OF DOCUMENTATION
+=========================================== 

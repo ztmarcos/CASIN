@@ -1039,4 +1039,276 @@
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+}
+
+.table-controls {
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.search-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Email column styles */
+.email-column {
+  width: 50px;
+  min-width: 50px;
+  text-align: center;
+  padding: 0;
+  background: #ffffff;
+}
+
+.email-cell {
+  width: 50px;
+  min-width: 50px;
+  text-align: center;
+  padding: 4px !important;
+  vertical-align: middle;
+  background: #ffffff;
+}
+
+.email-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+}
+
+.email-icon-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.email-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.email-icon {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.email-icon-btn:hover .email-icon {
+  color: #3b82f6;
+}
+
+/* Dark mode email styles */
+[data-theme='dark'] .email-column {
+  background: #1f2937;
+}
+
+[data-theme='dark'] .email-cell {
+  background: #1f2937;
+}
+
+[data-theme='dark'] .email-icon-btn:hover {
+  background-color: #374151;
+}
+
+[data-theme='dark'] .email-icon {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .email-icon-btn:hover .email-icon {
+  color: #60a5fa;
+}
+
+/* Hover state for email cell in table row */
+.table-row:hover .email-cell {
+  background-color: #ffe4cc !important;
+}
+
+[data-theme='dark'] .table-row:hover .email-cell {
+  background-color: #3d2e1e !important;
+}
+
+/* Delete button styles */
+.delete-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+}
+
+.delete-btn:hover {
+  background-color: #fee2e2;
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+.delete-icon {
+  width: 18px;
+  height: 18px;
+  color: #ef4444;
+  transition: color 0.2s ease;
+}
+
+.delete-btn:hover .delete-icon {
+  color: #dc2626;
+}
+
+/* Dark mode delete button styles */
+[data-theme='dark'] .delete-btn:hover {
+  background-color: #7f1d1d;
+}
+
+[data-theme='dark'] .delete-icon {
+  color: #f87171;
+}
+
+[data-theme='dark'] .delete-btn:hover .delete-icon {
+  color: #ef4444;
+}
+
+/* Delete confirmation dialog */
+.delete-confirmation-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 90%;
+}
+
+.delete-confirmation-dialog h4 {
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.delete-confirmation-dialog p {
+  margin: 0 0 1.5rem 0;
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.delete-confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.delete-confirm-btn,
+.delete-cancel-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.delete-confirm-btn {
+  background-color: #ef4444;
+  color: white;
+  border: none;
+}
+
+.delete-confirm-btn:hover {
+  background-color: #dc2626;
+}
+
+.delete-confirm-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.delete-cancel-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.delete-cancel-btn:hover {
+  background-color: #e5e7eb;
+}
+
+/* Dark mode delete confirmation dialog */
+[data-theme='dark'] .delete-confirmation-dialog {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme='dark'] .delete-confirmation-dialog h4 {
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .delete-confirmation-dialog p {
+  color: #d1d5db;
+}
+
+[data-theme='dark'] .delete-confirm-btn {
+  background-color: #dc2626;
+}
+
+[data-theme='dark'] .delete-confirm-btn:hover {
+  background-color: #b91c1c;
+}
+
+[data-theme='dark'] .delete-cancel-btn {
+  background-color: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+[data-theme='dark'] .delete-cancel-btn:hover {
+  background-color: #4b5563;
+}
+
+/* Delete overlay */
+.delete-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+[data-theme='dark'] .delete-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
 } 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TableCardView from '../TableCardView/TableCardView';
 import tableService from '../../services/data/tableService';
-import { fetchBirthdays } from '../../services/birthdayService';
+import { fetchBirthdays } from '../../services/birthdayServiceNew';
 import './Datapool.css';
 
 const Datapool = () => {

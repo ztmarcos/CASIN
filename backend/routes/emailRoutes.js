@@ -25,8 +25,22 @@ router.get('/test-connection', async (req, res) => {
 // Send welcome email
 router.post('/send-welcome', async (req, res) => {
     try {
-        const { to, gptResponse, ...data } = req.body;
-        const result = await emailService.sendWelcomeEmail(to, { gptResponse, ...data });
+        const { to, gptResponse, subject, ...data } = req.body;
+        
+        console.log('Sending welcome email to:', to);
+        console.log('Email data:', { subject, dataKeys: Object.keys(data) });
+        
+        const result = await emailService.sendWelcomeEmail(to, { 
+            gptResponse,
+            subject,
+            policyNumber: data.numero_poliza || data.poliza,
+            coverage: data.cobertura,
+            emergencyPhone: process.env.EMERGENCY_PHONE || '800-123-4567',
+            supportEmail: process.env.SUPPORT_EMAIL || 'soporte@cambiandohistorias.com.mx',
+            companyName: process.env.COMPANY_NAME || 'Cambiando Historias',
+            companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México'
+        });
+        
         res.json(result);
     } catch (error) {
         console.error('Error sending welcome email:', error);

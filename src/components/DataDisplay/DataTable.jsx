@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import pdfService from '../../services/pdfService';
 import tableService from '../../services/data/tableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
+import TableMail from './TableMail';
 import './DataTable.css';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
@@ -15,10 +16,32 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedCells, setSelectedCells] = useState([]);
   const [selectionStart, setSelectionStart] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredData, setFilteredData] = useState([]);
+  const [mailModal, setMailModal] = useState({ isOpen: false, rowData: null });
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
     setSortedData(data);
+    setFilteredData(data);
   }, [data]);
+
+  // Search handler
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredData(sortedData);
+      return;
+    }
+
+    const searchTermLower = searchTerm.toLowerCase();
+    const filtered = sortedData.filter(row => 
+      Object.values(row).some(value => 
+        value !== null && 
+        String(value).toLowerCase().includes(searchTermLower)
+      )
+    );
+    setFilteredData(filtered);
+  }, [searchTerm, sortedData]);
 
   const handleSort = (column) => {
     let direction = 'asc';
@@ -35,7 +58,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       return;
     }
 
-    const sorted = [...sortedData].sort((a, b) => {
+    const sorted = [...filteredData].sort((a, b) => {
       if (a[column] === null) return 1;
       if (b[column] === null) return -1;
       
@@ -263,12 +286,52 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     return () => document.removeEventListener('copy', handleCopy);
   }, [selectedCells, data, columns]);
 
+  const handleEmailClick = (rowData) => {
+    setMailModal({ isOpen: true, rowData });
+  };
+
+  const handleCloseMailModal = () => {
+    setMailModal({ isOpen: false, rowData: null });
+  };
+
+  const handleDeleteClick = (row) => {
+    setDeleteConfirm(row);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm || !deleteConfirm.id) return;
+
+    try {
+      await tableService.deleteRow(tableName, deleteConfirm.id);
+      setDeleteConfirm(null);
+      if (onRefresh) {
+        await refreshData();
+      }
+    } catch (error) {
+      console.error('Error deleting row:', error);
+    }
+  };
+
   return (
     <div className="data-table-container">
+      <div className="table-controls">
+        <input
+          type="text"
+          placeholder="Search in table..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-input"
+        />
+      </div>
       <div className={`table-wrapper ${isRefreshing ? 'refreshing' : ''}`}>
         <table className="data-table">
           <thead>
             <tr>
+              <th className="email-column">
+                <div className="header-content">
+                  <span>Email</span>
+                </div>
+              </th>
               {columns.map(column => (
                 <th 
                   key={column}
@@ -281,11 +344,31 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   </div>
                 </th>
               ))}
+              <th className="delete-column">
+                <div className="header-content">
+                  <span>Delete</span>
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {sortedData.map((row, rowIndex) => (
+            {filteredData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
+                <td className="email-cell">
+                  <button 
+                    className="email-icon-btn" 
+                    title="Send Email"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEmailClick(row);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="email-icon">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <path d="M22 6l-10 7L2 6" />
+                    </svg>
+                  </button>
+                </td>
                 {columns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
@@ -298,11 +381,50 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     {row[column] !== null ? String(row[column]) : '-'}
                   </td>
                 ))}
+                <td className="delete-cell">
+                  <button 
+                    className="delete-btn" 
+                    title="Delete Row"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteClick(row);
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="delete-icon">
+                      <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Mail Modal */}
+      <TableMail 
+        isOpen={mailModal.isOpen}
+        onClose={handleCloseMailModal}
+        rowData={mailModal.rowData}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="delete-overlay">
+          <div className="delete-confirmation-dialog">
+            <h4>Delete Row</h4>
+            <p>Are you sure you want to delete this row? This action cannot be undone.</p>
+            <div className="delete-confirmation-actions">
+              <button onClick={() => setDeleteConfirm(null)} className="delete-cancel-btn">
+                Cancel
+              </button>
+              <button onClick={handleConfirmDelete} className="delete-confirm-btn">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Cell Popup */}
       {editingCell && (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
-import { fetchBirthdays } from '../../services/birthdayService';
+import { fetchBirthdays } from '../../services/birthdayServiceNew';
 import tableService from '../../services/data/tableService';
 import { formatDate } from '../../utils/dateUtils';
 import './Dashboard.css';
@@ -125,7 +125,7 @@ const Dashboard = () => {
           <div className="card-header">
             <h3>Cumpleaños del Día</h3>
           </div>
-          <div className="card-content">∫
+          <div className="card-content">
             {loading ? (
               <div className="loading-spinner"></div>
             ) : error ? (

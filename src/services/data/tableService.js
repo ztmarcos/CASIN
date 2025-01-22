@@ -1,6 +1,6 @@
 class TableService {
   constructor() {
-    this.apiUrl = 'http://192.168.1.125:3001/api/data';
+    this.apiUrl = 'http://localhost:3001/api/data';
   }
 
   async getTables() {
@@ -368,6 +368,51 @@ class TableService {
       return { message: `Table ${tableName} deleted successfully` };
     } catch (error) {
       console.error('Error deleting table:', error);
+      throw error;
+    }
+  }
+
+  async deleteRow(tableName, id) {
+    try {
+      // Clean the table name using the same pattern as other methods
+      const cleanTableName = tableName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase()
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      const response = await fetch(`${this.apiUrl}/${cleanTableName}/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type');
+        let errorMessage;
+        
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          errorMessage = error.message;
+        } else {
+          errorMessage = await response.text();
+        }
+        
+        throw new Error(errorMessage || `Failed to delete row ${id} from ${tableName}`);
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      
+      return { message: `Row ${id} deleted successfully from ${tableName}` };
+    } catch (error) {
+      console.error('Error deleting row:', error);
       throw error;
     }
   }

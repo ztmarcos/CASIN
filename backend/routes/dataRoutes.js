@@ -210,4 +210,21 @@ router.delete('/tables/:tableName', async (req, res) => {
   }
 });
 
+// Delete row
+router.delete('/:tableName/:id', async (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    
+    if (!tableName || !id) {
+      return res.status(400).json({ error: 'Table name and row ID are required' });
+    }
+    
+    const result = await mysqlDatabase.deleteRow(tableName, id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting row:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

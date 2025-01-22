@@ -17,4 +17,23 @@ export const fetchBirthdays = async () => {
     console.error('Error fetching birthdays:', error);
     throw error;
   }
+};
+
+/**
+ * Triggers the birthday email check and send process
+ * @returns {Promise<Object>} Result of the operation
+ */
+export const triggerBirthdayEmails = async () => {
+  try {
+    const response = await fetch(`${API_URL}/birthday/check-and-send`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      throw new Error('Failed to trigger birthday emails');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error triggering birthday emails:', error);
+    throw error;
+  }
 }; 

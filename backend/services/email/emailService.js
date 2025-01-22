@@ -25,10 +25,7 @@ class EmailService {
             });
             
             // Create plain text email content
-            const text = `
-¡Bienvenido a tu Plan de Seguros!
-
-${data.gptResponse || 'No hay contenido disponible'}
+            const text = `${data.gptResponse || 'No hay contenido disponible'}
 
 Información de tu póliza:
 - Número de póliza: ${data.policyNumber}
@@ -49,7 +46,7 @@ ${data.companyAddress}`;
             const mailOptions = {
                 from: process.env.GMAIL_USER,
                 to,
-                subject: '¡Bienvenido a tu Plan de Seguros!',
+                subject: data.subject || '¡Bienvenido a tu Plan de Seguros!',
                 text
             };
 

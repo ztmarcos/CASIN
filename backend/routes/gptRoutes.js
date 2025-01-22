@@ -9,11 +9,62 @@ const openai = new OpenAI({
 
 router.post('/analyze', async (req, res) => {
     try {
-        const { text, metadata, targetColumns, tableName } = req.body;
-        console.log('Starting analysis for table:', tableName);
-        console.log('Target columns:', targetColumns);
+        const { type, text, metadata, targetColumns, tableName, data } = req.body;
 
-        // Create a single comprehensive prompt for all columns
+        // Handle email generation
+        if (type === 'welcome_email') {
+            // Crear una lista dinámica de los datos disponibles
+            const dataPoints = Object.entries(data)
+                .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+                .map(([key, value]) => `- ${key}: ${value}`)
+                .join('\n');
+
+            const completion = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [{
+                    role: "system",
+                    content: `Eres un experto en seguros que escribe correos profesionales y amigables en español. 
+                    Genera un correo de bienvenida claro y conciso que resuma los puntos más importantes de la información proporcionada.
+                    El formato debe ser:
+
+                    ASUNTO: [El asunto del correo]
+
+                    [Contenido del correo]`
+                }, {
+                    role: "user",
+                    content: `Genera un correo de bienvenida para un cliente usando estos datos:
+                    
+                    ${dataPoints}
+
+                    El correo debe:
+                    1. Tener un saludo personalizado usando el nombre si está disponible
+                    2. Agradecer por elegir nuestros servicios
+                    3. Resumir los puntos más importantes de la información proporcionada
+                    4. Si hay montos, incluirlos con formato de moneda mexicana
+                    5. Proporcionar información de contacto
+                    6. Tener un cierre profesional
+
+                    Usa un tono profesional pero cercano, y asegúrate de que la información sea fácil de entender.`
+                }],
+                temperature: 0.7,
+                max_tokens: 1000
+            });
+
+            const fullResponse = completion.choices[0].message.content;
+            const [subject, ...messageParts] = fullResponse.split('\n\n');
+
+            return res.json({
+                emailContent: {
+                    subject: subject.replace('ASUNTO: ', '').trim(),
+                    message: messageParts.join('\n\n').trim()
+                }
+            });
+        }
+
+        // Original document analysis logic
+        console.log('Iniciando análisis para tabla:', tableName);
+        console.log('Columnas objetivo:', targetColumns);
+
         const prompt = `
         Analiza el siguiente documento y extrae la información solicitada.
         

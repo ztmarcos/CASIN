@@ -1,0 +1,230 @@
+/* Mail Modal Styles */
+.mail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.mail-modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.mail-modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
+}
+
+.mail-modal-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+  padding: 5px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.mail-modal-body {
+  padding: 24px;
+}
+
+.mail-field {
+  margin-bottom: 20px;
+}
+
+.mail-field label {
+  display: block;
+  margin-bottom: 8px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.mail-input, .mail-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.mail-input:focus, .mail-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.mail-textarea {
+  resize: vertical;
+  min-height: 200px;
+}
+
+.mail-error {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+.mail-success {
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 0.95rem;
+}
+
+.mail-modal-footer {
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+  border-radius: 0 0 12px 12px;
+}
+
+.cancel-btn, .send-btn, .regenerate-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.cancel-btn:hover {
+  background: #e2e8f0;
+}
+
+.send-btn {
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  color: white;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.regenerate-btn {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  margin-right: auto;
+}
+
+.regenerate-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.regenerate-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Dark mode */
+[data-theme='dark'] .mail-modal-content {
+  background: #1e293b;
+}
+
+[data-theme='dark'] .mail-modal-header,
+[data-theme='dark'] .mail-modal-footer {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .mail-modal-header h3 {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .mail-input,
+[data-theme='dark'] .mail-textarea {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .mail-input:focus,
+[data-theme='dark'] .mail-textarea:focus {
+  border-color: #3b82f6;
+}
+
+[data-theme='dark'] .mail-field label {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .close-modal-btn {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .close-modal-btn:hover {
+  background: #334155;
+}
+
+[data-theme='dark'] .cancel-btn,
+[data-theme='dark'] .regenerate-btn {
+  background: #334155;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .cancel-btn:hover,
+[data-theme='dark'] .regenerate-btn:hover:not(:disabled) {
+  background: #475569;
+}
+
+[data-theme='dark'] .send-btn {
+  background: #3b82f6;
+  border-color: #2563eb;
+}
+
+[data-theme='dark'] .send-btn:hover:not(:disabled) {
+  background: #2563eb;
+} 
