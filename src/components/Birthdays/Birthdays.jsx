@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchBirthdays, triggerBirthdayEmails } from '../../services/birthdayService';
+import { fetchBirthdays } from '../../services/birthdayServiceNew';
+import { triggerBirthdayEmails } from '../../services/birthdayService';
 import './Birthdays.css';
 
 const Birthdays = () => {

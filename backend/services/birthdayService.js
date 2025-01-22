@@ -3,51 +3,75 @@ const mysqlDatabase = require('./mysqlDatabase');
 const { extractBirthdayFromRFC } = require('../utils/rfcUtils');
 
 class BirthdayService {
+    async getTableColumns(tableName) {
+        try {
+            const query = `SHOW COLUMNS FROM ${tableName}`;
+            const columns = await mysqlDatabase.executeQuery(query, []);
+            return columns.map(col => col.Field);
+        } catch (error) {
+            console.error(`Error getting columns for table ${tableName}:`, error);
+            return null;
+        }
+    }
+
+    async getAvailableTables() {
+        try {
+            const query = 'SHOW TABLES';
+            const tables = await mysqlDatabase.executeQuery(query, []);
+            return tables.map(table => Object.values(table)[0]);
+        } catch (error) {
+            console.error('Error getting available tables:', error);
+            return [];
+        }
+    }
+
+    findColumn(columns, patterns) {
+        return columns.find(col => 
+            patterns.some(pattern => 
+                col.toLowerCase().includes(pattern.toLowerCase())
+            )
+        );
+    }
+
     async getAllBirthdays() {
         try {
-            // Get birthdays from all tables that have birthday information
-            const queries = {
-                gmm: `
-                    SELECT 
-                        'GMM' as source,
-                        nombre_del_asegurado as name,
-                        fecha_nacimiento_asegurado as birthdate,
-                        e_mail as email,
-                        rfc,
-                        n__mero_de_p__liza as policy_number
-                    FROM gmm`,
-                autos: `
-                    SELECT 
-                        'Autos' as source,
-                        nombre_contratante as name,
-                        NULL as birthdate,
-                        e_mail as email,
-                        rfc,
-                        numero_de_poliza as policy_number
-                    FROM autos`,
-                users: `
-                    SELECT 
-                        'Users' as source,
-                        name,
-                        NULL as birthdate,
-                        NULL as email,
-                        NULL as rfc,
-                        NULL as policy_number
-                    FROM users`,
-                perros: `
-                    SELECT 
-                        'Perros' as source,
-                        galgos as name,
-                        NULL as birthdate,
-                        NULL as email,
-                        NULL as rfc,
-                        NULL as policy_number
-                    FROM perros`
+            const tables = await this.getAvailableTables();
+            const results = {};
+
+            // Columnas que necesitamos encontrar en cada tabla
+            const columnPatterns = {
+                name: ['nombre', 'name', 'contratante', 'asegurado'],
+                email: ['email', 'e_mail', 'correo'],
+                rfc: ['rfc'],
+                birthdate: ['fecha_nacimiento', 'birth', 'nacimiento', 'birthdate'],
+                policy: ['poliza', 'policy', 'numero_de_poliza', 'n__mero_de_p__liza']
             };
 
-            const results = {};
-            for (const [table, query] of Object.entries(queries)) {
+            for (const table of tables) {
                 try {
+                    const columns = await this.getTableColumns(table);
+                    if (!columns) continue;
+
+                    // Buscar las columnas necesarias
+                    const nameColumn = this.findColumn(columns, columnPatterns.name);
+                    const emailColumn = this.findColumn(columns, columnPatterns.email);
+                    const rfcColumn = this.findColumn(columns, columnPatterns.rfc);
+                    const birthdateColumn = this.findColumn(columns, columnPatterns.birthdate);
+                    const policyColumn = this.findColumn(columns, columnPatterns.policy);
+
+                    // Si no encontramos al menos una columna de nombre y RFC, saltamos esta tabla
+                    if (!nameColumn || !rfcColumn) continue;
+
+                    const query = `
+                        SELECT 
+                            '${table}' as source,
+                            ${nameColumn} as name,
+                            ${birthdateColumn ? birthdateColumn + ' as birthdate' : 'NULL as birthdate'},
+                            ${emailColumn ? emailColumn + ' as email' : 'NULL as email'},
+                            ${rfcColumn} as rfc,
+                            ${policyColumn ? policyColumn + ' as policy_number' : 'NULL as policy_number'}
+                        FROM ${table}`;
+
                     const data = await mysqlDatabase.executeQuery(query, []);
                     results[table] = data;
                 } catch (error) {
