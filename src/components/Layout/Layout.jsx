@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import Sidebar from '../Sidebar/Sidebar';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import './Layout.css';
 
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -39,6 +41,21 @@ const Layout = ({ children }) => {
         <div className="right-section">
           <div className="search-bar">
             <input type="text" placeholder="Search..." />
+          </div>
+          <div className="user-section">
+            <span className="user-email">{user?.email}</span>
+            <button className="logout-button" onClick={logout}>
+              <svg 
+                viewBox="0 0 24 24" 
+                width="24" 
+                height="24" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                fill="none"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+            </button>
           </div>
           <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
             {theme === 'dark' ? (

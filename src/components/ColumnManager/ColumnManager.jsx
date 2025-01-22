@@ -157,7 +157,7 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
 const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [columns, setColumns] = useState([]);
   const [columnTags, setColumnTags] = useState({});
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard/Dashboard'
@@ -10,64 +10,150 @@ import Prospeccion from './components/Prospeccion/Prospeccion'
 import Datapool from './components/Datapool/Datapool'
 import Birthdays from './components/Birthdays/Birthdays'
 import Reports from './components/Reports/Reports'
+import Login from './components/Auth/Login'
+import UserManagement from './components/UserManagement/UserManagement'
+import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
-import Sidebar from './components/Sidebar/Sidebar'
 import Sharepoint from './components/Sharepoint/Sharepoint'
 
-function App() {
-  const [currentUser] = useState("defaultUser")
+// Componente protector de rutas
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  return children;
+};
+
+function AppRoutes() {
+  const { user, login } = useAuth();
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <Layout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/data" element={<DataSection />} />
-            <Route path="/drive" element={
-              <div className="section-container">
-                <Drive currentUser="default-user" />
-              </div>
-            } />
-            <Route path="/reports" element={
-              <div className="section-container">
-                <Reports />
-              </div>
-            } />
-            <Route path="/pdf-parser" element={
-              <div className="section-container">
-                <PDFParser />
-              </div>
-            } />
-            <Route path="/datapool" element={
-              <div className="section-container">
-                <Datapool />
-              </div>
-            } />
-            <Route path="/sharepoint" element={
-              <div className="section-container">
-                <Sharepoint currentUser={currentUser} />
-              </div>
-            } />
-            <Route path="/birthdays" element={
-              <div className="section-container">
-                <Birthdays />
-              </div>
-            } />
-            <Route path="/prospeccion" element={
-              <div className="section-container">
-                <Prospeccion />
-              </div>
-            } />
-            <Route path="/test-gpt" element={<TestGPT />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Layout>
-      </BrowserRouter>
-    </ThemeProvider>
-  )
+    <Routes>
+      {!user ? (
+        <>
+          <Route path="/login" element={<Login onLogin={login} />} />
+          <Route path="/user-management" element={<UserManagement />} />
+        </>
+      ) : null}
+      
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Layout>
+            <Dashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/data" element={
+        <ProtectedRoute>
+          <Layout>
+            <DataSection />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/drive" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Drive currentUser={user?.email || 'default-user'} />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/reports" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Reports />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/pdf-parser" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <PDFParser />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/datapool" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Datapool />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/sharepoint" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Sharepoint currentUser={user?.email} />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/birthdays" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Birthdays />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/prospeccion" element={
+        <ProtectedRoute>
+          <Layout>
+            <div className="section-container">
+              <Prospeccion />
+            </div>
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/test-gpt" element={
+        <ProtectedRoute>
+          <Layout>
+            <TestGPT />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+    </Routes>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ThemeProvider>
+    </AuthProvider>
+  );
 }
 
 export default App 
