@@ -73,6 +73,7 @@
   color: #495057;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 0.9rem;
 }
 
 .back-button:hover:not(:disabled) {
@@ -117,10 +118,10 @@
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
-  padding: 0.75rem;
+  padding: 1rem;
   background: #f8f9fa;
   border-radius: 8px;
-  flex-shrink: 0;
+  align-items: center;
 }
 
 .folder-input {
@@ -129,32 +130,77 @@
   border: 1px solid #dee2e6;
   border-radius: 6px;
   font-size: 0.95rem;
+  background: white;
+  color: #333;
+  min-width: 200px;
 }
 
 .folder-input:focus {
   outline: none;
   border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
-.create-button {
-  padding: 0.8rem 1.5rem;
+.folder-input:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.create-folder-button {
+  padding: 0.5rem;
   border: none;
   border-radius: 6px;
-  background: #007bff;
+  background: #28a745;
   color: white;
-  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.create-button:hover:not(:disabled) {
-  background: #0056b3;
+.create-folder-button:hover:not(:disabled) {
+  background: #218838;
+  transform: translateY(-1px);
 }
 
-.create-button:disabled {
+.create-folder-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
+}
+
+.create-folder-button svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .new-folder-form {
+  background: #1f2937;
+}
+
+[data-theme='dark'] .folder-input {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+[data-theme='dark'] .folder-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme='dark'] .folder-input:disabled {
+  background-color: #1f2937;
+}
+
+[data-theme='dark'] .create-folder-button {
+  background: #059669;
+}
+
+[data-theme='dark'] .create-folder-button:hover:not(:disabled) {
+  background: #047857;
 }
 
 .files-grid {
@@ -395,9 +441,9 @@
 }
 
 .upload-button {
-  padding: 0.8rem 1.5rem;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -406,9 +452,10 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.9rem;
 }
 
-.upload-button:hover {
+.upload-button:hover:not(:disabled) {
   background: #218838;
   transform: translateY(-1px);
 }

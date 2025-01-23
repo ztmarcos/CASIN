@@ -25,9 +25,9 @@ const BreadcrumbPath = ({ folderStack, onNavigate }) => (
     <span 
       onClick={() => onNavigate(null)} 
       className="path-item"
-      title="Go to root folder"
+      title="Ir a la carpeta raíz"
     >
-      🏠 Root
+      🏠 Inicio
     </span>
     {folderStack.map((folder, index) => (
       <span key={index} className="path-item">
@@ -35,7 +35,7 @@ const BreadcrumbPath = ({ folderStack, onNavigate }) => (
         <span
           onClick={() => onNavigate(index)}
           className="path-link"
-          title={`Go to ${folder.name}`}
+          title={`Ir a ${folder.name}`}
         >
           {folder.name}
         </span>
@@ -66,6 +66,7 @@ const Drive = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
   const fileInputRef = useRef(null);
 
   const fetchFiles = async (folderId = null) => {
@@ -73,7 +74,7 @@ const Drive = () => {
       setLoading(true);
       setError(null);
       const targetFolderId = folderId || '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn';
-      console.log('Fetching files from:', targetFolderId);
+      console.log('Obteniendo archivos de:', targetFolderId);
       
       const response = await axios.get(`http://localhost:3001/api/drive/files`, {
         params: {
@@ -82,18 +83,9 @@ const Drive = () => {
         }
       });
       
-      console.log('API Response:', {
-        totalFiles: response.data.files?.length || 0,
-        files: response.data.files?.map(f => ({
-          name: f.name,
-          type: f.mimeType,
-          isFolder: f.mimeType === 'application/vnd.google-apps.folder'
-        }))
-      });
-      
       if (!response.data.files) {
-        console.warn('No files array in response:', response.data);
-        setError('Invalid response format from server');
+        console.warn('No hay array de archivos en la respuesta:', response.data);
+        setError('Formato de respuesta inválido del servidor');
         setFiles([]);
         return;
       }
@@ -103,68 +95,60 @@ const Drive = () => {
         isFolder: file.mimeType === 'application/vnd.google-apps.folder'
       }));
 
-      // If we got a single file that's not a folder, show a message
       if (processedFiles.length === 1 && !processedFiles[0].isFolder) {
-        setError(`"${processedFiles[0].name}" is a file, not a folder. You can view it by clicking on it.`);
+        setError(`"${processedFiles[0].name}" es un archivo, no una carpeta. Puedes verlo haciendo clic en él.`);
       } else if (processedFiles.length === 0) {
-        setError('No files found. This could mean the folder is empty or you don\'t have access to it.');
+        setError('No se encontraron archivos. La carpeta podría estar vacía o no tienes acceso a ella.');
       }
-
-      console.log('Processed files:', {
-        total: processedFiles.length,
-        folders: processedFiles.filter(f => f.isFolder).length,
-        files: processedFiles.filter(f => !f.isFolder).length
-      });
       
       setFiles(processedFiles);
     } catch (error) {
-      console.error('Error details:', {
+      console.error('Detalles del error:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status
       });
-      setError(error.response?.data?.error || 'Failed to fetch files. Please ensure the service account has access.');
+      setError(error.response?.data?.error || 'Error al obtener los archivos. Por favor, asegúrate de que la cuenta de servicio tiene acceso.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testGoogleDrive = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Probando conexión con Google Drive...');
+      
+      const response = await axios.get('http://localhost:3001/api/drive/test');
+      console.log('Respuesta completa del test:', response.data);
+      
+      setConnectionStatus(response.data.status);
+      
+      if (response.data.status === 'Connected') {
+        console.log('Conexión exitosa, obteniendo archivos raíz...');
+        await fetchFiles();
+      } else {
+        console.warn('Conectado pero el estado no es "Connected":', response.data.status);
+        setError('Estado de conexión inesperado');
+      }
+    } catch (error) {
+      console.error('Detalles del error de Drive:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setError(error.response?.data?.error || 'Error al conectar con Google Drive');
+      setConnectionStatus('Error');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (currentFolder) {
-      fetchFiles(currentFolder);
-    }
-  }, [currentFolder]);
-
-  const testGoogleDrive = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('Testing Google Drive connection...');
-      
-      const response = await axios.get('http://localhost:3001/api/drive/test');
-      console.log('Full test response:', response.data);
-      
-      setConnectionStatus(response.data.status);
-      
-      if (response.data.status === 'Connected') {
-        console.log('Connection successful, fetching root files...');
-        await fetchFiles();
-      } else {
-        console.warn('Connected but status is not "Connected":', response.data.status);
-        setError('Unexpected connection status');
-      }
-    } catch (error) {
-      console.error('Drive test error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      setError(error.response?.data?.error || 'Failed to connect to Google Drive');
-      setConnectionStatus('Error');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Test connection and fetch files when component mounts
+    testGoogleDrive();
+  }, []);
 
   const handleFolderClick = (folder) => {
     setFolderStack([...folderStack, { id: currentFolder, name: folder.name }]);
@@ -186,15 +170,25 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      // Normalize folder name
+      const normalizedName = newFolderName.trim();
+      
       await axios.post('http://localhost:3001/api/drive/folders', {
-        name: newFolderName,
-        parentId: currentFolder
+        name: normalizedName,
+        parentId: currentFolder || '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn'
       });
+      
+      // Clear input and close modal
       setNewFolderName('');
-      fetchFiles(currentFolder);
+      setShowCreateFolderModal(false);
+      
+      // Refresh the current folder's contents
+      await fetchFiles(currentFolder);
+      
     } catch (error) {
-      setError('Failed to create folder');
-      console.error('Error creating folder:', error);
+      console.error('Error al crear carpeta:', error);
+      setError(error.response?.data?.error || 'Error al crear la carpeta. Por favor, intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -277,7 +271,7 @@ const Drive = () => {
   return (
     <div className="drive-container">
       <div className="drive-header">
-        <h2>📂 Google Drive Files</h2>
+        <h2>📂 Drive</h2>
         <div className="header-actions">
           <input
             type="file"
@@ -290,18 +284,19 @@ const Drive = () => {
             className="upload-button" 
             onClick={handleUploadClick}
             disabled={loading}
-            title="Upload a file to current folder"
+            title="Subir un archivo a la carpeta actual"
           >
-            {loading ? '🔄 Uploading...' : '📤 Upload File'}
+            {loading ? '🔄 Subiendo...' : '📤 Subir Archivo'}
           </button>
           <button 
-            onClick={testGoogleDrive} 
-            disabled={loading}
-            className={`connection-button ${connectionStatus === 'Connected' ? 'connected' : ''}`}
+            onClick={() => setShowCreateFolderModal(true)} 
+            className="create-folder-button"
+            disabled={loading || !connectionStatus}
+            title="Crear una nueva carpeta"
           >
-            {loading ? '🔄 Connecting...' : 
-             connectionStatus === 'Connected' ? '✅ Connected' : 
-             '🔌 Test Connection'}
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 4v16m8-8H4"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -317,9 +312,9 @@ const Drive = () => {
           onClick={handleBackClick} 
           disabled={!currentFolder || loading}
           className="back-button"
-          title="Go back to previous folder"
+          title="Volver a la carpeta anterior"
         >
-          ← Back
+          ← Atrás
         </button>
         <BreadcrumbPath 
           folderStack={folderStack} 
@@ -337,28 +332,9 @@ const Drive = () => {
         />
       </div>
 
-      <div className="new-folder-form">
-        <input
-          type="text"
-          value={newFolderName}
-          onChange={(e) => setNewFolderName(e.target.value)}
-          placeholder="Enter new folder name..."
-          disabled={loading || !connectionStatus}
-          className="folder-input"
-        />
-        <button 
-          onClick={handleCreateFolder} 
-          disabled={loading || !newFolderName.trim() || !connectionStatus}
-          className="create-button"
-          title="Create a new folder"
-        >
-          + Create Folder
-        </button>
-      </div>
-
       {loading ? (
         <div className="loading-state">
-          🔄 Loading files...
+          🔄 Cargando archivos...
         </div>
       ) : files.length > 0 ? (
         <div className="files-grid">
@@ -376,7 +352,7 @@ const Drive = () => {
                     setNewFileName(file.name);
                     setShowRenameModal(true);
                   }}
-                  title="Rename"
+                  title="Renombrar"
                 >
                   ✏️
                 </button>
@@ -387,7 +363,7 @@ const Drive = () => {
                     setSelectedFile(file);
                     setShowDeleteModal(true);
                   }}
-                  title="Delete"
+                  title="Eliminar"
                 >
                   🗑️
                 </button>
@@ -402,7 +378,7 @@ const Drive = () => {
                     window.open(file.webViewLink, '_blank');
                   }
                 }}
-                title={file.isFolder ? 'Open folder' : 'View file'}
+                title={file.isFolder ? 'Abrir carpeta' : 'Ver archivo'}
               >
                 <div className="file-icon">
                   <FileIcon mimeType={file.mimeType} />
@@ -412,7 +388,7 @@ const Drive = () => {
                     {file.name}
                   </div>
                   <div className="file-type">
-                    {file.isFolder ? 'Folder' : file.mimeType.split('/').pop().replace('vnd.google-apps.', '')}
+                    {file.isFolder ? 'Carpeta' : file.mimeType.split('/').pop().replace('vnd.google-apps.', '')}
                   </div>
                 </div>
               </div>
@@ -422,14 +398,14 @@ const Drive = () => {
       ) : (
         <div className="empty-state">
           {connectionStatus === 'Connected' ? 
-            '📂 No files found in this folder' : 
-            '🔌 Connect to Google Drive to view files'}
+            '📂 No hay archivos en esta carpeta' : 
+            '🔌 Conecta con Google Drive para ver los archivos'}
         </div>
       )}
 
       {showDeleteModal && (
         <Modal
-          title="Confirm Delete"
+          title="Confirmar Eliminación"
           onClose={() => {
             setShowDeleteModal(false);
             setSelectedFile(null);
@@ -443,26 +419,26 @@ const Drive = () => {
                   setSelectedFile(null);
                 }}
               >
-                Cancel
+                Cancelar
               </button>
               <button 
                 className="modal-button delete"
                 onClick={handleDelete}
                 disabled={loading}
               >
-                {loading ? 'Deleting...' : 'Delete'}
+                {loading ? 'Eliminando...' : 'Eliminar'}
               </button>
             </>
           }
         >
-          <p>Are you sure you want to delete "{selectedFile?.name}"?</p>
-          <p>This action cannot be undone.</p>
+          <p>¿Estás seguro de que quieres eliminar "{selectedFile?.name}"?</p>
+          <p>Esta acción no se puede deshacer.</p>
         </Modal>
       )}
 
       {showRenameModal && (
         <Modal
-          title="Rename File"
+          title="Renombrar Archivo"
           onClose={() => {
             setShowRenameModal(false);
             setSelectedFile(null);
@@ -478,14 +454,14 @@ const Drive = () => {
                   setNewFileName('');
                 }}
               >
-                Cancel
+                Cancelar
               </button>
               <button 
                 className="modal-button confirm"
                 onClick={handleRename}
                 disabled={loading || !newFileName.trim()}
               >
-                {loading ? 'Saving...' : 'Save'}
+                {loading ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           }
@@ -494,9 +470,53 @@ const Drive = () => {
             type="text"
             value={newFileName}
             onChange={(e) => setNewFileName(e.target.value)}
-            placeholder="Enter new name"
+            placeholder="Nuevo nombre"
             className="modal-input"
             autoFocus
+          />
+        </Modal>
+      )}
+
+      {showCreateFolderModal && (
+        <Modal
+          title="Crear Nueva Carpeta"
+          onClose={() => {
+            setShowCreateFolderModal(false);
+            setNewFolderName('');
+          }}
+          actions={
+            <>
+              <button 
+                className="modal-button cancel"
+                onClick={() => {
+                  setShowCreateFolderModal(false);
+                  setNewFolderName('');
+                }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="modal-button confirm"
+                onClick={handleCreateFolder}
+                disabled={loading || !newFolderName.trim()}
+              >
+                {loading ? 'Creando...' : 'Crear'}
+              </button>
+            </>
+          }
+        >
+          <input
+            type="text"
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="Nombre de la carpeta"
+            className="modal-input"
+            autoFocus
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && newFolderName.trim() && !loading) {
+                handleCreateFolder();
+              }
+            }}
           />
         </Modal>
       )}
