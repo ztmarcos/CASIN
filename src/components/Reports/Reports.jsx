@@ -275,15 +275,21 @@ export default function Reports() {
           <div className="view-toggle">
             <button
               className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setViewMode('table')}
+              onClick={() => setViewMode(viewMode === 'table' ? 'cards' : 'table')}
+              title={viewMode === 'table' ? 'Ver como tarjetas' : 'Ver como tabla'}
             >
-              ▦ Tabla
-            </button>
-            <button
-              className={`toggle-btn ${viewMode === 'cards' ? 'active' : ''}`}
-              onClick={() => setViewMode('cards')}
-            >
-              ▤ Tarjetas
+              {viewMode === 'table' ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                  <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                  <rect x="4" y="4" width="7" height="7" />
+                  <rect x="13" y="4" width="7" height="7" />
+                  <rect x="4" y="13" width="7" height="7" />
+                  <rect x="13" y="13" width="7" height="7" />
+                </svg>
+              )}
             </button>
           </div>
           {!searchTerm.trim() && (
