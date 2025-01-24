@@ -1,26 +1,35 @@
 .pdf-parser {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .upload-section {
-  margin: 20px 0;
-  text-align: center;
+  padding: 1.5rem;
+  background: var(--bg-surface-secondary, #f8f9fa);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 }
 
 .file-input-label {
-  display: inline-block;
-  padding: 12px 24px;
-  background-color: #007bff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary-color, #007bff);
   color: white;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .file-input-label:hover {
-  background-color: #0056b3;
+  background-color: var(--primary-color-dark, #0056b3);
 }
 
 .file-input {
@@ -39,23 +48,27 @@
 }
 
 .loading {
-  margin: 20px 0;
-  padding: 10px;
-  background-color: #e9ecef;
-  border-radius: 4px;
+  padding: 1rem;
+  background-color: var(--bg-surface-secondary, #e9ecef);
+  border-radius: 6px;
   text-align: center;
+  color: var(--text-secondary, #6c757d);
 }
 
 .error-message {
-  color: #dc3545;
-  margin: 10px 0;
-  padding: 10px;
-  background-color: #f8d7da;
-  border-radius: 4px;
+  padding: 1rem;
+  background-color: var(--error-bg, #fff5f5);
+  color: var(--error-text, #dc3545);
+  border-radius: 6px;
+  text-align: center;
 }
 
 .parsed-content {
-  margin-top: 20px;
+  flex: 1;
+  overflow: auto;
+  padding: 1.5rem;
+  background: var(--bg-surface-secondary, #f8f9fa);
+  border-radius: 8px;
 }
 
 .text-content {
@@ -103,4 +116,20 @@
 
 .table-container th {
   background-color: #f8f9fa;
+}
+
+/* Dark theme support */
+[data-theme='dark'] .upload-section,
+[data-theme='dark'] .parsed-content {
+  background: var(--bg-surface-secondary, #2d3748);
+}
+
+[data-theme='dark'] .loading {
+  background-color: var(--bg-surface-secondary, #2d3748);
+  color: var(--text-secondary, #a0aec0);
+}
+
+[data-theme='dark'] .error-message {
+  background-color: var(--error-bg, #742a2a);
+  color: var(--error-text, #feb2b2);
 } 

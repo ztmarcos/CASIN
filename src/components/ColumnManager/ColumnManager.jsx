@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import PDFParser from '../PDFParser_new/PDFParser';
 import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
+import Modal from '../common/Modal';
 
 const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, isPdfEnabled }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -374,16 +375,13 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       </div>
 
       {/* PDF Parser Modal */}
-      {showPDFParser && (
-        <div className="modal-overlay" onClick={() => setShowPDFParser(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <button className="close-button" onClick={() => setShowPDFParser(false)}>×</button>
-            </div>
-            <PDFParser />
-          </div>
-        </div>
-      )}
+      <Modal 
+        isOpen={showPDFParser} 
+        onClose={() => setShowPDFParser(false)}
+        size="large"
+      >
+        <PDFParser />
+      </Modal>
 
       {!isCollapsed && (
         <>
