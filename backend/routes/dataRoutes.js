@@ -227,4 +227,119 @@ router.delete('/:tableName/:id', async (req, res) => {
   }
 });
 
+// Import CSV and create table automatically
+router.post('/import-csv', async (req, res) => {
+  try {
+    const { tableName, data } = req.body;
+    
+    if (!tableName || !data || !Array.isArray(data) || data.length === 0) {
+      return res.status(400).json({ error: 'Table name and non-empty data array are required' });
+    }
+
+    // Clean table name (remove special characters and spaces)
+    const cleanTableName = tableName.toLowerCase()
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+
+    // Get column definitions from the first row
+    const sampleRow = data[0];
+    const columns = Object.keys(sampleRow).map(key => {
+      // Clean column name
+      const cleanKey = key.toLowerCase()
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      // Infer column type from data
+      let type = 'VARCHAR(255)';
+      const value = sampleRow[key];
+      
+      if (typeof value === 'number') {
+        if (Number.isInteger(value)) {
+          type = 'INT';
+        } else {
+          type = 'DECIMAL(12,2)';
+        }
+      } else if (value instanceof Date) {
+        type = 'DATE';
+      } else if (typeof value === 'boolean') {
+        type = 'BOOLEAN';
+      } else if (typeof value === 'string') {
+        // Check if it's a date string
+        const dateValue = new Date(value);
+        if (!isNaN(dateValue) && value.includes('/') || value.includes('-')) {
+          type = 'DATE';
+        } else if (value.length > 255) {
+          type = 'TEXT';
+        }
+      }
+
+      return {
+        name: cleanKey,
+        type,
+        nullable: true
+      };
+    });
+
+    // Add id column
+    columns.unshift({
+      name: 'id',
+      type: 'INT',
+      isPrimary: true,
+      autoIncrement: true,
+      nullable: false
+    });
+
+    // Create table
+    await mysqlDatabase.createTable({
+      name: cleanTableName,
+      columns
+    });
+
+    // Clean and insert data
+    const cleanData = data.map(row => {
+      const cleanRow = {};
+      Object.entries(row).forEach(([key, value]) => {
+        const cleanKey = key.toLowerCase()
+          .replace(/[^a-z0-9_]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '');
+        
+        // Convert dates to MySQL format if needed
+        if (value && columns.find(col => col.name === cleanKey)?.type === 'DATE') {
+          try {
+            const date = new Date(value);
+            if (!isNaN(date)) {
+              value = date.toISOString().split('T')[0];
+            }
+          } catch (e) {
+            console.warn(`Failed to parse date: ${value}`);
+          }
+        }
+        
+        cleanRow[cleanKey] = value;
+      });
+      return cleanRow;
+    });
+
+    // Insert data in batches
+    const batchSize = 100;
+    for (let i = 0; i < cleanData.length; i += batchSize) {
+      const batch = cleanData.slice(i, i + batchSize);
+      await Promise.all(batch.map(row => mysqlDatabase.insertData(cleanTableName, row)));
+    }
+
+    res.json({
+      success: true,
+      message: `Table ${cleanTableName} created and ${cleanData.length} rows imported successfully`,
+      tableName: cleanTableName,
+      columns: columns.map(col => ({ name: col.name, type: col.type }))
+    });
+  } catch (error) {
+    console.error('Error importing CSV:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router; 

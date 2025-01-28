@@ -418,6 +418,157 @@ class TableService {
       throw error;
     }
   }
+
+  async importCSV(tableName, data) {
+    try {
+      if (!data || data.length === 0) {
+        throw new Error('No data to import');
+      }
+
+      // Get sample row for column types
+      const sampleRow = data[0];
+      
+      // Create column definitions
+      const columnDefs = Object.keys(sampleRow)
+        .filter(key => key.toLowerCase() !== 'id') // Exclude any id column from source data
+        .map(key => {
+          // Initialize type checking arrays
+          const values = data
+            .map(row => row[key])
+            .filter(val => val !== null && val !== undefined && val !== '');
+
+          // Infer type based on values
+          let type = 'VARCHAR(255)'; // default type
+          
+          if (values.length > 0) {
+            const allNumbers = values.every(val => !isNaN(val) && !isNaN(parseFloat(val)));
+            const allIntegers = allNumbers && values.every(val => Number.isInteger(parseFloat(val)));
+            const allDates = values.every(val => !isNaN(Date.parse(val)));
+            const maxLength = Math.max(...values.map(val => String(val).length));
+
+            if (allIntegers) {
+              type = 'INT';
+            } else if (allNumbers) {
+              type = 'DECIMAL(12,2)';
+            } else if (allDates) {
+              type = 'DATE';
+            } else if (maxLength > 255) {
+              type = 'TEXT';
+            } else {
+              type = `VARCHAR(${Math.min(maxLength + 50, 255)})`;
+            }
+          }
+
+          // Clean column name
+          const cleanName = key.toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9_]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '');
+
+          return {
+            name: cleanName,
+            type,
+            nullable: true
+          };
+        });
+
+      // Create table definition with clean table name
+      const cleanTableName = tableName.toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9_]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+
+      // Approach 1: Try creating table without explicit id column (let MySQL handle it)
+      try {
+        const createResponse = await axios.post(`${this.apiUrl}/tables`, {
+          name: cleanTableName,
+          columns: columnDefs,
+          options: {
+            addIdColumn: true // Signal backend to add id column
+          }
+        });
+
+        if (!createResponse.data.success) {
+          throw new Error(createResponse.data.error || 'Failed to create table');
+        }
+      } catch (error) {
+        // If first approach fails, try second approach
+        console.log('First approach failed, trying alternative...');
+        
+        // Approach 2: Try creating table with manual SQL
+        const createTableSQL = {
+          name: cleanTableName,
+          sql: `CREATE TABLE IF NOT EXISTS \`${cleanTableName}\` (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            ${columnDefs.map(col => `\`${col.name}\` ${col.type}${col.nullable ? '' : ' NOT NULL'}`).join(',\n')}
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
+        };
+
+        const createResponse = await axios.post(`${this.apiUrl}/tables/raw`, createTableSQL);
+        
+        if (!createResponse.data.success) {
+          throw new Error(createResponse.data.error || 'Failed to create table');
+        }
+      }
+
+      // Insert data in batches
+      const batchSize = 50;
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = data.slice(i, i + batchSize);
+        await Promise.all(batch.map(row => {
+          const processedRow = {};
+          columnDefs.forEach(({ name, type }) => {
+            let value = row[Object.keys(row).find(key => 
+              key.toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9_]/g, '_')
+                .replace(/_+/g, '_')
+                .replace(/^_|_$/g, '') === name
+            )];
+
+            // Convert values based on column type
+            if (value !== null && value !== undefined && value !== '') {
+              if (type === 'INT') {
+                value = parseInt(value, 10);
+                if (isNaN(value)) value = null;
+              } else if (type === 'DECIMAL(12,2)') {
+                value = parseFloat(value);
+                if (isNaN(value)) value = null;
+              } else if (type === 'DATE') {
+                const date = new Date(value);
+                if (!isNaN(date)) {
+                  value = date.toISOString().split('T')[0];
+                } else {
+                  value = null;
+                }
+              }
+            } else {
+              value = null;
+            }
+            
+            processedRow[name] = value;
+          });
+          return axios.post(`${this.apiUrl}/${cleanTableName}`, processedRow);
+        }));
+      }
+
+      return {
+        success: true,
+        message: `Table ${cleanTableName} created and ${data.length} rows imported successfully`,
+        tableName: cleanTableName,
+        rowCount: data.length,
+        columns: columnDefs
+      };
+    } catch (error) {
+      console.error('Error importing CSV:', error);
+      throw new Error(error.response?.data?.error || error.message || 'Error importing CSV data');
+    }
+  }
 }
 
 const tableService = new TableService();
