@@ -527,4 +527,37 @@
 .import-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reload-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.reload-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+  transform: rotate(180deg);
+}
+
+.reload-btn:active {
+  background: #e0e0e0;
+  transform: rotate(180deg) scale(0.95);
 } 

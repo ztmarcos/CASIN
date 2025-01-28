@@ -17,6 +17,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
 import './App.css'
 import Sharepoint from './components/Sharepoint/Sharepoint'
+import { Toaster } from 'react-hot-toast'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
@@ -132,13 +133,37 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </ThemeProvider>
-    </AuthProvider>
+    <>
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            theme: {
+              primary: '#4aed88',
+            },
+          },
+          error: {
+            duration: 4000,
+            theme: {
+              primary: '#ff4b4b',
+            },
+          },
+        }}
+      />
+      <AuthProvider>
+        <ThemeProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ThemeProvider>
+      </AuthProvider>
+    </>
   );
 }
 

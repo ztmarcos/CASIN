@@ -7,6 +7,7 @@ import TableImport from '../TableImport/TableImport';
 import AddEntryModal from './AddEntryModal';
 import tableService from '../../services/data/tableService';
 import './DataSection.css';
+import { toast } from 'react-hot-toast';
 
 const DataSection = () => {
   const [selectedTable, setSelectedTable] = useState(null);
@@ -260,11 +261,49 @@ const DataSection = () => {
     }
   };
 
+  const handleReload = async () => {
+    try {
+      setIsLoading(true);
+      // Get the current table name before reloading
+      const currentTableName = selectedTable?.name;
+      
+      // Reload tables list first
+      const tablesData = await tableService.getTables();
+      
+      // If we had a selected table, find it in the new list
+      if (currentTableName) {
+        const updatedSelectedTable = tablesData.find(t => t.name === currentTableName);
+        setSelectedTable(updatedSelectedTable || null);
+        
+        // If we still have the table selected, reload its data
+        if (updatedSelectedTable) {
+          await loadTableData();
+        }
+      }
+      
+      toast.success('Data refreshed successfully');
+    } catch (error) {
+      console.error('Error reloading data:', error);
+      toast.error('Failed to refresh data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="data-section">
       <div className="data-section-header">
         <div className="header-top">
-          <h2>Data Management</h2>
+          <div className="header-title">
+            <h2>Data Management</h2>
+            <button 
+              className="reload-btn"
+              onClick={handleReload}
+              title="Reload data"
+            >
+              ↻
+            </button>
+          </div>
           <button 
             className="btn-primary import-btn" 
             onClick={() => setShowImport(true)}
@@ -360,8 +399,10 @@ const DataSection = () => {
             <TableImport 
               onFileData={(result) => {
                 if (result.success) {
+                  if (result.shouldReload) {
+                    handleReload(); // Use our new comprehensive reload function
+                  }
                   setShowImport(false);
-                  loadTableData();
                 }
               }} 
             />

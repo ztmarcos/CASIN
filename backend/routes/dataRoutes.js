@@ -342,4 +342,33 @@ router.post('/import-csv', async (req, res) => {
   }
 });
 
+// Add this route handler for renaming tables
+router.put('/tables/rename', async (req, res) => {
+  try {
+    const { oldName, newName } = req.body;
+    
+    if (!oldName || !newName) {
+      return res.status(400).json({
+        success: false,
+        error: 'Both old and new table names are required'
+      });
+    }
+
+    // Execute the rename table query
+    const query = `RENAME TABLE \`${oldName}\` TO \`${newName}\``;
+    await mysqlDatabase.executeQuery(query, []);
+
+    res.json({
+      success: true,
+      message: `Table renamed from ${oldName} to ${newName} successfully`
+    });
+  } catch (error) {
+    console.error('Error renaming table:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Error renaming table'
+    });
+  }
+});
+
 module.exports = router; 

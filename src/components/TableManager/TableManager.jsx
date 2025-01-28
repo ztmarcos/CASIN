@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import tableService from '../../services/data/tableService';
 import './TableManager.css';
+import { toast } from 'react-hot-toast';
 
 const TableManager = ({ onTableSelect }) => {
   const [tables, setTables] = useState([]);
@@ -43,18 +44,20 @@ const TableManager = ({ onTableSelect }) => {
     setNewTableName(table.name);
   };
 
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingTable || !newTableName.trim()) return;
-
+  const handleEditSubmit = async (oldName, newName) => {
     try {
-      await tableService.renameTable(editingTable.name, newTableName.trim());
+      setIsLoading(true);
+      await tableService.renameTable(oldName, newName);
+      // Refresh the table list after successful rename
       await loadTables();
       setEditingTable(null);
       setNewTableName('');
-    } catch (err) {
-      console.error('Error renaming table:', err);
-      setError('Failed to rename table. Please try again.');
+      toast.success(`Table renamed from ${oldName} to ${newName} successfully`);
+    } catch (error) {
+      console.error('Error renaming table:', error);
+      toast.error(error.message || 'Error renaming table');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -108,7 +111,10 @@ const TableManager = ({ onTableSelect }) => {
                 >
                   <div className="table-info">
                     {editingTable?.name === table.name ? (
-                      <form onSubmit={handleEditSubmit} className="edit-form">
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        handleEditSubmit(table.name, newTableName);
+                      }} className="edit-form">
                         <input
                           type="text"
                           value={newTableName}

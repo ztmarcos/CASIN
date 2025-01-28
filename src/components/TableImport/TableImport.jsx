@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { read, utils } from 'xlsx';
 import tableService from '../../services/data/tableService';
 import './TableImport.css';
+import { toast } from 'react-hot-toast';
 
 const TableImport = ({ onFileData }) => {
   const [file, setFile] = useState(null);
@@ -181,14 +182,19 @@ const TableImport = ({ onFileData }) => {
         setPreviewData(null);
         setTableName('');
         setFile(null);
-        if (onFileData) {
-          onFileData({ success: true, message: response.message });
-        }
+        onFileData?.({
+          success: true,
+          tableName: cleanTableName,
+          shouldReload: true
+        });
+        toast.success('Data imported successfully');
       } else {
         setError(response.error || 'Error importing data');
       }
     } catch (error) {
-      setError(error.message || 'Error importing data');
+      console.error('Error importing data:', error);
+      toast.error(error.message || 'Error importing data');
+      onFileData?.({ success: false, error: error.message });
     } finally {
       setIsProcessing(false);
     }
