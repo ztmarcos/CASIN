@@ -46,31 +46,33 @@
 }
 
 .birthday-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   padding: 0.75rem;
-  border-radius: 6px;
-  background-color: var(--bg-surface-hover);
-  transition: all 0.2s;
-  border-left: 3px solid var(--accent-color);
-}
-
-.birthday-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .birthday-info {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .birthday-name {
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .birthday-date {
+  font-size: 0.875rem;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.birthday-age {
   font-size: 0.875rem;
   color: var(--text-secondary);
 }
@@ -81,17 +83,12 @@
   gap: 0.5rem;
   font-size: 0.875rem;
   color: var(--text-secondary);
-  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border-color);
 }
 
 .email-icon {
   font-size: 1rem;
-}
-
-.birthday-age {
-  font-weight: 500;
-  color: var(--accent-color);
-  font-size: 0.875rem;
 }
 
 .no-birthdays {
@@ -358,16 +355,30 @@
   display: block;
   text-align: center;
   padding: 0.5rem;
-  margin-top: 0.5rem;
-  color: var(--text-secondary);
+  color: var(--accent-color);
   text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
   border-top: 1px solid var(--border-color);
-  transition: color 0.2s;
+  margin-top: 0.5rem;
 }
 
 .view-more-link:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-surface-hover);
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .birthday-item {
+  background-color: var(--background-secondary-dark);
+  border-color: var(--border-color-dark);
+}
+
+[data-theme='dark'] .birthday-email {
+  border-color: var(--border-color-dark);
+}
+
+[data-theme='dark'] .view-more-link {
+  border-color: var(--border-color-dark);
 }
 
 .toggle-view-btn {

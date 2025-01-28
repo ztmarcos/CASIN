@@ -1,15 +1,15 @@
 .data-section {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
-  max-width: 100vw;
 }
 
 .data-section-header {
   padding: 1rem;
-  background: #fff;
-  border-bottom: 1px solid #eaeaea;
+  background: var(--background-primary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
@@ -45,7 +45,6 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 100%;
 }
 
 /* Layout structure */
@@ -159,7 +158,7 @@
 }
 
 .btn-icon-only:hover {
-  background-color: #F3F4F6;
+  background-color: #a8c4fc;
   border-color: #D1D5DB;
 }
 

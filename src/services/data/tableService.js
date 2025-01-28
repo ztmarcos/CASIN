@@ -1,3 +1,5 @@
+import axios from 'axios';
+
 class TableService {
   constructor() {
     this.apiUrl = 'http://localhost:3001/api/data';
@@ -32,63 +34,43 @@ class TableService {
 
   async createTable(tableName, data) {
     try {
-      if (!tableName) {
-        throw new Error('Table name is required');
+      if (!tableName || !data || !data.length) {
+        throw new Error('Table name and data are required');
       }
 
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        throw new Error('Data must be a non-empty array');
+      // Get the first row of data
+      let sampleRow = data[0];
+      // If the row is an object with nested data, flatten it
+      if (typeof sampleRow === 'object' && Object.keys(sampleRow).length === 1 && typeof Object.values(sampleRow)[0] === 'object') {
+        sampleRow = Object.values(sampleRow)[0];
       }
 
-      // Clean and normalize the data first
-      const normalizedData = data.map(row => {
-        const normalizedRow = {};
-        Object.entries(row).forEach(([key, value]) => {
-          // Remove special characters and spaces, convert to lowercase
-          const cleanKey = key
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9_]/g, '_')
-            .toLowerCase()
-            .replace(/_+/g, '_')
-            .replace(/^_|_$/g, '');
-          normalizedRow[cleanKey] = value;
+      // Process column definitions
+      const columns = Object.entries(sampleRow)
+        .filter(([key]) => !key.startsWith('__EMPTY')) // Skip empty columns
+        .map(([key, value]) => {
+          // Clean the column name for MySQL
+          const cleanName = key.trim()
+            .replace(/^["']|["']$/g, '') // Remove quotes
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters
+            .toLowerCase(); // Convert to lowercase for consistency
+          
+          return {
+            name: cleanName,
+            type: this.inferColumnType(value)
+          };
         });
-        return normalizedRow;
-      });
 
-      // Infer column types from normalized data
-      const columnTypes = this.inferColumnTypes(normalizedData);
-      
-      if (Object.keys(columnTypes).length === 0) {
-        throw new Error('No valid columns could be inferred from data');
-      }
-
-      // Format the table definition
-      const cleanTableName = tableName.trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase()
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-
-      // Create MySQL-style column definitions
-      const columnDefinitions = Object.entries(columnTypes).map(([name, type]) => ({
-        name,
-        type
-      }));
-
-      // Format the SQL-safe table definition
+      // Create table definition
       const tableDefinition = {
-        name: cleanTableName,
-        columns: columnDefinitions
+        name: tableName.toLowerCase().trim(),
+        columns: columns
       };
 
       console.log('Creating table with definition:', tableDefinition);
 
-      // Create the table structure
-      const createResponse = await fetch(`${this.apiUrl}/tables`, {
+      const response = await fetch(`${this.apiUrl}/tables`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,63 +78,71 @@ class TableService {
         body: JSON.stringify(tableDefinition)
       });
 
-      if (!createResponse.ok) {
-        const errorText = await createResponse.text();
-        throw new Error(errorText || `Failed to create table ${cleanTableName}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error creating table');
       }
 
-      // Then insert the data with normalized column names
-      const insertResponse = await this.insertData(cleanTableName, normalizedData);
-
-      return {
-        table: await createResponse.json(),
-        data: insertResponse
-      };
+      return await response.json();
     } catch (error) {
       console.error('Error creating table:', error);
       throw error;
     }
   }
 
+  inferColumnType(value) {
+    if (typeof value === 'number') {
+      return value % 1 === 0 ? 'INT' : 'DECIMAL(10,2)';
+    } else if (value instanceof Date) {
+      return 'DATETIME';
+    } else {
+      return 'VARCHAR(255)';
+    }
+  }
+
   async insertData(tableName, data) {
     try {
-      // Clean the table name
-      const cleanTableName = tableName.trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase()
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-
-      // Clean the data before sending
-      const cleanedData = Array.isArray(data) ? data.map(row => {
-        const cleanedRow = {};
+      // Ensure data is an array
+      const dataArray = Array.isArray(data) ? data : [data];
+      
+      // Clean and prepare the data
+      const cleanedData = dataArray.map(row => {
+        const cleanRow = {};
         Object.entries(row).forEach(([key, value]) => {
-          // Normalize the key to match database column names
-          const cleanKey = key
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-zA-Z0-9_]/g, '_')
-            .toLowerCase()
-            .replace(/_+/g, '_')
-            .replace(/^_|_$/g, '');
-          cleanedRow[cleanKey] = value;
+          // Skip empty keys
+          if (!key || key.startsWith('__EMPTY')) return;
+          
+          // Clean the key name
+          const cleanKey = key.trim()
+            .replace(/^["']|["']$/g, '') // Remove quotes
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters
+            .toLowerCase(); // Convert to lowercase for consistency
+          
+          // Clean the value
+          const cleanValue = typeof value === 'string' ? 
+            value.trim().replace(/^["']|["']$/g, '') : // Remove quotes from strings
+            value;
+          
+          cleanRow[cleanKey] = cleanValue;
         });
-        return cleanedRow;
-      }) : data;
+        return cleanRow;
+      });
 
-      const response = await fetch(`${this.apiUrl}/${cleanTableName}`, {
+      // Log the cleaned data for debugging
+      console.log('Inserting data:', cleanedData);
+
+      const response = await fetch(`${this.apiUrl}/${tableName}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(cleanedData)
+        body: JSON.stringify(cleanedData[0]) // Send the first object directly
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Failed to insert data into ${cleanTableName}`);
+        const error = await response.json();
+        throw new Error(error.error || 'Error inserting data');
       }
 
       return await response.json();
@@ -417,52 +407,16 @@ class TableService {
     }
   }
 
-  // Helper method to infer column types from data
-  inferColumnTypes(data) {
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      console.error('Invalid data provided to inferColumnTypes:', data);
-      return {};
+  async searchAllTables(searchTerm) {
+    try {
+      const response = await axios.get(`${this.apiUrl}/search`, {
+        params: { query: searchTerm }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error searching tables:', error);
+      throw error;
     }
-
-    const columnTypes = {};
-    const sampleRow = data[0];
-    
-    if (!sampleRow || typeof sampleRow !== 'object') {
-      console.error('Invalid first row:', sampleRow);
-      return {};
-    }
-
-    Object.entries(sampleRow).forEach(([column, value]) => {
-      // Skip empty or null values
-      if (value === null || value === undefined || value === '') {
-        columnTypes[column] = 'VARCHAR(255)';
-        return;
-      }
-
-      if (typeof value === 'number') {
-        if (Number.isInteger(value)) {
-          columnTypes[column] = 'INT';
-        } else {
-          columnTypes[column] = 'DECIMAL(15,2)';
-        }
-      } else if (value instanceof Date) {
-        columnTypes[column] = 'DATE';
-      } else if (typeof value === 'boolean') {
-        columnTypes[column] = 'TINYINT(1)';
-      } else {
-        const dateValue = new Date(value);
-        if (!isNaN(dateValue) && typeof value === 'string' && 
-            (value.match(/^\d{4}-\d{2}-\d{2}/) || value.match(/^\d{2}\/\d{2}\/\d{4}/))) {
-          columnTypes[column] = 'DATE';
-        } else {
-          const length = value.length > 255 ? 'TEXT' : `VARCHAR(${Math.max(value.length * 2, 255)})`;
-          columnTypes[column] = length;
-        }
-      }
-    });
-
-    console.log('Inferred column types:', columnTypes);
-    return columnTypes;
   }
 }
 

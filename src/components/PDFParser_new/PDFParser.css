@@ -1,18 +1,24 @@
 .pdf-parser {
   height: 100%;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  padding: 0 2rem;
 }
 
 .upload-section {
-  padding: 1.5rem;
+  width: 100%;
+  padding: 2rem;
   background: var(--bg-surface-secondary, #f8f9fa);
   border-radius: 8px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 2rem;
 }
 
 .file-input-label {
@@ -65,8 +71,9 @@
 
 .parsed-content {
   flex: 1;
+  width: 100%;
   overflow: auto;
-  padding: 1.5rem;
+  padding: 2rem;
   background: var(--bg-surface-secondary, #f8f9fa);
   border-radius: 8px;
 }
@@ -99,10 +106,11 @@
   border-radius: 4px;
   border: 1px solid #dee2e6;
   overflow-x: auto;
+  width: 100%;
 }
 
 .table-container table {
-  width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
@@ -116,6 +124,19 @@
 
 .table-container th {
   background-color: #f8f9fa;
+}
+
+.table-select {
+  min-width: 200px;
+}
+
+.table-dropdown {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #dee2e6);
+  background-color: white;
+  font-size: 16px;
 }
 
 /* Dark theme support */
@@ -132,4 +153,20 @@
 [data-theme='dark'] .error-message {
   background-color: var(--error-bg, #742a2a);
   color: var(--error-text, #feb2b2);
+}
+
+/* Added responsive design */
+@media (max-width: 768px) {
+  .upload-section {
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+
+  .table-select {
+    width: 100%;
+  }
+
+  .pdf-parser {
+    padding: 0 1rem;
+  }
 } 

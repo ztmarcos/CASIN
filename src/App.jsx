@@ -64,9 +64,7 @@ function AppRoutes() {
       <Route path="/drive" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Drive currentUser={user?.email || 'default-user'} />
-            </div>
+            <Drive currentUser={user?.email || 'default-user'} />
           </Layout>
         </ProtectedRoute>
       } />
@@ -74,9 +72,7 @@ function AppRoutes() {
       <Route path="/reports" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Reports />
-            </div>
+            <Reports />
           </Layout>
         </ProtectedRoute>
       } />
@@ -84,9 +80,7 @@ function AppRoutes() {
       <Route path="/pdf-parser" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <PDFParser />
-            </div>
+            <PDFParser />
           </Layout>
         </ProtectedRoute>
       } />
@@ -94,9 +88,7 @@ function AppRoutes() {
       <Route path="/datapool" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Datapool />
-            </div>
+            <Datapool />
           </Layout>
         </ProtectedRoute>
       } />
@@ -104,9 +96,7 @@ function AppRoutes() {
       <Route path="/sharepoint" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Sharepoint currentUser={user?.email} />
-            </div>
+            <Sharepoint currentUser={user?.email} />
           </Layout>
         </ProtectedRoute>
       } />
@@ -114,9 +104,7 @@ function AppRoutes() {
       <Route path="/birthdays" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Birthdays />
-            </div>
+            <Birthdays />
           </Layout>
         </ProtectedRoute>
       } />
@@ -124,9 +112,7 @@ function AppRoutes() {
       <Route path="/prospeccion" element={
         <ProtectedRoute>
           <Layout>
-            <div className="section-container">
-              <Prospeccion />
-            </div>
+            <Prospeccion />
           </Layout>
         </ProtectedRoute>
       } />

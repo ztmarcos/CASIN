@@ -1311,4 +1311,107 @@
 
 [data-theme='dark'] .delete-overlay {
   background-color: rgba(0, 0, 0, 0.7);
+}
+
+.datatable-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.datatable-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.normalize-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--background-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.normalize-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.normalize-toggle.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.normalize-toggle:hover {
+  background: var(--background-secondary);
+}
+
+.normalize-toggle.active:hover {
+  background: var(--primary-color-dark);
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.normalize-btn {
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.th-content:hover .normalize-btn {
+  opacity: 1;
+}
+
+.normalize-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.normalize-btn:hover {
+  color: var(--primary-color);
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .normalize-toggle {
+  border-color: var(--border-color-dark);
+  background: var(--background-primary-dark);
+  color: var(--text-primary-dark);
+}
+
+[data-theme='dark'] .normalize-toggle:hover {
+  background: var(--background-secondary-dark);
+}
+
+[data-theme='dark'] .normalize-toggle.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+[data-theme='dark'] .normalize-toggle.active:hover {
+  background: var(--primary-color-dark);
+}
+
+[data-theme='dark'] .normalize-btn {
+  color: var(--text-secondary-dark);
+}
+
+[data-theme='dark'] .normalize-btn:hover {
+  color: var(--primary-color);
 } 

@@ -338,7 +338,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   onClick={() => handleSort(column)}
                   className={`sortable-header ${sortConfig.key === column ? 'active' : ''}`}
                 >
-                  <div className="header-content">
+                  <div className="th-content">
                     <span>{column}</span>
                     {getSortIcon(column)}
                   </div>

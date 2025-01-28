@@ -17,6 +17,7 @@ const DataSection = () => {
   const [showAddEntryModal, setShowAddEntryModal] = useState(false);
   const [showCreateTableModal, setShowCreateTableModal] = useState(false);
   const [filters, setFilters] = useState({});
+  const [error, setError] = useState(null);
 
   const loadTableData = useCallback(async () => {
     if (!selectedTable) return;
@@ -75,17 +76,54 @@ const DataSection = () => {
   };
 
   const handleImportData = async (data) => {
-    if (!selectedTable || !data.length) return;
+    if (!selectedTable || !data) return;
     
     setIsLoading(true);
     try {
-      // Here you would typically send the data to your backend
-      // await tableService.importData(selectedTable.name, data);
-      await Promise.all(data.map(row => tableService.insertData(selectedTable.name, row)));
+      // Ensure data is an array
+      const dataArray = Array.isArray(data) ? data : [data];
+      
+      // Insert data in chunks to avoid overwhelming the server
+      const chunkSize = 100;
+      for (let i = 0; i < dataArray.length; i += chunkSize) {
+        const chunk = dataArray.slice(i, i + chunkSize);
+        await tableService.insertData(selectedTable.name, chunk);
+      }
+      
       loadTableData(); // Reload the table data after import
       setShowImportModal(false);
     } catch (error) {
       console.error('Error importing data:', error);
+      setError(error.message || 'Error importing data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCreateTableFromData = async (data, tableName) => {
+    if (!data || !data.length || !tableName) {
+      console.error('Data and table name are required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Create new table from the data
+      await tableService.createTable(tableName, data);
+      
+      // Insert the data into the new table
+      const chunkSize = 100;
+      for (let i = 0; i < data.length; i += chunkSize) {
+        const chunk = data.slice(i, i + chunkSize);
+        await tableService.insertData(tableName, chunk);
+      }
+      
+      setShowCreateTableModal(false);
+      // Refresh the table list in TableManager
+      // This will be handled by the TableManager component's useEffect
+    } catch (error) {
+      console.error('Error creating table:', error);
+      setError(error.message || 'Error creating table');
     } finally {
       setIsLoading(false);
     }
@@ -131,31 +169,6 @@ const DataSection = () => {
     } catch (error) {
       console.error('Error updating cell:', error);
       throw error; // Let DataTable handle the error
-    }
-  };
-
-  const handleCreateTable = async (data, tableName) => {
-    if (!data || !data.length) {
-      console.error('No data provided');
-      return;
-    }
-
-    if (!tableName) {
-      console.error('Table name is required');
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      // Create the table with the preview data
-      await tableService.createTable(tableName, data);
-      setShowCreateTableModal(false);
-      // Refresh the table list in TableManager
-      // This will be handled by the TableManager component's useEffect
-    } catch (error) {
-      console.error('Error creating table:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -294,7 +307,7 @@ const DataSection = () => {
               </button>
             </div>
             <div className="modal-body">
-              <TableImport onFileData={handleCreateTable} />
+              <TableImport onFileData={handleCreateTableFromData} mode="create" />
             </div>
           </div>
         </div>

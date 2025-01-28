@@ -17,19 +17,30 @@ const Dashboard = () => {
     const loadDashboardData = async () => {
       try {
         setLoading(true);
-        // Get current date once
+        // Get current date and week boundaries
         const currentDate = new Date();
+        const startOfWeek = new Date(currentDate);
+        startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Domingo
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6); // Sábado
         
         // Fetch birthdays
         const birthdayData = await fetchBirthdays();
         
-        // Filter birthdays for today
-        const todaysBirthdays = birthdayData
+        // Filter birthdays for this week
+        const thisWeekBirthdays = birthdayData
           .filter(birthday => {
             const birthdayDate = new Date(birthday.date);
-            return birthdayDate && 
-                   birthdayDate.getDate() === currentDate.getDate() && 
-                   birthdayDate.getMonth() === currentDate.getMonth();
+            if (!birthdayDate) return false;
+            
+            // Create a date for this year's birthday
+            const thisYearBirthday = new Date(currentDate.getFullYear(), 
+              birthdayDate.getMonth(), 
+              birthdayDate.getDate()
+            );
+            
+            // Check if the birthday falls within this week
+            return thisYearBirthday >= startOfWeek && thisYearBirthday <= endOfWeek;
           })
           .sort((a, b) => {
             const dateA = new Date(a.date);
@@ -37,7 +48,7 @@ const Dashboard = () => {
             return dateA.getDate() - dateB.getDate();
           });
         
-        setBirthdays(todaysBirthdays);
+        setBirthdays(thisWeekBirthdays);
 
         // Fetch policies data
         const [gmmResponse, autosResponse] = await Promise.all([
@@ -120,10 +131,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Sección 2 - Cumpleaños del Día */}
+        {/* Sección 2 - Cumpleaños de la Semana */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Cumpleaños del Día</h3>
+            <h3>Cumpleaños de la Semana</h3>
           </div>
           <div className="card-content">
             {loading ? (
@@ -131,31 +142,41 @@ const Dashboard = () => {
             ) : error ? (
               <div className="error-message">{error}</div>
             ) : birthdays.length === 0 ? (
-              <p className="no-birthdays">No hay cumpleaños hoy</p>
+              <p className="no-birthdays">No hay cumpleaños esta semana</p>
             ) : (
               <div className="birthday-list">
-                {birthdays.slice(0, 2).map((birthday) => (
-                  <div key={birthday.id || birthday.rfc} className="birthday-item">
-                    <div className="birthday-info">
-                      <span className="birthday-name">{birthday.name}</span>
-                      <span className="birthday-age">
-                        Cumple: {birthday.age + 1} años
-                      </span>
-                    </div>
-                    {birthday.email && (
-                      <div className="birthday-email">
-                        <span className="email-icon">📧</span>
-                        {birthday.email}
+                {birthdays.slice(0, 3).map((birthday) => {
+                  const birthdayDate = new Date(birthday.date);
+                  const thisYearBirthday = new Date(
+                    new Date().getFullYear(),
+                    birthdayDate.getMonth(),
+                    birthdayDate.getDate()
+                  );
+                  const dayName = thisYearBirthday.toLocaleDateString('es-ES', { weekday: 'long' });
+                  
+                  return (
+                    <div key={birthday.id || birthday.rfc} className="birthday-item">
+                      <div className="birthday-info">
+                        <span className="birthday-name">{birthday.name}</span>
+                        <span className="birthday-date">
+                          {dayName.charAt(0).toUpperCase() + dayName.slice(1)}
+                        </span>
+                        <span className="birthday-age">
+                          Cumple: {birthday.age + 1} años
+                        </span>
                       </div>
-                    )}
-                    <div className="birthday-source">
-                      {birthday.source} - {birthday.birthdaySource}
+                      {birthday.email && (
+                        <div className="birthday-email">
+                          <span className="email-icon">📧</span>
+                          {birthday.email}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
-                {birthdays.length > 2 && (
+                  );
+                })}
+                {birthdays.length > 3 && (
                   <Link to="/birthdays" className="view-more-link">
-                    Ver más ({birthdays.length - 2} más)
+                    Ver más ({birthdays.length - 3} más)
                   </Link>
                 )}
               </div>

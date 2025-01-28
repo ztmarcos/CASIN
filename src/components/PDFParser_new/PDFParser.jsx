@@ -62,7 +62,7 @@ const PDFParser = () => {
 
   return (
     <div className="pdf-parser">
-      <h2>PDF Parser</h2>
+      <h2>Capturador de Pólizas</h2>
       
       <div className="upload-section">
         <div className="table-select">
@@ -89,12 +89,12 @@ const PDFParser = () => {
             className="file-input"
           />
           <span className="file-input-text">
-            {loading ? 'Processing...' : 'Choose PDF File'}
+            {loading ? 'Processing...' : 'Subir Póliza'}
           </span>
         </label>
       </div>
 
-      {loading && <div className="loading">Processing PDF...</div>}
+      {loading && <div className="loading">Procesando póliza...</div>}
       
       {error && (
         <div className="error-message">

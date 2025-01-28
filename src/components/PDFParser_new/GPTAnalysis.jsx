@@ -119,13 +119,12 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 'modelo'  // Year field
             ];
             
-            // Clean numeric values
+            // Clean numeric values and prepare data for insertion
             Object.entries(cleanData).forEach(([key, value]) => {
                 if (numericFields.includes(key) && value !== null && value !== '') {
                     // Remove currency symbols and commas
                     const numStr = value.toString().replace(/[$,]/g, '');
-                    const numValue = parseFloat(numStr) || 0;
-                    cleanData[key] = numValue;
+                    cleanData[key] = parseFloat(numStr) || 0;
                 }
             });
 
@@ -142,7 +141,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
             console.log('Selected table:', selectedTable);
             console.log('Cleaned data for insertion:', cleanData);
 
-            // Insert the data
+            // Insert the data as a single object, not wrapped in an array
             const result = await tableService.insertData(selectedTable, cleanData);
             console.log('Data insertion result:', result);
             

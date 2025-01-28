@@ -84,11 +84,27 @@ const TableImport = ({ onFileData }) => {
           const workbook = read(data, { type: 'array', codepage: 65001 });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
+          
+          // Get the data with proper options
           const jsonData = utils.sheet_to_json(worksheet, {
             raw: false,
-            defval: ''
+            defval: '',
+            header: 1 // Use array of arrays format
           });
-          resolve(jsonData);
+
+          // Process the data to create proper objects
+          const headers = jsonData[0];
+          const rows = jsonData.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+              if (header && !header.startsWith('__EMPTY')) {
+                obj[header] = row[index] || '';
+              }
+            });
+            return obj;
+          });
+
+          resolve(rows);
         } catch (err) {
           reject(err);
         }
