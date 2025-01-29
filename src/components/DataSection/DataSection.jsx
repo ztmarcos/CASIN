@@ -311,7 +311,7 @@ const DataSection = () => {
             <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-9-1.5h7.5m-7.5 3h7.5m3-3v3m0 0v3m0-3h-3m3 0h3M3 9l3-3m0 0l3 3m-3-3v12" />
             </svg>
-            Import Data
+            Importar csv
           </button>
         </div>
         <div className="header-actions">

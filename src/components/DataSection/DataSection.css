@@ -171,8 +171,8 @@
 .btn-icon-only {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: .5rem;
+  padding: 0.4rem 0.8rem; /* Adjusted padding for better size management */
   border-radius: 4px;
   border: none;
   font-size: 0.875rem;
@@ -184,6 +184,8 @@
 .btn-primary {
   background-color: #4F46E5;
   color: white;
+  max-width: 200px; /* Set a minimum width for consistency */
+  padding: .5rem; /* Adjusted padding for better size management */
 }
 
 .btn-primary:hover {
