@@ -96,6 +96,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  padding-right: 1rem;
 }
 
 .search-bar {
@@ -120,6 +121,7 @@
 .user-email {
   color: var(--text-secondary);
   font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .logout-button,

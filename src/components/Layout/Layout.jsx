@@ -50,9 +50,6 @@ const Layout = ({ children }) => {
           </nav>
         </div>
         <div className="right-section">
-          <div className="search-bar">
-            <input type="text" placeholder="Search..." />
-          </div>
           <div className="user-section">
             <span className="user-email">{user?.email}</span>
             <button className="logout-button" onClick={logout}>
