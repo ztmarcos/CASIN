@@ -287,52 +287,62 @@
 .expiration-list {
   display: flex;
   flex-direction: column;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 .expiration-item {
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  padding: 0.8rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--background-secondary);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.expiration-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .expiration-info {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
 }
 
 .expiration-type {
-  background-color: #e9ecef;
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #495057;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--primary-color);
+  color: white;
 }
 
 .expiration-policy {
-  font-size: 0.9rem;
-  color: #6c757d;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: 'Roboto Mono', monospace;
 }
 
 .expiration-details {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.25rem;
 }
 
 .expiration-name {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #212529;
+  color: var(--text-primary);
 }
 
 .expiration-date {
-  font-size: 0.9rem;
-  color: #dc3545;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 
 .no-expirations {
@@ -382,46 +392,51 @@
 }
 
 .toggle-view-btn {
-  width: 100%;
-  padding: 8px;
-  margin-top: 10px;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  color: var(--text-primary);
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.875rem;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .toggle-view-btn:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--primary-color);
-  color: var(--primary-color);
+  opacity: 0.8;
 }
 
-.expiration-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding-right: 5px;
+/* Dark mode styles */
+[data-theme='dark'] .expiration-item {
+  background: var(--background-secondary-dark, #1f2937);
+  border-color: var(--border-color-dark, #374151);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.expiration-list::-webkit-scrollbar {
-  width: 5px;
+[data-theme='dark'] .expiration-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.expiration-list::-webkit-scrollbar-track {
-  background: var(--bg-surface);
+[data-theme='dark'] .expiration-type {
+  background: var(--primary-color-dark, #3b82f6);
 }
 
-.expiration-list::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 5px;
+[data-theme='dark'] .expiration-policy {
+  color: var(--text-primary-dark, #f3f4f6);
 }
 
-.expiration-list::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+[data-theme='dark'] .expiration-name {
+  color: var(--text-primary-dark, #f3f4f6);
+}
+
+[data-theme='dark'] .expiration-date {
+  color: var(--text-secondary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .toggle-view-btn {
+  color: var(--primary-color-light, #60a5fa);
+}
+
+[data-theme='dark'] .no-expirations {
+  color: var(--text-secondary-dark, #9ca3af);
 } 
