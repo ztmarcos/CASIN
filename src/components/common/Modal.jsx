@@ -30,7 +30,9 @@ const Modal = ({ isOpen, onClose, children, size = 'default' }) => {
         className={`modal-content modal-${size}`}
         onClick={e => e.stopPropagation()}
       >
-        <button className="modal-close" onClick={onClose}>×</button>
+        <div className="modal-header">
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
         <div className="modal-body">
           {children}
         </div>
