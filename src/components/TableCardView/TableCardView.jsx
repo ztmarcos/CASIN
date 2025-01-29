@@ -17,16 +17,21 @@ const TableCardView = ({ data, onCardClick }) => {
     });
   };
 
+  const formatTableName = (tableName) => {
+    if (!tableName) return 'General';
+    return tableName.charAt(0).toUpperCase() + tableName.slice(1);
+  };
+
   const getDisplayTitle = (item) => {
-    // Buscar el campo más apropiado para el título
+    // Priorizar el nombre del contratante
+    if (item.nombre_contratante) {
+      return item.nombre_contratante;
+    }
+    
     const titleFields = [
-      'title',
-      'name',
       'nombre',
       'contratante',
-      'nombre_contratante',
-      'poliza',
-      'numero_poliza'
+      'name'
     ];
     
     for (const field of titleFields) {
@@ -35,73 +40,168 @@ const TableCardView = ({ data, onCardClick }) => {
       }
     }
     
-    // Si no se encuentra ningún campo específico, usar el primer campo no nulo
-    const firstNonNullField = Object.entries(item)
-      .find(([key, value]) => 
-        value !== null && 
-        value !== undefined && 
-        key !== 'id' && 
-        key !== '_sourceTable' &&
-        key !== 'status'
-      );
-    
-    return firstNonNullField ? firstNonNullField[1].toString() : 'Sin título';
+    return 'Sin título';
   };
 
   const getDisplaySubtitle = (item) => {
-    // Buscar el campo más apropiado para el subtítulo
+    // Priorizar el número de póliza
+    if (item.numero_de_poliza) {
+      return `Póliza: ${item.numero_de_poliza}`;
+    }
+    
     const subtitleFields = [
-      'subtitle',
-      'details',
-      'description',
-      'descripcion',
-      'detalles',
-      'rfc',
-      'email',
-      'telefono'
+      'poliza',
+      'numero_poliza'
     ];
     
     for (const field of subtitleFields) {
       if (item[field] && typeof item[field] === 'string') {
-        return item[field];
+        return `Póliza: ${item[field]}`;
       }
     }
     
     return '';
   };
 
+  const formatDate = (value) => {
+    if (!value) return value;
+    if (value.includes('/')) return value; // Ya está formateado
+    const date = new Date(value);
+    return !isNaN(date.getTime()) ? 
+      date.toLocaleDateString('es-MX') : 
+      value;
+  };
+
+  const formatValue = (key, value) => {
+    if (!value) return '-';
+    
+    // Formatear forma de pago
+    if (key === 'forma_de_pago') {
+      const formaDePago = value.toString().trim().toLowerCase();
+      if (!formaDePago || formaDePago === 'null' || formaDePago === 'undefined') {
+        return 'No especificada';
+      }
+      // Capitalizar primera letra
+      return formaDePago.charAt(0).toUpperCase() + formaDePago.slice(1);
+    }
+    
+    // Formatear fechas
+    if (key.includes('fecha') || key.includes('vigencia')) {
+      return formatDate(value);
+    }
+    
+    // Formatear valores monetarios
+    if (key.includes('prima') || key.includes('pago') || key.includes('precio') || key.includes('costo')) {
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      if (isNaN(numValue)) return '-';
+      return `$${numValue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`;
+    }
+
+    // Formatear direcciones
+    if (key.includes('direccion') || key.includes('domicilio')) {
+      return value.toString().split(',').map(part => part.trim()).join(',\n');
+    }
+
+    // Formatear descripciones largas
+    if (key.includes('descripcion') || (typeof value === 'string' && value.length > 50)) {
+      return value.toString().split(' ').reduce((acc, word) => {
+        if (acc.length > 0 && acc[acc.length - 1].length + word.length < 40) {
+          acc[acc.length - 1] = `${acc[acc.length - 1]} ${word}`;
+        } else {
+          acc.push(word);
+        }
+        return acc;
+      }, []).join('\n');
+    }
+    
+    return value.toString();
+  };
+
+  const formatFieldName = (field) => {
+    return field
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const renderCardContent = (item, isExpanded) => {
     const title = getDisplayTitle(item);
     const subtitle = getDisplaySubtitle(item);
+
+    // Campos que siempre se muestran
+    const alwaysShowFields = ['vigencia_fin', 'forma_de_pago'];
+    
+    // Campos que no se deben mostrar
+    const excludeFields = [
+      'id', 
+      '_sourceTable', 
+      'nombre_contratante', 
+      'numero_de_poliza',
+      'aa',
+      'pdf',
+      'ramo'
+    ];
+
+    // Campos prioritarios cuando está expandido
+    const priorityFields = [
+      'aseguradora',
+      'tipo_de_vehiculo',
+      'vigencia_inicio',
+      'duracion',
+      'prima_neta',
+      'pago_total_o_prima_total',
+      'descripcion_del_vehiculo',
+      'modelo',
+      'placas'
+    ];
 
     return (
       <>
         <h3 className="card-title">{title}</h3>
         {subtitle && <div className="card-subtitle">{subtitle}</div>}
-        {isExpanded && (
-          <div className="card-details">
-            {Object.entries(item).map(([key, value]) => {
-              if (key !== 'id' && 
-                  key !== '_sourceTable' &&
-                  key !== 'status' &&
-                  value !== null && 
-                  value !== undefined &&
-                  // No mostrar campos que ya están en el título o subtítulo
-                  value.toString() !== title &&
-                  value.toString() !== subtitle) {
-                return (
-                  <div key={key} className="card-detail-item">
-                    <span className="detail-label">└─ {key}:</span>
-                    <span className="detail-value">
-                      {typeof value === 'object' ? JSON.stringify(value) : value.toString()}
-                    </span>
+        <div className={`card-details ${isExpanded ? 'expanded' : ''}`}>
+          {/* Mostrar campos principales */}
+          {alwaysShowFields.map(field => (
+            <div key={field} className="card-detail-item">
+              <span className="detail-label">{formatFieldName(field)}:</span>
+              <span className="detail-value">{formatValue(field, item[field])}</span>
+            </div>
+          ))}
+          
+          {/* Mostrar campos cuando está expandido */}
+          {isExpanded && (
+            <>
+              {/* Primero mostrar campos prioritarios */}
+              {priorityFields.map(field => 
+                item[field] && (
+                  <div key={field} className="card-detail-item">
+                    <span className="detail-label">{formatFieldName(field)}:</span>
+                    <span className="detail-value">{formatValue(field, item[field])}</span>
                   </div>
-                );
+                )
+              )}
+              
+              {/* Luego mostrar el resto de campos */}
+              {Object.entries(item)
+                .filter(([key]) => 
+                  !excludeFields.includes(key) && 
+                  !alwaysShowFields.includes(key) &&
+                  !priorityFields.includes(key) &&
+                  item[key] !== null && 
+                  item[key] !== undefined &&
+                  item[key] !== ''
+                )
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([key, value]) => (
+                  <div key={key} className="card-detail-item">
+                    <span className="detail-label">{formatFieldName(key)}:</span>
+                    <span className="detail-value">{formatValue(key, value)}</span>
+                  </div>
+                ))
               }
-              return null;
-            })}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </>
     );
   };
@@ -120,9 +220,9 @@ const TableCardView = ({ data, onCardClick }) => {
           >
             <div className="card-header">
               <div className="card-header-left">
-                {item._sourceTable && (
-                  <span className="card-source-table">{item._sourceTable}</span>
-                )}
+                <span className="card-source-table">
+                  {formatTableName(item._sourceTable)}
+                </span>
                 {item.id && <span className="card-id">#{item.id}</span>}
               </div>
               <div className="card-header-right">
@@ -132,13 +232,11 @@ const TableCardView = ({ data, onCardClick }) => {
                   </span>
                 )}
                 <button 
-                  className={`expand-button ${isExpanded ? 'expanded' : ''}`}
+                  className="expand-button"
                   onClick={(e) => toggleCard(cardId, e)}
-                  title={isExpanded ? 'Collapse' : 'Expand'}
+                  aria-label={isExpanded ? 'Contraer' : 'Expandir'}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d={isExpanded ? "M19.5 12h-15" : "M12 4.5v15m7.5-7.5h-15"} />
-                  </svg>
+                  {isExpanded ? '−' : '+'}
                 </button>
               </div>
             </div>
