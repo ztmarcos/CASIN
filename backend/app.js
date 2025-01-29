@@ -4,6 +4,7 @@ const mysqlDatabase = require('./services/mysqlDatabase');
 const prospeccionRoutes = require('./routes/prospeccionRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const dataRoutes = require('./routes/dataRoutes');
+const policyStatusRoutes = require('./routes/policyStatusRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/prospeccion', prospeccionRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/policy-status', policyStatusRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

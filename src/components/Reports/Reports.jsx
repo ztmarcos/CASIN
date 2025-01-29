@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import './Reports.css';
 import tableService from '../../services/data/tableService';
+import policyStatusService from '../../services/policyStatusService';
 import { sendReportEmail } from '../../services/reportEmailService';
 import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUtils';
+import { toast } from 'react-hot-toast';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -24,6 +26,8 @@ export default function Reports() {
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState(null);
   const [expandedCards, setExpandedCards] = useState({});
+  const [policyStatuses, setPolicyStatuses] = useState({});
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
 
   const calculateNextPaymentDate = (startDate, paymentForm) => {
     if (!startDate || !paymentForm) return null;
@@ -49,6 +53,28 @@ export default function Reports() {
     return nextPayment;
   };
 
+  // Function to get policy status key
+  const getPolicyKey = (policy) => `${policy.ramo.toLowerCase()}_${policy.id}`;
+
+  // Load policy statuses from database
+  const loadPolicyStatuses = async () => {
+    try {
+      setIsStatusLoading(true);
+      const statuses = await policyStatusService.getStatuses();
+      setPolicyStatuses(statuses);
+    } catch (error) {
+      console.error('Error loading policy statuses:', error);
+      toast.error('Error al cargar los estados de las pólizas');
+    } finally {
+      setIsStatusLoading(false);
+    }
+  };
+
+  // Load statuses on component mount
+  useEffect(() => {
+    loadPolicyStatuses();
+  }, []);
+
   const normalizePolicy = (policy, source) => {
     if (source === 'gmm') {
       const normalized = {
@@ -70,7 +96,6 @@ export default function Reports() {
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
         aseguradora: policy.aseguradora,
-        status: 'Vigente',
         fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia__inicio_, policy.forma_de_pago),
         ramo: 'GMM'
       };
@@ -95,7 +120,6 @@ export default function Reports() {
         pagos_fraccionados: null,
         pago_parcial: null,
         aseguradora: policy.aseguradora,
-        status: 'Vigente',
         fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia_inicio, policy.forma_de_pago),
         ramo: 'Autos'
       };
@@ -266,6 +290,35 @@ export default function Reports() {
     }));
   };
 
+  // Add toggle status function
+  const handleToggleStatus = async (policy) => {
+    const policyKey = getPolicyKey(policy);
+    const currentStatus = policyStatuses[policyKey] || 'No Pagado';
+    const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+    
+    try {
+      // Update in database
+      await policyStatusService.updateStatus(policyKey, newStatus);
+      
+      // Update local state
+      setPolicyStatuses(prev => ({
+        ...prev,
+        [policyKey]: newStatus
+      }));
+
+      toast.success(`Estado actualizado: ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Error al actualizar el estado');
+    }
+  };
+
+  // Get status for a policy
+  const getPolicyStatus = (policy) => {
+    const policyKey = getPolicyKey(policy);
+    return policyStatuses[policyKey] || 'No Pagado';
+  };
+
   return (
     <div className="reports-container">
       <div className="reports-header">
@@ -348,6 +401,8 @@ export default function Reports() {
         <div className="loading-message">
           Cargando datos...
         </div>
+      ) : isStatusLoading ? (
+        <div className="loading-message">Cargando estados de pólizas...</div>
       ) : viewMode === 'table' ? (
         <div className="table-container">
           <table className="reports-table">
@@ -387,9 +442,12 @@ export default function Reports() {
                     <td>{policy.forma_pago}</td>
                     <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                     <td>
-                      <span className={`status-badge status-${policy.status.toLowerCase()}`}>
-                        {policy.status}
-                      </span>
+                      <button 
+                        onClick={() => handleToggleStatus(policy)}
+                        className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                      >
+                        {getPolicyStatus(policy)}
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -418,9 +476,15 @@ export default function Reports() {
                     </div>
                     <h3>{policy.numero_poliza}</h3>
                   </div>
-                  <span className={`status-badge status-${policy.status.toLowerCase()}`}>
-                    {policy.status}
-                  </span>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleStatus(policy);
+                    }}
+                    className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                  >
+                    {getPolicyStatus(policy)}
+                  </button>
                 </div>
                 <div className="card-content">
                   <div className="card-info">

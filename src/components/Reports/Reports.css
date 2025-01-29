@@ -488,4 +488,30 @@
   border-radius: 4px;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.status-toggle {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.status-toggle.pagado {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.status-toggle.no-pagado {
+  background-color: #f44336;
+  color: white;
+}
+
+.status-toggle:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
 } 
