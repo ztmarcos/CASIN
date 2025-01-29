@@ -317,7 +317,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       <div className="table-controls">
         <input
           type="text"
-          placeholder="Search in table..."
+          placeholder="Buscar en tabla..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="search-input"

@@ -90,7 +90,7 @@ const TableManager = ({ onTableSelect }) => {
           <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
             {isCollapsed ? '>' : 'v'}
           </span>
-          Tables {tables.length > 0 && `(${tables.length})`}
+          Tablas {tables.length > 0 && `(${tables.length})`}
         </h3>
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
