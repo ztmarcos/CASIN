@@ -23,11 +23,35 @@ export default function Reports() {
   const [dateFormat, setDateFormat] = useState('long-es');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [emailStatus, setEmailStatus] = useState(null);
+  const [expandedCards, setExpandedCards] = useState({});
 
-  // Helper function to normalize policy data from different tables
+  const calculateNextPaymentDate = (startDate, paymentForm) => {
+    if (!startDate || !paymentForm) return null;
+    
+    const start = new Date(startDate);
+    const today = new Date();
+    const paymentIntervals = {
+      'MENSUAL': 1,
+      'BIMESTRAL': 2,
+      'TRIMESTRAL': 3,
+      'CUATRIMESTRAL': 4,
+      'SEMESTRAL': 6,
+      'ANUAL': 12
+    };
+
+    const interval = paymentIntervals[paymentForm.toUpperCase()] || 12;
+    let nextPayment = new Date(start);
+
+    while (nextPayment <= today) {
+      nextPayment.setMonth(nextPayment.getMonth() + interval);
+    }
+
+    return nextPayment;
+  };
+
   const normalizePolicy = (policy, source) => {
     if (source === 'gmm') {
-      return {
+      const normalized = {
         id: policy.id,
         numero_poliza: policy.n__mero_de_p__liza,
         contratante: policy.contratante,
@@ -36,20 +60,23 @@ export default function Reports() {
         email: policy.e_mail || policy.email,
         fecha_inicio: policy.vigencia__inicio_,
         fecha_fin: policy.vigencia__fin_,
-        prima_total: parseFloat(policy.prima_neta || 0),
+        prima_neta: parseFloat(policy.prima_neta || 0),
+        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || 0),
         derecho_poliza: parseFloat(policy.derecho_de_p__liza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
         iva: parseFloat(policy.i_v_a__16_ || 0),
-        pago_total: parseFloat(policy.importe_total_a_pagar || 0),
+        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.importe_total_a_pagar || 0),
         forma_pago: policy.forma_de_pago,
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
         aseguradora: policy.aseguradora,
         status: 'Vigente',
-        tipo: 'GMM'
+        fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia__inicio_, policy.forma_de_pago),
+        ramo: 'GMM'
       };
+      return normalized;
     } else if (source === 'autos') {
-      return {
+      const normalized = {
         id: policy.id,
         numero_poliza: policy.numero_de_poliza,
         contratante: policy.nombre_contratante,
@@ -58,18 +85,21 @@ export default function Reports() {
         email: policy.e_mail || policy.email,
         fecha_inicio: policy.vigencia_inicio,
         fecha_fin: policy.vigencia_fin,
-        prima_total: parseFloat(policy.prima_neta || 0),
+        prima_neta: parseFloat(policy.prima_neta || 0),
+        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.pago_total_o_prima_total || 0),
         derecho_poliza: parseFloat(policy.derecho_de_poliza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
         iva: parseFloat(policy.i_v_a || 0),
-        pago_total: parseFloat(policy.pago_total_o_prima_total || 0),
+        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.pago_total_o_prima_total || 0),
         forma_pago: policy.forma_de_pago,
         pagos_fraccionados: null,
         pago_parcial: null,
         aseguradora: policy.aseguradora,
         status: 'Vigente',
-        tipo: 'Auto'
+        fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia_inicio, policy.forma_de_pago),
+        ramo: 'Autos'
       };
+      return normalized;
     }
     return null;
   };
@@ -104,34 +134,6 @@ export default function Reports() {
     fetchPolicies();
   }, []);
 
-  // Helper function to calculate next payment date
-  const calculateNextPayment = (startDate, paymentType, currentDate) => {
-    if (!startDate || !paymentType) return null;
-    
-    const start = new Date(startDate);
-    if (isNaN(start.getTime())) return null;
-    
-    const current = currentDate || new Date();
-    const monthsDiff = (current.getFullYear() - start.getFullYear()) * 12 + 
-                      (current.getMonth() - start.getMonth());
-    
-    const paymentIntervals = {
-      'Mensual': 1,
-      'Trimestral': 3,
-      'Semestral': 6,
-      'Anual': 12
-    };
-
-    const interval = paymentIntervals[paymentType];
-    if (!interval) return null;
-    
-    const paymentsElapsed = Math.floor(monthsDiff / interval);
-    const nextPaymentMonth = new Date(start);
-    nextPaymentMonth.setMonth(start.getMonth() + (paymentsElapsed + 1) * interval);
-    
-    return nextPaymentMonth;
-  };
-
   // Helper function to check if a value matches the search term
   const matchesSearch = (value, term) => {
     if (!term.trim()) return true;
@@ -145,6 +147,16 @@ export default function Reports() {
     const filtered = policies.filter(policy => {
       if (!policy) return false;
 
+      // Verificación más estricta para forma de pago anual
+      const isAnnualPayment = policy.forma_pago?.toUpperCase().includes('ANUAL') || 
+                             policy.forma_pago?.toUpperCase() === 'ANNUAL' ||
+                             policy.forma_pago?.toUpperCase() === 'YEARLY';
+
+      // Si estamos en vista de Cobro y es pago anual, excluir la póliza
+      if (selectedType === 'Cobro' && isAnnualPayment) {
+        return false;
+      }
+
       if (searchTerm.trim()) {
         return (
           matchesSearch(policy.numero_poliza, searchTerm) ||
@@ -152,31 +164,21 @@ export default function Reports() {
           matchesSearch(policy.asegurado, searchTerm) ||
           matchesSearch(policy.rfc, searchTerm) ||
           matchesSearch(policy.aseguradora, searchTerm) ||
-          matchesSearch(policy.forma_pago, searchTerm) ||
-          matchesSearch(policy.tipo, searchTerm)
+          matchesSearch(policy.forma_pago, searchTerm)
         );
       }
 
       if (selectedType === 'Vencimientos') {
         const expiryDate = parseDate(policy.fecha_fin);
-        
-        console.log('Checking policy:', {
-          policy_number: policy.numero_poliza,
-          fecha_fin: policy.fecha_fin,
-          parsed_date: expiryDate,
-          month: expiryDate?.getMonth(),
-          selectedMonth,
-          matches: expiryDate?.getMonth() === selectedMonth
-        });
-        
         if (!expiryDate) {
           console.warn('Invalid or missing date for policy:', policy.numero_poliza, policy.fecha_fin);
           return false;
         }
-        
         return expiryDate.getMonth() === selectedMonth;
       } else {
-        const nextPayment = calculateNextPayment(policy.fecha_inicio, policy.forma_pago);
+        // Solo procesar pagos parciales para formas de pago no anuales
+        if (isAnnualPayment) return false;
+        const nextPayment = calculateNextPaymentDate(policy.fecha_inicio, policy.forma_pago);
         return nextPayment && nextPayment.getMonth() === selectedMonth;
       }
     });
@@ -191,7 +193,6 @@ export default function Reports() {
     console.log('Filtered policies:', sortedFiltered.map(p => ({
       numero_poliza: p.numero_poliza,
       fecha_fin: p.fecha_fin,
-      tipo: p.tipo,
       parsed_date: parseDate(p.fecha_fin)
     })));
 
@@ -258,6 +259,13 @@ export default function Reports() {
     }
   };
 
+  const toggleCardExpansion = (cardId) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [cardId]: !prev[cardId]
+    }));
+  };
+
   return (
     <div className="reports-container">
       <div className="reports-header">
@@ -312,17 +320,6 @@ export default function Reports() {
                   <option key={month} value={index}>{month}</option>
                 ))}
               </select>
-              <select
-                className="filter-select"
-                value={dateFormat}
-                onChange={(e) => setDateFormat(e.target.value)}
-              >
-                {getDateFormatOptions().map(option => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
             </div>
           )}
           <button
@@ -356,7 +353,7 @@ export default function Reports() {
           <table className="reports-table">
             <thead>
               <tr>
-                <th>Tipo</th>
+                <th>Ramo</th>
                 <th>Póliza</th>
                 <th>Contratante</th>
                 <th>Email</th>
@@ -365,24 +362,21 @@ export default function Reports() {
                 <th>Fecha Fin</th>
                 <th>Prima Total</th>
                 <th>Forma de Pago</th>
+                <th>Próximo Pago</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredPolicies.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="no-data">
+                  <td colSpan={11} className="no-data">
                     No se encontraron pólizas
                   </td>
                 </tr>
               ) : (
                 filteredPolicies.map(policy => (
                   <tr key={`${policy.id}-${policy.numero_poliza}`}>
-                    <td>
-                      <span className={`policy-type ${policy.tipo.toLowerCase()}`}>
-                        {policy.tipo}
-                      </span>
-                    </td>
+                    <td>{policy.ramo}</td>
                     <td>{policy.numero_poliza}</td>
                     <td>{policy.contratante}</td>
                     <td>{policy.email || 'No disponible'}</td>
@@ -391,6 +385,7 @@ export default function Reports() {
                     <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
                     <td>${policy.prima_total.toLocaleString()}</td>
                     <td>{policy.forma_pago}</td>
+                    <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                     <td>
                       <span className={`status-badge status-${policy.status.toLowerCase()}`}>
                         {policy.status}
@@ -410,30 +405,67 @@ export default function Reports() {
             </div>
           ) : (
             filteredPolicies.map(policy => (
-              <div key={`${policy.id}-${policy.numero_poliza}`} className="report-card">
+              <div 
+                key={`${policy.id}-${policy.numero_poliza}`} 
+                className={`report-card ${expandedCards[`${policy.id}-${policy.numero_poliza}`] ? 'expanded' : ''}`}
+                onClick={() => toggleCardExpansion(`${policy.id}-${policy.numero_poliza}`)}
+              >
                 <div className="card-header">
                   <div className="card-header-content">
-                    <span className={`policy-type ${policy.tipo.toLowerCase()}`}>
-                      {policy.tipo}
-                    </span>
+                    <div className="card-header-details">
+                      <span className="policy-ramo">{policy.ramo}</span>
+                      <span className="report-type">{policy.aseguradora}</span>
+                    </div>
                     <h3>{policy.numero_poliza}</h3>
                   </div>
-                  <span className="report-type">{policy.aseguradora}</span>
+                  <span className={`status-badge status-${policy.status.toLowerCase()}`}>
+                    {policy.status}
+                  </span>
                 </div>
                 <div className="card-content">
                   <div className="card-info">
-                    <strong>{policy.contratante}</strong>
-                    <span className={`status-badge status-${policy.status.toLowerCase()}`}>
-                      {policy.status}
-                    </span>
+                    <strong>Contratante: {policy.contratante}</strong>
                   </div>
                   <div className="card-details">
-                    <p>Email: {policy.email || 'No disponible'}</p>
-                    <p>Inicio: {formatDate(policy.fecha_inicio, dateFormat)}</p>
-                    <p>Vencimiento: {formatDate(policy.fecha_fin, dateFormat)}</p>
-                    <p>Forma de Pago: {policy.forma_pago}</p>
-                    <p className="card-amount">Prima Total: ${policy.prima_total.toLocaleString()}</p>
+                    {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
+                      // Información básica cuando no está expandida
+                      <>
+                        <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
+                        <p><span>Prima Total:</span> ${policy.prima_total.toLocaleString()}</p>
+                        <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
+                      </>
+                    ) : (
+                      // Información completa cuando está expandida
+                      <>
+                        <p><span>Email:</span> {policy.email || 'No disponible'}</p>
+                        <p><span>RFC:</span> {policy.rfc || 'No disponible'}</p>
+                        <p><span>Asegurado:</span> {policy.asegurado || 'No disponible'}</p>
+                        <p><span>Inicio:</span> {formatDate(policy.fecha_inicio)}</p>
+                        <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
+                        <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
+                        <div className="card-section">
+                          <h4>Información de Pagos</h4>
+                          <p><span>Prima Neta:</span> ${policy.prima_neta.toLocaleString()}</p>
+                          <p><span>Derecho de Póliza:</span> ${policy.derecho_poliza.toLocaleString()}</p>
+                          <p><span>Recargo por Pago Fraccionado:</span> ${policy.recargo_pago_fraccionado.toLocaleString()}</p>
+                          <p><span>IVA:</span> ${policy.iva.toLocaleString()}</p>
+                          <p className="card-amount"><span>Prima Total:</span> ${policy.pago_total.toLocaleString()}</p>
+                          {policy.pagos_fraccionados && (
+                            <p><span>Pagos Fraccionados:</span> {policy.pagos_fraccionados}</p>
+                          )}
+                          {policy.pago_parcial && (
+                            <p><span>Pago Parcial:</span> ${policy.pago_parcial.toLocaleString()}</p>
+                          )}
+                          <p><span>Próximo Pago:</span> {policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago) : 'N/A'}</p>
+                        </div>
+                      </>
+                    )}
                   </div>
+                </div>
+                <div className="card-footer">
+                  <button className="expand-btn">
+                    {expandedCards[`${policy.id}-${policy.numero_poliza}`] ? '−' : '+'}
+                  </button>
                 </div>
               </div>
             ))
