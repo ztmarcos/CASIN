@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 1rem;
-  background: var(--background-primary);
+  background-color: #ffffff;
   border-bottom: 1px solid var(--border-color);
   height: 60px;
   width: 100%;
@@ -28,9 +28,9 @@
 }
 .logo {
   display: flex;
-  flex-direction: column; /* Changed to row for single line */
-  align-items: center; /* Centered items vertically */
-  gap: 0.5rem; /* Increased gap for better spacing */
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   padding: .25rem;
 }
 .logo-text {
@@ -39,8 +39,8 @@
   color: var(--text-primary);
   letter-spacing: .025em;
   line-height: 1.2;
-  text-transform: uppercase; /* Added text type */
-  font-family: 'Arial', sans-serif; /* Added font picker */
+  text-transform: uppercase;
+  font-family: 'Arial', sans-serif;
 }
 
 .logo-version {
@@ -49,15 +49,14 @@
   color: var(--text-secondary);
   letter-spacing: .025em;
   line-height: 1;
-  font-family: 'Arial', sans-serif; /* Added font picker */
-  white-space: nowrap; /* Prevents line break */
-}
+  font-family: 'Arial', sans-serif;
+  white-space: nowrap;
 }
 
 [data-theme='dark'] .top-bar {
-  background: var(--background-primary-dark, #1a1a1a);
-  border-color: var(--border-color-dark, #2d3748);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  background-color: #121212;
+  border-color: #2d3748;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .top-nav {
