@@ -18,7 +18,7 @@
   top: 0;
   left: 0;
   z-index: 100;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .left-section {
@@ -57,7 +57,7 @@
 [data-theme='dark'] .top-bar {
   background: var(--background-primary-dark, #1a1a1a);
   border-color: var(--border-color-dark, #2d3748);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .top-nav {
