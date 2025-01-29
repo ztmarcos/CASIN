@@ -378,9 +378,11 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       <Modal 
         isOpen={showPDFParser} 
         onClose={() => setShowPDFParser(false)}
-        size="large"
+        size="full"
       >
-        <PDFParser />
+        <div style={{ height: '100%', width: '100%' }}>
+          <PDFParser />
+        </div>
       </Modal>
 
       {!isCollapsed && (

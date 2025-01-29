@@ -1,9 +1,11 @@
 .gpt-analysis {
     width: 100%;
+    max-width: 95vw; /* Make it use almost full viewport width */
     padding: 2rem;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 0 auto; /* Center it */
 }
 
 .loading {
@@ -47,11 +49,13 @@
     overflow-x: auto;
     border-radius: 8px;
     border: 1px solid #eaeaea;
+    width: 100%;
+    max-width: 95vw; /* Make preview use almost full viewport width */
 }
 
 .table-preview table {
     width: 100%;
-    min-width: 1200px; /* Ensure table is wide enough */
+    min-width: 95vw; /* Make table use almost full viewport width */
     border-collapse: collapse;
     background: white;
 }

@@ -469,3 +469,175 @@
 .upload-input {
   display: none;
 }
+
+/* Dark mode styles */
+[data-theme='dark'] .drive-container {
+  background: var(--bg-surface, #1a1a1a);
+}
+
+[data-theme='dark'] .drive-header h2 {
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .drive-header {
+  border-bottom-color: var(--border-color, #2d3748);
+}
+
+[data-theme='dark'] .connection-button {
+  background: var(--bg-surface-secondary, #2d3748);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .connection-button:hover {
+  background: var(--bg-surface-tertiary, #374151);
+}
+
+[data-theme='dark'] .connection-button.connected {
+  background: var(--success, #059669);
+}
+
+[data-theme='dark'] .folder-navigation {
+  background: var(--bg-surface-secondary, #2d3748);
+}
+
+[data-theme='dark'] .back-button {
+  background: var(--bg-surface-tertiary, #374151);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .back-button:hover:not(:disabled) {
+  background: var(--bg-surface-quaternary, #4b5563);
+}
+
+[data-theme='dark'] .path-item {
+  color: var(--text-secondary, #9ca3af);
+}
+
+[data-theme='dark'] .path-item:hover {
+  background: var(--bg-surface-tertiary, #374151);
+}
+
+[data-theme='dark'] .path-link {
+  color: var(--primary, #3b82f6);
+}
+
+[data-theme='dark'] .new-folder-form {
+  background: var(--bg-surface-secondary, #2d3748);
+}
+
+[data-theme='dark'] .folder-input {
+  background: var(--bg-surface-tertiary, #374151);
+  border-color: var(--border-color, #4b5563);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .folder-input:focus {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme='dark'] .folder-input:disabled {
+  background-color: var(--bg-surface-quaternary, #1f2937);
+}
+
+[data-theme='dark'] .file-item {
+  background: var(--bg-surface-secondary, #2d3748);
+  border-color: var(--border-color, #4b5563);
+}
+
+[data-theme='dark'] .file-item:hover {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .file-content:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme='dark'] .file-name {
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .action-button {
+  background: var(--bg-surface-tertiary, #374151);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .action-button:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .action-button.delete:hover {
+  background-color: var(--error, #991b1b);
+  color: white;
+}
+
+[data-theme='dark'] .action-button.edit:hover {
+  background-color: var(--primary, #1d4ed8);
+  color: white;
+}
+
+[data-theme='dark'] .modal-content {
+  background: var(--bg-surface, #1a1a1a);
+  border: 1px solid var(--border-color, #2d3748);
+}
+
+[data-theme='dark'] .modal-header {
+  border-bottom-color: var(--border-color, #2d3748);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .modal-body {
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .modal-actions {
+  border-top-color: var(--border-color, #2d3748);
+}
+
+[data-theme='dark'] .modal-button.cancel {
+  background-color: var(--bg-surface-secondary, #2d3748);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .modal-button.cancel:hover:not(:disabled) {
+  background-color: var(--bg-surface-tertiary, #374151);
+}
+
+[data-theme='dark'] .modal-button.delete {
+  background-color: var(--error, #dc2626);
+}
+
+[data-theme='dark'] .modal-button.delete:hover:not(:disabled) {
+  background-color: var(--error-dark, #991b1b);
+}
+
+[data-theme='dark'] .modal-button.confirm {
+  background-color: var(--primary, #3b82f6);
+}
+
+[data-theme='dark'] .modal-button.confirm:hover:not(:disabled) {
+  background-color: var(--primary-dark, #1d4ed8);
+}
+
+[data-theme='dark'] .modal-input {
+  background: var(--bg-surface-tertiary, #374151);
+  border-color: var(--border-color, #4b5563);
+  color: var(--text-primary, #e5e7eb);
+}
+
+[data-theme='dark'] .modal-input:focus {
+  border-color: var(--primary, #3b82f6);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme='dark'] .empty-state {
+  background: var(--bg-surface-secondary, #2d3748);
+  color: var(--text-secondary, #9ca3af);
+}
+
+[data-theme='dark'] .error-message {
+  background: var(--error-bg, #7f1d1d);
+  border-color: var(--error, #dc2626);
+  color: var(--error-text, #fecaca);
+}
