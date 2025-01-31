@@ -186,28 +186,31 @@
 
 /* Column widths - ensure total width is enough for scrolling */
 .data-table th:nth-child(2),
-.data-table td:nth-child(2) { min-width: 120px; } /* numero poliza */
+.data-table td:nth-child(2) { 
+  min-width: 100px; /* status */
+  text-align: center;
+}
 
 .data-table th:nth-child(3),
-.data-table td:nth-child(3) { min-width: 200px; } /* contratante */
+.data-table td:nth-child(3) { min-width: 120px; } /* numero poliza */
 
 .data-table th:nth-child(4),
-.data-table td:nth-child(4) { min-width: 120px; } /* rfc */
+.data-table td:nth-child(4) { min-width: 200px; } /* contratante */
 
 .data-table th:nth-child(5),
-.data-table td:nth-child(5) { min-width: 200px; } /* nombre */
+.data-table td:nth-child(5) { min-width: 120px; } /* rfc */
 
 .data-table th:nth-child(6),
-.data-table td:nth-child(6) { min-width: 300px; } /* direccion */
+.data-table td:nth-child(6) { min-width: 200px; } /* nombre */
 
 .data-table th:nth-child(7),
-.data-table td:nth-child(7) { min-width: 120px; } /* telefono */
+.data-table td:nth-child(7) { min-width: 300px; } /* direccion */
 
 .data-table th:nth-child(8),
-.data-table td:nth-child(8) { min-width: 120px; } /* codigo */
+.data-table td:nth-child(8) { min-width: 120px; } /* telefono */
 
-.data-table th:last-child,
-.data-table td:last-child { min-width: 100px; } /* acciones */
+.data-table th:nth-child(9),
+.data-table td:nth-child(9) { min-width: 120px; } /* codigo */
 
 /* Address cell specific styling */
 .data-table td.address-cell {
@@ -272,29 +275,114 @@
 }
 
 /* Status indicators */
-.status-cell {
+.status-indicator {
   display: inline-flex;
   align-items: center;
-  padding: 0.25rem 0.75rem;
-  border-radius: 6px;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
-  letter-spacing: 0.025em;
+  width: 100px;
+  margin: 0 auto;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
 .status-active {
   background-color: #dcfce7;
   color: #166534;
+  border: 1px solid #86efac;
 }
 
 .status-inactive {
   background-color: #fee2e2;
   color: #991b1b;
+  border: 1px solid #fca5a5;
 }
 
-.status-pending {
-  background-color: #fef9c3;
-  color: #854d0e;
+/* Dark mode status indicators */
+[data-theme='dark'] .status-active {
+  background-color: #065f46;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+[data-theme='dark'] .status-inactive {
+  background-color: #991b1b;
+  color: #fca5a5;
+  border-color: #dc2626;
+}
+
+/* Status cell specific styling */
+.status-cell {
+  text-align: center !important;
+  padding: 4px !important;
+}
+
+/* Center status text */
+td .status-indicator {
+  justify-content: center;
+  margin: 0 auto;
+}
+
+/* Edit cell input styles */
+.edit-cell-input {
+  width: 100%;
+  height: 100%;
+  padding: 4px 8px;
+  border: none;
+  background: white;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: 2px solid #3b82f6;
+  border-radius: 4px;
+}
+
+.edit-cell-input:focus {
+  outline: 2px solid #3b82f6;
+}
+
+/* Status select specific styles */
+td .edit-cell-input[type="select"] {
+  padding-right: 24px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+  background-size: 16px;
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .status-active {
+  background-color: #065f46;
+  color: #a7f3d0;
+}
+
+[data-theme='dark'] .status-inactive {
+  background-color: #991b1b;
+  color: #fca5a5;
+}
+
+[data-theme='dark'] .edit-cell-input {
+  background: #1f2937;
+  color: white;
+  outline-color: #60a5fa;
+}
+
+[data-theme='dark'] .edit-cell-input:focus {
+  outline-color: #60a5fa;
+}
+
+/* Remove old dropdown styles */
+.status-cell-wrapper,
+.status-dropdown,
+.status-cell::after {
+  display: none;
 }
 
 /* Responsive adjustments */
@@ -1571,4 +1659,248 @@
 
 [data-theme='dark'] .card-empty-subtext {
   color: var(--text-secondary, #9ca3af);
+}
+
+.status-cell-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.status-dropdown {
+  width: 100%;
+  height: 100%;
+  padding: 4px 24px 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: inherit;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  color: inherit;
+  transition: background-color 0.2s ease;
+}
+
+.status-dropdown:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.status-dropdown:focus {
+  outline: none;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.status-cell {
+  padding: 0 !important;
+  position: relative;
+  cursor: pointer;
+}
+
+.status-cell::after {
+  content: '▼';
+  font-size: 8px;
+  color: #666;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: color 0.2s ease;
+}
+
+.status-cell:hover::after {
+  color: #333;
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .status-dropdown:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme='dark'] .status-dropdown:focus {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme='dark'] .status-cell::after {
+  color: #999;
+}
+
+[data-theme='dark'] .status-cell:hover::after {
+  color: #fff;
+}
+
+/* Prevent text selection in status cell */
+.status-cell {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Option styles */
+.status-dropdown option {
+  padding: 8px;
+  background-color: white;
+  color: black;
+}
+
+[data-theme='dark'] .status-dropdown option {
+  background-color: #1f2937;
+  color: white;
+}
+
+/* Status Modal */
+.status-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.status-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  min-width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.status-modal h4 {
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.status-option {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  margin: 0 auto;
+}
+
+.status-option:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.status-option:first-child {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.status-option:last-child {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.status-option:first-child:hover {
+  background-color: #bbf7d0;
+}
+
+.status-option:last-child:hover {
+  background-color: #fecaca;
+}
+
+.status-modal-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.status-modal-actions button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-modal-actions .cancel-btn {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+}
+
+.status-modal-actions .cancel-btn:hover {
+  background: #e5e7eb;
+}
+
+/* Dark mode styles for status modal */
+[data-theme='dark'] .status-modal {
+  background: #1f2937;
+  border-color: #374151;
+}
+
+[data-theme='dark'] .status-modal h4 {
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .status-option {
+  background: #1f2937;
+  border-color: #374151;
+  color: #e5e7eb;
+}
+
+[data-theme='dark'] .status-option:first-child {
+  background-color: #065f46;
+  color: #a7f3d0;
+  border-color: #059669;
+}
+
+[data-theme='dark'] .status-option:last-child {
+  background-color: #991b1b;
+  color: #fca5a5;
+  border-color: #dc2626;
+}
+
+[data-theme='dark'] .status-option:first-child:hover {
+  background-color: #047857;
+}
+
+[data-theme='dark'] .status-option:last-child:hover {
+  background-color: #b91c1c;
+}
+
+[data-theme='dark'] .status-modal-actions .cancel-btn {
+  background: #374151;
+  color: #f3f4f6;
+  border-color: #4b5563;
+}
+
+[data-theme='dark'] .status-modal-actions .cancel-btn:hover {
+  background: #4b5563;
 } 

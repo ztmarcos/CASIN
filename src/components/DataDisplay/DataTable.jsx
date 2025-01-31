@@ -20,6 +20,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [filteredData, setFilteredData] = useState([]);
   const [mailModal, setMailModal] = useState({ isOpen: false, rowData: null });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [statusModal, setStatusModal] = useState({ isOpen: false, rowId: null, currentStatus: null });
 
   useEffect(() => {
     setSortedData(data);
@@ -108,6 +109,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   };
 
   const handleCellDoubleClick = (rowIndex, column, value) => {
+    if (column === 'status') {
+      const row = data[rowIndex];
+      setStatusModal({
+        isOpen: true,
+        rowId: row.id,
+        currentStatus: value || 'Vigente'
+      });
+      return;
+    }
     setEditingCell({ rowIndex, column, value });
     setEditValue(value !== null ? String(value) : '');
   };
@@ -312,6 +322,105 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
   };
 
+  const handleStatusChange = async (rowId, newValue) => {
+    try {
+      console.log('Status change initiated:', { rowId, newValue });
+      
+      // Validate the new value
+      if (!['Vigente 🟢', 'Baja 🔴'].includes(newValue)) {
+        throw new Error(`Invalid status value: ${newValue}`);
+      }
+      
+      // Update the UI optimistically
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === rowId ? { ...row, status: newValue } : row
+        )
+      );
+      
+      // Call the update function
+      await onCellUpdate(rowId, 'status', newValue);
+      console.log('Status update successful');
+      
+      // Refresh the data to ensure consistency
+      await refreshData();
+    } catch (error) {
+      console.error('Failed to update status:', {
+        error,
+        rowId,
+        newValue,
+        details: error.response?.data
+      });
+      
+      // Revert the optimistic update on error
+      await refreshData();
+      
+      // Show error to user (you can implement a better error UI)
+      alert('Error updating status. Please try again.');
+    }
+  };
+
+  const handleStatusModalClose = () => {
+    setStatusModal({ isOpen: false, rowId: null, currentStatus: null });
+  };
+
+  const handleStatusConfirm = async (newStatus) => {
+    try {
+      await handleStatusChange(statusModal.rowId, newStatus);
+      handleStatusModalClose();
+    } catch (error) {
+      console.error('Error updating status:', error);
+    }
+  };
+
+  const renderCell = (row, rowIndex, column) => {
+    // Check if this cell is being edited
+    if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
+      if (column === 'status') {
+        return (
+          <select
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={handleInputKeyDown}
+            autoFocus
+            className="edit-cell-input"
+          >
+            <option value="Vigente">Vigente</option>
+            <option value="Baja">Baja</option>
+          </select>
+        );
+      }
+      return (
+        <input
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={handleInputKeyDown}
+          autoFocus
+          className="edit-cell-input"
+        />
+      );
+    }
+
+    // Regular cell display
+    if (column === 'status') {
+      const status = row[column] || 'Vigente';
+      return (
+        <div className={`status-indicator ${status.includes('Baja') ? 'status-inactive' : 'status-active'}`}>
+          {status}
+        </div>
+      );
+    }
+    return row[column] !== null ? String(row[column]) : '-';
+  };
+
+  // Reorder columns to put status after ID
+  const reorderedColumns = columns.filter(col => col !== 'status');
+  const idIndex = reorderedColumns.indexOf('id');
+  if (idIndex !== -1) {
+    reorderedColumns.splice(idIndex + 1, 0, 'status');
+  }
+
   return (
     <div className="data-table-container">
       <div className="table-controls">
@@ -332,7 +441,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   <span>Email</span>
                 </div>
               </th>
-              {columns.map(column => (
+              {reorderedColumns.map(column => (
                 <th 
                   key={column}
                   onClick={() => handleSort(column)}
@@ -369,16 +478,16 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     </svg>
                   </button>
                 </td>
-                {columns.map(column => (
+                {reorderedColumns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
                     onMouseDown={(e) => handleCellSelection(e, rowIndex, column, row[column])}
                     onDoubleClick={() => handleCellDoubleClick(rowIndex, column, row[column])}
                     className={`editable-cell ${column === 'id' ? 'id-cell' : ''} ${
-                      selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''
-                    }`}
+                      column === 'status' ? 'status-cell' : ''
+                    } ${selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''}`}
                   >
-                    {row[column] !== null ? String(row[column]) : '-'}
+                    {renderCell(row, rowIndex, column)}
                   </td>
                 ))}
                 <td className="delete-cell">
@@ -472,6 +581,34 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
               </button>
               <button onClick={handleConfirmEdit} className="confirm-btn">
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Modal */}
+      {statusModal.isOpen && (
+        <div className="status-modal-overlay">
+          <div className="status-modal">
+            <h4>Cambiar Estado</h4>
+            <div className="status-options">
+              <button
+                className={`status-option ${statusModal.currentStatus === 'Vigente 🟢' ? 'active' : ''}`}
+                onClick={() => handleStatusConfirm('Vigente 🟢')}
+              >
+                Vigente 🟢
+              </button>
+              <button
+                className={`status-option ${statusModal.currentStatus === 'Baja 🔴' ? 'active' : ''}`}
+                onClick={() => handleStatusConfirm('Baja 🔴')}
+              >
+                Baja 🔴
+              </button>
+            </div>
+            <div className="status-modal-actions">
+              <button onClick={handleStatusModalClose} className="cancel-btn">
+                Cancelar
               </button>
             </div>
           </div>
