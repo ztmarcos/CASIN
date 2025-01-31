@@ -102,53 +102,86 @@ class TableService {
 
   async insertData(tableName, data) {
     try {
-      // Ensure data is an array
-      const dataArray = Array.isArray(data) ? data : [data];
+      // Get table structure first to validate data
+      const tables = await this.getTables();
+      const targetTable = tables.find(t => t.name === tableName);
       
-      // Clean and prepare the data
-      const cleanedData = dataArray.map(row => {
-        const cleanRow = {};
-        Object.entries(row).forEach(([key, value]) => {
-          // Skip empty keys
-          if (!key || key.startsWith('__EMPTY')) return;
-          
-          // Clean the key name
-          const cleanKey = key.trim()
-            .replace(/^["']|["']$/g, '') // Remove quotes
-            .replace(/\s+/g, '_') // Replace spaces with underscores
-            .replace(/[^a-zA-Z0-9_]/g, '') // Remove special characters
-            .toLowerCase(); // Convert to lowercase for consistency
-          
-          // Clean the value
-          const cleanValue = typeof value === 'string' ? 
-            value.trim().replace(/^["']|["']$/g, '') : // Remove quotes from strings
-            value;
-          
-          cleanRow[cleanKey] = cleanValue;
-        });
-        return cleanRow;
-      });
-
-      // Log the cleaned data for debugging
-      console.log('Inserting data:', cleanedData);
-
-      const response = await fetch(`${this.apiUrl}/${tableName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(cleanedData[0]) // Send the first object directly
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error inserting data');
+      if (!targetTable) {
+        throw new Error('Table not found');
       }
 
-      return await response.json();
+      // Create a copy of data and clean it
+      const cleanData = { ...data };
+      delete cleanData.id;  // Ensure id is not included
+
+      // Clean and validate data based on column types
+      targetTable.columns.forEach(column => {
+        const value = cleanData[column.name];
+        
+        if (value === undefined || value === null || value === '') {
+          cleanData[column.name] = null;
+          return;
+        }
+
+        // Handle different column types
+        if (column.type.includes('int')) {
+          cleanData[column.name] = parseInt(value) || null;
+        } else if (column.type.includes('decimal')) {
+          const numStr = value.toString().replace(/[$,]/g, '');
+          cleanData[column.name] = parseFloat(numStr) || null;
+        } else if (column.type.includes('varchar')) {
+          // Get length from varchar(X)
+          const maxLength = parseInt(column.type.match(/\((\d+)\)/)?.[1]) || 255;
+          cleanData[column.name] = String(value).substring(0, maxLength);
+        } else if (column.type.includes('date')) {
+          // Handle date format conversion
+          try {
+            if (value.includes('/')) {
+              // Convert from DD/MM/YYYY to YYYY-MM-DD
+              const [day, month, year] = value.split('/');
+              cleanData[column.name] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            } else if (value.includes('-')) {
+              // Ensure YYYY-MM-DD format
+              const date = new Date(value);
+              cleanData[column.name] = date.toISOString().split('T')[0];
+            } else {
+              // Try to parse as date
+              const date = new Date(value);
+              if (!isNaN(date)) {
+                cleanData[column.name] = date.toISOString().split('T')[0];
+              } else {
+                cleanData[column.name] = null;
+              }
+            }
+          } catch (e) {
+            console.warn(`Failed to parse date: ${value}`);
+            cleanData[column.name] = null;
+          }
+        }
+      });
+
+      console.log('Clean data before insertion:', cleanData);
+
+      // Insert data
+      const response = await axios.post(`${this.apiUrl}/${tableName}`, cleanData);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to insert data');
+      }
+
+      // If table has relationships, handle them
+      if (targetTable.isMainTable || targetTable.isSecondaryTable) {
+        console.log('Table has relationships:', {
+          isMain: targetTable.isMainTable,
+          isSecondary: targetTable.isSecondaryTable,
+          relatedTable: targetTable.relatedTableName
+        });
+      }
+
+      return response.data;
     } catch (error) {
       console.error('Error inserting data:', error);
-      throw error;
+      throw new Error(error.response?.data?.error || error.message || 'Error inserting data');
     }
   }
 

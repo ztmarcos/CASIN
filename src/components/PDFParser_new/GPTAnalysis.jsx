@@ -118,13 +118,29 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 'pago_total_o_prima_total',
                 'modelo'  // Year field
             ];
+
+            // Define date fields
+            const dateFields = [
+                'desde_vigencia',
+                'hasta_vigencia',
+                'fecha_expedicion',
+                'fecha_pago'
+            ];
             
             // Clean numeric values and prepare data for insertion
             Object.entries(cleanData).forEach(([key, value]) => {
-                if (numericFields.includes(key) && value !== null && value !== '') {
+                if (value === null || value === undefined || value === '') {
+                    cleanData[key] = null;
+                    return;
+                }
+
+                if (numericFields.includes(key)) {
                     // Remove currency symbols and commas
                     const numStr = value.toString().replace(/[$,]/g, '');
                     cleanData[key] = parseFloat(numStr) || 0;
+                } else if (dateFields.includes(key)) {
+                    // Keep date as is, will be formatted in tableService
+                    cleanData[key] = value;
                 }
             });
 
@@ -141,7 +157,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
             console.log('Selected table:', selectedTable);
             console.log('Cleaned data for insertion:', cleanData);
 
-            // Insert the data as a single object, not wrapped in an array
+            // Insert the data directly
             const result = await tableService.insertData(selectedTable, cleanData);
             console.log('Data insertion result:', result);
             
