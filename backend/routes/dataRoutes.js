@@ -342,7 +342,7 @@ router.post('/import-csv', async (req, res) => {
   }
 });
 
-// Add this route handler for renaming tables
+// Rename table
 router.put('/tables/rename', async (req, res) => {
   try {
     const { oldName, newName } = req.body;
@@ -354,20 +354,69 @@ router.put('/tables/rename', async (req, res) => {
       });
     }
 
-    // Execute the rename table query
-    const query = `RENAME TABLE \`${oldName}\` TO \`${newName}\``;
-    await mysqlDatabase.executeQuery(query, []);
-
-    res.json({
-      success: true,
-      message: `Table renamed from ${oldName} to ${newName} successfully`
-    });
+    const result = await mysqlDatabase.renameTable(oldName, newName);
+    res.json(result);
   } catch (error) {
     console.error('Error renaming table:', error);
     res.status(500).json({
       success: false,
       error: error.message || 'Error renaming table'
     });
+  }
+});
+
+// Get table relationships
+router.get('/table-relationships', async (req, res) => {
+  try {
+    const relationships = await mysqlDatabase.getTableRelationships();
+    res.json(relationships);
+  } catch (error) {
+    console.error('Error getting table relationships:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create table relationship
+router.post('/table-relationships', async (req, res) => {
+  try {
+    const { mainTableName, secondaryTableName } = req.body;
+    
+    if (!mainTableName || !secondaryTableName) {
+      return res.status(400).json({ 
+        error: 'Main table name and secondary table name are required' 
+      });
+    }
+    
+    const result = await mysqlDatabase.createTableRelationship(
+      mainTableName, 
+      secondaryTableName
+    );
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating table relationship:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete table relationship
+router.delete('/table-relationships', async (req, res) => {
+  try {
+    const { mainTableName, secondaryTableName } = req.body;
+    
+    if (!mainTableName || !secondaryTableName) {
+      return res.status(400).json({ 
+        error: 'Main table name and secondary table name are required' 
+      });
+    }
+    
+    const result = await mysqlDatabase.deleteTableRelationship(
+      mainTableName, 
+      secondaryTableName
+    );
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting table relationship:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

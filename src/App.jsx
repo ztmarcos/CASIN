@@ -21,16 +21,7 @@ import { Toaster } from 'react-hot-toast'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-  
+  // Temporalmente desactivado el chequeo de autenticación
   return children;
 };
 
@@ -39,13 +30,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {!user ? (
-        <>
-          <Route path="/login" element={<Login onLogin={login} />} />
-          <Route path="/user-management" element={<UserManagement />} />
-        </>
-      ) : null}
-      
       <Route path="/" element={
         <ProtectedRoute>
           <Layout>
@@ -126,7 +110,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

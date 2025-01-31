@@ -34,12 +34,36 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       const [rows] = await connection.execute('SHOW TABLES');
+      
+      // Initialize tables with relationship properties
       const tables = rows.map(row => ({
-        name: Object.values(row)[0]
+        name: Object.values(row)[0],
+        isMainTable: false,
+        isSecondaryTable: false,
+        relatedTableName: null,
+        columns: []
       }));
 
-      // Get columns for each table
+      // Get relationships
+      const [relationships] = await connection.execute('SELECT * FROM table_relationships');
+      console.log('Found relationships:', relationships); // Debug log
+
+      // Update relationship information
       for (let table of tables) {
+        // Check if table is main or secondary
+        const asMain = relationships.find(r => r.main_table_name === table.name);
+        const asSecondary = relationships.find(r => r.secondary_table_name === table.name);
+        
+        table.isMainTable = !!asMain;
+        table.isSecondaryTable = !!asSecondary;
+        
+        if (asMain) {
+          table.relatedTableName = asMain.secondary_table_name;
+        } else if (asSecondary) {
+          table.relatedTableName = asSecondary.main_table_name;
+        }
+
+        // Get columns
         const [columns] = await connection.execute(`SHOW COLUMNS FROM ${table.name}`);
         table.columns = columns.map(col => ({
           name: col.Field,
@@ -47,6 +71,15 @@ class MySQLDatabaseService {
           isPrimary: col.Key === 'PRI'
         }));
       }
+
+      console.log('Returning tables with relationships:', 
+        tables.map(t => ({
+          name: t.name, 
+          isMain: t.isMainTable, 
+          isSecondary: t.isSecondaryTable,
+          related: t.relatedTableName
+        }))
+      ); // Debug log
 
       return tables;
     } catch (error) {
@@ -452,6 +485,136 @@ class MySQLDatabaseService {
       if (connection) {
         await connection.end();
       }
+    }
+  }
+
+  async getTableRelationships() {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const [relationships] = await connection.execute(
+        'SELECT * FROM table_relationships ORDER BY created_at DESC'
+      );
+      return relationships;
+    } catch (error) {
+      console.error('Error getting table relationships:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async createTableRelationship(mainTableName, secondaryTableName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      const [result] = await connection.execute(
+        'INSERT INTO table_relationships (main_table_name, secondary_table_name) VALUES (?, ?)',
+        [mainTableName, secondaryTableName]
+      );
+      return {
+        success: true,
+        message: 'Table relationship created successfully',
+        id: result.insertId
+      };
+    } catch (error) {
+      console.error('Error creating table relationship:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async deleteTableRelationship(mainTableName, secondaryTableName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      await connection.execute(
+        'DELETE FROM table_relationships WHERE main_table_name = ? AND secondary_table_name = ?',
+        [mainTableName, secondaryTableName]
+      );
+      return {
+        success: true,
+        message: 'Table relationship deleted successfully'
+      };
+    } catch (error) {
+      console.error('Error deleting table relationship:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async updateTableRelationshipName(oldName, newName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Actualizar si es tabla principal
+      await connection.execute(
+        'UPDATE table_relationships SET main_table_name = ? WHERE main_table_name = ?',
+        [newName, oldName]
+      );
+      
+      // Actualizar si es tabla secundaria
+      await connection.execute(
+        'UPDATE table_relationships SET secondary_table_name = ? WHERE secondary_table_name = ?',
+        [newName, oldName]
+      );
+
+      return {
+        success: true,
+        message: 'Table relationships updated successfully'
+      };
+    } catch (error) {
+      console.error('Error updating table relationships:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
+    }
+  }
+
+  async renameTable(oldName, newName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Primero verificar si la tabla está en alguna relación
+      const [relationships] = await connection.execute(
+        'SELECT * FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
+        [oldName, oldName]
+      );
+
+      // Renombrar la tabla
+      const query = `RENAME TABLE \`${oldName}\` TO \`${newName}\``;
+      await connection.execute(query);
+      
+      // Si la tabla está en alguna relación, actualizar el nombre
+      if (relationships.length > 0) {
+        // Actualizar nombre en relaciones como tabla principal
+        await connection.execute(
+          'UPDATE table_relationships SET main_table_name = ? WHERE main_table_name = ?',
+          [newName, oldName]
+        );
+        
+        // Actualizar nombre en relaciones como tabla secundaria
+        await connection.execute(
+          'UPDATE table_relationships SET secondary_table_name = ? WHERE secondary_table_name = ?',
+          [newName, oldName]
+        );
+
+        console.log(`Updated relationships for renamed table ${oldName} to ${newName}`);
+      }
+
+      return {
+        success: true,
+        message: `Table renamed from ${oldName} to ${newName} successfully`
+      };
+    } catch (error) {
+      console.error('Error renaming table:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
     }
   }
 }

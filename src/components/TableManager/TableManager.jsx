@@ -21,7 +21,17 @@ const TableManager = ({ onTableSelect }) => {
     try {
       setIsLoading(true);
       const tablesData = await tableService.getTables();
-      setTables(tablesData);
+      
+      // Ordenar las tablas para que las principales aparezcan antes que las secundarias
+      const sortedTables = [...tablesData].sort((a, b) => {
+        if (a.isMainTable && !b.isMainTable) return -1;
+        if (!a.isMainTable && b.isMainTable) return 1;
+        if (a.isSecondaryTable && !b.isSecondaryTable) return 1;
+        if (!a.isSecondaryTable && b.isSecondaryTable) return -1;
+        return a.name.localeCompare(b.name);
+      });
+
+      setTables(sortedTables);
       setError(null);
     } catch (err) {
       console.error('Error loading tables:', err);
@@ -35,6 +45,11 @@ const TableManager = ({ onTableSelect }) => {
     setSelectedTable(table);
     if (onTableSelect) {
       onTableSelect(table);
+      
+      // Si es una tabla relacionada, también notificamos la relación
+      if (table.isMainTable || table.isSecondaryTable) {
+        toast.info(`Esta tabla está relacionada con ${table.relatedTableName}`);
+      }
     }
   };
 
@@ -83,6 +98,26 @@ const TableManager = ({ onTableSelect }) => {
     }
   };
 
+  const getTableClassName = (table) => {
+    const classes = ['table-item'];
+    if (selectedTable?.name === table.name) classes.push('selected');
+    if (table.isMainTable) classes.push('main-table');
+    if (table.isSecondaryTable) classes.push('secondary-table');
+    return classes.join(' ');
+  };
+
+  const renderTableRelationship = (table) => {
+    if (!table.isMainTable && !table.isSecondaryTable) return null;
+
+    return (
+      <div className="table-relationship-indicator">
+        <span>
+          {table.relatedTableName}
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="table-manager">
       <div className="section-header">
@@ -106,7 +141,7 @@ const TableManager = ({ onTableSelect }) => {
               tables.map(table => (
                 <div
                   key={table.name}
-                  className={`table-item ${selectedTable?.name === table.name ? 'selected' : ''}`}
+                  className={getTableClassName(table)}
                   onClick={() => handleTableSelect(table)}
                 >
                   <div className="table-info">
@@ -131,9 +166,7 @@ const TableManager = ({ onTableSelect }) => {
                     ) : (
                       <>
                         <span className="table-name">{table.name}</span>
-                        {table.count !== undefined && (
-                          <span className="table-count">{table.count}</span>
-                        )}
+                        {renderTableRelationship(table)}
                       </>
                     )}
                   </div>
@@ -164,7 +197,11 @@ const TableManager = ({ onTableSelect }) => {
               <div className="modal-content">
                 <h4>Delete Table</h4>
                 <p>Are you sure you want to delete the table "{showConfirmDelete.name}"?</p>
-                <p className="warning">This action cannot be undone!</p>
+                {(showConfirmDelete.isMainTable || showConfirmDelete.isSecondaryTable) && (
+                  <p className="warning">
+                    ¡Advertencia! Esta tabla está relacionada con {showConfirmDelete.relatedTableName}
+                  </p>
+                )}
                 <div className="modal-actions">
                   <button onClick={handleConfirmDelete} className="danger-btn">
                     Delete

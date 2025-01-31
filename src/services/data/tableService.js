@@ -572,41 +572,23 @@ class TableService {
 
   async renameTable(oldName, newName) {
     try {
-      // Clean both table names using the same pattern as other methods
-      const cleanOldName = oldName.trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase()
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-
-      const cleanNewName = newName.trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase()
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
-
-      const response = await axios.put(`${this.apiUrl}/tables/rename`, {
-        oldName: cleanOldName,
-        newName: cleanNewName
+      const response = await fetch(`${this.apiUrl}/tables/rename`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ oldName, newName })
       });
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || `Failed to rename table from ${oldName} to ${newName}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Error renaming table');
       }
 
-      return {
-        success: true,
-        message: `Table renamed from ${oldName} to ${newName} successfully`,
-        oldName: cleanOldName,
-        newName: cleanNewName
-      };
+      return await response.json();
     } catch (error) {
       console.error('Error renaming table:', error);
-      throw new Error(error.response?.data?.error || error.message || 'Error renaming table');
+      throw error;
     }
   }
 }

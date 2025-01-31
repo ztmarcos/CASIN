@@ -26,8 +26,9 @@
 
 .tables-list {
   display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
 }
 
 .table-item {
@@ -373,4 +374,65 @@
   [data-theme='dark'] .table-item {
     background: #111827;
   }
+}
+
+/* Estilos para tablas relacionadas */
+.table-item.main-table {
+  border-left: 3px solid #2196f3;
+  background-color: #f0f7ff;
+  margin-bottom: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.table-item.secondary-table {
+  border-left: 3px solid #2196f3;
+  margin-left: 2rem;
+  position: relative;
+  margin-top: 0;
+}
+
+/* Línea de conexión */
+.table-item.secondary-table::before {
+  content: '';
+  position: absolute;
+  left: -2rem;
+  top: -0.5rem;
+  width: 2px;
+  height: calc(100% + 0.5rem);
+  background-color: #2196f3;
+  z-index: 1;
+}
+
+.table-item.secondary-table::after {
+  content: '';
+  position: absolute;
+  left: -2rem;
+  top: 50%;
+  width: 2rem;
+  height: 2px;
+  background-color: #2196f3;
+  z-index: 1;
+}
+
+/* Ajustes para el hover */
+.table-item.main-table:hover,
+.table-item.secondary-table:hover {
+  background-color: #e3f2fd;
+  transform: translateX(2px);
+  transition: transform 0.2s ease;
+}
+
+/* Ocultar el indicador de relación por defecto */
+.table-relationship-indicator {
+  display: none;
+}
+
+/* Mostrar el indicador solo al hover */
+.table-item:hover .table-relationship-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #666;
+  margin-left: 8px;
 } 
