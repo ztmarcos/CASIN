@@ -11,33 +11,48 @@ const initializeDrive = () => {
   try {
     console.log('Starting Drive initialization...');
     
-    // Load credentials from file
-    const credentialsPath = path.join(__dirname, '..', 'pdfcasin-1091c7357015.json');
-    const credentials = require(credentialsPath);
-    
-    console.log('Credentials loaded:', {
-      client_email: credentials.client_email,
-      project_id: credentials.project_id
-    });
-
     // Verify required environment variables
+    const clientEmail = process.env.GOOGLE_DRIVE_CLIENT_EMAIL;
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    if (!folderId) {
-      throw new Error('GOOGLE_DRIVE_FOLDER_ID environment variable is not set');
+    const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY;
+    const projectId = process.env.GOOGLE_DRIVE_PROJECT_ID;
+    
+    console.log('Environment variables check:', {
+      hasClientEmail: !!clientEmail,
+      hasFolderId: !!folderId,
+      hasPrivateKey: !!privateKey,
+      hasProjectId: !!projectId,
+      clientEmail,
+      folderId,
+      projectId,
+      privateKeyLength: privateKey?.length
+    });
+    
+    if (!clientEmail || !folderId || !privateKey || !projectId) {
+      throw new Error('Required environment variables are not set');
     }
 
+    console.log('Creating auth object...');
     const auth = new google.auth.GoogleAuth({
-      credentials,
+      credentials: {
+        client_email: clientEmail,
+        private_key: privateKey.replace(/\\n/g, '\n'),
+        project_id: projectId
+      },
       scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive']
     });
 
-    console.log('Auth object created');
+    console.log('Auth object created successfully');
     const drive = google.drive({ version: 'v3', auth });
-    console.log('Drive client created');
+    console.log('Drive client created successfully');
     return drive;
   } catch (error) {
-    console.error('Drive initialization error:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('Drive initialization detailed error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
     return null;
   }
 };
@@ -48,7 +63,7 @@ router.get('/test', async (req, res) => {
   try {
     const drive = initializeDrive();
     if (!drive) {
-      throw new Error('Drive initialization failed');
+      throw new Error('Drive initialization failed - check server logs for details');
     }
 
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
