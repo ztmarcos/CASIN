@@ -295,7 +295,7 @@ const DataSection = () => {
       <div className="data-section-header">
         <div className="header-top">
           <div className="header-title">
-            <h2>Data Management</h2>
+            <h2>Base de datos</h2>
             <button 
               className="reload-btn"
               onClick={handleReload}

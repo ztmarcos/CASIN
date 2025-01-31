@@ -374,6 +374,10 @@
   cursor: pointer;
   font-size: 14px;
   margin-left: 10px;
+  width: auto; /* Control width */
+  height: 40px; /* Control height */
+  min-width: 100px; /* Minimum width for better usability */
+  max-width: 20px; /* Maximum width to prevent overflow */
 }
 
 .send-email-btn:hover {

@@ -146,8 +146,25 @@ class MySQLDatabaseService {
       const results = [];
       for (const item of dataArray) {
         // Create a copy of data to avoid modifying the original
-        const cleanedData = { ...item };
-        delete cleanedData.id;  // Ensure id is not included
+        const cleanedData = {};
+        
+        // Check if this is a listado table insert
+        if (tableName === 'listado') {
+          // Special handling for listado table
+          Object.entries(item).forEach(([key, value]) => {
+            if (isNaN(key)) {
+              cleanedData[key] = value;
+            }
+          });
+        } else {
+          // Normal table handling - keep all fields except id
+          Object.entries(item).forEach(([key, value]) => {
+            cleanedData[key] = value;
+          });
+        }
+
+        // Remove id if present
+        delete cleanedData.id;
 
         // Get only the columns that exist in the data
         const columns = Object.keys(cleanedData);
@@ -164,6 +181,16 @@ class MySQLDatabaseService {
           ...result,
           insertId: result.insertId
         });
+
+        // If this table has relationships, handle them
+        const [relationships] = await connection.execute(
+          'SELECT * FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
+          [tableName, tableName]
+        );
+
+        if (relationships.length > 0) {
+          console.log(`Table ${tableName} has relationships:`, relationships);
+        }
       }
       
       return {
@@ -174,8 +201,7 @@ class MySQLDatabaseService {
       };
     } catch (error) {
       console.error('Database error:', error);
-      // Return a cleaner error message
-      throw new Error(error.message || 'Error inserting data');
+      throw error;
     } finally {
       if (connection) await connection.end();
     }

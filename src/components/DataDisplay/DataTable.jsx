@@ -114,7 +114,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       setStatusModal({
         isOpen: true,
         rowId: row.id,
-        currentStatus: value || 'Vigente'
+        currentStatus: value || 'Vigente 🟢'
       });
       return;
     }
@@ -385,8 +385,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
             autoFocus
             className="edit-cell-input"
           >
-            <option value="Vigente">Vigente</option>
-            <option value="Baja">Baja</option>
+            <option value="Vigente 🟢">Vigente 🟢</option>
+            <option value="Baja 🔴">Baja 🔴</option>
           </select>
         );
       }
@@ -404,7 +404,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
     // Regular cell display
     if (column === 'status') {
-      const status = row[column] || 'Vigente';
+      const status = row[column] || 'Vigente 🟢';
       return (
         <div className={`status-indicator ${status.includes('Baja') ? 'status-inactive' : 'status-active'}`}>
           {status}

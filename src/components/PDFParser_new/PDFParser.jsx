@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import pdfService from '../../services/pdfService';
 import tableService from '../../services/data/tableService';
 import GPTAnalysis from './GPTAnalysis';
+import ListadoAnalysis from './ListadoAnalysis';
 import './PDFParser.css';
 
 const PDFParser = () => {
@@ -102,15 +103,22 @@ const PDFParser = () => {
         </div>
       )}
 
-      {parsedData && (
-        <div className="parsed-content">
-          <GPTAnalysis 
-            parsedData={parsedData} 
-            tables={tables} 
+      {parsedData && selectedTable && (
+        selectedTable === 'listado' ? (
+          <ListadoAnalysis
+            parsedData={parsedData}
+            tables={tables}
             selectedTable={selectedTable}
             autoAnalyze={true}
           />
-        </div>
+        ) : (
+          <GPTAnalysis
+            parsedData={parsedData}
+            tables={tables}
+            selectedTable={selectedTable}
+            autoAnalyze={true}
+          />
+        )
       )}
     </div>
   );
