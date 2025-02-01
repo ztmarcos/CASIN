@@ -2,18 +2,23 @@ import React, { useState, useEffect } from 'react';
 import tableService from '../../services/data/tableService';
 import './TableManager.css';
 import { toast } from 'react-hot-toast';
+import Modal from '../Modal/Modal';
 
-const TableManager = ({ onTableSelect }) => {
+const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [tables, setTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
   const [newTableName, setNewTableName] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupData, setGroupData] = useState({
+    mainTableName: '',
+    secondaryTableName: '',
+    groupType: 'default'
+  });
 
   useEffect(() => {
     loadTables();
@@ -54,7 +59,6 @@ const TableManager = ({ onTableSelect }) => {
   };
 
   const handleTableSelect = async (table) => {
-    setSelectedTable(table);
     if (onTableSelect) {
       onTableSelect(table);
       
@@ -100,8 +104,7 @@ const TableManager = ({ onTableSelect }) => {
       await tableService.deleteTable(showConfirmDelete.name);
       await loadTables();
       setShowConfirmDelete(null);
-      if (selectedTable?.name === showConfirmDelete.name) {
-        setSelectedTable(null);
+      if (selectedTableProp?.name === showConfirmDelete.name) {
         onTableSelect(null);
       }
     } catch (err) {
@@ -112,7 +115,7 @@ const TableManager = ({ onTableSelect }) => {
 
   const getTableClassName = (table) => {
     const classes = ['table-item'];
-    if (selectedTable?.name === table.name) classes.push('selected');
+    if (selectedTableProp?.name === table.name) classes.push('selected');
     if (table.isMainTable) classes.push('main-table');
     if (table.isSecondaryTable) classes.push('secondary-table');
     return classes.join(' ');
@@ -132,32 +135,25 @@ const TableManager = ({ onTableSelect }) => {
 
   const handleCreateGroup = async () => {
     try {
-      setIsLoading(true);
-      const groupName = newGroupName.trim();
-      const listadoName = `listado[${groupName}]`;
-
-      // Validar el nombre del grupo
-      if (!groupName) {
-        throw new Error('El nombre del grupo es requerido');
-      }
-
-      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(groupName)) {
-        throw new Error('El nombre debe comenzar con una letra y solo puede contener letras, números y guiones bajos');
-      }
-
-      // Crear el grupo de tablas
-      await tableService.createTableGroup(groupName, listadoName);
+      const result = await tableService.createTableGroup(
+        groupData.mainTableName,
+        groupData.secondaryTableName,
+        groupData.groupType
+      );
       
-      // Recargar las tablas
-      await loadTables();
-      setShowCreateGroup(false);
-      setNewGroupName('');
-      toast.success(`Grupo ${groupName} creado con éxito`);
-    } catch (err) {
-      console.error('Error creating table group:', err);
-      setError(err.message || 'Error al crear el grupo de tablas');
-    } finally {
-      setIsLoading(false);
+      if (result.success) {
+        toast.success('Grupo de tablas creado exitosamente');
+        loadTables();
+        setShowGroupModal(false);
+        setGroupData({
+          mainTableName: '',
+          secondaryTableName: '',
+          groupType: 'default'
+        });
+      }
+    } catch (error) {
+      console.error('Error creating table group:', error);
+      toast.error(error.message || 'Error al crear el grupo de tablas');
     }
   };
 
@@ -171,66 +167,80 @@ const TableManager = ({ onTableSelect }) => {
           Tablas {tables.length > 0 && `(${tables.length})`}
         </h3>
         <div className="header-actions">
-          <button 
+          <button
+            onClick={() => setShowGroupModal(true)}
             className="create-group-btn"
-            onClick={() => setShowCreateGroup(true)}
-            title="Crear Grupo con Listado"
           >
-            + Grupo
+            <span>🔗</span> Nuevo Grupo
           </button>
         </div>
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      {/* Modal para crear grupo */}
-      {showCreateGroup && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h4>Crear Nuevo Grupo con Listado</h4>
-              <button 
-                className="close-button"
-                onClick={() => {
-                  setShowCreateGroup(false);
-                  setNewGroupName('');
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div className="form-group">
-              <label>Nombre del Grupo:</label>
-              <input
-                type="text"
-                value={newGroupName}
-                onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="Ejemplo: grupo_nuevo"
-                autoFocus
-              />
-              <small className="preview-text">
-                Se creará: {newGroupName && `${newGroupName} y listado[${newGroupName}]`}
-              </small>
-            </div>
-            {error && <div className="error-message">{error}</div>}
-            <div className="modal-actions">
-              <button 
-                onClick={handleCreateGroup} 
-                className="primary-btn"
-                disabled={!newGroupName.trim()}
-              >
-                Crear Grupo
-              </button>
-              <button onClick={() => {
-                setShowCreateGroup(false);
-                setNewGroupName('');
-                setError(null);
-              }}>
-                Cancelar
-              </button>
-            </div>
+      {/* Modal para crear grupo de tablas */}
+      <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
+        <div className="modal-header">
+          <h2>Crear Grupo de Tablas</h2>
+          <button onClick={() => setShowGroupModal(false)}>×</button>
+        </div>
+        <div className="modal-content">
+          <div className="form-group">
+            <label>Nombre de Tabla Principal:</label>
+            <input
+              type="text"
+              value={groupData.mainTableName}
+              onChange={(e) => setGroupData(prev => ({
+                ...prev,
+                mainTableName: e.target.value
+              }))}
+              placeholder="Nombre de tabla principal"
+              className="form-input"
+            />
+          </div>
+          <div className="form-group">
+            <label>Nombre de Tabla Secundaria:</label>
+            <input
+              type="text"
+              value={groupData.secondaryTableName}
+              onChange={(e) => setGroupData(prev => ({
+                ...prev,
+                secondaryTableName: e.target.value
+              }))}
+              placeholder="Nombre de tabla secundaria"
+              className="form-input"
+            />
+          </div>
+          <div className="form-group">
+            <label>Tipo de Grupo:</label>
+            <select
+              value={groupData.groupType}
+              onChange={(e) => setGroupData(prev => ({
+                ...prev,
+                groupType: e.target.value
+              }))}
+              className="form-select"
+            >
+              <option value="default">Emant (Default)</option>
+              <option value="GMM">GMM</option>
+              <option value="basic">Básico</option>
+            </select>
+            <small className="help-text">
+              {groupData.groupType === 'default' && 'Estructura igual a emant/listado'}
+              {groupData.groupType === 'GMM' && 'Estructura para pólizas GMM'}
+              {groupData.groupType === 'basic' && 'Estructura básica de grupo'}
+            </small>
+          </div>
+          <div className="modal-actions">
+            <button
+              onClick={handleCreateGroup}
+              className="btn btn-primary"
+              disabled={!groupData.mainTableName || !groupData.secondaryTableName}
+            >
+              Crear Grupo
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
 
       {!isCollapsed && (
         <>

@@ -1,0 +1,92 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modal-container {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+/* Tamaños de modal */
+.modal-sm {
+  width: 300px;
+}
+
+.modal-md {
+  width: 500px;
+}
+
+.modal-lg {
+  width: 800px;
+}
+
+.modal-xl {
+  width: 1140px;
+}
+
+.modal-full {
+  width: 95vw;
+  height: 90vh;
+}
+
+/* Dark mode */
+[data-theme='dark'] .modal-container {
+  background-color: #1F2937;
+  color: #F3F4F6;
+  border: 1px solid #374151;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-container {
+    width: 90% !important;
+    margin: 1rem;
+  }
+}
+
+/* Scrollbar personalizado */
+.modal-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.modal-container::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.modal-container::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Dark mode scrollbar */
+[data-theme='dark'] .modal-container::-webkit-scrollbar-track {
+  background: #374151;
+}
+
+[data-theme='dark'] .modal-container::-webkit-scrollbar-thumb {
+  background: #4B5563;
+}
+
+[data-theme='dark'] .modal-container::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+} 

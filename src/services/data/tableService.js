@@ -11,7 +11,16 @@ class TableService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const tables = await response.json();
+      
+      // Filtrar la columna status de las tablas no relacionadas
+      return tables.map(table => {
+        if (!table.isMainTable && !table.isSecondaryTable && table.columns) {
+          // Si es una tabla individual, filtrar la columna status
+          table.columns = table.columns.filter(col => col.name !== 'status');
+        }
+        return table;
+      });
     } catch (error) {
       console.error('Error fetching tables:', error);
       throw error;
@@ -25,7 +34,21 @@ class TableService {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const data = await response.json();
+
+      // Verificar si la tabla es relacionada
+      const tables = await this.getTables();
+      const table = tables.find(t => t.name === tableName);
+      
+      if (table && !table.isMainTable && !table.isSecondaryTable) {
+        // Si es una tabla individual, filtrar la columna status de los datos
+        data.data = data.data.map(row => {
+          const { status, ...rest } = row;
+          return rest;
+        });
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error fetching data:', error);
       throw error;
@@ -625,11 +648,12 @@ class TableService {
     }
   }
 
-  async createTableGroup(mainTableName, secondaryTableName) {
+  async createTableGroup(mainTableName, secondaryTableName, groupType = 'default') {
     try {
       const response = await axios.post(`${this.apiUrl}/tables/group`, {
         mainTableName,
-        secondaryTableName
+        secondaryTableName,
+        groupType
       });
       return response.data;
     } catch (error) {

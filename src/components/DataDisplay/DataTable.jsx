@@ -414,11 +414,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     return row[column] !== null ? String(row[column]) : '-';
   };
 
-  // Reorder columns to put status after ID
-  const reorderedColumns = columns.filter(col => col !== 'status');
-  const idIndex = reorderedColumns.indexOf('id');
-  if (idIndex !== -1) {
-    reorderedColumns.splice(idIndex + 1, 0, 'status');
+  // Reorder columns to put status after ID only for related tables
+  let reorderedColumns = columns;
+  if (tableName && (data[0]?.status !== undefined)) {
+    reorderedColumns = columns.filter(col => col !== 'status');
+    const idIndex = reorderedColumns.indexOf('id');
+    if (idIndex !== -1) {
+      reorderedColumns.splice(idIndex + 1, 0, 'status');
+    }
   }
 
   return (

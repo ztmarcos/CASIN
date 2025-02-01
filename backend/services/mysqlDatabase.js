@@ -205,8 +205,10 @@ class MySQLDatabaseService {
       
       // Add column definitions
       const columnDefinitions = tableDefinition.columns.map(column => {
+        // Skip status column for individual tables
+        if (column.name === 'status') return null;
         return `\`${column.name}\` ${column.type}`;
-      });
+      }).filter(Boolean); // Remove null entries
       
       query += columnDefinitions.join(',\n');
       query += ',\nPRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;';
@@ -643,42 +645,162 @@ class MySQLDatabaseService {
     }
   }
 
-  async createTableGroup(mainTableName, secondaryTableName) {
+  async createTableGroup(mainTableName, secondaryTableName, groupType = 'default') {
     let connection;
     try {
       connection = await this.getConnection();
 
+      // Limpiar los nombres de las tablas
+      const cleanMainTableName = mainTableName.replace(/[\[\]]/g, '_');
+      const cleanSecondaryTableName = secondaryTableName.replace(/[\[\]]/g, '_');
+
       // Iniciar transacción
       await connection.beginTransaction();
 
-      // Crear la tabla principal si no existe
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS \`${mainTableName}\` (
-          id INT PRIMARY KEY AUTO_INCREMENT,
-          status VARCHAR(20) DEFAULT 'Vigente 🟢',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-      `);
+      if (groupType === 'GMM') {
+        // Crear la tabla principal con estructura exacta de emant
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
+            id INT NOT NULL AUTO_INCREMENT,
+            numero_de_poliza INT,
+            contratante VARCHAR(72),
+            rfc VARCHAR(64),
+            domicilio VARCHAR(117),
+            desde_vigencia DATE,
+            hasta_vigencia DATE,
+            forma_de_pago VARCHAR(55),
+            fecha_de_expedicion DATE,
+            planes VARCHAR(87),
+            suma_asegurada VARCHAR(94),
+            deducible VARCHAR(59),
+            coaseguro DATE,
+            prima_neta VARCHAR(61),
+            derecho_de_poliza VARCHAR(59),
+            recargo_por_pago_fraccionado VARCHAR(61),
+            prima_total VARCHAR(61),
+            iva VARCHAR(60),
+            total_a_pagar VARCHAR(61),
+            nombre_del_agente VARCHAR(79),
+            clave_zona VARCHAR(59),
+            status VARCHAR(20) DEFAULT 'Vigente 🟢',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
 
-      // Crear la tabla secundaria si no existe
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS \`${secondaryTableName}\` (
-          id INT PRIMARY KEY AUTO_INCREMENT,
-          status VARCHAR(20) DEFAULT 'Vigente 🟢',
-          main_table_id INT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          FOREIGN KEY (main_table_id) REFERENCES \`${mainTableName}\`(id) ON DELETE CASCADE
-        )
-      `);
+        // Crear la tabla secundaria con estructura exacta de listado
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
+            id INT NOT NULL AUTO_INCREMENT,
+            numero_de_certificado VARCHAR(58),
+            nombre_completo VARCHAR(81),
+            sexo VARCHAR(51),
+            edad VARCHAR(59),
+            cobertura VARCHAR(53),
+            suma_asegurada VARCHAR(60),
+            prima VARCHAR(59),
+            fecha_de_antiguedad DATE,
+            status ENUM('Vigente 🟢','Baja 🔴') DEFAULT 'Vigente 🟢',
+            main_table_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+      } else if (groupType === 'default') {
+        // Crear la tabla principal con estructura de emant
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
+            id INT NOT NULL AUTO_INCREMENT,
+            numero_de_poliza INT,
+            contratante VARCHAR(72),
+            rfc VARCHAR(64),
+            domicilio VARCHAR(117),
+            desde_vigencia DATE,
+            hasta_vigencia DATE,
+            forma_de_pago VARCHAR(55),
+            fecha_de_expedicion DATE,
+            planes VARCHAR(87),
+            suma_asegurada VARCHAR(94),
+            deducible VARCHAR(59),
+            coaseguro DATE,
+            prima_neta VARCHAR(61),
+            derecho_de_poliza VARCHAR(59),
+            recargo_por_pago_fraccionado VARCHAR(61),
+            prima_total VARCHAR(61),
+            iva VARCHAR(60),
+            total_a_pagar VARCHAR(61),
+            nombre_del_agente VARCHAR(79),
+            clave_zona VARCHAR(59),
+            status VARCHAR(20) DEFAULT 'Vigente 🟢',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
 
-      // Registrar la relación
+        // Crear la tabla secundaria con estructura de listado
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
+            id INT NOT NULL AUTO_INCREMENT,
+            numero_de_certificado VARCHAR(58),
+            nombre_completo VARCHAR(81),
+            sexo VARCHAR(51),
+            edad VARCHAR(59),
+            cobertura VARCHAR(53),
+            suma_asegurada VARCHAR(60),
+            prima VARCHAR(59),
+            fecha_de_antiguedad DATE,
+            status VARCHAR(20) DEFAULT 'Vigente 🟢',
+            main_table_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
+      } else {
+        // Crear tabla principal básica
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            nombre VARCHAR(100),
+            descripcion TEXT,
+            fecha DATE,
+            monto DECIMAL(10,2),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+          )
+        `);
+
+        // Crear tabla secundaria básica
+        await connection.execute(`
+          CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            detalle VARCHAR(100),
+            cantidad INT,
+            precio DECIMAL(10,2),
+            subtotal DECIMAL(10,2),
+            main_table_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
+          )
+        `);
+      }
+
+      // Registrar la relación con el tipo específico
+      const relationType = groupType === 'GMM' ? 'gmm_policy' : 
+                         groupType === 'default' ? 'emant_policy' : 
+                         'group_policy';
+
       await connection.execute(`
         INSERT INTO table_relationships 
         (main_table_name, secondary_table_name, relationship_type, created_at) 
-        VALUES (?, ?, 'group_policy', CURRENT_TIMESTAMP)
-      `, [mainTableName, secondaryTableName]);
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      `, [mainTableName, secondaryTableName, relationType]);
 
       // Confirmar transacción
       await connection.commit();
@@ -688,7 +810,8 @@ class MySQLDatabaseService {
         message: `Grupo de tablas creado: ${mainTableName} y ${secondaryTableName}`,
         tables: {
           main: mainTableName,
-          secondary: secondaryTableName
+          secondary: secondaryTableName,
+          type: groupType
         }
       };
     } catch (error) {
@@ -699,8 +822,58 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) {
-        await connection.end();
+        await connection.release();
       }
+    }
+  }
+
+  async removeStatusFromIndividualTables() {
+    let connection;
+    try {
+      connection = await this.getConnection();
+
+      // Obtener todas las tablas que no están en relaciones
+      const [tables] = await connection.execute(`
+        SELECT TABLE_NAME 
+        FROM INFORMATION_SCHEMA.TABLES 
+        WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME NOT IN (
+          SELECT main_table_name FROM table_relationships
+          UNION
+          SELECT secondary_table_name FROM table_relationships
+        )
+        AND TABLE_NAME != 'table_relationships'
+      `);
+
+      // Para cada tabla, verificar si tiene columna status y eliminarla
+      for (const table of tables) {
+        const tableName = table[`Tables_in_${this.config.database}`];
+        
+        // Verificar si la tabla tiene columna status
+        const [columns] = await connection.execute(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = ? 
+          AND COLUMN_NAME = 'status'
+        `, [tableName]);
+
+        if (columns.length > 0) {
+          // La tabla tiene columna status, eliminarla
+          await connection.execute(`ALTER TABLE \`${tableName}\` DROP COLUMN status`);
+          console.log(`Removed status column from table ${tableName}`);
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Status column removed from individual tables'
+      };
+    } catch (error) {
+      console.error('Error removing status column:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
     }
   }
 }
