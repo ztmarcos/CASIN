@@ -12,6 +12,8 @@ const TableManager = ({ onTableSelect }) => {
   const [editingTable, setEditingTable] = useState(null);
   const [newTableName, setNewTableName] = useState('');
   const [showConfirmDelete, setShowConfirmDelete] = useState(null);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
 
   useEffect(() => {
     loadTables();
@@ -22,16 +24,26 @@ const TableManager = ({ onTableSelect }) => {
       setIsLoading(true);
       const tablesData = await tableService.getTables();
       
-      // Ordenar las tablas para que las principales aparezcan antes que las secundarias
-      const sortedTables = [...tablesData].sort((a, b) => {
-        if (a.isMainTable && !b.isMainTable) return -1;
-        if (!a.isMainTable && b.isMainTable) return 1;
-        if (a.isSecondaryTable && !b.isSecondaryTable) return 1;
-        if (!a.isSecondaryTable && b.isSecondaryTable) return -1;
-        return a.name.localeCompare(b.name);
-      });
+      // Agrupar las tablas relacionadas
+      const groupedTables = tablesData.reduce((acc, table) => {
+        // Si es una tabla principal o no tiene relación, agregarla directamente
+        if (!table.isSecondaryTable) {
+          acc.push(table);
+          return acc;
+        }
+        
+        // Si es una tabla secundaria, insertarla después de su tabla principal
+        const mainTableIndex = acc.findIndex(t => t.name === table.relatedTableName);
+        if (mainTableIndex !== -1) {
+          acc.splice(mainTableIndex + 1, 0, table);
+        } else {
+          // Si no encontramos la tabla principal, la agregamos al final
+          acc.push(table);
+        }
+        return acc;
+      }, []);
 
-      setTables(sortedTables);
+      setTables(groupedTables);
       setError(null);
     } catch (err) {
       console.error('Error loading tables:', err);
@@ -118,6 +130,37 @@ const TableManager = ({ onTableSelect }) => {
     );
   };
 
+  const handleCreateGroup = async () => {
+    try {
+      setIsLoading(true);
+      const groupName = newGroupName.trim();
+      const listadoName = `listado[${groupName}]`;
+
+      // Validar el nombre del grupo
+      if (!groupName) {
+        throw new Error('El nombre del grupo es requerido');
+      }
+
+      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(groupName)) {
+        throw new Error('El nombre debe comenzar con una letra y solo puede contener letras, números y guiones bajos');
+      }
+
+      // Crear el grupo de tablas
+      await tableService.createTableGroup(groupName, listadoName);
+      
+      // Recargar las tablas
+      await loadTables();
+      setShowCreateGroup(false);
+      setNewGroupName('');
+      toast.success(`Grupo ${groupName} creado con éxito`);
+    } catch (err) {
+      console.error('Error creating table group:', err);
+      setError(err.message || 'Error al crear el grupo de tablas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="table-manager">
       <div className="section-header">
@@ -127,8 +170,67 @@ const TableManager = ({ onTableSelect }) => {
           </span>
           Tablas {tables.length > 0 && `(${tables.length})`}
         </h3>
+        <div className="header-actions">
+          <button 
+            className="create-group-btn"
+            onClick={() => setShowCreateGroup(true)}
+            title="Crear Grupo con Listado"
+          >
+            + Grupo
+          </button>
+        </div>
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
+
+      {/* Modal para crear grupo */}
+      {showCreateGroup && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h4>Crear Nuevo Grupo con Listado</h4>
+              <button 
+                className="close-button"
+                onClick={() => {
+                  setShowCreateGroup(false);
+                  setNewGroupName('');
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div className="form-group">
+              <label>Nombre del Grupo:</label>
+              <input
+                type="text"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Ejemplo: grupo_nuevo"
+                autoFocus
+              />
+              <small className="preview-text">
+                Se creará: {newGroupName && `${newGroupName} y listado[${newGroupName}]`}
+              </small>
+            </div>
+            {error && <div className="error-message">{error}</div>}
+            <div className="modal-actions">
+              <button 
+                onClick={handleCreateGroup} 
+                className="primary-btn"
+                disabled={!newGroupName.trim()}
+              >
+                Crear Grupo
+              </button>
+              <button onClick={() => {
+                setShowCreateGroup(false);
+                setNewGroupName('');
+                setError(null);
+              }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!isCollapsed && (
         <>

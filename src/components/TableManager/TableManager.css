@@ -380,7 +380,7 @@
 .table-item.main-table {
   border-left: 3px solid #2196f3;
   background-color: #f0f7ff;
-  margin-bottom: 0;
+  margin-bottom: 0.5rem;
   position: relative;
   z-index: 2;
 }
@@ -389,7 +389,9 @@
   border-left: 3px solid #2196f3;
   margin-left: 2rem;
   position: relative;
-  margin-top: 0;
+  margin-top: -0.25rem;
+  margin-bottom: 0.5rem;
+  background-color: #f8fbff;
 }
 
 /* Línea de conexión */
@@ -423,16 +425,125 @@
   transition: transform 0.2s ease;
 }
 
-/* Ocultar el indicador de relación por defecto */
+/* Indicador de relación */
 .table-relationship-indicator {
-  display: none;
-}
-
-/* Mostrar el indicador solo al hover */
-.table-item:hover .table-relationship-indicator {
   display: flex;
   align-items: center;
   font-size: 12px;
   color: #666;
   margin-left: 8px;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.table-item:hover .table-relationship-indicator {
+  opacity: 1;
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .table-item.main-table {
+  background-color: #1a2234;
+  border-left-color: #3b82f6;
+}
+
+[data-theme='dark'] .table-item.secondary-table {
+  background-color: #151b29;
+  border-left-color: #3b82f6;
+}
+
+[data-theme='dark'] .table-item.secondary-table::before,
+[data-theme='dark'] .table-item.secondary-table::after {
+  background-color: #3b82f6;
+}
+
+[data-theme='dark'] .table-item.main-table:hover,
+[data-theme='dark'] .table-item.secondary-table:hover {
+  background-color: #1f2937;
+}
+
+[data-theme='dark'] .table-relationship-indicator {
+  color: #9ca3af;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-group-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.create-group-btn:hover {
+  background-color: #45a049;
+}
+
+[data-theme='dark'] .create-group-btn {
+  background-color: #059669;
+}
+
+[data-theme='dark'] .create-group-btn:hover {
+  background-color: #047857;
+}
+
+.preview-text {
+  color: #666;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-content .form-group {
+  margin-bottom: 16px;
+}
+
+.modal-content .form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.modal-content .form-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.modal-content .form-group input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+[data-theme='dark'] .preview-text {
+  color: #9ca3af;
+}
+
+[data-theme='dark'] .modal-content .form-group input {
+  background: #1f2937;
+  border-color: #374151;
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .modal-content .form-group input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
 } 

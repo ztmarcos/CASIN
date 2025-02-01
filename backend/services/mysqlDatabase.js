@@ -7,11 +7,59 @@ class MySQLDatabaseService {
   }
 
   async getConnection() {
+    return await mysql.createConnection(this.config);
+  }
+
+  async getTables() {
+    let connection;
     try {
-      return await mysql.createConnection(this.config);
+      connection = await this.getConnection();
+
+      // Obtener todas las tablas
+      const [tables] = await connection.execute(
+        'SHOW TABLES'
+      );
+
+      // Obtener todas las relaciones
+      const [relationships] = await connection.execute(
+        'SELECT * FROM table_relationships'
+      );
+
+      // Procesar cada tabla y agregar información de relaciones
+      const processedTables = await Promise.all(tables.map(async (tableRow) => {
+        const tableName = tableRow[`Tables_in_${this.config.database}`];
+        
+        // Buscar si la tabla está en alguna relación
+        const asMain = relationships.find(r => r.main_table_name === tableName);
+        const asSecondary = relationships.find(r => r.secondary_table_name === tableName);
+
+        // Obtener columnas de la tabla
+        const [columns] = await connection.execute(
+          `SHOW COLUMNS FROM \`${tableName}\``
+        );
+
+        return {
+          name: tableName,
+          isMainTable: !!asMain,
+          isSecondaryTable: !!asSecondary,
+          relatedTableName: asMain ? asMain.secondary_table_name : 
+                           asSecondary ? asSecondary.main_table_name : null,
+          relationshipType: asMain ? asMain.relationship_type : 
+                          asSecondary ? asSecondary.relationship_type : null,
+          columns: columns.map(col => ({
+            name: col.Field,
+            type: col.Type,
+            nullable: col.Null === 'YES'
+          }))
+        };
+      }));
+
+      return processedTables;
     } catch (error) {
-      console.error('Database connection error:', error);
-      throw new Error('Failed to connect to database');
+      console.error('Error getting tables:', error);
+      throw error;
+    } finally {
+      if (connection) await connection.end();
     }
   }
 
@@ -23,67 +71,6 @@ class MySQLDatabaseService {
       return results;
     } catch (error) {
       console.error('Error executing query:', error);
-      throw error;
-    } finally {
-      if (connection) await connection.end();
-    }
-  }
-
-  async getTables() {
-    let connection;
-    try {
-      connection = await this.getConnection();
-      const [rows] = await connection.execute('SHOW TABLES');
-      
-      // Initialize tables with relationship properties
-      const tables = rows.map(row => ({
-        name: Object.values(row)[0],
-        isMainTable: false,
-        isSecondaryTable: false,
-        relatedTableName: null,
-        columns: []
-      }));
-
-      // Get relationships
-      const [relationships] = await connection.execute('SELECT * FROM table_relationships');
-      console.log('Found relationships:', relationships); // Debug log
-
-      // Update relationship information
-      for (let table of tables) {
-        // Check if table is main or secondary
-        const asMain = relationships.find(r => r.main_table_name === table.name);
-        const asSecondary = relationships.find(r => r.secondary_table_name === table.name);
-        
-        table.isMainTable = !!asMain;
-        table.isSecondaryTable = !!asSecondary;
-        
-        if (asMain) {
-          table.relatedTableName = asMain.secondary_table_name;
-        } else if (asSecondary) {
-          table.relatedTableName = asSecondary.main_table_name;
-        }
-
-        // Get columns
-        const [columns] = await connection.execute(`SHOW COLUMNS FROM ${table.name}`);
-        table.columns = columns.map(col => ({
-          name: col.Field,
-          type: col.Type,
-          isPrimary: col.Key === 'PRI'
-        }));
-      }
-
-      console.log('Returning tables with relationships:', 
-        tables.map(t => ({
-          name: t.name, 
-          isMain: t.isMainTable, 
-          isSecondary: t.isSecondaryTable,
-          related: t.relatedTableName
-        }))
-      ); // Debug log
-
-      return tables;
-    } catch (error) {
-      console.error('Error getting tables:', error);
       throw error;
     } finally {
       if (connection) await connection.end();
@@ -501,9 +488,21 @@ class MySQLDatabaseService {
     let connection;
     try {
       connection = await this.getConnection();
+
+      // Primero eliminar las relaciones donde la tabla es principal o secundaria
+      await connection.execute(
+        'DELETE FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
+        [tableName, tableName]
+      );
+
+      // Luego eliminar la tabla
       const query = `DROP TABLE IF EXISTS \`${tableName}\``;
       await connection.execute(query);
-      return { success: true, message: `Table ${tableName} deleted successfully` };
+      
+      return { 
+        success: true, 
+        message: `Table ${tableName} deleted successfully` 
+      };
     } catch (error) {
       console.error('Error deleting table:', error);
       throw error;
@@ -641,6 +640,67 @@ class MySQLDatabaseService {
       throw error;
     } finally {
       if (connection) await connection.end();
+    }
+  }
+
+  async createTableGroup(mainTableName, secondaryTableName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+
+      // Iniciar transacción
+      await connection.beginTransaction();
+
+      // Crear la tabla principal si no existe
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS \`${mainTableName}\` (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          status VARCHAR(20) DEFAULT 'Vigente 🟢',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+
+      // Crear la tabla secundaria si no existe
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS \`${secondaryTableName}\` (
+          id INT PRIMARY KEY AUTO_INCREMENT,
+          status VARCHAR(20) DEFAULT 'Vigente 🟢',
+          main_table_id INT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          FOREIGN KEY (main_table_id) REFERENCES \`${mainTableName}\`(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Registrar la relación
+      await connection.execute(`
+        INSERT INTO table_relationships 
+        (main_table_name, secondary_table_name, relationship_type, created_at) 
+        VALUES (?, ?, 'group_policy', CURRENT_TIMESTAMP)
+      `, [mainTableName, secondaryTableName]);
+
+      // Confirmar transacción
+      await connection.commit();
+
+      return {
+        success: true,
+        message: `Grupo de tablas creado: ${mainTableName} y ${secondaryTableName}`,
+        tables: {
+          main: mainTableName,
+          secondary: secondaryTableName
+        }
+      };
+    } catch (error) {
+      if (connection) {
+        await connection.rollback();
+      }
+      console.error('Error creating table group:', error);
+      throw error;
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
     }
   }
 }

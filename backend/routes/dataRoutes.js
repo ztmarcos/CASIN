@@ -22,13 +22,11 @@ router.post('/tables', async (req, res) => {
       return res.status(400).json({ error: 'Name and columns array are required' });
     }
     
-    // Create the table directly in MySQL
     await mysqlDatabase.createTable({ 
       name: name.toLowerCase().trim(),
       columns 
     });
 
-    // Return success response
     res.json({ 
       success: true,
       message: `Table ${name} created successfully`
@@ -417,6 +415,29 @@ router.delete('/table-relationships', async (req, res) => {
   } catch (error) {
     console.error('Error deleting table relationship:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Crear grupo de tablas relacionadas
+router.post('/tables/group', async (req, res) => {
+  try {
+    const { mainTableName, secondaryTableName } = req.body;
+    
+    if (!mainTableName || !secondaryTableName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requieren los nombres de ambas tablas'
+      });
+    }
+
+    const result = await mysqlDatabase.createTableGroup(mainTableName, secondaryTableName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error creating table group:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error al crear el grupo de tablas'
+    });
   }
 });
 

@@ -352,11 +352,11 @@ class TableService {
 
   async deleteTable(tableName) {
     try {
-      // Clean the table name using the same pattern as other methods
+      // Clean the table name but preserve brackets
       const cleanTableName = tableName.trim()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/[^a-zA-Z0-9_\[\]]/g, '_') // Allow brackets in addition to alphanumeric and underscore
         .toLowerCase()
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
@@ -622,6 +622,19 @@ class TableService {
     } catch (error) {
       console.error('Error renaming table:', error);
       throw error;
+    }
+  }
+
+  async createTableGroup(mainTableName, secondaryTableName) {
+    try {
+      const response = await axios.post(`${this.apiUrl}/tables/group`, {
+        mainTableName,
+        secondaryTableName
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error creating table group:', error);
+      throw new Error(error.response?.data?.message || 'Error al crear el grupo de tablas');
     }
   }
 }
