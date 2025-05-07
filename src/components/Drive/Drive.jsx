@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import './Drive.css';
+
+// Get folder ID from environment variable with fallback
+const ROOT_FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '1rDGEXJg-8fssJ_atzDNHeJr6BouwGCCo';
 
 const FileIcon = ({ mimeType }) => {
   switch (mimeType) {
@@ -27,11 +30,12 @@ const BreadcrumbPath = ({ folderStack, onNavigate }) => (
       className="path-item"
       title="Ir a la carpeta raíz"
     >
-      🏠 Inicio
+      <span className="icon">🏠</span>
+      <span>Inicio</span>
     </span>
     {folderStack.map((folder, index) => (
       <span key={index} className="path-item">
-        {' › '}
+        <span className="separator">›</span>
         <span
           onClick={() => onNavigate(index)}
           className="path-link"
@@ -47,7 +51,10 @@ const BreadcrumbPath = ({ folderStack, onNavigate }) => (
 const Modal = ({ title, children, onClose, actions }) => (
   <div className="modal-backdrop" onClick={onClose}>
     <div className="modal-content" onClick={e => e.stopPropagation()}>
-      <div className="modal-header">{title}</div>
+      <div className="modal-header">
+        <span>{title}</span>
+        <button className="modal-close" onClick={onClose}>×</button>
+      </div>
       <div className="modal-body">{children}</div>
       <div className="modal-actions">{actions}</div>
     </div>
@@ -67,13 +74,14 @@ const Drive = () => {
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [showCreateFolderModal, setShowCreateFolderModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef(null);
 
   const fetchFiles = async (folderId = null) => {
     try {
       setLoading(true);
       setError(null);
-      const targetFolderId = folderId || '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn';
+      const targetFolderId = folderId || ROOT_FOLDER_ID;
       console.log('Obteniendo archivos de:', targetFolderId);
       
       const response = await axios.get(`http://localhost:3001/api/drive/files`, {
@@ -114,6 +122,14 @@ const Drive = () => {
     }
   };
 
+  // Memoized filtered files based on search term
+  const filteredFiles = useMemo(() => {
+    if (!searchTerm) return files;
+    return files.filter(file => 
+      file.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [files, searchTerm]);
+
   const testGoogleDrive = async () => {
     try {
       setLoading(true);
@@ -150,17 +166,26 @@ const Drive = () => {
     testGoogleDrive();
   }, []);
 
-  const handleFolderClick = (folder) => {
+  useEffect(() => {
+    // Fetch files whenever currentFolder changes
+    if (connectionStatus === 'Connected') {
+      fetchFiles(currentFolder);
+    }
+  }, [currentFolder, connectionStatus]);
+
+  const handleFolderClick = async (folder) => {
     setFolderStack([...folderStack, { id: currentFolder, name: folder.name }]);
     setCurrentFolder(folder.id);
+    await fetchFiles(folder.id);
   };
 
-  const handleBackClick = () => {
+  const handleBackClick = async () => {
     if (folderStack.length > 0) {
       const newStack = [...folderStack];
       const previousFolder = newStack.pop();
       setFolderStack(newStack);
       setCurrentFolder(previousFolder?.id || null);
+      await fetchFiles(previousFolder?.id || null);
     }
   };
 
@@ -176,7 +201,7 @@ const Drive = () => {
       
       await axios.post('http://localhost:3001/api/drive/folders', {
         name: normalizedName,
-        parentId: currentFolder || '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn'
+        parentId: currentFolder || ROOT_FOLDER_ID
       });
       
       // Clear input and close modal
@@ -244,7 +269,7 @@ const Drive = () => {
       setError(null);
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('folderId', currentFolder || '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn');
+      formData.append('folderId', currentFolder || ROOT_FOLDER_ID);
 
       const response = await fetch('http://localhost:3001/api/drive/upload', {
         method: 'POST',
@@ -271,8 +296,28 @@ const Drive = () => {
   return (
     <div className="drive-container">
       <div className="drive-header">
-        <h2>📂 Drive</h2>
+        <h2>
+          <span className="header-icon">📂</span>
+          Drive
+        </h2>
         <div className="header-actions">
+          <div className="search-container">
+            <input 
+              type="text" 
+              placeholder="Buscar archivos..." 
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button 
+                className="search-clear" 
+                onClick={() => setSearchTerm('')}
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <input
             type="file"
             ref={fileInputRef}
@@ -286,7 +331,8 @@ const Drive = () => {
             disabled={loading}
             title="Subir un archivo a la carpeta actual"
           >
-            {loading ? '🔄 Subiendo...' : '📤 Subir Archivo'}
+            <span className="button-icon">📤</span>
+            {loading ? 'Subiendo...' : 'Subir'}
           </button>
           <button 
             onClick={() => setShowCreateFolderModal(true)} 
@@ -303,7 +349,8 @@ const Drive = () => {
 
       {error && (
         <div className="error-message">
-          ⚠️ {error}
+          <span className="error-icon">⚠️</span>
+          <span>{error}</span>
         </div>
       )}
 
@@ -314,7 +361,7 @@ const Drive = () => {
           className="back-button"
           title="Volver a la carpeta anterior"
         >
-          ← Atrás
+          ←
         </button>
         <BreadcrumbPath 
           folderStack={folderStack} 
@@ -334,11 +381,12 @@ const Drive = () => {
 
       {loading ? (
         <div className="loading-state">
-          🔄 Cargando archivos...
+          <span className="loading-icon">🔄</span>
+          <span>Cargando archivos...</span>
         </div>
-      ) : files.length > 0 ? (
+      ) : filteredFiles.length > 0 ? (
         <div className="files-grid">
-          {files.map((file) => (
+          {filteredFiles.map((file) => (
             <div 
               key={file.id} 
               className={`file-item ${file.isFolder ? 'folder' : ''}`}
@@ -397,9 +445,22 @@ const Drive = () => {
         </div>
       ) : (
         <div className="empty-state">
-          {connectionStatus === 'Connected' ? 
-            '📂 No hay archivos en esta carpeta' : 
-            '🔌 Conecta con Google Drive para ver los archivos'}
+          {connectionStatus === 'Connected' ? (
+            <>
+              <span className="empty-icon">📂</span>
+              <span>
+                {searchTerm 
+                  ? `No se encontraron archivos que coincidan con "${searchTerm}"` 
+                  : 'No hay archivos en esta carpeta'
+                }
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="empty-icon">🔌</span>
+              <span>Conecta con Google Drive para ver los archivos</span>
+            </>
+          )}
         </div>
       )}
 
@@ -432,7 +493,7 @@ const Drive = () => {
           }
         >
           <p>¿Estás seguro de que quieres eliminar "{selectedFile?.name}"?</p>
-          <p>Esta acción no se puede deshacer.</p>
+          <p className="warning-text">Esta acción no se puede deshacer.</p>
         </Modal>
       )}
 
