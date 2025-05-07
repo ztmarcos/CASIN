@@ -1,17 +1,41 @@
 const mysqlDatabase = require('./mysqlDatabase');
 const admin = require('firebase-admin');
+const path = require('path');
 
 // Initialize Firebase Admin
-admin.initializeApp({
-  apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID
-});
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = require('../../casinbbdd-firebase-adminsdk-hnwk0-856db1f02b.json');
 
-const bucket = admin.storage().bucket();
+    // Ensure the private key is properly formatted
+    if (serviceAccount.private_key && !serviceAccount.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
+      serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${serviceAccount.private_key}\n-----END PRIVATE KEY-----`;
+    }
+
+    console.log('Firebase Admin Initialization:', {
+      projectId: serviceAccount.project_id,
+      hasClientEmail: !!serviceAccount.client_email,
+      hasPrivateKey: !!serviceAccount.private_key,
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
+    });
+
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: serviceAccount.project_id,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key
+      }),
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
+    });
+
+    console.log('Firebase Admin initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin:', error);
+    throw error;
+  }
+}
+
+const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
 
 const fileService = {
   // Test Firebase connection

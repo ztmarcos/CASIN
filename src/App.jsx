@@ -18,6 +18,7 @@ import './styles/theme.css'
 import './App.css'
 import Sharepoint from './components/Sharepoint/Sharepoint'
 import { Toaster } from 'react-hot-toast'
+import FirebaseViewer from './components/FirebaseViewer/FirebaseViewer'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
@@ -106,6 +107,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <TestGPT />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/firebase" element={
+        <ProtectedRoute>
+          <Layout>
+            <FirebaseViewer />
           </Layout>
         </ProtectedRoute>
       } />
