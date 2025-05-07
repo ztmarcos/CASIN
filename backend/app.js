@@ -1,3 +1,7 @@
+require('dotenv').config();
+console.log('Loading environment from:', require('path').resolve('.env'));
+console.log('Environment variables loaded:', Object.keys(process.env));
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -11,14 +15,12 @@ const prospeccionRoutes = require('./routes/prospeccionRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const dataRoutes = require('./routes/dataRoutes');
 const policyStatusRoutes = require('./routes/policyStatusRoutes');
-const driveRoutes = require('./routes/driveRoutes');
+const driveRoutes = require('./routes/driveRoutes'); // Re-enabled
 const emailRoutes = require('./routes/emailRoutes');
-const sharepointRoutes = require('./routes/sharepointRoutes');
+// const sharepointRoutes = require('./routes/sharepointRoutes'); // Temporarily disabled
 const gptRoutes = require('./routes/gptRoutes');
 const birthdayRoutes = require('./routes/birthdayRoutes');
 const authRoutes = require('./routes/authRoutes');
-
-require('dotenv').config();
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -26,6 +28,7 @@ const port = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -36,9 +39,9 @@ app.use('/api/prospeccion', prospeccionRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/policy-status', policyStatusRoutes);
-app.use('/api/drive', driveRoutes);
+app.use('/api/drive', driveRoutes); // Re-enabled
 app.use('/api/email', emailRoutes);
-app.use('/api/sharepoint', sharepointRoutes);
+// app.use('/api/sharepoint', sharepointRoutes); // Temporarily disabled
 app.use('/api/gpt', gptRoutes);
 app.use('/api/birthday', birthdayRoutes);
 app.use('/api/auth', authRoutes);
@@ -56,12 +59,10 @@ cron.schedule('0 9 * * *', async () => {
 // Print available routes
 console.log('Available routes:');
 console.log('- /api/prospeccion');
-console.log('- /api/files');
 console.log('- /api/data');
 console.log('- /api/policy-status');
 console.log('- /api/drive');
 console.log('- /api/email');
-console.log('- /api/sharepoint');
 console.log('- /api/gpt');
 console.log('- /api/birthday');
 console.log('- /api/auth');

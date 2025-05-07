@@ -1,10 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const OpenAI = require('openai');
-require('dotenv').config();
+require('dotenv').config({ path: '../../.env' });
+
+console.log('GPT Routes - Environment variables:', Object.keys(process.env));
+console.log('GPT Routes - VITE_OPENAI_API_KEY exists:', !!process.env.VITE_OPENAI_API_KEY);
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.VITE_OPENAI_API_KEY,
 });
 
 router.post('/analyze', async (req, res) => {

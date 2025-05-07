@@ -23,7 +23,7 @@ router.get('/test-connection', async (req, res) => {
 });
 
 // Upload file with record relationship
-router.post('/upload/:tableName/:recordId?', upload.single('file'), async (req, res) => {
+router.post('/upload/:tableName/:recordId', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -38,6 +38,34 @@ router.post('/upload/:tableName/:recordId?', upload.single('file'), async (req, 
       // Special handling for GMM PDF files
       if (req.params.tableName === 'gmm') {
         await fileRelationService.updateGmmPdf(req.params.recordId, result.url);
+      }
+    }
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Error uploading file:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Upload file without record ID
+router.post('/upload/:tableName', upload.single('file'), async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const recordId = null;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    
+    const result = await fileService.uploadFile(req.file, tableName);
+    
+    // If recordId is provided, link the file to the record
+    if (recordId) {
+      await fileRelationService.linkFileToRecord(result.id, tableName, recordId);
+      
+      // Special handling for GMM PDF files
+      if (tableName === 'gmm') {
+        await fileRelationService.updateGmmPdf(recordId, result.url);
       }
     }
     

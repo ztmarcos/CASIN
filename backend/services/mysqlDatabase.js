@@ -1,13 +1,14 @@
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const dbConfig = require('../config/database');
 
 class MySQLDatabaseService {
   constructor() {
     this.config = dbConfig;
+    this.pool = mysql.createPool(this.config).promise();
   }
 
   async getConnection() {
-    return await mysql.createConnection(this.config);
+    return await this.pool.getConnection();
   }
 
   async getTables() {
@@ -59,7 +60,7 @@ class MySQLDatabaseService {
       console.error('Error getting tables:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -73,7 +74,7 @@ class MySQLDatabaseService {
       console.error('Error executing query:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -118,7 +119,7 @@ class MySQLDatabaseService {
       console.error('Error getting data:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -190,7 +191,7 @@ class MySQLDatabaseService {
       console.error('Database error:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -226,7 +227,7 @@ class MySQLDatabaseService {
       console.error('Error creating table:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -267,7 +268,7 @@ class MySQLDatabaseService {
       console.error('Error updating column order:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -319,7 +320,7 @@ class MySQLDatabaseService {
       console.error('Error modifying table structure:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -352,9 +353,7 @@ class MySQLDatabaseService {
       console.error('Error updating data:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -376,7 +375,7 @@ class MySQLDatabaseService {
       console.error('Error adding column:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -391,9 +390,7 @@ class MySQLDatabaseService {
       console.error('Error deleting column:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -425,9 +422,7 @@ class MySQLDatabaseService {
       console.error('Error renaming column:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -459,9 +454,7 @@ class MySQLDatabaseService {
       console.error('Error setting column tag:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -480,9 +473,7 @@ class MySQLDatabaseService {
       console.error('Error deleting row:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -509,9 +500,7 @@ class MySQLDatabaseService {
       console.error('Error deleting table:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.end();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -527,7 +516,7 @@ class MySQLDatabaseService {
       console.error('Error getting table relationships:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -548,7 +537,7 @@ class MySQLDatabaseService {
       console.error('Error creating table relationship:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -568,7 +557,7 @@ class MySQLDatabaseService {
       console.error('Error deleting table relationship:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -597,7 +586,7 @@ class MySQLDatabaseService {
       console.error('Error updating table relationships:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -641,7 +630,7 @@ class MySQLDatabaseService {
       console.error('Error renaming table:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 
@@ -821,9 +810,7 @@ class MySQLDatabaseService {
       console.error('Error creating table group:', error);
       throw error;
     } finally {
-      if (connection) {
-        await connection.release();
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -873,7 +860,7 @@ class MySQLDatabaseService {
       console.error('Error removing status column:', error);
       throw error;
     } finally {
-      if (connection) await connection.end();
+      if (connection) connection.release();
     }
   }
 }

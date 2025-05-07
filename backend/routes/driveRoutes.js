@@ -110,7 +110,8 @@ router.get('/files', async (req, res) => {
 
     let folderId = req.query.folderId;
     if (!folderId || folderId === 'root') {
-      folderId = '1VitMX-H-IzNpfy0uAMUnaHkh92m0NVRn';
+      folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+      console.log('Using default folder ID from env:', folderId);
     }
 
     // First check if the ID exists and get its details

@@ -1,8 +1,12 @@
 const mysqlDatabase = require('./mysqlDatabase');
 const OpenAI = require('openai');
+require('dotenv').config({ path: '../../.env' });
+
+console.log('Prospeccion Service - Environment variables:', Object.keys(process.env));
+console.log('Prospeccion Service - VITE_OPENAI_API_KEY exists:', !!process.env.VITE_OPENAI_API_KEY);
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.VITE_OPENAI_API_KEY
 });
 
 class ProspeccionService {

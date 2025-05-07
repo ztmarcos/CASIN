@@ -7,11 +7,6 @@ if (!admin.apps.length) {
   try {
     const serviceAccount = require('../../casinbbdd-firebase-adminsdk-hnwk0-856db1f02b.json');
 
-    // Ensure the private key is properly formatted
-    if (serviceAccount.private_key && !serviceAccount.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
-      serviceAccount.private_key = `-----BEGIN PRIVATE KEY-----\n${serviceAccount.private_key}\n-----END PRIVATE KEY-----`;
-    }
-
     console.log('Firebase Admin Initialization:', {
       projectId: serviceAccount.project_id,
       hasClientEmail: !!serviceAccount.client_email,
@@ -20,17 +15,13 @@ if (!admin.apps.length) {
     });
 
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: serviceAccount.project_id,
-        clientEmail: serviceAccount.client_email,
-        privateKey: serviceAccount.private_key
-      }),
+      credential: admin.credential.cert(serviceAccount),
       storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
     });
 
     console.log('Firebase Admin initialized successfully');
   } catch (error) {
-    console.error('Error initializing Firebase Admin:', error);
+    console.error('Firebase Admin initialization error:', error);
     throw error;
   }
 }
