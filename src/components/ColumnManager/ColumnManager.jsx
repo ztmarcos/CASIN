@@ -19,6 +19,8 @@ import PDFParser from '../PDFParser_new/PDFParser';
 import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
 import Modal from '../common/Modal';
+import { toast } from 'react-hot-toast';
+import EditColumn from '../EditColumn/EditColumn';
 
 const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, isPdfEnabled }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -26,7 +28,7 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
   const [showTagInput, setShowTagInput] = useState(false);
   const [tag, setTag] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [editedType, setEditedType] = useState('TEXT');
 
   const {
     attributes,
@@ -43,16 +45,13 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
 
   const handleEditSubmit = (e) => {
     e.preventDefault();
-    if (editedName.trim() && editedName !== column) {
-      setShowEditConfirm(true);
-    } else {
-      setIsEditing(false);
+    if (editedName.trim()) {
+      handleConfirmEdit();
     }
   };
 
   const handleConfirmEdit = () => {
-    onEdit(column, editedName.trim());
-    setShowEditConfirm(false);
+    onEdit(column, editedName.trim(), editedType);
     setIsEditing(false);
   };
 
@@ -67,29 +66,44 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
 
   if (isEditing) {
     return (
-      <>
+      <div ref={setNodeRef} style={style} className="column-edit-container">
         <form onSubmit={handleEditSubmit} className="column-edit-form">
           <input
             type="text"
             value={editedName}
             onChange={(e) => setEditedName(e.target.value)}
             autoFocus
-            onBlur={() => !showEditConfirm && setIsEditing(false)}
+            className="column-edit-input"
+            placeholder="Column name"
           />
-        </form>
-        {showEditConfirm && (
-          <div className="confirmation-dialog">
-            <p>Are you sure you want to rename this column?</p>
-            <div className="confirmation-actions">
-              <button className="cancel-btn" onClick={() => {
-                setShowEditConfirm(false);
-                setIsEditing(false);
-              }}>Cancel</button>
-              <button className="confirm-btn" onClick={handleConfirmEdit}>Confirm</button>
-            </div>
+          <select
+            value={editedType}
+            onChange={(e) => setEditedType(e.target.value)}
+            className="column-type-select"
+          >
+            <option value="TEXT">Text</option>
+            <option value="INT">Integer</option>
+            <option value="DECIMAL">Decimal</option>
+            <option value="DATE">Date</option>
+            <option value="BOOLEAN">Boolean</option>
+          </select>
+          <div className="column-edit-actions">
+            <button 
+              type="button" 
+              onClick={() => setIsEditing(false)}
+              className="cancel-btn"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit"
+              className="save-btn"
+            >
+              Save
+            </button>
           </div>
-        )}
-      </>
+        </form>
+      </div>
     );
   }
 
@@ -126,7 +140,10 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
           </form>
         ) : (
           <>
-            <button onClick={() => setIsEditing(true)} className="action-btn edit-btn">
+            <button onClick={() => {
+              setIsEditing(true);
+              setEditedName(column);
+            }} className="action-btn edit-btn">
               ✎
             </button>
             {id !== 'col-id' && (
@@ -166,6 +183,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [newColumnType, setNewColumnType] = useState('text');
   const [showPDFParser, setShowPDFParser] = useState(false);
   const [pdfEnabledColumns, setPdfEnabledColumns] = useState({});
+  const [showEditColumns, setShowEditColumns] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -177,16 +195,23 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const loadColumns = async () => {
     try {
       setIsLoading(true);
-      const response = await tableService.getData(selectedTable.name, { limit: 1 });
-      if (response.data && response.data.length > 0) {
-        const columnNames = Object.keys(response.data[0]);
-        setColumns(columnNames);
+      setError(null);
+      
+      const structure = await tableService.getTableStructure(selectedTable.name);
+      
+      if (structure && structure.columns) {
+        setColumns(structure.columns.map(col => ({
+          name: col.name,
+          type: col.type || 'TEXT'
+        })));
       } else {
         setColumns([]);
+        setError('No columns found in table');
       }
     } catch (error) {
       console.error('Error loading columns:', error);
       setError('Failed to load columns');
+      setColumns([]);
     } finally {
       setIsLoading(false);
     }
@@ -206,8 +231,8 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
 
     // Remove 'col-' prefix to get actual column names
-    const oldIndex = columns.findIndex(col => `col-${col}` === active.id);
-    const newIndex = columns.findIndex(col => `col-${col}` === over.id);
+    const oldIndex = columns.findIndex(col => `col-${col.name}` === active.id);
+    const newIndex = columns.findIndex(col => `col-${col.name}` === over.id);
 
     const newColumns = arrayMove(columns, oldIndex, newIndex);
     
@@ -216,7 +241,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       setColumns(newColumns);
       
       // Update in the database
-      await tableService.updateColumnOrder(selectedTable.name, newColumns);
+      await tableService.updateColumnOrder(selectedTable.name, newColumns.map(col => col.name));
       
       // Refresh to ensure we're showing the current database state
       await loadColumns();
@@ -270,7 +295,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         console.log(`Deleting column: ${columnName}`);
         
         // Optimistically update the UI
-        setColumns((prevColumns) => prevColumns.filter((col) => col !== columnName));
+        setColumns((prevColumns) => prevColumns.filter((col) => col.name !== columnName));
 
         await tableService.deleteColumn(selectedTable.name, columnName);
         await loadColumns(); // Ensure data is refreshed from the server
@@ -287,25 +312,44 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
   };
 
-  const handleEditColumnName = async (oldName, newName) => {
+  const handleEditColumnName = async (oldName, newName, newType) => {
     try {
       setIsLoading(true);
-      console.log(`Renaming column from ${oldName} to ${newName}`);
+      console.log(`Updating column from ${oldName} to ${newName} with type ${newType}`);
       
-      // Optimistically update the UI
-      setColumns((prevColumns) => 
-        prevColumns.map((col) => (col === oldName ? newName : col))
-      );
+      let success = true;
+      
+      // First try to update the type
+      try {
+        await tableService.updateColumnType(selectedTable.name, oldName, newType);
+        toast.success('Column type updated');
+      } catch (typeError) {
+        console.warn('Could not update column type:', typeError);
+        success = false;
+        toast.error('Failed to update column type');
+      }
+      
+      // Then update the name if it changed
+      if (oldName !== newName) {
+        try {
+          await tableService.renameColumn(selectedTable.name, oldName, newName);
+          toast.success('Column renamed');
+        } catch (renameError) {
+          console.error('Failed to rename column:', renameError);
+          success = false;
+          toast.error('Failed to rename column');
+        }
+      }
 
-      await tableService.renameColumn(selectedTable.name, oldName, newName);
-      await loadColumns(); // Ensure data is refreshed from the server
-      if (onOrderChange) {
-        onOrderChange();
+      // Refresh the data
+      await refreshData();
+      
+      if (success) {
+        toast.success('Column updated successfully');
       }
     } catch (err) {
-      console.error('Failed to rename column:', err);
-      setError('Failed to rename column');
-      await loadColumns(); // Revert changes if there's an error
+      console.error('Failed to update column:', err);
+      toast.error('Failed to update column');
     } finally {
       setIsLoading(false);
     }
@@ -349,6 +393,48 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
   };
 
+  // Add refresh function
+  const refreshData = async () => {
+    if (selectedTable) {
+      await loadColumns();
+      if (onOrderChange) {
+        onOrderChange();
+      }
+    }
+  };
+
+  // Add event listener for table updates
+  useEffect(() => {
+    const handleTableUpdate = () => {
+      console.log('Table structure updated, refreshing...');
+      refreshData();
+    };
+
+    window.addEventListener('tableStructureUpdated', handleTableUpdate);
+    return () => window.removeEventListener('tableStructureUpdated', handleTableUpdate);
+  }, [selectedTable]);
+
+  const handleEditColumns = () => {
+    setShowEditColumns(true);
+  };
+
+  const handleEditColumnsSave = async (updatedColumns) => {
+    try {
+      setIsLoading(true);
+      await loadColumns();
+      if (onOrderChange) {
+        onOrderChange();
+      }
+      setShowEditColumns(false);
+      toast.success('Columns updated successfully');
+    } catch (error) {
+      console.error('Failed to save column changes:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="column-manager">
       <div className="section-header">
@@ -362,11 +448,28 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           <button className="create-btn" onClick={() => setShowCreateForm(!showCreateForm)}>
             {showCreateForm ? '—' : '+'}
           </button>
+          <button className="edit-btn" onClick={handleEditColumns}>
+            Edit
+          </button>
           <button className="pdf-btn" onClick={() => setShowPDFParser(true)}>
             Capturador
           </button>
         </div>
       </div>
+
+      {/* Edit Columns Modal */}
+      <Modal 
+        isOpen={showEditColumns} 
+        onClose={() => setShowEditColumns(false)}
+        size="large"
+      >
+        <EditColumn
+          columns={columns}
+          tableName={selectedTable?.name}
+          onSave={handleEditColumnsSave}
+          onCancel={() => setShowEditColumns(false)}
+        />
+      </Modal>
 
       {/* PDF Parser Modal */}
       <Modal 
@@ -405,6 +508,15 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
             </form>
           )}
 
+          {error && (
+            <div className="error-message">
+              {error}
+              <button onClick={refreshData} className="refresh-btn">
+                Retry
+              </button>
+            </div>
+          )}
+
           <div className="columns-list">
             {!selectedTable ? (
               <div className="no-table-message">Select a table</div>
@@ -417,20 +529,20 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
-                  items={columns.map(col => `col-${col}`)}
+                  items={columns.map(col => `col-${col.name}`)}
                   strategy={horizontalListSortingStrategy}
                 >
                   <div className="columns-tags">
                     {columns.map((column) => (
                       <SortableItem 
-                        key={`col-${column}`}
-                        id={`col-${column}`}
-                        column={column}
+                        key={`col-${column.name}`}
+                        id={`col-${column.name}`}
+                        column={column.name}
                         onDelete={handleDeleteColumn}
                         onEdit={handleEditColumnName}
                         onTagChange={handleTagChange}
                         onPdfToggle={handlePdfToggle}
-                        isPdfEnabled={pdfEnabledColumns[column]}
+                        isPdfEnabled={pdfEnabledColumns[column.name]}
                       />
                     ))}
                   </div>

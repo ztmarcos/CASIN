@@ -15,9 +15,11 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import tableService from '../../services/data/tableService';
+import { toast } from 'react-hot-toast';
 import './EditColumn.css';
 
-const SortableItem = ({ id, column, onDelete }) => {
+const SortableItem = ({ id, column, onDelete, onEdit }) => {
   const {
     attributes,
     listeners,
@@ -29,6 +31,14 @@ const SortableItem = ({ id, column, onDelete }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  };
+
+  const handleNameChange = (e) => {
+    onEdit(column.name, { ...column, name: e.target.value });
+  };
+
+  const handleTypeChange = (e) => {
+    onEdit(column.name, { ...column, type: e.target.value });
   };
 
   return (
@@ -43,11 +53,13 @@ const SortableItem = ({ id, column, onDelete }) => {
         type="text"
         className="column-input name-input"
         value={column.name}
+        onChange={handleNameChange}
         disabled={column.isPrimary}
       />
       <select
         className="column-input type-select"
         value={column.type}
+        onChange={handleTypeChange}
         disabled={column.isPrimary}
       >
         <option value="VARCHAR">VARCHAR</option>
@@ -65,8 +77,9 @@ const SortableItem = ({ id, column, onDelete }) => {
   );
 };
 
-const EditColumn = ({ columns, onSave, onCancel }) => {
+const EditColumn = ({ columns, tableName, onSave, onCancel }) => {
   const [editableColumns, setEditableColumns] = useState(columns);
+  const [isLoading, setIsLoading] = useState(false);
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -75,21 +88,86 @@ const EditColumn = ({ columns, onSave, onCancel }) => {
     })
   );
 
-  const handleDragEnd = (event) => {
+  const handleDragEnd = async (event) => {
     const { active, over } = event;
     
     if (active.id !== over.id) {
-      setEditableColumns((items) => {
-        const oldIndex = items.findIndex(item => `col-${item.name}` === active.id);
-        const newIndex = items.findIndex(item => `col-${item.name}` === over.id);
+      try {
+        const oldIndex = editableColumns.findIndex(item => `col-${item.name}` === active.id);
+        const newIndex = editableColumns.findIndex(item => `col-${item.name}` === over.id);
         
-        return arrayMove(items, oldIndex, newIndex);
-      });
+        const newColumns = arrayMove(editableColumns, oldIndex, newIndex);
+        setEditableColumns(newColumns);
+
+        // Update column order in database
+        await tableService.updateColumnOrder(tableName, newColumns.map(col => col.name));
+        toast.success('Column order updated');
+      } catch (error) {
+        console.error('Failed to update column order:', error);
+        toast.error('Failed to update column order');
+      }
     }
   };
 
-  const handleDelete = (columnName) => {
-    setEditableColumns(columns => columns.filter(col => col.name !== columnName));
+  const handleDelete = async (columnName) => {
+    try {
+      setIsLoading(true);
+      await tableService.deleteColumn(tableName, columnName);
+      setEditableColumns(columns => columns.filter(col => col.name !== columnName));
+      toast.success(`Column ${columnName} deleted`);
+    } catch (error) {
+      console.error('Failed to delete column:', error);
+      toast.error(`Failed to delete column ${columnName}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEdit = async (oldName, updatedColumn) => {
+    try {
+      setIsLoading(true);
+      if (oldName !== updatedColumn.name) {
+        // If name changed, rename the column
+        await tableService.renameColumn(tableName, oldName, updatedColumn.name);
+      }
+      
+      // Update column type if changed
+      const currentColumn = editableColumns.find(col => col.name === oldName);
+      if (currentColumn.type !== updatedColumn.type) {
+        await tableService.updateColumnType(tableName, updatedColumn.name, updatedColumn.type);
+      }
+
+      // Update local state
+      setEditableColumns(columns => 
+        columns.map(col => col.name === oldName ? updatedColumn : col)
+      );
+      
+      toast.success(`Column ${oldName} updated`);
+    } catch (error) {
+      console.error('Failed to update column:', error);
+      toast.error(`Failed to update column ${oldName}`);
+      // Revert changes in UI
+      setEditableColumns(columns => 
+        columns.map(col => col.name === oldName ? { ...col, name: oldName } : col)
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsLoading(true);
+      // Save all changes
+      await tableService.updateColumns(tableName, editableColumns);
+      toast.success('All changes saved');
+      onSave(editableColumns);
+    } catch (error) {
+      console.error('Failed to save changes:', error);
+      toast.error('Failed to save changes');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -97,8 +175,20 @@ const EditColumn = ({ columns, onSave, onCancel }) => {
       <div className="edit-column-header">
         <h3>Edit Columns</h3>
         <div>
-          <button className="btn-secondary" onClick={onCancel}>Cancel</button>
-          <button className="btn-primary" onClick={() => onSave(editableColumns)}>Save</button>
+          <button 
+            className="btn-secondary" 
+            onClick={onCancel}
+            disabled={isLoading}
+          >
+            Cancel
+          </button>
+          <button 
+            className="btn-primary" 
+            onClick={handleSave}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Saving...' : 'Save'}
+          </button>
         </div>
       </div>
 
@@ -118,6 +208,7 @@ const EditColumn = ({ columns, onSave, onCancel }) => {
                 id={`col-${column.name}`}
                 column={column}
                 onDelete={handleDelete}
+                onEdit={handleEdit}
               />
             ))}
           </div>

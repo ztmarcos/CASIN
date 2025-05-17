@@ -165,8 +165,23 @@ router.patch('/tables/:tableName/columns/:columnName/rename', async (req, res) =
       return res.status(400).json({ error: 'Table name, column name, and new name are required' });
     }
     
-    const result = await mysqlDatabase.renameColumn(tableName, columnName, newName);
-    res.json(result);
+    // Get column type first
+    const [columnInfo] = await mysqlDatabase.executeQuery(
+      `SHOW COLUMNS FROM \`${tableName}\` WHERE Field = ?`,
+      [columnName]
+    );
+    
+    if (!columnInfo) {
+      return res.status(404).json({ error: 'Column not found' });
+    }
+    
+    // Rename column while preserving its type
+    await mysqlDatabase.executeQuery(
+      `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${newName}\` ${columnInfo.Type}`,
+      []
+    );
+    
+    res.json({ success: true, message: `Column renamed successfully` });
   } catch (error) {
     console.error('Error renaming column:', error);
     res.status(500).json({ error: error.message });
@@ -438,6 +453,29 @@ router.post('/tables/group', async (req, res) => {
       success: false,
       message: error.message || 'Error al crear el grupo de tablas'
     });
+  }
+});
+
+// Update column type
+router.patch('/tables/:tableName/columns/:columnName/type', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    const { type } = req.body;
+    
+    if (!tableName || !columnName || !type) {
+      return res.status(400).json({ error: 'Table name, column name, and type are required' });
+    }
+    
+    // Execute the ALTER TABLE command
+    await mysqlDatabase.executeQuery(
+      `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${type}`,
+      []
+    );
+    
+    res.json({ success: true, message: `Column type updated successfully` });
+  } catch (error) {
+    console.error('Error updating column type:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

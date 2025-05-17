@@ -208,19 +208,78 @@ class TableService {
     }
   }
 
+  #tableStructureCache = new Map();
+  #cacheTimeout = 5000; // 5 seconds
+
   async getTableStructure(tableName) {
     try {
-      const response = await fetch(`${this.apiUrl}/${tableName}/structure`);
+      // First try to get from tables list
+      const response = await fetch(`${this.apiUrl}/tables`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Failed to get tables: ${response.statusText}`);
       }
-      const data = await response.json();
-      console.log('Table structure response:', data);
-      return data;
+      
+      const tables = await response.json();
+      const table = tables.find(t => t.name === tableName);
+      
+      if (table && table.columns) {
+        return { columns: table.columns };
+      }
+
+      // If not found in tables list, try getting schema from database
+      const schemaQuery = `
+        SELECT 
+          COLUMN_NAME as name,
+          DATA_TYPE as type
+        FROM 
+          INFORMATION_SCHEMA.COLUMNS 
+        WHERE 
+          TABLE_NAME = '${tableName}'
+        ORDER BY 
+          ORDINAL_POSITION
+      `;
+
+      const schemaResult = await this.executeQuery(schemaQuery);
+      if (schemaResult && schemaResult.length > 0) {
+        return {
+          columns: schemaResult.map(col => ({
+            name: col.name,
+            type: this.mapDatabaseTypeToFrontend(col.type)
+          }))
+        };
+      }
+
+      // If still no columns found, get from sample data
+      const dataResponse = await this.getData(tableName);
+      if (dataResponse.data && dataResponse.data.length > 0) {
+        const sampleRow = dataResponse.data[0];
+        return {
+          columns: Object.keys(sampleRow).map(name => ({
+            name,
+            type: this.inferColumnTypeFromValue(sampleRow[name])
+          }))
+        };
+      }
+      
+      return { columns: [] };
     } catch (error) {
       console.error('Error fetching table structure:', error);
       throw error;
     }
+  }
+
+  inferColumnTypeFromValue(value) {
+    if (value === null || value === undefined) return 'TEXT';
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? 'INT' : 'DECIMAL';
+    }
+    if (value instanceof Date || (typeof value === 'string' && !isNaN(Date.parse(value)))) {
+      return 'DATE';
+    }
+    if (typeof value === 'boolean') {
+      return 'BOOLEAN';
+    }
+    return 'TEXT';
   }
 
   async updateColumnOrder(tableName, columnOrder) {
@@ -331,18 +390,42 @@ class TableService {
 
   async renameColumn(tableName, oldName, newName) {
     try {
-      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${oldName}/rename`, {
+      // Clean the column names
+      const cleanOldName = oldName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
+
+      const cleanNewName = newName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
+
+      // Use the correct endpoint for renaming columns
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${cleanOldName}/rename`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ newName })
+        body: JSON.stringify({
+          newName: cleanNewName
+        })
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({
+          message: `Failed to rename column: ${response.statusText}`
+        }));
         throw new Error(error.message || 'Failed to rename column');
       }
+
+      // Dispatch an event to notify other components
+      const event = new CustomEvent('tableStructureUpdated', {
+        detail: { tableName, oldName: cleanOldName, newName: cleanNewName }
+      });
+      window.dispatchEvent(event);
 
       return await response.json();
     } catch (error) {
@@ -694,6 +777,139 @@ class TableService {
       console.error(`Error getting data from ${tableName}:`, error);
       throw error;
     }
+  }
+
+  async updateColumnType(tableName, columnName, newType) {
+    try {
+      // Map frontend types to SQL types
+      const sqlType = newType === 'TEXT' ? 'TEXT' :
+                     newType === 'INT' ? 'INT' :
+                     newType === 'DECIMAL' ? 'DECIMAL(10,2)' :
+                     newType === 'DATE' ? 'DATE' :
+                     newType === 'BOOLEAN' ? 'BOOLEAN' :
+                     'TEXT';
+
+      // Clean the column name
+      const cleanColumnName = columnName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
+
+      // Use the correct endpoint for updating column type
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${cleanColumnName}/type`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: sqlType
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Failed to update column type: ${response.statusText}`);
+      }
+
+      // Dispatch an event to notify other components
+      const event = new CustomEvent('tableStructureUpdated', {
+        detail: { tableName, columnName: cleanColumnName, type: sqlType }
+      });
+      window.dispatchEvent(event);
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating column type:', error);
+      throw error;
+    }
+  }
+
+  async updateColumns(tableName, columns) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ columns }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update columns: ${response.statusText}`);
+      }
+
+      // Dispatch an event to notify other components
+      const event = new CustomEvent('tableStructureUpdated', {
+        detail: { tableName }
+      });
+      window.dispatchEvent(event);
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating columns:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to execute table operations
+  async executeTableOperation(tableName, operation) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${tableName}/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(operation)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          message: `Operation failed: ${response.statusText}`
+        }));
+        throw new Error(error.message || 'Operation failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error executing table operation:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to execute SQL query
+  async executeQuery(query) {
+    try {
+      const response = await fetch(`${this.apiUrl}/query`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({
+          message: `Query failed: ${response.statusText}`
+        }));
+        throw new Error(error.message || 'Query failed');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error executing query:', error);
+      throw error;
+    }
+  }
+
+  // Helper method to map database types to frontend types
+  mapDatabaseTypeToFrontend(dbType) {
+    dbType = dbType.toUpperCase();
+    if (dbType.includes('INT')) return 'INT';
+    if (dbType.includes('DECIMAL') || dbType.includes('NUMERIC')) return 'DECIMAL';
+    if (dbType.includes('DATE') || dbType.includes('TIME')) return 'DATE';
+    if (dbType === 'BOOLEAN' || dbType === 'TINYINT(1)') return 'BOOLEAN';
+    return 'TEXT';
   }
 }
 
