@@ -6,7 +6,7 @@ const sendWelcomeEmail = async (gptResponse, data) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        to: 'ztmarcos@gmail.com',
+        to: data.email,
         gptResponse,
         ...data
       }),

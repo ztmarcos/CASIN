@@ -14,7 +14,7 @@ const Layout = ({ children }) => {
         <div className="left-section">
           <div className="logo">
             <span className="logo-text">C-H</span>
-            <span className="logo-version">Cambiando Historias</span>
+            <span className="logo-version">CASIN Seguros</span>
           </div>
           <nav className="top-nav">
             <NavLink to="/">

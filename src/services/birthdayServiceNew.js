@@ -25,13 +25,21 @@ export const fetchBirthdays = async () => {
  */
 export const triggerBirthdayEmails = async () => {
   try {
+    console.log('Triggering birthday emails check...');
     const response = await fetch(`${API_URL}/birthday/check-and-send`, {
       method: 'POST'
     });
+    
+    // Get the full error response
+    const data = await response.json();
+    
     if (!response.ok) {
-      throw new Error('Failed to trigger birthday emails');
+      console.error('Server error details:', data);
+      throw new Error(data.error || 'Failed to trigger birthday emails');
     }
-    return await response.json();
+    
+    console.log('Birthday emails triggered successfully:', data);
+    return data;
   } catch (error) {
     console.error('Error triggering birthday emails:', error);
     throw error;

@@ -4,11 +4,25 @@ const dbConfig = require('../config/database');
 class MySQLDatabaseService {
   constructor() {
     this.config = dbConfig;
+    console.log('Initializing MySQL Database Service with config:', {
+      host: this.config.host,
+      user: this.config.user,
+      database: this.config.database,
+      port: this.config.port
+    });
     this.pool = mysql.createPool(this.config).promise();
   }
 
   async getConnection() {
-    return await this.pool.getConnection();
+    try {
+      console.log('Getting database connection from pool...');
+      const connection = await this.pool.getConnection();
+      console.log('Successfully obtained database connection');
+      return connection;
+    } catch (error) {
+      console.error('Failed to get database connection:', error);
+      throw error;
+    }
   }
 
   async getTables() {
@@ -67,14 +81,26 @@ class MySQLDatabaseService {
   async executeQuery(query, values = []) {
     let connection;
     try {
+      console.log('Executing query:', query);
+      console.log('Query values:', values);
+      
       connection = await this.getConnection();
       const [results] = await connection.execute(query, values);
+      
+      console.log('Query executed successfully. Results count:', results.length);
       return results;
     } catch (error) {
-      console.error('Error executing query:', error);
+      console.error('Error executing query:', {
+        error: error.message,
+        query,
+        values
+      });
       throw error;
     } finally {
-      if (connection) connection.release();
+      if (connection) {
+        console.log('Releasing database connection');
+        connection.release();
+      }
     }
   }
 

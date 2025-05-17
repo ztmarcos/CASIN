@@ -193,12 +193,12 @@ const TestGPT = () => {
         insuranceType: tableData?.data[0]?.tipo || 'Seguro',
         startDate: new Date().toLocaleDateString('es-MX'),
         coverage: tableData?.data[0]?.cobertura || 'Por definir',
-        insuranceCompany: 'Cambiando Historias',
+        insuranceCompany: 'CASIN Seguros',
         emergencyPhone: '800-123-4567',
-        supportEmail: 'soporte@cambiandohistorias.com.mx',
+        supportEmail: 'soporte@casinseguros.com.mx',
         policyUrl: '#',
         companyAddress: 'Av. Reforma 123, CDMX, México',
-        companyName: 'Cambiando Historias',
+        companyName: 'CASIN Seguros',
         currentYear: new Date().getFullYear(),
         gptResponse: response
       });

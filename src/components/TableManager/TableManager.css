@@ -99,11 +99,16 @@
   cursor: pointer;
   border-radius: 3px;
   transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.table-item:hover .action-btn {
+  opacity: 1;
 }
 
 .action-btn:hover {
   background: #e0e0e0;
-  color: #333;
+  color: #000;
 }
 
 .edit-btn:hover {
@@ -280,12 +285,17 @@
 }
 
 [data-theme='dark'] .action-btn {
-  color: #D1D5DB;
+  color: #666;
+  opacity: 0;
+}
+
+[data-theme='dark'] .table-item:hover .action-btn {
+  opacity: 1;
 }
 
 [data-theme='dark'] .action-btn:hover {
-  background: #374151;
-  color: #F3F4F6;
+  background: #2a2a2a;
+  color: #000;
 }
 
 [data-theme='dark'] .edit-btn:hover {

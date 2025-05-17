@@ -22,6 +22,48 @@ router.get('/test-connection', async (req, res) => {
     }
 });
 
+// Detailed test email configuration
+router.get('/test-detailed', async (req, res) => {
+    try {
+        console.log('Testing email configuration with detailed logging...');
+        console.log('Environment variables:', {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT,
+            user: process.env.SMTP_USER,
+            // Not logging password for security
+        });
+        
+        await emailService.sendTestEmail();
+        res.json({ 
+            success: true, 
+            message: 'Email test successful',
+            config: {
+                host: process.env.SMTP_HOST,
+                port: process.env.SMTP_PORT,
+                user: process.env.SMTP_USER,
+                secure: false
+            }
+        });
+    } catch (error) {
+        console.error('Detailed email test failed:', {
+            message: error.message,
+            code: error.code,
+            command: error.command,
+            response: error.response,
+            stack: error.stack
+        });
+        res.status(500).json({ 
+            error: 'Email test failed',
+            details: {
+                message: error.message,
+                code: error.code,
+                command: error.command,
+                response: error.response
+            }
+        });
+    }
+});
+
 // Send welcome email
 router.post('/send-welcome', async (req, res) => {
     try {
@@ -36,8 +78,8 @@ router.post('/send-welcome', async (req, res) => {
             policyNumber: data.numero_poliza || data.poliza,
             coverage: data.cobertura,
             emergencyPhone: process.env.EMERGENCY_PHONE || '800-123-4567',
-            supportEmail: process.env.SUPPORT_EMAIL || 'soporte@cambiandohistorias.com.mx',
-            companyName: process.env.COMPANY_NAME || 'Cambiando Historias',
+            supportEmail: process.env.SUPPORT_EMAIL || 'soporte@casinseguros.com.mx',
+            companyName: process.env.COMPANY_NAME || 'CASIN Seguros',
             companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México'
         });
         
@@ -66,9 +108,6 @@ router.post('/report', async (req, res) => {
         // Send individual emails to each policy holder
         const emailPromises = policies.map(async (policy) => {
             try {
-                // Temporarily override email to ztmarcos@gmail.com for testing
-                const testEmail = 'ztmarcos@gmail.com';
-                
                 const emailContent = `
                     <h2>Recordatorio de ${reportType}</h2>
                     <p>Estimado/a ${policy.contratante},</p>
@@ -85,12 +124,16 @@ router.post('/report', async (req, res) => {
                         }
                     </ul>
                     <p>Por favor, póngase en contacto con nosotros para más información.</p>
-                    <p><small>Email original destinado a: ${policy.email || 'No disponible'}</small></p>
                 `;
 
-                console.log(`Sending email for policy ${policy.numero_poliza} to ${testEmail}`);
+                if (!policy.email) {
+                    console.log(`No email address available for policy ${policy.numero_poliza}`);
+                    return;
+                }
+
+                console.log(`Sending email for policy ${policy.numero_poliza} to ${policy.email}`);
                 await emailService.sendReportEmail(
-                    testEmail,
+                    policy.email,
                     `Recordatorio de ${reportType} - Póliza ${policy.numero_poliza}`,
                     emailContent
                 );

@@ -40,17 +40,21 @@ class BirthdayService {
 
             // Columnas que necesitamos encontrar en cada tabla
             const columnPatterns = {
-                name: ['nombre', 'name', 'contratante', 'asegurado'],
-                email: ['email', 'e_mail', 'correo'],
+                name: ['nombre', 'name', 'contratante', 'asegurado', 'nombre_completo'],
+                email: ['email', 'e_mail', 'correo', 'e-mail'],
                 rfc: ['rfc'],
                 birthdate: ['fecha_nacimiento', 'birth', 'nacimiento', 'birthdate'],
                 policy: ['poliza', 'policy', 'numero_de_poliza', 'n__mero_de_p__liza']
             };
 
+            console.log('Available tables:', tables);
+
             for (const table of tables) {
                 try {
                     const columns = await this.getTableColumns(table);
                     if (!columns) continue;
+
+                    console.log(`Checking table ${table} columns:`, columns);
 
                     // Buscar las columnas necesarias
                     const nameColumn = this.findColumn(columns, columnPatterns.name);
@@ -59,8 +63,19 @@ class BirthdayService {
                     const birthdateColumn = this.findColumn(columns, columnPatterns.birthdate);
                     const policyColumn = this.findColumn(columns, columnPatterns.policy);
 
-                    // Si no encontramos al menos una columna de nombre y RFC, saltamos esta tabla
-                    if (!nameColumn || !rfcColumn) continue;
+                    console.log(`Found columns in ${table}:`, {
+                        nameColumn,
+                        emailColumn,
+                        rfcColumn,
+                        birthdateColumn,
+                        policyColumn
+                    });
+
+                    // Si no encontramos al menos una columna de nombre y RFC o fecha de nacimiento, saltamos esta tabla
+                    if (!nameColumn || (!rfcColumn && !birthdateColumn)) {
+                        console.log(`Skipping table ${table} - missing required columns`);
+                        continue;
+                    }
 
                     const query = `
                         SELECT 
@@ -68,11 +83,13 @@ class BirthdayService {
                             ${nameColumn} as name,
                             ${birthdateColumn ? birthdateColumn + ' as birthdate' : 'NULL as birthdate'},
                             ${emailColumn ? emailColumn + ' as email' : 'NULL as email'},
-                            ${rfcColumn} as rfc,
+                            ${rfcColumn ? rfcColumn + ' as rfc' : 'NULL as rfc'},
                             ${policyColumn ? policyColumn + ' as policy_number' : 'NULL as policy_number'}
                         FROM ${table}`;
 
+                    console.log(`Executing query for table ${table}:`, query);
                     const data = await mysqlDatabase.executeQuery(query, []);
+                    console.log(`Retrieved ${data.length} records from ${table}`);
                     results[table] = data;
                 } catch (error) {
                     console.error(`Error fetching birthdays from ${table}:`, error);
@@ -102,10 +119,13 @@ class BirthdayService {
 
                     if (!birthDate) return null;
 
+                    // Clean and validate email
+                    const email = birthday.email ? birthday.email.trim().toLowerCase() : null;
+
                     return {
                         date: birthDate,
                         name: birthday.name,
-                        email: birthday.email,
+                        email: email,
                         rfc: birthday.rfc,
                         source: birthday.source,
                         details: `Póliza: ${birthday.policy_number || 'N/A'}`,
@@ -121,6 +141,7 @@ class BirthdayService {
                     return a.date.getDate() - b.date.getDate();
                 });
 
+            console.log('Total birthdays found:', allBirthdays.length);
             return allBirthdays;
         } catch (error) {
             console.error('Error getting all birthdays:', error);
@@ -130,38 +151,103 @@ class BirthdayService {
 
     async checkAndSendBirthdayEmails() {
         try {
+            console.log('Starting birthday email check process...');
+            
             // Get today's date in format MM-DD
             const today = new Date();
             const monthDay = `${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            console.log('Checking birthdays for date:', monthDay);
             
             // Get all birthdays
+            console.log('Fetching all birthdays...');
             const allBirthdays = await this.getAllBirthdays();
+            console.log('Total birthdays fetched:', allBirthdays.length);
+            
+            if (!Array.isArray(allBirthdays)) {
+                throw new Error(`Invalid birthdays data: ${JSON.stringify(allBirthdays)}`);
+            }
             
             // Filter for today's birthdays
+            console.log('Filtering birthdays for today...');
             const todaysBirthdays = allBirthdays.filter(birthday => {
+                if (!birthday || !birthday.date) {
+                    console.log('Invalid birthday entry:', birthday);
+                    return false;
+                }
                 const birthMonth = String(birthday.date.getMonth() + 1).padStart(2, '0');
                 const birthDay = String(birthday.date.getDate()).padStart(2, '0');
-                return `${birthMonth}-${birthDay}` === monthDay;
+                const birthdayDate = `${birthMonth}-${birthDay}`;
+                console.log(`Comparing birthday ${birthdayDate} with today ${monthDay} for ${birthday.name}`);
+                return birthdayDate === monthDay;
             });
             
+            console.log('Found birthdays for today:', todaysBirthdays.length);
+            console.log('Birthday details:', JSON.stringify(todaysBirthdays, null, 2));
+            
+            if (todaysBirthdays.length === 0) {
+                console.log('No birthdays found for today');
+                return {
+                    success: true,
+                    emailsSent: 0,
+                    message: 'No birthdays found for today'
+                };
+            }
+            
             // Send emails to each birthday person
+            let emailsSent = 0;
+            const emailResults = [];
+            
             for (const person of todaysBirthdays) {
-                if (person.email) {
+                if (!person.email) {
+                    console.log(`Skipping ${person.name} - no email address available`);
+                    emailResults.push({
+                        name: person.name,
+                        status: 'skipped',
+                        reason: 'No email address'
+                    });
+                    continue;
+                }
+                
+                console.log(`Attempting to send email to ${person.name} (${person.email})`);
+                try {
                     await emailService.sendBirthdayEmail(person.email, {
                         nombre: person.name,
-                        companyName: process.env.COMPANY_NAME || 'Cambiando Historias',
+                        companyName: process.env.COMPANY_NAME || 'CASIN Seguros',
                         companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México'
                     });
-                    console.log(`Birthday email sent to ${person.name} (${person.email})`);
+                    console.log(`Successfully sent birthday email to ${person.name} (${person.email})`);
+                    emailsSent++;
+                    emailResults.push({
+                        name: person.name,
+                        email: person.email,
+                        status: 'success'
+                    });
+                } catch (emailError) {
+                    console.error(`Failed to send email to ${person.name} (${person.email}):`, emailError);
+                    emailResults.push({
+                        name: person.name,
+                        email: person.email,
+                        status: 'failed',
+                        error: emailError.message
+                    });
                 }
             }
             
-            return {
+            const result = {
                 success: true,
-                emailsSent: todaysBirthdays.length
+                emailsSent,
+                totalBirthdays: todaysBirthdays.length,
+                details: emailResults
             };
+            
+            console.log('Birthday email process complete:', result);
+            return result;
         } catch (error) {
-            console.error('Error in birthday service:', error);
+            console.error('Error in birthday service:', {
+                message: error.message,
+                stack: error.stack,
+                cause: error.cause
+            });
             throw error;
         }
     }
