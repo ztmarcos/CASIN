@@ -337,13 +337,37 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       
-      // Clean numeric values
-      if (typeof value === 'string' && !isNaN(value)) {
-        value = parseFloat(value);
+      // Get column type
+      const [columnInfo] = await connection.execute(
+        `SHOW COLUMNS FROM \`${tableName}\` WHERE Field = ?`,
+        [column]
+      );
+      
+      let processedValue = value;
+      
+      // Handle different data types
+      if (columnInfo && columnInfo[0]) {
+        const columnType = columnInfo[0].Type.toUpperCase();
+        
+        // Handle numeric values
+        if (typeof value === 'string' && !isNaN(value) && 
+            (columnType.includes('INT') || columnType.includes('DECIMAL') || columnType.includes('FLOAT'))) {
+          processedValue = parseFloat(value);
+        }
+        
+        // Handle date values
+        if (columnType.includes('DATE') && typeof value === 'string') {
+          // Check if the value is in DD/MM/YYYY format
+          const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+          if (dateMatch) {
+            // Keep the DD/MM/YYYY format as is, since we're using VARCHAR for dates
+            processedValue = value;
+          }
+        }
       }
       
-      const query = `UPDATE ${tableName} SET ${column} = ? WHERE id = ?`;
-      const [result] = await connection.execute(query, [value, id]);
+      const query = `UPDATE \`${tableName}\` SET \`${column}\` = ? WHERE id = ?`;
+      const [result] = await connection.execute(query, [processedValue, id]);
       
       return {
         success: true,

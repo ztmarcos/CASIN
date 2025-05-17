@@ -174,10 +174,18 @@ router.patch('/tables/:tableName/columns/:columnName/rename', async (req, res) =
     if (!columnInfo) {
       return res.status(404).json({ error: 'Column not found' });
     }
+
+    // Clean the new name to match MySQL naming conventions
+    const cleanNewName = newName.toLowerCase()
+      .normalize('NFD')
+      .replace(/[\\u0300-\\u036f]/g, '')
+      .replace(/[^a-z0-9_]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
     
     // Rename column while preserving its type
     await mysqlDatabase.executeQuery(
-      `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${newName}\` ${columnInfo.Type}`,
+      `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${cleanNewName}\` ${columnInfo.Type}`,
       []
     );
     
@@ -465,8 +473,33 @@ router.patch('/tables/:tableName/columns/:columnName/type', async (req, res) => 
     if (!tableName || !columnName || !type) {
       return res.status(400).json({ error: 'Table name, column name, and type are required' });
     }
+
+    // For date type, we'll use VARCHAR to store DD/MM/YYYY format
+    if (type.toUpperCase() === 'DATE') {
+      try {
+        // Convert column to VARCHAR to store dates in DD/MM/YYYY format
+        await mysqlDatabase.executeQuery(
+          `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` VARCHAR(10)`,
+          []
+        );
+
+        // Ensure all dates are in DD/MM/YYYY format
+        await mysqlDatabase.executeQuery(
+          `UPDATE \`${tableName}\` 
+           SET \`${columnName}\` = DATE_FORMAT(STR_TO_DATE(\`${columnName}\`, '%d/%m/%Y'), '%d/%m/%Y')
+           WHERE \`${columnName}\` REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'`,
+          []
+        );
+
+        res.json({ success: true, message: `Column type updated successfully` });
+        return;
+      } catch (error) {
+        console.error('Error converting date format:', error);
+        throw error;
+      }
+    }
     
-    // Execute the ALTER TABLE command
+    // For non-DATE types, just execute the ALTER TABLE command
     await mysqlDatabase.executeQuery(
       `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${type}`,
       []
