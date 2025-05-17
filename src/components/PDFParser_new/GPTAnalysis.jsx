@@ -163,6 +163,13 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
             
             setMessage('Data inserted successfully');
             setError(null);
+
+            // Emit a custom event to notify other components
+            const event = new CustomEvent('policyDataUpdated', {
+                detail: { table: selectedTable }
+            });
+            window.dispatchEvent(event);
+
         } catch (err) {
             console.error('Error inserting data:', err);
             setError(err.message || 'Failed to insert data');

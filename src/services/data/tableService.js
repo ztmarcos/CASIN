@@ -661,6 +661,40 @@ class TableService {
       throw new Error(error.response?.data?.message || 'Error al crear el grupo de tablas');
     }
   }
+
+  // Modified getAllTables method to use API instead of direct DB connection
+  async getAllTables() {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const tables = await response.json();
+      return tables
+        .filter(table => 
+          table.name.toLowerCase().includes('gmm') || 
+          table.name.toLowerCase().includes('auto')
+        )
+        .map(table => table.name);
+    } catch (error) {
+      console.error('Error getting tables:', error);
+      throw error;
+    }
+  }
+
+  // Modified getData method to use existing API method
+  async getData(tableName) {
+    try {
+      const response = await fetch(`${this.apiUrl}/${tableName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error(`Error getting data from ${tableName}:`, error);
+      throw error;
+    }
+  }
 }
 
 const tableService = new TableService();

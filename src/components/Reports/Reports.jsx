@@ -79,48 +79,54 @@ export default function Reports() {
     if (source === 'gmm') {
       const normalized = {
         id: policy.id,
-        numero_poliza: policy.n__mero_de_p__liza,
-        contratante: policy.contratante,
-        asegurado: policy.nombre_del_asegurado,
+        numero_poliza: policy.n__mero_de_p__liza || policy.numero_de_poliza || policy.numero_poliza,
+        contratante: policy.contratante || policy.nombre_contratante,
+        asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
         rfc: policy.rfc,
         email: policy.e_mail || policy.email,
-        fecha_inicio: policy.vigencia__inicio_,
-        fecha_fin: policy.vigencia__fin_,
+        fecha_inicio: policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
+        fecha_fin: policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia,
         prima_neta: parseFloat(policy.prima_neta || 0),
-        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || 0),
-        derecho_poliza: parseFloat(policy.derecho_de_p__liza || 0),
+        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0),
+        derecho_poliza: parseFloat(policy.derecho_de_p__liza || policy.derecho_de_poliza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
-        iva: parseFloat(policy.i_v_a__16_ || 0),
-        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.importe_total_a_pagar || 0),
-        forma_pago: policy.forma_de_pago,
+        iva: parseFloat(policy.i_v_a__16_ || policy.i_v_a || 0),
+        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0),
+        forma_pago: policy.forma_de_pago || policy.forma_pago,
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
         aseguradora: policy.aseguradora,
-        fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia__inicio_, policy.forma_de_pago),
+        fecha_proximo_pago: calculateNextPaymentDate(
+          policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
+          policy.forma_de_pago || policy.forma_pago
+        ),
         ramo: 'GMM'
       };
       return normalized;
     } else if (source === 'autos') {
       const normalized = {
         id: policy.id,
-        numero_poliza: policy.numero_de_poliza,
-        contratante: policy.nombre_contratante,
-        asegurado: policy.nombre_contratante,
+        numero_poliza: policy.numero_de_poliza || policy.numero_poliza,
+        contratante: policy.nombre_contratante || policy.contratante,
+        asegurado: policy.nombre_contratante || policy.contratante,
         rfc: policy.rfc,
         email: policy.e_mail || policy.email,
-        fecha_inicio: policy.vigencia_inicio,
-        fecha_fin: policy.vigencia_fin,
+        fecha_inicio: policy.vigencia_inicio || policy.desde_vigencia,
+        fecha_fin: policy.vigencia_fin || policy.hasta_vigencia,
         prima_neta: parseFloat(policy.prima_neta || 0),
         prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.pago_total_o_prima_total || 0),
         derecho_poliza: parseFloat(policy.derecho_de_poliza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
         iva: parseFloat(policy.i_v_a || 0),
         pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.pago_total_o_prima_total || 0),
-        forma_pago: policy.forma_de_pago,
+        forma_pago: policy.forma_de_pago || policy.forma_pago,
         pagos_fraccionados: null,
         pago_parcial: null,
         aseguradora: policy.aseguradora,
-        fecha_proximo_pago: calculateNextPaymentDate(policy.vigencia_inicio, policy.forma_de_pago),
+        fecha_proximo_pago: calculateNextPaymentDate(
+          policy.vigencia_inicio || policy.desde_vigencia,
+          policy.forma_de_pago || policy.forma_pago
+        ),
         ramo: 'Autos'
       };
       return normalized;
@@ -128,99 +134,205 @@ export default function Reports() {
     return null;
   };
 
-  useEffect(() => {
-    const fetchPolicies = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const [gmmResponse, autosResponse] = await Promise.all([
-          tableService.getData('gmm'),
-          tableService.getData('autos')
-        ]);
+  const matchesSearch = (value, term) => {
+    if (!term.trim()) return true;
+    if (value === null || value === undefined) return false;
 
-        const gmmPolicies = (gmmResponse.data || [])
-          .map(policy => normalizePolicy(policy, 'gmm'))
-          .filter(Boolean);
-        
-        const autosPolicies = (autosResponse.data || [])
-          .map(policy => normalizePolicy(policy, 'autos'))
-          .filter(Boolean);
-
-        setPolicies([...gmmPolicies, ...autosPolicies]);
-      } catch (err) {
-        console.error('Error fetching policies:', err);
-        setError('Failed to load policies data');
-      } finally {
-        setIsLoading(false);
-      }
+    // Normalize both the search term and the value for comparison
+    const normalizeText = (text) => {
+      return text.toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+        .replace(/[^a-z0-9\s]/g, '') // Remove special characters except spaces
+        .trim();
     };
 
+    // Split search term into words for more flexible matching
+    const searchTerms = normalizeText(term).split(/\s+/);
+    let normalizedValue;
+
+    // Handle different types of values
+    if (value instanceof Date) {
+      normalizedValue = normalizeText(formatDate(value));
+    } else if (typeof value === 'number') {
+      normalizedValue = normalizeText(value.toString());
+    } else {
+      normalizedValue = normalizeText(String(value));
+    }
+
+    // Match if ALL search terms are found in the value
+    return searchTerms.every(term => normalizedValue.includes(term));
+  };
+
+  const fetchPolicies = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Get all available tables
+      const tables = await tableService.getTables();
+      console.log('All available tables:', tables);
+
+      // Get data from all tables that contain policy data (including historical)
+      const policyTables = tables.filter(table => 
+        table.name.toLowerCase().includes('gmm') || 
+        table.name.toLowerCase().includes('auto') ||
+        table.name.toLowerCase().includes('poliza') ||
+        table.name.toLowerCase().includes('policy')
+      );
+      console.log('Policy-related tables found:', policyTables.map(t => t.name));
+
+      // Fetch data from all policy tables
+      const allResponses = await Promise.all(
+        policyTables.map(async (table) => {
+          try {
+            const response = await tableService.getData(table.name);
+            console.log(`Data from ${table.name}:`, {
+              count: response.data?.length || 0,
+              sample: response.data?.[0]
+            });
+            return { tableName: table.name, data: response.data || [] };
+          } catch (error) {
+            console.error(`Error fetching from ${table.name}:`, error);
+            return { tableName: table.name, data: [] };
+          }
+        })
+      );
+
+      // Process all responses with better error handling and logging
+      const allPolicies = allResponses.flatMap(({ tableName, data }) => {
+        const policyType = tableName.toLowerCase().includes('gmm') ? 'gmm' : 'autos';
+        
+        const policies = data
+          .map(policy => {
+            try {
+              const normalized = normalizePolicy(policy, policyType);
+              if (!normalized) {
+                console.warn(`Failed to normalize policy from ${tableName}:`, policy);
+                return null;
+              }
+              return {
+                ...normalized,
+                sourceTable: tableName // Add source table for debugging
+              };
+            } catch (error) {
+              console.error(`Error normalizing policy from ${tableName}:`, policy, error);
+              return null;
+            }
+          })
+          .filter(Boolean);
+
+        console.log(`Processed ${policies.length} policies from ${tableName}`);
+        return policies;
+      });
+
+      // Improved duplicate detection
+      const uniquePolicies = allPolicies.reduce((acc, policy) => {
+        const key = `${policy.numero_poliza}_${policy.ramo}`;
+        if (!acc[key] || new Date(policy.fecha_inicio) > new Date(acc[key].fecha_inicio)) {
+          acc[key] = policy;
+        }
+        return acc;
+      }, {});
+
+      const finalPolicies = Object.values(uniquePolicies);
+
+      console.log('Final policies count:', {
+        total: allPolicies.length,
+        unique: finalPolicies.length,
+        byType: finalPolicies.reduce((acc, p) => {
+          acc[p.ramo] = (acc[p.ramo] || 0) + 1;
+          return acc;
+        }, {}),
+        bySource: finalPolicies.reduce((acc, p) => {
+          acc[p.sourceTable] = (acc[p.sourceTable] || 0) + 1;
+          return acc;
+        }, {})
+      });
+
+      setPolicies(finalPolicies);
+    } catch (err) {
+      console.error('Error fetching policies:', err);
+      setError('Failed to load policies data');
+      toast.error('Error al cargar los datos de pólizas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add back the initial data fetch
+  useEffect(() => {
+    console.log('Initial data fetch starting...');
     fetchPolicies();
   }, []);
 
-  // Helper function to check if a value matches the search term
-  const matchesSearch = (value, term) => {
-    if (!term.trim()) return true;
-    if (!value) return false;
-    return value.toString().toLowerCase().includes(term.toLowerCase());
-  };
+  // Add the policy update listener
+  useEffect(() => {
+    const handlePolicyUpdate = () => {
+      console.log('Policy update detected, refreshing data...');
+      fetchPolicies();
+    };
+
+    window.addEventListener('policyDataUpdated', handlePolicyUpdate);
+    return () => window.removeEventListener('policyDataUpdated', handlePolicyUpdate);
+  }, []);
 
   useEffect(() => {
-    const currentDate = new Date();
+    if (!policies.length) return;
+
+    console.log('Filtering policies...');
+    console.log('Search term:', searchTerm);
+    console.log('Selected month:', selectedMonth);
+    console.log('Selected type:', selectedType);
+    console.log('Total policies:', policies.length);
     
-    const filtered = policies.filter(policy => {
-      if (!policy) return false;
+    let filtered = policies;
+    
+    // If there's a search term, only apply search filter
+    if (searchTerm.trim()) {
+      filtered = policies.filter(policy => {
+        if (!policy) return false;
 
-      // Verificación más estricta para forma de pago anual
-      const isAnnualPayment = policy.forma_pago?.toUpperCase().includes('ANUAL') || 
-                             policy.forma_pago?.toUpperCase() === 'ANNUAL' ||
-                             policy.forma_pago?.toUpperCase() === 'YEARLY';
+        return Object.entries(policy).some(([key, value]) => {
+          if (typeof value === 'function' || 
+              (typeof value === 'object' && value !== null && !(value instanceof Date))) {
+            return false;
+          }
 
-      // Si estamos en vista de Cobro y es pago anual, excluir la póliza
-      if (selectedType === 'Cobro' && isAnnualPayment) {
-        return false;
-      }
-
-      if (searchTerm.trim()) {
-        return (
-          matchesSearch(policy.numero_poliza, searchTerm) ||
-          matchesSearch(policy.contratante, searchTerm) ||
-          matchesSearch(policy.asegurado, searchTerm) ||
-          matchesSearch(policy.rfc, searchTerm) ||
-          matchesSearch(policy.aseguradora, searchTerm) ||
-          matchesSearch(policy.forma_pago, searchTerm)
-        );
-      }
-
+          const isMatch = matchesSearch(value, searchTerm);
+          if (isMatch) {
+            console.log('Match found in field:', key, 'value:', value);
+          }
+          return isMatch;
+        });
+      });
+    } else {
+      // Only apply month and type filters if there's no search term
       if (selectedType === 'Vencimientos') {
-        const expiryDate = parseDate(policy.fecha_fin);
-        if (!expiryDate) {
-          console.warn('Invalid or missing date for policy:', policy.numero_poliza, policy.fecha_fin);
-          return false;
-        }
-        return expiryDate.getMonth() === selectedMonth;
-      } else {
-        // Solo procesar pagos parciales para formas de pago no anuales
-        if (isAnnualPayment) return false;
-        const nextPayment = calculateNextPaymentDate(policy.fecha_inicio, policy.forma_pago);
-        return nextPayment && nextPayment.getMonth() === selectedMonth;
+        filtered = filtered.filter(policy => {
+          const endDate = parseDate(policy.fecha_fin);
+          if (!endDate) return false;
+          return endDate.getMonth() === selectedMonth;
+        });
+      } else if (selectedType === 'Pagos Parciales') {
+        filtered = filtered.filter(policy => {
+          const nextPaymentDate = policy.fecha_proximo_pago;
+          if (!nextPaymentDate) return false;
+          return nextPaymentDate.getMonth() === selectedMonth;
+        });
       }
-    });
+    }
 
-    const sortedFiltered = filtered.sort((a, b) => {
-      const dateA = parseDate(a.fecha_fin);
-      const dateB = parseDate(b.fecha_fin);
-      if (!dateA || !dateB) return 0;
-      return dateA - dateB;
-    });
-
-    console.log('Filtered policies:', sortedFiltered.map(p => ({
+    console.log('Filtered policies count:', filtered.length);
+    console.log('Filtered policies:', filtered.map(p => ({
       numero_poliza: p.numero_poliza,
       fecha_fin: p.fecha_fin,
-      parsed_date: parseDate(p.fecha_fin)
+      fecha_proximo_pago: p.fecha_proximo_pago,
+      type: selectedType,
+      searchApplied: !!searchTerm.trim()
     })));
 
-    setFilteredPolicies(sortedFiltered);
+    setFilteredPolicies(filtered);
   }, [selectedMonth, selectedType, policies, searchTerm]);
 
   const handleSendEmail = async () => {
@@ -403,33 +515,31 @@ export default function Reports() {
         </div>
       ) : isStatusLoading ? (
         <div className="loading-message">Cargando estados de pólizas...</div>
-      ) : viewMode === 'table' ? (
-        <div className="table-container">
-          <table className="reports-table">
-            <thead>
-              <tr>
-                <th>Ramo</th>
-                <th>Póliza</th>
-                <th>Contratante</th>
-                <th>Email</th>
-                <th>Aseguradora</th>
-                <th>Fecha Inicio</th>
-                <th>Fecha Fin</th>
-                <th>Prima Total</th>
-                <th>Forma de Pago</th>
-                <th>Próximo Pago</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPolicies.length === 0 ? (
+      ) : (
+        <div className={viewMode === 'table' ? 'table-container' : 'cards-grid'}>
+          {filteredPolicies.length === 0 ? (
+            <div className="no-data">
+              No se encontraron pólizas
+            </div>
+          ) : viewMode === 'table' ? (
+            <table className="reports-table">
+              <thead>
                 <tr>
-                  <td colSpan={11} className="no-data">
-                    No se encontraron pólizas
-                  </td>
+                  <th>Ramo</th>
+                  <th>Póliza</th>
+                  <th>Contratante</th>
+                  <th>Email</th>
+                  <th>Aseguradora</th>
+                  <th>Fecha Inicio</th>
+                  <th>Fecha Fin</th>
+                  <th>Prima Total</th>
+                  <th>Forma de Pago</th>
+                  <th>Próximo Pago</th>
+                  <th>Status</th>
                 </tr>
-              ) : (
-                filteredPolicies.map(policy => (
+              </thead>
+              <tbody>
+                {filteredPolicies.map(policy => (
                   <tr key={`${policy.id}-${policy.numero_poliza}`}>
                     <td>{policy.ramo}</td>
                     <td>{policy.numero_poliza}</td>
@@ -438,7 +548,7 @@ export default function Reports() {
                     <td>{policy.aseguradora}</td>
                     <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
                     <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
-                    <td>${policy.prima_total.toLocaleString()}</td>
+                    <td>${policy.prima_total?.toLocaleString() || '0'}</td>
                     <td>{policy.forma_pago}</td>
                     <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                     <td>
@@ -450,17 +560,9 @@ export default function Reports() {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="cards-grid">
-          {filteredPolicies.length === 0 ? (
-            <div className="no-data">
-              No se encontraron pólizas
-            </div>
+                ))}
+              </tbody>
+            </table>
           ) : (
             filteredPolicies.map(policy => (
               <div 
@@ -492,14 +594,12 @@ export default function Reports() {
                   </div>
                   <div className="card-details">
                     {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
-                      // Información básica cuando no está expandida
                       <>
                         <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
-                        <p><span>Prima Total:</span> ${policy.prima_total.toLocaleString()}</p>
+                        <p><span>Prima Total:</span> ${policy.prima_total?.toLocaleString() || '0'}</p>
                         <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
                       </>
                     ) : (
-                      // Información completa cuando está expandida
                       <>
                         <p><span>Email:</span> {policy.email || 'No disponible'}</p>
                         <p><span>RFC:</span> {policy.rfc || 'No disponible'}</p>
@@ -509,16 +609,16 @@ export default function Reports() {
                         <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
                         <div className="card-section">
                           <h4>Información de Pagos</h4>
-                          <p><span>Prima Neta:</span> ${policy.prima_neta.toLocaleString()}</p>
-                          <p><span>Derecho de Póliza:</span> ${policy.derecho_poliza.toLocaleString()}</p>
-                          <p><span>Recargo por Pago Fraccionado:</span> ${policy.recargo_pago_fraccionado.toLocaleString()}</p>
-                          <p><span>IVA:</span> ${policy.iva.toLocaleString()}</p>
-                          <p className="card-amount"><span>Prima Total:</span> ${policy.pago_total.toLocaleString()}</p>
+                          <p><span>Prima Neta:</span> ${policy.prima_neta?.toLocaleString() || '0'}</p>
+                          <p><span>Derecho de Póliza:</span> ${policy.derecho_poliza?.toLocaleString() || '0'}</p>
+                          <p><span>Recargo por Pago Fraccionado:</span> ${policy.recargo_pago_fraccionado?.toLocaleString() || '0'}</p>
+                          <p><span>IVA:</span> ${policy.iva?.toLocaleString() || '0'}</p>
+                          <p className="card-amount"><span>Prima Total:</span> ${policy.pago_total?.toLocaleString() || '0'}</p>
                           {policy.pagos_fraccionados && (
                             <p><span>Pagos Fraccionados:</span> {policy.pagos_fraccionados}</p>
                           )}
                           {policy.pago_parcial && (
-                            <p><span>Pago Parcial:</span> ${policy.pago_parcial.toLocaleString()}</p>
+                            <p><span>Pago Parcial:</span> ${policy.pago_parcial?.toLocaleString()}</p>
                           )}
                           <p><span>Próximo Pago:</span> {policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago) : 'N/A'}</p>
                         </div>
