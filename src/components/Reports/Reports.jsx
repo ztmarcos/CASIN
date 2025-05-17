@@ -77,6 +77,7 @@ export default function Reports() {
 
   const normalizePolicy = (policy, source) => {
     if (source === 'gmm') {
+      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0);
       const normalized = {
         id: policy.id,
         numero_poliza: policy.n__mero_de_p__liza || policy.numero_de_poliza || policy.numero_poliza,
@@ -86,16 +87,16 @@ export default function Reports() {
         email: policy.e_mail || policy.email,
         fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
         fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
-        prima_neta: parseFloat(policy.prima_neta || 0),
-        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0),
+        prima_neta: primaTotal,
+        prima_total: primaTotal,
         derecho_poliza: parseFloat(policy.derecho_de_p__liza || policy.derecho_de_poliza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
         iva: parseFloat(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16 || 0),
-        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0),
-        forma_pago: policy.forma_de_pago || policy.forma_pago,
+        pago_total: primaTotal,
+        forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
-        aseguradora: policy.aseguradora,
+        aseguradora: policy.aseguradora || 'No especificada',
         fecha_proximo_pago: calculateNextPaymentDate(
           policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
           policy.forma_de_pago || policy.forma_pago
@@ -104,6 +105,7 @@ export default function Reports() {
       };
       return normalized;
     } else if (source === 'autos') {
+      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.pago_total_o_prima_total || 0);
       const normalized = {
         id: policy.id,
         numero_poliza: policy.numero_de_poliza || policy.numero_poliza,
@@ -113,16 +115,16 @@ export default function Reports() {
         email: policy.e_mail || policy.email,
         fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio || policy.desde_vigencia,
         fecha_fin: policy.fecha_fin || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
-        prima_neta: parseFloat(policy.prima_neta || 0),
-        prima_total: parseFloat(policy.prima_total || policy.pago_total || policy.pago_total_o_prima_total || 0),
+        prima_neta: primaTotal,
+        prima_total: primaTotal,
         derecho_poliza: parseFloat(policy.derecho_de_poliza || 0),
         recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
         iva: parseFloat(policy.i_v_a || policy.iva_16 || 0),
-        pago_total: parseFloat(policy.pago_total || policy.prima_total || policy.pago_total_o_prima_total || 0),
-        forma_pago: policy.forma_de_pago || policy.forma_pago,
+        pago_total: primaTotal,
+        forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
         pagos_fraccionados: null,
         pago_parcial: null,
-        aseguradora: policy.aseguradora,
+        aseguradora: policy.aseguradora || 'No especificada',
         fecha_proximo_pago: calculateNextPaymentDate(
           policy.fecha_inicio || policy.vigencia_inicio || policy.desde_vigencia,
           policy.forma_de_pago || policy.forma_pago
@@ -130,8 +132,76 @@ export default function Reports() {
         ramo: 'Autos'
       };
       return normalized;
+    } else if (source === 'mascotas') {
+      // Special handling for mascotas table
+      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || 0);
+      console.log('Normalizing mascota policy:', {
+        raw: policy,
+        paymentField: policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago
+      });
+      
+      return {
+        id: policy.id,
+        numero_poliza: policy.numero_poliza || policy.id,
+        contratante: policy.contratante || policy.nombre || policy.nombre_contratante,
+        asegurado: policy.asegurado || policy.nombre || policy.nombre_contratante,
+        rfc: policy.rfc,
+        email: policy.email || policy.e_mail,
+        fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio,
+        fecha_fin: policy.fecha_fin || policy.vigencia_fin,
+        prima_neta: primaTotal,
+        prima_total: primaTotal,
+        forma_pago: policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago || 'No especificado',
+        aseguradora: policy.aseguradora || 'No especificada',
+        fecha_proximo_pago: calculateNextPaymentDate(
+          policy.fecha_inicio || policy.vigencia_inicio,
+          policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago
+        ),
+        ramo: 'mascotas'
+      };
+    } else {
+      // Handle other table types including mascotas
+      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || 0);
+      
+      // Debug log for mascotas table
+      if (tableName.toLowerCase().includes('mascota')) {
+        console.log('Mascotas policy data:', {
+          original: policy,
+          forma_pago_fields: {
+            FORMA_DE_PAGO: policy.FORMA_DE_PAGO,
+            forma_de_pago: policy.forma_de_pago,
+            forma_pago: policy.forma_pago
+          }
+        });
+      }
+
+      const normalized = {
+        id: policy.id,
+        numero_poliza: policy.numero_poliza || policy.id,
+        contratante: policy.contratante || policy.nombre || policy.nombre_contratante,
+        asegurado: policy.asegurado || policy.nombre || policy.nombre_contratante,
+        rfc: policy.rfc,
+        email: policy.email || policy.e_mail,
+        fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio,
+        fecha_fin: policy.fecha_fin || policy.vigencia_fin,
+        prima_neta: primaTotal,
+        prima_total: primaTotal,
+        forma_pago: policy.FORMA_DE_PAGO || policy.forma_de_pago || policy.forma_pago || 'No especificado',
+        aseguradora: policy.aseguradora || 'No especificada',
+        fecha_proximo_pago: calculateNextPaymentDate(
+          policy.fecha_inicio || policy.vigencia_inicio,
+          policy.FORMA_DE_PAGO || policy.forma_de_pago || policy.forma_pago
+        ),
+        ramo: tableName
+      };
+
+      // Debug log for normalized data
+      if (tableName.toLowerCase().includes('mascota')) {
+        console.log('Normalized mascotas data:', normalized);
+      }
+
+      return normalized;
     }
-    return null;
   };
 
   const matchesSearch = (value, term) => {
@@ -185,10 +255,15 @@ export default function Reports() {
         tables.map(async (table) => {
           try {
             const response = await tableService.getData(table.name);
-            console.log(`Data from ${table.name}:`, {
-              count: response.data?.length || 0,
-              sample: response.data?.[0]
-            });
+            // Add specific debug logging for mascotas table
+            if (table.name.toLowerCase().includes('mascota')) {
+              console.log('Mascotas table data:', {
+                tableName: table.name,
+                columnNames: response.data?.[0] ? Object.keys(response.data[0]).sort() : [],
+                sampleRow: response.data?.[0],
+                allRows: response.data
+              });
+            }
             return { tableName: table.name, data: response.data || [] };
           } catch (error) {
             console.error(`Error fetching from ${table.name}:`, error);
@@ -199,6 +274,14 @@ export default function Reports() {
 
       // Process all responses with better error handling and logging
       const allPolicies = allResponses.flatMap(({ tableName, data }) => {
+        // Add debug logging for mascotas normalization
+        if (tableName.toLowerCase().includes('mascota')) {
+          console.log('Processing mascotas data:', {
+            beforeNormalization: data,
+            tableName
+          });
+        }
+
         // Determine the type based on table name or data structure
         let policyType = 'other';
         if (tableName.toLowerCase().includes('gmm')) policyType = 'gmm';
@@ -212,34 +295,23 @@ export default function Reports() {
               if (policyType === 'gmm' || policyType === 'autos') {
                 normalized = normalizePolicy(policy, policyType);
               } else {
+                // For mascotas table, log the raw policy data before normalization
+                if (tableName.toLowerCase().includes('mascota')) {
+                  console.log('Raw mascota policy before normalization:', {
+                    id: policy.id,
+                    allFields: policy,
+                    paymentFields: {
+                      FORMA_DE_PAGO: policy.FORMA_DE_PAGO,
+                      forma_de_pago: policy.forma_de_pago,
+                      formaPago: policy.formaPago,
+                      forma_pago: policy.forma_pago
+                    }
+                  });
+                }
                 // Handle other table types including mascotas
-                normalized = {
-                  id: policy.id,
-                  numero_poliza: policy.numero_poliza || policy.id,
-                  contratante: policy.contratante || policy.nombre || policy.nombre_contratante,
-                  asegurado: policy.asegurado || policy.nombre || policy.nombre_contratante,
-                  rfc: policy.rfc,
-                  email: policy.email || policy.e_mail,
-                  fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio,
-                  fecha_fin: policy.fecha_fin || policy.vigencia_fin,
-                  prima_total: parseFloat(policy.prima_total || policy.pago_total || 0),
-                  forma_pago: policy.forma_pago || 'No especificado',
-                  aseguradora: policy.aseguradora || 'No especificada',
-                  fecha_proximo_pago: calculateNextPaymentDate(
-                    policy.fecha_inicio || policy.vigencia_inicio,
-                    policy.forma_pago
-                  ),
-                  ramo: tableName
-                };
+                normalized = normalizePolicy(policy, policyType);
               }
-              if (!normalized) {
-                console.warn(`Failed to normalize policy from ${tableName}:`, policy);
-                return null;
-              }
-              return {
-                ...normalized,
-                sourceTable: tableName
-              };
+              return normalized;
             } catch (error) {
               console.error(`Error normalizing policy from ${tableName}:`, policy, error);
               return null;
@@ -247,7 +319,13 @@ export default function Reports() {
           })
           .filter(Boolean);
 
-        console.log(`Processed ${policies.length} policies from ${tableName}`);
+        if (tableName.toLowerCase().includes('mascota')) {
+          console.log('After normalization mascotas:', {
+            normalizedPolicies: policies,
+            count: policies.length
+          });
+        }
+
         return policies;
       });
 
@@ -362,24 +440,51 @@ export default function Reports() {
 
   const handleSendEmail = async () => {
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
+    const thirtyDaysFromNow = new Date(today);
+    thirtyDaysFromNow.setDate(today.getDate() + 30);
     
-    // Filter policies that are due today with proper date validation
+    const fourteenDaysFromNow = new Date(today);
+    fourteenDaysFromNow.setDate(today.getDate() + 14);
+    
+    console.log('Checking policies with dates:', {
+      today: today.toISOString(),
+      thirtyDaysFromNow: thirtyDaysFromNow.toISOString(),
+      fourteenDaysFromNow: fourteenDaysFromNow.toISOString()
+    });
+    
+    // Filter policies based on type and date range
     const duePolicies = filteredPolicies.filter(policy => {
       try {
-        if (!policy.fecha_fin) {
-          console.warn('Missing fecha_fin for policy:', policy.numero_poliza);
-          return false;
-        }
-        
-        const policyDate = parseDate(policy.fecha_fin);
-        if (!policyDate || isNaN(policyDate.getTime())) {
-          console.warn('Invalid fecha_fin for policy:', policy.numero_poliza, policy.fecha_fin);
-          return false;
-        }
+        if (selectedType === 'Vencimientos') {
+          if (!policy.fecha_fin) {
+            console.log('Missing fecha_fin for policy:', policy.numero_poliza);
+            return false;
+          }
+          
+          const policyEndDate = parseDate(policy.fecha_fin);
+          if (!policyEndDate || isNaN(policyEndDate.getTime())) {
+            console.log('Invalid fecha_fin for policy:', policy.numero_poliza, policy.fecha_fin);
+            return false;
+          }
 
-        const policyDateStr = policyDate.toISOString().split('T')[0];
-        return policyDateStr === todayStr;
+          // Check if policy expires within the next 30 days
+          return policyEndDate >= today && policyEndDate <= thirtyDaysFromNow;
+        } else {
+          // Pagos Parciales
+          if (!policy.fecha_proximo_pago) {
+            console.log('Missing fecha_proximo_pago for policy:', policy.numero_poliza);
+            return false;
+          }
+
+          const nextPaymentDate = policy.fecha_proximo_pago;
+          if (!nextPaymentDate || isNaN(nextPaymentDate.getTime())) {
+            console.log('Invalid fecha_proximo_pago for policy:', policy.numero_poliza, policy.fecha_proximo_pago);
+            return false;
+          }
+
+          // Check if next payment is due within the next 14 days
+          return nextPaymentDate >= today && nextPaymentDate <= fourteenDaysFromNow;
+        }
       } catch (error) {
         console.error('Error processing policy date:', policy.numero_poliza, error);
         return false;
@@ -389,13 +494,16 @@ export default function Reports() {
     console.log('Due policies:', duePolicies.map(p => ({
       numero_poliza: p.numero_poliza,
       fecha_fin: p.fecha_fin,
-      parsed_date: parseDate(p.fecha_fin)
+      fecha_proximo_pago: p.fecha_proximo_pago,
+      type: selectedType
     })));
 
     if (duePolicies.length === 0) {
       setEmailStatus({ 
         type: 'error', 
-        message: 'No hay pólizas que venzan hoy para enviar recordatorios' 
+        message: selectedType === 'Vencimientos' 
+          ? 'No hay pólizas que venzan en los próximos 30 días' 
+          : 'No hay pólizas con pagos programados en las próximas 2 semanas'
       });
       return;
     }
