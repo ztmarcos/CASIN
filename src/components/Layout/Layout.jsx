@@ -2,6 +2,7 @@ import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { NavLink } from 'react-router-dom';
+import logoImage from '/logo.png';
 import './Layout.css';
 
 const Layout = ({ children }) => {
@@ -12,10 +13,13 @@ const Layout = ({ children }) => {
     <div className="layout">
       <header className="top-bar">
         <div className="left-section">
-          <div className="logo">
-            <span className="logo-text">C-H</span>
-            <span className="logo-version">CASIN Seguros</span>
-          </div>
+          <NavLink to="/" className="logo">
+            <img src={logoImage} alt="CASIN Seguros Logo" className="logo-image" />
+            <div className="logo-content">
+              <span className="logo-text">CASIN</span>&nbsp;
+              <span className="logo-version">Seguros</span>
+            </div>
+          </NavLink>
           <nav className="top-nav">
             <NavLink to="/">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">

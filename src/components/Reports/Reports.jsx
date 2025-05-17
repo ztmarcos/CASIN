@@ -138,7 +138,7 @@ export default function Reports() {
     if (!term.trim()) return true;
     if (value === null || value === undefined) return false;
 
-    // Normalize both the search term and the value for comparison
+    // Enhanced text normalization for mixed case handling
     const normalizeText = (text) => {
       return text.toString()
         .toLowerCase()
@@ -148,21 +148,28 @@ export default function Reports() {
         .trim();
     };
 
-    // Split search term into words for more flexible matching
-    const searchTerms = normalizeText(term).split(/\s+/);
-    let normalizedValue;
+    // Split search terms and remove empty strings
+    const searchTerms = normalizeText(term)
+      .split(/\s+/)
+      .filter(Boolean);
 
-    // Handle different types of values
+    // Handle different value types and ensure case-insensitive matching
+    let normalizedValue;
     if (value instanceof Date) {
       normalizedValue = normalizeText(formatDate(value));
-    } else if (typeof value === 'number') {
-      normalizedValue = normalizeText(value.toString());
+    } else if (typeof value === 'object' && value !== null) {
+      // For objects, try to stringify them
+      try {
+        normalizedValue = normalizeText(JSON.stringify(value));
+      } catch {
+        return false;
+      }
     } else {
-      normalizedValue = normalizeText(String(value));
+      normalizedValue = normalizeText(value.toString());
     }
 
-    // Match if ALL search terms are found in the value
-    return searchTerms.every(term => normalizedValue.includes(term));
+    // Match if any of the search terms is found in the normalized value
+    return searchTerms.some(term => normalizedValue.includes(term));
   };
 
   const fetchPolicies = async () => {
@@ -173,18 +180,9 @@ export default function Reports() {
       const tables = await tableService.getTables();
       console.log('All available tables:', tables);
 
-      // Get data from all tables that contain policy data (including historical)
-      const policyTables = tables.filter(table => 
-        table.name.toLowerCase().includes('gmm') || 
-        table.name.toLowerCase().includes('auto') ||
-        table.name.toLowerCase().includes('poliza') ||
-        table.name.toLowerCase().includes('policy')
-      );
-      console.log('Policy-related tables found:', policyTables.map(t => t.name));
-
-      // Fetch data from all policy tables
+      // Get data from all tables without filtering
       const allResponses = await Promise.all(
-        policyTables.map(async (table) => {
+        tables.map(async (table) => {
           try {
             const response = await tableService.getData(table.name);
             console.log(`Data from ${table.name}:`, {
@@ -201,19 +199,46 @@ export default function Reports() {
 
       // Process all responses with better error handling and logging
       const allPolicies = allResponses.flatMap(({ tableName, data }) => {
-        const policyType = tableName.toLowerCase().includes('gmm') ? 'gmm' : 'autos';
+        // Determine the type based on table name or data structure
+        let policyType = 'other';
+        if (tableName.toLowerCase().includes('gmm')) policyType = 'gmm';
+        else if (tableName.toLowerCase().includes('auto')) policyType = 'autos';
+        else if (tableName.toLowerCase().includes('mascota')) policyType = 'mascotas';
         
         const policies = data
           .map(policy => {
             try {
-              const normalized = normalizePolicy(policy, policyType);
+              let normalized;
+              if (policyType === 'gmm' || policyType === 'autos') {
+                normalized = normalizePolicy(policy, policyType);
+              } else {
+                // Handle other table types including mascotas
+                normalized = {
+                  id: policy.id,
+                  numero_poliza: policy.numero_poliza || policy.id,
+                  contratante: policy.contratante || policy.nombre || policy.nombre_contratante,
+                  asegurado: policy.asegurado || policy.nombre || policy.nombre_contratante,
+                  rfc: policy.rfc,
+                  email: policy.email || policy.e_mail,
+                  fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio,
+                  fecha_fin: policy.fecha_fin || policy.vigencia_fin,
+                  prima_total: parseFloat(policy.prima_total || policy.pago_total || 0),
+                  forma_pago: policy.forma_pago || 'No especificado',
+                  aseguradora: policy.aseguradora || 'No especificada',
+                  fecha_proximo_pago: calculateNextPaymentDate(
+                    policy.fecha_inicio || policy.vigencia_inicio,
+                    policy.forma_pago
+                  ),
+                  ramo: tableName
+                };
+              }
               if (!normalized) {
                 console.warn(`Failed to normalize policy from ${tableName}:`, policy);
                 return null;
               }
               return {
                 ...normalized,
-                sourceTable: tableName // Add source table for debugging
+                sourceTable: tableName
               };
             } catch (error) {
               console.error(`Error normalizing policy from ${tableName}:`, policy, error);
