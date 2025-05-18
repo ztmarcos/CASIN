@@ -1921,4 +1921,43 @@ td .edit-cell-input[type="select"] {
 /* Add hover effect to make cells more visible */
 .data-table tr:hover td {
   background-color: #f8fafc;
+}
+
+.search-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+}
+
+.capturador-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.capturador-btn:hover {
+  background: #45a049;
+}
+
+.capturador-btn .pdf-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .capturador-btn {
+  background: #059669;
+}
+
+[data-theme='dark'] .capturador-btn:hover {
+  background: #047857;
 } 

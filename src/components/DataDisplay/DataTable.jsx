@@ -3,6 +3,8 @@ import pdfService from '../../services/pdfService';
 import tableService from '../../services/data/tableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
 import TableMail from './TableMail';
+import PDFParser from '../PDFParser_new/PDFParser';
+import Modal from '../Modal/Modal';
 import './DataTable.css';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
@@ -25,6 +27,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [mailModal, setMailModal] = useState({ isOpen: false, rowData: null });
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [statusModal, setStatusModal] = useState({ isOpen: false, rowId: null, currentStatus: null });
+  const [showPDFParser, setShowPDFParser] = useState(false);
 
   useEffect(() => {
     console.log('Setting sorted data:', data);
@@ -440,14 +443,42 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   return (
     <div className="data-table-container">
       <div className="table-controls">
-        <input
-          type="text"
-          placeholder="Buscar en tabla..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="search-input"
-        />
+        <div className="search-section">
+          <input
+            type="text"
+            placeholder="Buscar en tabla..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+          <button
+            className="capturador-btn"
+            onClick={() => setShowPDFParser(true)}
+            title="Abrir Capturador"
+          >
+            <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M16 13H8" />
+              <path d="M16 17H8" />
+              <path d="M10 9H8" />
+            </svg>
+            Capturador
+          </button>
+        </div>
       </div>
+
+      {/* PDF Parser Modal */}
+      <Modal 
+        isOpen={showPDFParser} 
+        onClose={() => setShowPDFParser(false)}
+        size="full"
+      >
+        <div style={{ height: '100%', width: '100%' }}>
+          <PDFParser selectedTable={tableName} />
+        </div>
+      </Modal>
+
       <div className={`table-wrapper ${isRefreshing ? 'refreshing' : ''}`}>
         <table className="data-table">
           <thead>

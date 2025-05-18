@@ -827,9 +827,17 @@ class TableService {
     try {
       const response = await fetch(`${this.apiUrl}/table-types`);
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-      return await response.json();
+      const data = await response.json();
+      
+      // Validate the response data
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid table types data received');
+      }
+      
+      return data;
     } catch (error) {
       console.error('Error getting table types:', error);
       throw error;

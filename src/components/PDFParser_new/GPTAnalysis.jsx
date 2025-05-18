@@ -10,6 +10,9 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     const [editedData, setEditedData] = useState(null);
     const [message, setMessage] = useState(null);
     const [editingCell, setEditingCell] = useState(null);
+    
+    // Move tableName to component scope so it's available everywhere
+    const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
 
     useEffect(() => {
         if (mappedData && !editedData) {
@@ -19,13 +22,13 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     // Trigger analysis automatically when data is available and autoAnalyze is true
     useEffect(() => {
-        if (autoAnalyze && parsedData && selectedTable && !analysis) {
+        if (autoAnalyze && parsedData && tableName && !analysis) {
             analyzeContent();
         }
-    }, [parsedData, selectedTable, autoAnalyze]);
+    }, [parsedData, tableName, autoAnalyze]);
 
     const analyzeContent = async () => {
-        if (!selectedTable || !tableInfo) {
+        if (!tableName || !tableInfo) {
             setError('Please select a valid target table first');
             return;
         }
@@ -34,17 +37,24 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         setError(null);
         
         try {
+            console.log('Fetching tables for:', tableName);
             const tables = await tableService.getTables();
-            const targetTable = tables.find(t => t.name === selectedTable);
+            console.log('Available tables:', tables.map(t => t.name));
+            
+            const targetTable = tables.find(t => t.name === tableName);
             if (!targetTable) {
-                throw new Error('Selected table not found');
+                console.error('Table not found:', tableName, 'Available tables:', tables.map(t => t.name));
+                throw new Error(`Selected table "${tableName}" not found`);
             }
 
             // Get columns based on table type
             let columns;
             if (tableInfo.type === 'simple') {
                 columns = tableInfo.fields;
+            } else if (tableInfo.type === 'group') {
+                columns = tableInfo.childFields;
             } else {
+                // If no specific type, use all columns from the table except 'id'
                 columns = targetTable.columns
                     .filter(col => col.name !== 'id')
                     .map(col => col.name);
@@ -53,11 +63,11 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             // Create prompt for GPT
             const prompt = {
                 text: parsedData.text,
-                tables: tables,
+                tables: [targetTable], // Only send the target table
                 metadata: parsedData.metadata,
                 targetColumns: columns,
-                tableName: selectedTable,
-                tableType: tableInfo.type,
+                tableName: tableName,
+                tableType: tableInfo.type || 'simple',
                 instructions: `
                     Please analyze the document and extract the following information:
                     ${columns.map(col => `- ${col}: Find the exact value in the text`).join('\n')}
@@ -112,7 +122,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     const handleDataInsertion = async (data) => {
         try {
-            if (!tableInfo) {
+            if (!tableName || !tableInfo) {
                 throw new Error('Invalid table information');
             }
 
@@ -163,7 +173,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             });
 
             // Insert the data
-            const result = await tableService.insertData(selectedTable, cleanData);
+            const result = await tableService.insertData(tableName, cleanData);
             console.log('Data insertion result:', result);
             
             setMessage('Data inserted successfully');
@@ -171,7 +181,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
             // Emit a custom event to notify other components
             const event = new CustomEvent('policyDataUpdated', {
-                detail: { table: selectedTable }
+                detail: { table: tableName }
             });
             window.dispatchEvent(event);
 

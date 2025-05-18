@@ -582,4 +582,71 @@
 
 [data-theme='dark'] .table-relationship-indicator[data-type="emant_policy"] {
   color: #34D399;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.delete-button {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.table-item:hover .delete-button {
+  opacity: 1;
+}
+
+.delete-button:hover {
+  background-color: #fee2e2;
+  transform: scale(1.1);
+}
+
+.table-name-input {
+  background: transparent;
+  border: 1px solid #0366d6;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: inherit;
+  color: inherit;
+  width: auto;
+  min-width: 120px;
+}
+
+.table-name-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.3);
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .delete-button {
+  color: #ef4444;
+}
+
+[data-theme='dark'] .delete-button:hover {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+[data-theme='dark'] .table-name-input {
+  background: #1F2937;
+  border-color: #3B82F6;
+  color: #F3F4F6;
+}
+
+[data-theme='dark'] .table-name-input:focus {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 } 

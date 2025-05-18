@@ -31,33 +31,106 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
-      // Obtener todas las tablas
+      // Get all tables
       const [tables] = await connection.execute(
         'SHOW TABLES'
       );
 
-      // Obtener todas las relaciones
+      // Get all relationships
       const [relationships] = await connection.execute(
         'SELECT * FROM table_relationships'
       );
 
-      // Procesar cada tabla y agregar información de relaciones
+      // Process each table and add relationship and type information
       const processedTables = await Promise.all(tables.map(async (tableRow) => {
         const tableName = tableRow[`Tables_in_${this.config.database}`];
         
-        // Buscar si la tabla está en alguna relación
+        // Find if table is in relationships
         const asMain = relationships.find(r => r.main_table_name === tableName);
         const asSecondary = relationships.find(r => r.secondary_table_name === tableName);
 
-        // Obtener columnas de la tabla
+        // Get columns
         const [columns] = await connection.execute(
           `SHOW COLUMNS FROM \`${tableName}\``
         );
 
+        // Determine table type from TABLE_DEFINITIONS
+        let tableType = null;
+        let isGroup = false;
+        let childTable = null;
+
+        try {
+          // Step 1: Check exact matches for main and secondary tables
+          for (const [type, definition] of Object.entries(TABLE_DEFINITIONS)) {
+            if (definition.main && definition.main.name === tableName) {
+              tableType = type;
+              isGroup = true;
+              childTable = definition.secondary?.name;
+              break;
+            } else if (definition.secondary && definition.secondary.name === tableName) {
+              tableType = type;
+              break;
+            } else if (definition.name === tableName) {
+              tableType = type;
+              break;
+            }
+          }
+
+          // Step 2: If no exact match, check for type name in table name
+          if (!tableType) {
+            for (const [type] of Object.entries(TABLE_DEFINITIONS)) {
+              const typeRegex = new RegExp(`\\b${type}\\b`, 'i');
+              if (typeRegex.test(tableName)) {
+                tableType = type;
+                break;
+              }
+            }
+          }
+
+          // Step 3: Check for type as substring (case insensitive)
+          if (!tableType) {
+            for (const [type] of Object.entries(TABLE_DEFINITIONS)) {
+              if (tableName.toLowerCase().includes(type.toLowerCase())) {
+                tableType = type;
+                break;
+              }
+            }
+          }
+
+          // Step 4: For numbered tables (e.g. autos1), extract base type
+          if (!tableType) {
+            const baseNameMatch = tableName.match(/^([a-zA-Z]+)\d+$/);
+            if (baseNameMatch) {
+              const baseName = baseNameMatch[1].toUpperCase();
+              if (TABLE_DEFINITIONS[baseName]) {
+                tableType = baseName;
+              }
+            }
+          }
+
+          // Step 5: For tables in relationships, inherit type from relationship
+          if (!tableType && (asMain || asSecondary)) {
+            const relatedTable = asMain ? asMain.secondary_table_name : asSecondary.main_table_name;
+            for (const [type, definition] of Object.entries(TABLE_DEFINITIONS)) {
+              if (definition.main?.name === relatedTable || definition.secondary?.name === relatedTable) {
+                tableType = type;
+                break;
+              }
+            }
+          }
+        } catch (typeError) {
+          console.error(`Error determining type for table ${tableName}:`, typeError);
+          // Don't let type determination errors block the whole process
+          tableType = 'UNKNOWN';
+        }
+
         return {
           name: tableName,
+          type: tableType || 'UNKNOWN',
           isMainTable: !!asMain,
           isSecondaryTable: !!asSecondary,
+          isGroup,
+          childTable,
           relatedTableName: asMain ? asMain.secondary_table_name : 
                            asSecondary ? asSecondary.main_table_name : null,
           relationshipType: asMain ? asMain.relationship_type : 
@@ -65,7 +138,9 @@ class MySQLDatabaseService {
           columns: columns.map(col => ({
             name: col.Field,
             type: col.Type,
-            nullable: col.Null === 'YES'
+            nullable: col.Null === 'YES',
+            key: col.Key,
+            default: col.Default
           }))
         };
       }));
@@ -75,7 +150,9 @@ class MySQLDatabaseService {
       console.error('Error getting tables:', error);
       throw error;
     } finally {
-      if (connection) connection.release();
+      if (connection) {
+        connection.release();
+      }
     }
   }
 
@@ -140,8 +217,8 @@ class MySQLDatabaseService {
         
         // Get table structure
         const [tableColumns] = await connection.execute(
-          'SHOW COLUMNS FROM ??',
-          [tableName]
+          'SHOW COLUMNS FROM `' + tableName + '`',
+          []
         );
 
         // Clean and validate data based on column types
@@ -191,7 +268,7 @@ class MySQLDatabaseService {
         const values = Object.values(cleanedData);
         const placeholders = insertColumns.map(() => '?').join(',');
         
-        // Use backticks to properly escape column names
+        // Build the query with proper escaping
         const query = `INSERT INTO \`${tableName}\` (\`${insertColumns.join('`,`')}\`) VALUES (${placeholders})`;
         console.log('Insert query:', query);
         console.log('Values:', values);
@@ -223,7 +300,9 @@ class MySQLDatabaseService {
       console.error('Database error:', error);
       throw error;
     } finally {
-      if (connection) connection.release();
+      if (connection) {
+        connection.release();
+      }
     }
   }
 

@@ -15,10 +15,9 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import PDFParser from '../PDFParser_new/PDFParser';
 import tableService from '../../services/data/tableService';
 import './ColumnManager.css';
-import Modal from '../common/Modal';
+import Modal from '../Modal/Modal';
 import { toast } from 'react-hot-toast';
 import EditColumn from '../EditColumn/EditColumn';
 
@@ -114,19 +113,6 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
         {tag && <span className="column-tag-label">{tag}</span>}
       </span>
       <div className="column-actions">
-        <button 
-          onClick={() => onPdfToggle(column)} 
-          className={`action-btn pdf-toggle ${isPdfEnabled ? 'active' : ''}`}
-          title={isPdfEnabled ? 'PDF enabled' : 'PDF disabled'}
-        >
-          <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <path d="M14 2v6h6" />
-            <path d="M16 13H8" />
-            <path d="M16 17H8" />
-            <path d="M10 9H8" />
-          </svg>
-        </button>
         {showTagInput ? (
           <form onSubmit={handleTagSubmit} className="tag-input-form">
             <input
@@ -181,8 +167,6 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const [newColumnType, setNewColumnType] = useState('text');
-  const [showPDFParser, setShowPDFParser] = useState(false);
-  const [pdfEnabledColumns, setPdfEnabledColumns] = useState({});
   const [showEditColumns, setShowEditColumns] = useState(false);
 
   const sensors = useSensors(
@@ -374,20 +358,10 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const handlePdfToggle = async (columnName) => {
     try {
       setIsLoading(true);
-      setPdfEnabledColumns(prev => ({
-        ...prev,
-        [columnName]: !prev[columnName]
-      }));
-      // Here you would typically update this in your backend
       await tableService.updateColumnPdfStatus(selectedTable.name, columnName, !pdfEnabledColumns[columnName]);
     } catch (err) {
       console.error('Failed to toggle PDF status:', err);
       setError('Failed to toggle PDF status');
-      // Revert the change if there's an error
-      setPdfEnabledColumns(prev => ({
-        ...prev,
-        [columnName]: !prev[columnName]
-      }));
     } finally {
       setIsLoading(false);
     }
@@ -451,9 +425,6 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           <button className="edit-btn" onClick={handleEditColumns}>
             Edit
           </button>
-          <button className="pdf-btn" onClick={() => setShowPDFParser(true)}>
-            Capturador
-          </button>
         </div>
       </div>
 
@@ -469,17 +440,6 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           onSave={handleEditColumnsSave}
           onCancel={() => setShowEditColumns(false)}
         />
-      </Modal>
-
-      {/* PDF Parser Modal */}
-      <Modal 
-        isOpen={showPDFParser} 
-        onClose={() => setShowPDFParser(false)}
-        size="full"
-      >
-        <div style={{ height: '100%', width: '100%' }}>
-          <PDFParser selectedTable={selectedTable?.name} />
-        </div>
       </Modal>
 
       {!isCollapsed && (

@@ -11,6 +11,8 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedTables, setExpandedTables] = useState(new Set());
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [editingTable, setEditingTable] = useState(null);
+  const [editingName, setEditingName] = useState('');
   const [groupData, setGroupData] = useState({
     mainTableName: '',
     secondaryTableName: '',
@@ -102,6 +104,48 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     }
     if (onTableSelect) {
       onTableSelect(table);
+    }
+  };
+
+  const handleTableDoubleClick = (e, table) => {
+    e.stopPropagation();
+    setEditingTable(table);
+    setEditingName(table.name);
+  };
+
+  const handleNameChange = (e) => {
+    setEditingName(e.target.value);
+  };
+
+  const handleNameSubmit = async (e) => {
+    if (e.key === 'Enter') {
+      try {
+        await tableService.renameTable(editingTable.name, editingName);
+        toast.success('Table renamed successfully');
+        loadTables();
+      } catch (error) {
+        console.error('Error renaming table:', error);
+        toast.error(error.message || 'Error renaming table');
+      }
+      setEditingTable(null);
+      setEditingName('');
+    } else if (e.key === 'Escape') {
+      setEditingTable(null);
+      setEditingName('');
+    }
+  };
+
+  const handleDeleteTable = async (e, table) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete table "${table.name}"?`)) {
+      try {
+        await tableService.deleteTable(table.name);
+        toast.success('Table deleted successfully');
+        loadTables();
+      } catch (error) {
+        console.error('Error deleting table:', error);
+        toast.error(error.message || 'Error deleting table');
+      }
     }
   };
 
@@ -225,20 +269,42 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
               <div
                 className={`table-item ${selectedTableProp === table.name ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''}`}
                 onClick={() => handleTableClick(table)}
+                onDoubleClick={(e) => handleTableDoubleClick(e, table)}
               >
                 <div className="table-info">
-                  <span className="table-name">{table.name}</span>
+                  {editingTable === table ? (
+                    <input
+                      type="text"
+                      value={editingName}
+                      onChange={handleNameChange}
+                      onKeyDown={handleNameSubmit}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      className="table-name-input"
+                    />
+                  ) : (
+                    <span className="table-name">{table.name}</span>
+                  )}
                   {table.secondaryTable && (
                     <span className="expand-icon">
                       {expandedTables.has(table.name) ? '▼' : '▶'}
                     </span>
                   )}
                 </div>
-                {table.relationshipType && (
-                  <span className="table-relationship-indicator" data-type={table.relationshipType}>
-                    {table.relationshipType.split('_')[0].toUpperCase()}
-                  </span>
-                )}
+                <div className="table-actions">
+                  {table.relationshipType && (
+                    <span className="table-relationship-indicator" data-type={table.relationshipType}>
+                      {table.relationshipType.split('_')[0].toUpperCase()}
+                    </span>
+                  )}
+                  <button
+                    className="delete-button"
+                    onClick={(e) => handleDeleteTable(e, table)}
+                    title="Delete table"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
               
               {table.secondaryTable && expandedTables.has(table.name) && (
@@ -246,11 +312,35 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
                   <div
                     className={`table-item ${selectedTableProp === table.secondaryTable.name ? 'selected' : ''}`}
                     onClick={() => handleTableClick(table.secondaryTable, true)}
+                    onDoubleClick={(e) => handleTableDoubleClick(e, table.secondaryTable)}
                   >
-                    <span className="table-name">{table.secondaryTable.name}</span>
-                    <span className="table-relationship-indicator" data-type={table.relationshipType}>
-                      Details
-                    </span>
+                    <div className="table-info">
+                      {editingTable === table.secondaryTable ? (
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={handleNameChange}
+                          onKeyDown={handleNameSubmit}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          className="table-name-input"
+                        />
+                      ) : (
+                        <span className="table-name">{table.secondaryTable.name}</span>
+                      )}
+                    </div>
+                    <div className="table-actions">
+                      <span className="table-relationship-indicator" data-type={table.relationshipType}>
+                        Details
+                      </span>
+                      <button
+                        className="delete-button"
+                        onClick={(e) => handleDeleteTable(e, table.secondaryTable)}
+                        title="Delete table"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

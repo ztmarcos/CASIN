@@ -2,6 +2,48 @@ const express = require('express');
 const router = express.Router();
 const mysqlDatabase = require('../services/mysqlDatabase');
 
+// Get table types
+router.get('/table-types', async (req, res) => {
+  try {
+    // Get all tables
+    const tables = await mysqlDatabase.getTables();
+    
+    // Convert to the expected format
+    const tableTypes = {};
+    
+    for (const table of tables) {
+      // Extract base type for numbered tables (e.g. autos1 -> AUTOS)
+      let type = table.type;
+      if (type === 'UNKNOWN') {
+        const baseNameMatch = table.name.match(/^([a-zA-Z]+)\d+$/);
+        if (baseNameMatch) {
+          const baseName = baseNameMatch[1].toUpperCase();
+          type = baseName;
+        }
+      }
+
+      tableTypes[table.name] = {
+        type: type || 'simple',
+        isGroup: table.isGroup || false,
+        childTable: table.childTable || null,
+        isMainTable: table.isMainTable || false,
+        isSecondaryTable: table.isSecondaryTable || false,
+        fields: table.columns
+          .filter(col => col.name !== 'id')
+          .map(col => col.name)
+      };
+    }
+
+    res.json(tableTypes);
+  } catch (error) {
+    console.error('Error getting table types:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Failed to get table types. Please try again.' 
+    });
+  }
+});
+
 // Get all tables
 router.get('/tables', async (req, res) => {
   try {
@@ -339,242 +381,16 @@ router.post('/import-csv', async (req, res) => {
             console.warn(`Failed to parse date: ${value}`);
           }
         }
-        
-        cleanRow[cleanKey] = value;
       });
       return cleanRow;
     });
 
-    // Insert data in batches
-    const batchSize = 100;
-    for (let i = 0; i < cleanData.length; i += batchSize) {
-      const batch = cleanData.slice(i, i + batchSize);
-      await Promise.all(batch.map(row => mysqlDatabase.insertData(cleanTableName, row)));
-    }
-
-    res.json({
-      success: true,
-      message: `Table ${cleanTableName} created and ${cleanData.length} rows imported successfully`,
-      tableName: cleanTableName,
-      columns: columns.map(col => ({ name: col.name, type: col.type }))
-    });
+    const result = await mysqlDatabase.insertData(cleanTableName, cleanData);
+    res.json({ success: true, data: result });
   } catch (error) {
     console.error('Error importing CSV:', error);
-    res.status(500).json({ error: error.message });
+    throw error;
   }
 });
 
-// Rename table
-router.put('/tables/rename', async (req, res) => {
-  try {
-    const { oldName, newName } = req.body;
-    
-    if (!oldName || !newName) {
-      return res.status(400).json({
-        success: false,
-        error: 'Both old and new table names are required'
-      });
-    }
-
-    const result = await mysqlDatabase.renameTable(oldName, newName);
-    res.json(result);
-  } catch (error) {
-    console.error('Error renaming table:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Error renaming table'
-    });
-  }
-});
-
-// Get table relationships
-router.get('/table-relationships', async (req, res) => {
-  try {
-    const relationships = await mysqlDatabase.getTableRelationships();
-    res.json(relationships);
-  } catch (error) {
-    console.error('Error getting table relationships:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Create table relationship
-router.post('/table-relationships', async (req, res) => {
-  try {
-    const { mainTableName, secondaryTableName } = req.body;
-    
-    if (!mainTableName || !secondaryTableName) {
-      return res.status(400).json({ 
-        error: 'Main table name and secondary table name are required' 
-      });
-    }
-    
-    const result = await mysqlDatabase.createTableRelationship(
-      mainTableName, 
-      secondaryTableName
-    );
-    res.json(result);
-  } catch (error) {
-    console.error('Error creating table relationship:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Delete table relationship
-router.delete('/table-relationships', async (req, res) => {
-  try {
-    const { mainTableName, secondaryTableName } = req.body;
-    
-    if (!mainTableName || !secondaryTableName) {
-      return res.status(400).json({ 
-        error: 'Main table name and secondary table name are required' 
-      });
-    }
-    
-    const result = await mysqlDatabase.deleteTableRelationship(
-      mainTableName, 
-      secondaryTableName
-    );
-    res.json(result);
-  } catch (error) {
-    console.error('Error deleting table relationship:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Crear grupo de tablas relacionadas
-router.post('/tables/group', async (req, res) => {
-  try {
-    const { mainTableName, secondaryTableName } = req.body;
-    
-    if (!mainTableName || !secondaryTableName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Se requieren los nombres de ambas tablas'
-      });
-    }
-
-    const result = await mysqlDatabase.createTableGroup(mainTableName, secondaryTableName);
-    res.json(result);
-  } catch (error) {
-    console.error('Error creating table group:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error al crear el grupo de tablas'
-    });
-  }
-});
-
-// Update column type
-router.patch('/tables/:tableName/columns/:columnName/type', async (req, res) => {
-  try {
-    const { tableName, columnName } = req.params;
-    const { type } = req.body;
-    
-    if (!tableName || !columnName || !type) {
-      return res.status(400).json({ error: 'Table name, column name, and type are required' });
-    }
-
-    // For date type, we'll use VARCHAR to store DD/MM/YYYY format
-    if (type.toUpperCase() === 'DATE') {
-      try {
-        // Convert column to VARCHAR to store dates in DD/MM/YYYY format
-        await mysqlDatabase.executeQuery(
-          `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` VARCHAR(10)`,
-          []
-        );
-
-        // Ensure all dates are in DD/MM/YYYY format
-        await mysqlDatabase.executeQuery(
-          `UPDATE \`${tableName}\` 
-           SET \`${columnName}\` = DATE_FORMAT(STR_TO_DATE(\`${columnName}\`, '%d/%m/%Y'), '%d/%m/%Y')
-           WHERE \`${columnName}\` REGEXP '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'`,
-          []
-        );
-
-        res.json({ success: true, message: `Column type updated successfully` });
-        return;
-      } catch (error) {
-        console.error('Error converting date format:', error);
-        throw error;
-      }
-    }
-    
-    // For non-DATE types, just execute the ALTER TABLE command
-    await mysqlDatabase.executeQuery(
-      `ALTER TABLE \`${tableName}\` MODIFY COLUMN \`${columnName}\` ${type}`,
-      []
-    );
-    
-    res.json({ success: true, message: `Column type updated successfully` });
-  } catch (error) {
-    console.error('Error updating column type:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get table types
-router.get('/table-types', async (req, res) => {
-  try {
-    const tables = await mysqlDatabase.getTables();
-    
-    // Group tables by type
-    const tableTypes = tables.reduce((acc, table) => {
-      // Extract type from relationship or table name
-      let type = null;
-      let isGroup = false;
-      let child = null;
-
-      if (table.isMainTable) {
-        // For main tables, determine type from name
-        if (table.name.toLowerCase().includes('gmm')) {
-          type = 'GMM';
-          isGroup = true;
-          child = 'GMMListado';
-        } else if (table.name.toLowerCase().includes('autos') && table.name === 'GruposAutos') {
-          type = 'AUTOS';
-          isGroup = true;
-          child = 'AutosListado';
-        } else if (table.name.toLowerCase().includes('vida')) {
-          type = 'VIDA';
-          isGroup = true;
-          child = 'VidaListado';
-        }
-      } else if (!table.isSecondaryTable) {
-        // For individual tables
-        if (table.name.toLowerCase().includes('mascotas')) {
-          type = 'MASCOTAS';
-        } else if (table.name.toLowerCase().includes('transporte')) {
-          type = 'TRANSPORTE';
-        } else if (table.name.toLowerCase().includes('negocio')) {
-          type = 'NEGOCIO';
-        } else if (table.name.toLowerCase().includes('hogar')) {
-          type = 'HOGAR';
-        } else if (table.name.toLowerCase().includes('responsabilidad')) {
-          type = 'RC';
-        } else if (table.name.toLowerCase().includes('autos')) {
-          type = 'AUTOS';
-        }
-      }
-
-      if (type) {
-        acc[table.name] = {
-          type,
-          isGroup: isGroup || false
-        };
-        if (child) {
-          acc[table.name].child = child;
-        }
-      }
-
-      return acc;
-    }, {});
-
-    res.json(tableTypes);
-  } catch (error) {
-    console.error('Error getting table types:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-module.exports = router; 
+module.exports = router;

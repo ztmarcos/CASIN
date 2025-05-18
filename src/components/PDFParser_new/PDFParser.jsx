@@ -12,19 +12,36 @@ const PDFParser = ({ selectedTable }) => {
   const [fileName, setFileName] = useState('');
   const [tableTypes, setTableTypes] = useState({});
 
+  // Support both string and object for selectedTable
+  const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
+
   // Fetch table types on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setError(null);
         const types = await tableService.getTableTypes();
+        
+        // Validate the received table types
+        if (!types || typeof types !== 'object') {
+          throw new Error('Invalid table types data received');
+        }
+        
+        // Check if we have data for the selected table
+        if (tableName && !types[tableName]) {
+          console.warn(`No type information found for table: ${tableName}`);
+        }
+        
         setTableTypes(types);
       } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('Failed to fetch table types');
+        console.error('Error fetching table types:', err);
+        setError(err.message || 'Failed to fetch table types');
+        // Don't block the component if table types fail to load
+        setTableTypes({});
       }
     };
     fetchData();
-  }, []);
+  }, [tableName]);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
@@ -54,11 +71,11 @@ const PDFParser = ({ selectedTable }) => {
     }
   };
 
-  const getTableInfo = (tableName) => {
-    return tableTypes[tableName] || null;
+  const getTableInfo = (name) => {
+    return tableTypes[name] || null;
   };
 
-  if (!selectedTable) {
+  if (!tableName) {
     return (
       <div className="pdf-parser">
         <div className="error-message">Please select a table first</div>
@@ -87,18 +104,18 @@ const PDFParser = ({ selectedTable }) => {
       {parsedData && (
         <div className="analysis-section">
           <div className="analysis-component">
-            {getTableInfo(selectedTable.name)?.isGroup ? (
+            {getTableInfo(tableName)?.isGroup ? (
               <ListadoAnalysis
                 parsedData={parsedData}
-                selectedTable={selectedTable.name}
-                tableInfo={getTableInfo(selectedTable.name)}
+                selectedTable={tableName}
+                tableInfo={getTableInfo(tableName)}
                 autoAnalyze={true}
               />
             ) : (
               <GPTAnalysis
                 parsedData={parsedData}
-                selectedTable={selectedTable.name}
-                tableInfo={getTableInfo(selectedTable.name)}
+                selectedTable={tableName}
+                tableInfo={getTableInfo(tableName)}
                 autoAnalyze={true}
               />
             )}
