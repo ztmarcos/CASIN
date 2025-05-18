@@ -148,6 +148,26 @@ ${data.companyAddress}`;
         }
     }
 
+    // Helper function to convert text to proper case
+    toProperCase(text) {
+        if (!text) return '';
+        
+        // Split by any whitespace and handle multiple spaces
+        const words = text.trim().split(/\s+/);
+        
+        return words
+            .map(word => {
+                // Skip empty words
+                if (!word) return '';
+                // Convert word to lowercase first
+                word = word.toLowerCase();
+                // Capitalize first letter
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            })
+            .filter(Boolean) // Remove any empty strings
+            .join(' ');
+    }
+
     async sendBirthdayEmail(to, data) {
         try {
             console.log('\n=== Email Service: Sending Birthday Email ===');
@@ -158,8 +178,12 @@ ${data.companyAddress}`;
                 throw new Error(`Invalid email address: ${to}`);
             }
 
+            // Convert name to proper case
+            const properName = this.toProperCase(data.nombre);
+            console.log('Name converted to proper case:', properName);
+
             const text = `
-¡Feliz Cumpleaños ${data.nombre}!
+¡Feliz Cumpleaños ${properName}!
 
 En este día tan especial, queremos desearte un muy feliz cumpleaños.
 Gracias por confiar en nosotros para proteger lo que más te importa.
@@ -180,7 +204,7 @@ ${data.companyAddress}`;
 </head>
 <body>
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>¡Feliz Cumpleaños ${data.nombre}!</h2>
+        <h2>¡Feliz Cumpleaños ${properName}!</h2>
         <p>En este día tan especial, queremos desearte un muy feliz cumpleaños.</p>
         <p>Gracias por confiar en nosotros para proteger lo que más te importa.</p>
         <p>Que este nuevo año de vida esté lleno de bendiciones y éxitos.</p>

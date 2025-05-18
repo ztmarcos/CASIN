@@ -218,7 +218,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   };
 
   useEffect(() => {
-    if (selectedTable) {
+    if (selectedTable?.name) {
       loadColumns();
     }
   }, [selectedTable]);
@@ -395,7 +395,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   // Add refresh function
   const refreshData = async () => {
-    if (selectedTable) {
+    if (selectedTable?.name) {
       await loadColumns();
       if (onOrderChange) {
         onOrderChange();
@@ -478,7 +478,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         size="full"
       >
         <div style={{ height: '100%', width: '100%' }}>
-          <PDFParser />
+          <PDFParser selectedTable={selectedTable?.name} />
         </div>
       </Modal>
 
@@ -518,7 +518,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           )}
 
           <div className="columns-list">
-            {!selectedTable ? (
+            {!selectedTable?.name ? (
               <div className="no-table-message">Select a table</div>
             ) : columns.length === 0 ? (
               <div className="no-columns-message">No columns</div>

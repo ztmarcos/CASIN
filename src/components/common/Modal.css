@@ -19,6 +19,8 @@
   z-index: 1001;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden; /* Ensure content doesn't overflow */
 }
 
 /* Size variants - make them more specific */
@@ -27,22 +29,22 @@
   max-width: 1200px;
   min-height: 200px;
   max-height: 85vh;
-  border: 3px solid red;
 }
 
 .modal-content.modal-full {
-  width: 95vw !important; /* Force override */
-  height: 95vh !important; /* Force override */
-  max-width: none !important; /* Remove any max-width constraints */
-  max-height: none !important; /* Remove any max-height constraints */
-  border: 3px solid blue;
+  width: 95vw;
+  height: 95vh;
+  max-width: none;
+  max-height: none;
 }
 
 .modal-body {
   padding: 20px;
   overflow: auto;
-  flex: 1; /* Take up remaining space */
+  flex: 1;
   height: 100%;
+  display: flex; /* Add flex display */
+  flex-direction: column; /* Stack children vertically */
 }
 
 .modal-header {

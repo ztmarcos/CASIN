@@ -210,12 +210,17 @@ class BirthdayService {
                 
                 console.log(`Attempting to send email to ${person.name} (${person.email})`);
                 try {
+                    // Convert name to proper case before sending
+                    const properName = person.name.split(' ')
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                        .join(' ');
+                        
                     await emailService.sendBirthdayEmail(person.email, {
-                        nombre: person.name,
+                        nombre: properName,
                         companyName: process.env.COMPANY_NAME || 'CASIN Seguros',
                         companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México'
                     });
-                    console.log(`Successfully sent birthday email to ${person.name} (${person.email})`);
+                    console.log(`Successfully sent birthday email to ${properName} (${person.email})`);
                     emailsSent++;
                     emailResults.push({
                         name: person.name,

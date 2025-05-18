@@ -40,7 +40,8 @@ router.post('/tables', async (req, res) => {
 // Get table data
 router.get('/:tableName', async (req, res) => {
   try {
-    const data = await mysqlDatabase.getData(req.params.tableName, req.query);
+    const { tableName } = req.params;
+    const data = await mysqlDatabase.getData(tableName);
     res.json(data);
   } catch (error) {
     console.error('Error getting data:', error);
@@ -508,6 +509,70 @@ router.patch('/tables/:tableName/columns/:columnName/type', async (req, res) => 
     res.json({ success: true, message: `Column type updated successfully` });
   } catch (error) {
     console.error('Error updating column type:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get table types
+router.get('/table-types', async (req, res) => {
+  try {
+    const tables = await mysqlDatabase.getTables();
+    
+    // Group tables by type
+    const tableTypes = tables.reduce((acc, table) => {
+      // Extract type from relationship or table name
+      let type = null;
+      let isGroup = false;
+      let child = null;
+
+      if (table.isMainTable) {
+        // For main tables, determine type from name
+        if (table.name.toLowerCase().includes('gmm')) {
+          type = 'GMM';
+          isGroup = true;
+          child = 'GMMListado';
+        } else if (table.name.toLowerCase().includes('autos') && table.name === 'GruposAutos') {
+          type = 'AUTOS';
+          isGroup = true;
+          child = 'AutosListado';
+        } else if (table.name.toLowerCase().includes('vida')) {
+          type = 'VIDA';
+          isGroup = true;
+          child = 'VidaListado';
+        }
+      } else if (!table.isSecondaryTable) {
+        // For individual tables
+        if (table.name.toLowerCase().includes('mascotas')) {
+          type = 'MASCOTAS';
+        } else if (table.name.toLowerCase().includes('transporte')) {
+          type = 'TRANSPORTE';
+        } else if (table.name.toLowerCase().includes('negocio')) {
+          type = 'NEGOCIO';
+        } else if (table.name.toLowerCase().includes('hogar')) {
+          type = 'HOGAR';
+        } else if (table.name.toLowerCase().includes('responsabilidad')) {
+          type = 'RC';
+        } else if (table.name.toLowerCase().includes('autos')) {
+          type = 'AUTOS';
+        }
+      }
+
+      if (type) {
+        acc[table.name] = {
+          type,
+          isGroup: isGroup || false
+        };
+        if (child) {
+          acc[table.name].child = child;
+        }
+      }
+
+      return acc;
+    }, {});
+
+    res.json(tableTypes);
+  } catch (error) {
+    console.error('Error getting table types:', error);
     res.status(500).json({ error: error.message });
   }
 });

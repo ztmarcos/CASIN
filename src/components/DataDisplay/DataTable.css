@@ -119,6 +119,7 @@
   overflow-y: auto;
   position: relative;
   width: 100%;
+  max-width: 100%;
 }
 
 .data-table {
@@ -169,7 +170,9 @@
   white-space: nowrap;
   height: 32px;
   vertical-align: middle;
-  user-select: none; /* Prevent text selection while dragging */
+  user-select: none;
+  min-width: 100px;
+  max-width: 300px;
 }
 
 /* Regular styling for ID cells */
@@ -181,6 +184,7 @@
   white-space: nowrap;
   width: 60px;
   min-width: 60px;
+  max-width: 60px;
   background: #ffffff;
 }
 
@@ -1903,4 +1907,18 @@ td .edit-cell-input[type="select"] {
 
 [data-theme='dark'] .status-modal-actions .cancel-btn:hover {
   background: #4b5563;
+}
+
+/* Ensure table cells are visible */
+.data-table td:not(.id-cell):not(.status-cell) {
+  min-width: 120px;
+  padding: 6px 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Add hover effect to make cells more visible */
+.data-table tr:hover td {
+  background-color: #f8fafc;
 } 

@@ -6,6 +6,10 @@ import TableMail from './TableMail';
 import './DataTable.css';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
+  // Add console logs for debugging
+  console.log('DataTable received data:', data);
+  console.log('DataTable received tableName:', tableName);
+
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -23,6 +27,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [statusModal, setStatusModal] = useState({ isOpen: false, rowId: null, currentStatus: null });
 
   useEffect(() => {
+    console.log('Setting sorted data:', data);
+    if (!Array.isArray(data)) {
+      console.error('Data is not an array:', data);
+      setSortedData([]);
+      setFilteredData([]);
+      return;
+    }
     setSortedData(data);
     setFilteredData(data);
   }, [data]);
@@ -30,6 +41,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   // Search handler
   useEffect(() => {
     if (!searchTerm.trim()) {
+      console.log('No search term, showing all data:', sortedData);
       setFilteredData(sortedData);
       return;
     }
@@ -41,6 +53,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         String(value).toLowerCase().includes(searchTermLower)
       )
     );
+    console.log('Filtered data:', filtered);
     setFilteredData(filtered);
   }, [searchTerm, sortedData]);
 
@@ -98,7 +111,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
   }, [onRefresh]);
 
-  if (!data || data.length === 0) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
     return <div className="no-data">No data available</div>;
   }
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import tableService from '../../services/data/tableService';
 import './GPTAnalysis.css';
 
-const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false }) => {
+const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -25,8 +25,8 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
     }, [parsedData, selectedTable, autoAnalyze]);
 
     const analyzeContent = async () => {
-        if (!selectedTable) {
-            setError('Please select a target table first');
+        if (!selectedTable || !tableInfo) {
+            setError('Please select a valid target table first');
             return;
         }
 
@@ -40,10 +40,15 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 throw new Error('Selected table not found');
             }
 
-            // Get all columns except 'id'
-            const columns = targetTable.columns
-                .filter(col => col.name !== 'id')
-                .map(col => col.name);
+            // Get columns based on table type
+            let columns;
+            if (tableInfo.type === 'simple') {
+                columns = tableInfo.fields;
+            } else {
+                columns = targetTable.columns
+                    .filter(col => col.name !== 'id')
+                    .map(col => col.name);
+            }
 
             // Create prompt for GPT
             const prompt = {
@@ -52,6 +57,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 metadata: parsedData.metadata,
                 targetColumns: columns,
                 tableName: selectedTable,
+                tableType: tableInfo.type,
                 instructions: `
                     Please analyze the document and extract the following information:
                     ${columns.map(col => `- ${col}: Find the exact value in the text`).join('\n')}
@@ -63,6 +69,7 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                     4. For dates, maintain the format as shown in the document
                     5. For currency values, include the full amount with decimals
                     6. For text fields, extract the complete text as shown
+                    ${tableInfo.type === 'simple' ? '7. This is a simple policy table, focus on basic policy information' : ''}
                 `
             };
 
@@ -96,8 +103,8 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
                 throw new Error('No mapped data received from analysis');
             }
         } catch (err) {
-            setError(err.message);
             console.error('Error analyzing content:', err);
+            setError(err.message || 'Failed to analyze content');
         } finally {
             setLoading(false);
         }
@@ -105,59 +112,57 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
 
     const handleDataInsertion = async (data) => {
         try {
+            if (!tableInfo) {
+                throw new Error('Invalid table information');
+            }
+
             // Create a copy of the data and remove the id field
             const cleanData = { ...data };
             delete cleanData.id;  // Remove id field as it's auto-incremented
-            
-            // Clean numeric values
-            const numericFields = [
-                'prima_neta', 
-                'derecho_de_poliza', 
-                'i_v_a', 
-                'recargo_por_pago_fraccionado', 
-                'pago_total_o_prima_total',
-                'modelo'  // Year field
-            ];
 
-            // Define date fields
-            const dateFields = [
-                'desde_vigencia',
-                'hasta_vigencia',
-                'fecha_expedicion',
-                'fecha_pago'
-            ];
-            
-            // Clean numeric values and prepare data for insertion
+            // Define field types based on table type
+            const fieldTypes = {
+                numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo'],
+                date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago'],
+                status: ['status']
+            };
+
+            // Clean and format data based on field types
             Object.entries(cleanData).forEach(([key, value]) => {
                 if (value === null || value === undefined || value === '') {
                     cleanData[key] = null;
                     return;
                 }
 
-                if (numericFields.includes(key)) {
+                if (fieldTypes.numeric.includes(key)) {
                     // Remove currency symbols and commas
                     const numStr = value.toString().replace(/[$,]/g, '');
-                    cleanData[key] = parseFloat(numStr) || 0;
-                } else if (dateFields.includes(key)) {
-                    // Keep date as is, will be formatted in tableService
-                    cleanData[key] = value;
+                    cleanData[key] = parseFloat(numStr) || null;
+                } else if (fieldTypes.date.includes(key)) {
+                    // Format date to YYYY-MM-DD
+                    try {
+                        if (typeof value === 'string') {
+                            if (value.includes('/')) {
+                                const [day, month, year] = value.split('/');
+                                cleanData[key] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            } else if (value.includes('-')) {
+                                cleanData[key] = value;
+                            }
+                        } else if (value instanceof Date) {
+                            cleanData[key] = value.toISOString().split('T')[0];
+                        }
+                    } catch (e) {
+                        console.warn(`Failed to parse date: ${value}`, e);
+                        cleanData[key] = null;
+                    }
+                } else if (fieldTypes.status.includes(key)) {
+                    // Normalize status values
+                    const status = value.toString().toLowerCase();
+                    cleanData[key] = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
                 }
             });
 
-            // Ensure tipo_de_vehiculo is one of the allowed values
-            if (cleanData.tipo_de_vehiculo) {
-                const tipo = cleanData.tipo_de_vehiculo.toUpperCase();
-                if (!['AUTO', 'MOTO', 'CAMION', 'TAXI'].includes(tipo)) {
-                    cleanData.tipo_de_vehiculo = 'AUTO';
-                } else {
-                    cleanData.tipo_de_vehiculo = tipo;
-                }
-            }
-
-            console.log('Selected table:', selectedTable);
-            console.log('Cleaned data for insertion:', cleanData);
-
-            // Insert the data directly
+            // Insert the data
             const result = await tableService.insertData(selectedTable, cleanData);
             console.log('Data insertion result:', result);
             
@@ -192,68 +197,81 @@ const GPTAnalysis = ({ parsedData, tables, selectedTable, autoAnalyze = false })
 
     return (
         <div className="gpt-analysis">
-            {loading && <div className="loading">Analyzing content...</div>}
-            
-            {error && (
-                <div className="error-message">
-                    Error: {error}
-                </div>
+            {!selectedTable && (
+                <div className="error-message">Please select a table first</div>
             )}
 
-            {mappedData && editedData && (
-                <div className="analysis-results">
-                    <h3>Extracted Data Preview</h3>
-                    <div className="table-preview">
-                        <table>
-                            <thead>
-                                <tr>
-                                    {Object.keys(mappedData).map(column => (
-                                        <th key={column}>{column}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    {Object.keys(editedData).map((column) => (
-                                        <td 
-                                            key={column} 
-                                            className={`
-                                                ${editedData[column] === null ? 'null-value' : ''}
-                                                ${editingCell === column ? 'editing' : ''}
-                                            `}
-                                            onClick={() => setEditingCell(column)}
-                                        >
-                                            {editingCell === column ? (
-                                                <input
-                                                    type="text"
-                                                    value={editedData[column] !== null ? String(editedData[column]) : ''}
-                                                    onChange={(e) => handleCellEdit(column, e.target.value)}
-                                                    onKeyDown={(e) => handleKeyDown(e, column)}
-                                                    onBlur={() => setEditingCell(null)}
-                                                    autoFocus
-                                                />
-                                            ) : (
-                                                editedData[column] !== null ? String(editedData[column]) : '-'
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <button 
-                        onClick={() => handleDataInsertion(editedData)}
-                        className="insert-button"
-                    >
-                        Insert into Database
+            {!parsedData && (
+                <div className="error-message">Please upload a PDF file first</div>
+            )}
+
+            {loading && (
+                <div className="loading">Analyzing content...</div>
+            )}
+
+            {error && (
+                <div className="error-message">
+                    {error}
+                    <button onClick={analyzeContent} className="retry-button">
+                        Retry Analysis
                     </button>
                 </div>
             )}
 
             {message && (
-                <div className="message">
-                    {message}
+                <div className="success-message">{message}</div>
+            )}
+
+            {mappedData && (
+                <div className="mapped-data">
+                    <h3>Extracted Data</h3>
+                    <div className="data-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Field</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Object.entries(editedData || {}).map(([key, value]) => (
+                                    <tr key={key}>
+                                        <td>{key}</td>
+                                        <td>
+                                            {editingCell === key ? (
+                                                <input
+                                                    type="text"
+                                                    value={value || ''}
+                                                    onChange={(e) => handleCellEdit(key, e.target.value)}
+                                                    onBlur={() => setEditingCell(null)}
+                                                    onKeyDown={(e) => handleKeyDown(e, key)}
+                                                    autoFocus
+                                                />
+                                            ) : (
+                                                <span onClick={() => setEditingCell(key)}>
+                                                    {value || 'N/A'}
+                                                </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="action-buttons">
+                        <button 
+                            onClick={() => handleDataInsertion(editedData)}
+                            className="insert-button"
+                        >
+                            Insert Data
+                        </button>
+                        <button 
+                            onClick={analyzeContent}
+                            className="reanalyze-button"
+                        >
+                            Reanalyze
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

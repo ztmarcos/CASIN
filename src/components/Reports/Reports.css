@@ -518,4 +518,71 @@
 .status-toggle:hover {
   opacity: 0.9;
   transform: scale(1.05);
+}
+
+.matrix-container {
+  overflow-x: auto;
+  margin-top: 1rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 0.75rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
+
+.matrix-table th {
+  background-color: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.matrix-table tr:nth-child(even) {
+  background-color: var(--bg-surface);
+}
+
+.matrix-table td:first-child {
+  text-align: left;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  background: white;
+  z-index: 1;
+}
+
+.matrix-table td.has-policy {
+  color: var(--success);
+  font-weight: bold;
+}
+
+.matrix-table td.no-policy {
+  color: var(--error);
+  opacity: 0.5;
+}
+
+/* Responsive adjustments for matrix view */
+@media (max-width: 768px) {
+  .matrix-container {
+    margin: 0 -1rem;
+    border-radius: 0;
+  }
+  
+  .matrix-table th,
+  .matrix-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
 } 

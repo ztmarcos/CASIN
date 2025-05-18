@@ -5,120 +5,105 @@ import GPTAnalysis from './GPTAnalysis';
 import ListadoAnalysis from './ListadoAnalysis';
 import './PDFParser.css';
 
-const PDFParser = () => {
+const PDFParser = ({ selectedTable }) => {
   const [parsedData, setParsedData] = useState(null);
-  const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [dbTables, setDbTables] = useState([]);
-  const [selectedTable, setSelectedTable] = useState('');
+  const [fileName, setFileName] = useState('');
+  const [tableTypes, setTableTypes] = useState({});
 
-  // Fetch available tables on component mount
+  // Fetch table types on component mount
   useEffect(() => {
-    const fetchTables = async () => {
+    const fetchData = async () => {
       try {
-        const tables = await tableService.getTables();
-        setDbTables(tables);
+        const types = await tableService.getTableTypes();
+        setTableTypes(types);
       } catch (err) {
-        console.error('Error fetching tables:', err);
-        setError('Failed to fetch database tables');
+        console.error('Error fetching data:', err);
+        setError('Failed to fetch table types');
       }
     };
-    fetchTables();
+    fetchData();
   }, []);
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Validate file type
     if (file.type !== 'application/pdf') {
       setError('Please upload a PDF file');
       return;
     }
 
-    if (!selectedTable) {
-      setError('Please select a target table first');
-      return;
-    }
-
+    setFileName(file.name);
     setLoading(true);
     setError(null);
 
     try {
-      // Parse PDF content
-      const data = await pdfService.parsePDF(file);
-      setParsedData(data);
+      const formData = new FormData();
+      formData.append('pdf', file);
 
-      // Extract tables
-      const extractedTables = await pdfService.extractTables(file);
-      setTables(extractedTables);
-
+      const result = await pdfService.parsePDF(file); // Pass file directly
+      setParsedData(result);
     } catch (err) {
-      setError('Error parsing PDF: ' + err.message);
       console.error('Error parsing PDF:', err);
+      setError('Failed to parse PDF file');
     } finally {
       setLoading(false);
     }
   };
 
+  const getTableInfo = (tableName) => {
+    return tableTypes[tableName] || null;
+  };
+
+  if (!selectedTable) {
+    return (
+      <div className="pdf-parser">
+        <div className="error-message">Please select a table first</div>
+      </div>
+    );
+  }
+
   return (
     <div className="pdf-parser">
-      <h2>Capturador de Pólizas</h2>
-      
       <div className="upload-section">
-        <div className="table-select">
-          <select 
-            value={selectedTable}
-            onChange={(e) => setSelectedTable(e.target.value)}
-            className="table-dropdown"
-          >
-            <option value="">Select Target Table</option>
-            {dbTables.map((table) => (
-              <option key={table.name} value={table.name}>
-                {table.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <label className="file-input-label">
           <input
             type="file"
             accept=".pdf"
             onChange={handleFileUpload}
-            disabled={loading || !selectedTable}
             className="file-input"
           />
           <span className="file-input-text">
-            {loading ? 'Processing...' : 'Subir Póliza'}
+            {fileName ? `Selected: ${fileName}` : 'Choose PDF File'}
           </span>
         </label>
+        {loading && <div className="loading">Processing PDF...</div>}
+        {error && <div className="error-message">{error}</div>}
       </div>
 
-      {loading && <div className="loading">Procesando póliza...</div>}
-      
-      {error && (
-        <div className="error-message">
-          Error: {error}
+      {parsedData && (
+        <div className="analysis-section">
+          <div className="analysis-component">
+            {getTableInfo(selectedTable.name)?.isGroup ? (
+              <ListadoAnalysis
+                parsedData={parsedData}
+                selectedTable={selectedTable.name}
+                tableInfo={getTableInfo(selectedTable.name)}
+                autoAnalyze={true}
+              />
+            ) : (
+              <GPTAnalysis
+                parsedData={parsedData}
+                selectedTable={selectedTable.name}
+                tableInfo={getTableInfo(selectedTable.name)}
+                autoAnalyze={true}
+              />
+            )}
+          </div>
         </div>
-      )}
-
-      {parsedData && selectedTable && (
-        selectedTable === 'listado' ? (
-          <ListadoAnalysis
-            parsedData={parsedData}
-            tables={tables}
-            selectedTable={selectedTable}
-            autoAnalyze={true}
-          />
-        ) : (
-          <GPTAnalysis
-            parsedData={parsedData}
-            tables={tables}
-            selectedTable={selectedTable}
-            autoAnalyze={true}
-          />
-        )
       )}
     </div>
   );

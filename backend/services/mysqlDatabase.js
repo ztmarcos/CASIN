@@ -1,5 +1,6 @@
 const mysql = require('mysql2');
 const dbConfig = require('../config/database');
+const TABLE_DEFINITIONS = require('./tableDefinitions');
 
 class MySQLDatabaseService {
   constructor() {
@@ -104,38 +105,13 @@ class MySQLDatabaseService {
     }
   }
 
-  async getData(tableName, filters = {}) {
+  async getData(tableName) {
     let connection;
     try {
       connection = await this.getConnection();
-      let query = `SELECT * FROM ${tableName}`;
-      const filterConditions = [];
-      const values = [];
-
-      // Handle non-limit filters
-      const { limit, ...otherFilters } = filters;
-
-      // Add filters if they exist
-      if (Object.keys(otherFilters).length > 0) {
-        Object.entries(otherFilters).forEach(([key, value]) => {
-          if (value) {
-            filterConditions.push(`${key} = ?`);
-            values.push(value);
-          }
-        });
-        
-        if (filterConditions.length > 0) {
-          query += ' WHERE ' + filterConditions.join(' AND ');
-        }
-      }
-
-      // Add LIMIT clause if specified - directly in query
-      if (limit) {
-        query += ` LIMIT ${parseInt(limit)}`;
-      }
-
-      console.log('Executing query:', query, 'with values:', values);
-      const [rows] = await connection.execute(query, values);
+      const query = `SELECT * FROM \`${tableName}\``;
+      const [rows] = await connection.execute(query);
+      
       return {
         table: tableName,
         data: rows,
@@ -162,31 +138,61 @@ class MySQLDatabaseService {
         // Create a copy of data to avoid modifying the original
         const cleanedData = {};
         
-        // Check if this is a listado table insert
-        if (tableName === 'listado') {
-          // Special handling for listado table
-          Object.entries(item).forEach(([key, value]) => {
-            if (isNaN(key)) {
-              cleanedData[key] = value;
+        // Get table structure
+        const [tableColumns] = await connection.execute(
+          'SHOW COLUMNS FROM ??',
+          [tableName]
+        );
+
+        // Clean and validate data based on column types
+        tableColumns.forEach(column => {
+          const value = item[column.Field];
+          
+          if (value === undefined || value === null || value === '') {
+            cleanedData[column.Field] = null;
+            return;
+          }
+
+          // Handle different column types
+          if (column.Type.includes('int')) {
+            cleanedData[column.Field] = parseInt(value) || null;
+          } else if (column.Type.includes('decimal')) {
+            const numStr = value.toString().replace(/[$,]/g, '');
+            cleanedData[column.Field] = parseFloat(numStr) || null;
+          } else if (column.Type.includes('varchar')) {
+            const maxLength = parseInt(column.Type.match(/\((\d+)\)/)?.[1]) || 255;
+            cleanedData[column.Field] = String(value).substring(0, maxLength);
+          } else if (column.Type.includes('date')) {
+            try {
+              if (typeof value === 'string') {
+                if (value.includes('/')) {
+                  const [day, month, year] = value.split('/');
+                  cleanedData[column.Field] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                } else if (value.includes('-')) {
+                  cleanedData[column.Field] = value;
+                }
+              } else if (value instanceof Date) {
+                cleanedData[column.Field] = value.toISOString().split('T')[0];
+              }
+            } catch (e) {
+              console.warn(`Failed to parse date: ${value}`, e);
+              cleanedData[column.Field] = null;
             }
-          });
-        } else {
-          // Normal table handling - keep all fields except id
-          Object.entries(item).forEach(([key, value]) => {
-            cleanedData[key] = value;
-          });
-        }
+          } else {
+            cleanedData[column.Field] = value;
+          }
+        });
 
         // Remove id if present
         delete cleanedData.id;
 
         // Get only the columns that exist in the data
-        const columns = Object.keys(cleanedData);
+        const insertColumns = Object.keys(cleanedData);
         const values = Object.values(cleanedData);
-        const placeholders = columns.map(() => '?').join(',');
+        const placeholders = insertColumns.map(() => '?').join(',');
         
         // Use backticks to properly escape column names
-        const query = `INSERT INTO \`${tableName}\` (\`${columns.join('`,`')}\`) VALUES (${placeholders})`;
+        const query = `INSERT INTO \`${tableName}\` (\`${insertColumns.join('`,`')}\`) VALUES (${placeholders})`;
         console.log('Insert query:', query);
         console.log('Values:', values);
         
@@ -412,7 +418,7 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       
-      const query = `ALTER TABLE ${tableName} ADD COLUMN \`${columnData.name}\` ${columnData.type}`;
+      const query = `ALTER TABLE \`${tableName}\` ADD COLUMN \`${columnData.name}\` ${columnData.type}`;
       console.log('Executing query:', query);
       
       await connection.execute(query);
@@ -689,164 +695,97 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
-      // Limpiar los nombres de las tablas
+      // Clean table names
       const cleanMainTableName = mainTableName.replace(/[\[\]]/g, '_');
       const cleanSecondaryTableName = secondaryTableName.replace(/[\[\]]/g, '_');
 
-      // Iniciar transacción
+      // Start transaction
       await connection.beginTransaction();
 
-      if (groupType === 'GMM') {
-        // Crear la tabla principal con estructura exacta de emant
+      // Get table definition based on group type
+      const tableDefinition = TABLE_DEFINITIONS[groupType.toUpperCase()];
+      if (!tableDefinition) {
+        throw new Error(`Invalid group type: ${groupType}`);
+      }
+
+      if (tableDefinition.main && tableDefinition.secondary) {
+        // Create main table
+        const mainTableColumns = [
+          'id INT NOT NULL AUTO_INCREMENT',
+          ...tableDefinition.main.columns.map(col => {
+            let colDef = `\`${col.name}\` ${col.type}`;
+            if (col.nullable === false) colDef += ' NOT NULL';
+            if (col.default) colDef += ` DEFAULT '${col.default}'`;
+            return colDef;
+          }),
+          'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+          'updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+          'PRIMARY KEY (id)'
+        ];
+
         await connection.execute(`
           CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
-            id INT NOT NULL AUTO_INCREMENT,
-            numero_de_poliza INT,
-            contratante VARCHAR(72),
-            rfc VARCHAR(64),
-            domicilio VARCHAR(117),
-            desde_vigencia DATE,
-            hasta_vigencia DATE,
-            forma_de_pago VARCHAR(55),
-            fecha_de_expedicion DATE,
-            planes VARCHAR(87),
-            suma_asegurada VARCHAR(94),
-            deducible VARCHAR(59),
-            coaseguro DATE,
-            prima_neta VARCHAR(61),
-            derecho_de_poliza VARCHAR(59),
-            recargo_por_pago_fraccionado VARCHAR(61),
-            prima_total VARCHAR(61),
-            iva VARCHAR(60),
-            total_a_pagar VARCHAR(61),
-            nombre_del_agente VARCHAR(79),
-            clave_zona VARCHAR(59),
-            status VARCHAR(20) DEFAULT 'Vigente 🟢',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            ${mainTableColumns.join(',\n')}
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
 
-        // Crear la tabla secundaria con estructura exacta de listado
+        // Create secondary table
+        const secondaryTableColumns = [
+          'id INT NOT NULL AUTO_INCREMENT',
+          ...tableDefinition.secondary.columns.map(col => {
+            let colDef = `\`${col.name}\` ${col.type}`;
+            if (col.nullable === false) colDef += ' NOT NULL';
+            if (col.default) colDef += ` DEFAULT '${col.default}'`;
+            return colDef;
+          }),
+          'main_table_id INT',
+          'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+          'updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+          'PRIMARY KEY (id)',
+          `FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE`
+        ];
+
         await connection.execute(`
           CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
-            id INT NOT NULL AUTO_INCREMENT,
-            numero_de_certificado VARCHAR(58),
-            nombre_completo VARCHAR(81),
-            sexo VARCHAR(51),
-            edad VARCHAR(59),
-            cobertura VARCHAR(53),
-            suma_asegurada VARCHAR(60),
-            prima VARCHAR(59),
-            fecha_de_antiguedad DATE,
-            status ENUM('Vigente 🟢','Baja 🔴') DEFAULT 'Vigente 🟢',
-            main_table_id INT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `);
-      } else if (groupType === 'default') {
-        // Crear la tabla principal con estructura de emant
-        await connection.execute(`
-          CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
-            id INT NOT NULL AUTO_INCREMENT,
-            numero_de_poliza INT,
-            contratante VARCHAR(72),
-            rfc VARCHAR(64),
-            domicilio VARCHAR(117),
-            desde_vigencia DATE,
-            hasta_vigencia DATE,
-            forma_de_pago VARCHAR(55),
-            fecha_de_expedicion DATE,
-            planes VARCHAR(87),
-            suma_asegurada VARCHAR(94),
-            deducible VARCHAR(59),
-            coaseguro DATE,
-            prima_neta VARCHAR(61),
-            derecho_de_poliza VARCHAR(59),
-            recargo_por_pago_fraccionado VARCHAR(61),
-            prima_total VARCHAR(61),
-            iva VARCHAR(60),
-            total_a_pagar VARCHAR(61),
-            nombre_del_agente VARCHAR(79),
-            clave_zona VARCHAR(59),
-            status VARCHAR(20) DEFAULT 'Vigente 🟢',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id)
+            ${secondaryTableColumns.join(',\n')}
           ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
 
-        // Crear la tabla secundaria con estructura de listado
+        // Register the relationship
         await connection.execute(`
-          CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
-            id INT NOT NULL AUTO_INCREMENT,
-            numero_de_certificado VARCHAR(58),
-            nombre_completo VARCHAR(81),
-            sexo VARCHAR(51),
-            edad VARCHAR(59),
-            cobertura VARCHAR(53),
-            suma_asegurada VARCHAR(60),
-            prima VARCHAR(59),
-            fecha_de_antiguedad DATE,
-            status VARCHAR(20) DEFAULT 'Vigente 🟢',
-            main_table_id INT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (id),
-            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
-          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-        `);
+          INSERT INTO table_relationships 
+          (main_table_name, secondary_table_name, relationship_type, created_at) 
+          VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        `, [mainTableName, secondaryTableName, `${groupType.toLowerCase()}_policy`]);
+
       } else {
-        // Crear tabla principal básica
+        // Create single table
+        const tableColumns = [
+          'id INT NOT NULL AUTO_INCREMENT',
+          ...tableDefinition.columns.map(col => {
+            let colDef = `\`${col.name}\` ${col.type}`;
+            if (col.nullable === false) colDef += ' NOT NULL';
+            if (col.default) colDef += ` DEFAULT '${col.default}'`;
+            return colDef;
+          }),
+          'created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+          'updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+          'PRIMARY KEY (id)'
+        ];
+
         await connection.execute(`
           CREATE TABLE IF NOT EXISTS \`${cleanMainTableName}\` (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            nombre VARCHAR(100),
-            descripcion TEXT,
-            fecha DATE,
-            monto DECIMAL(10,2),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-          )
-        `);
-
-        // Crear tabla secundaria básica
-        await connection.execute(`
-          CREATE TABLE IF NOT EXISTS \`${cleanSecondaryTableName}\` (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            detalle VARCHAR(100),
-            cantidad INT,
-            precio DECIMAL(10,2),
-            subtotal DECIMAL(10,2),
-            main_table_id INT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (main_table_id) REFERENCES \`${cleanMainTableName}\`(id) ON DELETE CASCADE
-          )
+            ${tableColumns.join(',\n')}
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
       }
 
-      // Registrar la relación con el tipo específico
-      const relationType = groupType === 'GMM' ? 'gmm_policy' : 
-                         groupType === 'default' ? 'emant_policy' : 
-                         'group_policy';
-
-      await connection.execute(`
-        INSERT INTO table_relationships 
-        (main_table_name, secondary_table_name, relationship_type, created_at) 
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-      `, [mainTableName, secondaryTableName, relationType]);
-
-      // Confirmar transacción
+      // Commit transaction
       await connection.commit();
 
       return {
         success: true,
-        message: `Grupo de tablas creado: ${mainTableName} y ${secondaryTableName}`,
+        message: `Table group created: ${mainTableName}${secondaryTableName ? ` and ${secondaryTableName}` : ''}`,
         tables: {
           main: mainTableName,
           secondary: secondaryTableName,

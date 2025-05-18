@@ -26,8 +26,21 @@ const DataSection = () => {
     
     setIsLoading(true);
     try {
+      console.log('Loading data for table:', selectedTable.name);
       const result = await tableService.getData(selectedTable.name, filters);
-      setTableData(result.data || []);
+      console.log('Received data from API:', result);
+      
+      if (!result) {
+        console.error('No response from API');
+        setTableData([]);
+        return;
+      }
+      
+      // The API returns { table, data, timestamp }
+      // We need to use result.data for the table data
+      const tableData = result.data || [];
+      console.log('Setting table data with', tableData.length, 'rows');
+      setTableData(tableData);
     } catch (error) {
       console.error('Error loading table data:', error);
       setTableData([]);
@@ -37,12 +50,40 @@ const DataSection = () => {
   }, [selectedTable, filters]);
 
   useEffect(() => {
-    loadTableData();
-  }, [loadTableData]);
+    // Only load data when filters change and we have a selected table
+    if (selectedTable && Object.keys(filters).length > 0) {
+      loadTableData();
+    }
+  }, [filters, loadTableData]);
 
   const handleTableSelect = async (table) => {
+    console.log('Selected table:', table);
     setSelectedTable(table);
     setFilters({}); // Reset filters on table change
+    
+    // Load data immediately after selecting the table
+    try {
+      setIsLoading(true);
+      const result = await tableService.getData(table.name);
+      console.log('Received data from API:', result);
+      
+      if (!result) {
+        console.error('No response from API');
+        setTableData([]);
+        return;
+      }
+      
+      // The API returns { table, data, timestamp }
+      // We need to use result.data for the table data
+      const tableData = result.data || [];
+      console.log('Setting table data with', tableData.length, 'rows');
+      setTableData(tableData);
+    } catch (error) {
+      console.error('Error loading table data:', error);
+      setTableData([]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleRowClick = (row) => {

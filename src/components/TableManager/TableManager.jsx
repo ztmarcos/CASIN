@@ -9,16 +9,25 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [editingTable, setEditingTable] = useState(null);
-  const [newTableName, setNewTableName] = useState('');
-  const [showConfirmDelete, setShowConfirmDelete] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [expandedTables, setExpandedTables] = useState(new Set());
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupData, setGroupData] = useState({
     mainTableName: '',
     secondaryTableName: '',
-    groupType: 'default'
+    groupType: 'GMM'
   });
+
+  // Define table types
+  const TABLE_TYPES = {
+    'GMM': 'Gastos Médicos Mayores',
+    'AUTOS': 'Autos',
+    'VIDA': 'Vida',
+    'MASCOTAS': 'Mascotas',
+    'TRANSPORTE': 'Transporte',
+    'NEGOCIO': 'Negocio',
+    'HOGAR': 'Hogar',
+    'RC': 'Responsabilidad Civil'
+  };
 
   useEffect(() => {
     loadTables();
@@ -27,110 +36,28 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const loadTables = async () => {
     try {
       setIsLoading(true);
-      const tablesData = await tableService.getTables();
+      const tables = await tableService.getTables();
       
-      // Agrupar las tablas relacionadas
-      const groupedTables = tablesData.reduce((acc, table) => {
-        // Si es una tabla principal o no tiene relación, agregarla directamente
-        if (!table.isSecondaryTable) {
-          acc.push(table);
-          return acc;
-        }
-        
-        // Si es una tabla secundaria, insertarla después de su tabla principal
-        const mainTableIndex = acc.findIndex(t => t.name === table.relatedTableName);
-        if (mainTableIndex !== -1) {
-          acc.splice(mainTableIndex + 1, 0, table);
-        } else {
-          // Si no encontramos la tabla principal, la agregamos al final
+      // Group tables by relationships
+      const groupedTables = tables.reduce((acc, table) => {
+        if (table.isMainTable) {
+          acc.push({
+            ...table,
+            secondaryTable: tables.find(t => t.name === table.relatedTableName)
+          });
+        } else if (!table.isSecondaryTable) {
           acc.push(table);
         }
         return acc;
       }, []);
 
       setTables(groupedTables);
-      setError(null);
     } catch (err) {
       console.error('Error loading tables:', err);
-      setError('Failed to load tables. Please try again.');
+      setError('Failed to load tables');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleTableSelect = async (table) => {
-    if (onTableSelect) {
-      onTableSelect(table);
-      
-      // Si es una tabla relacionada, también notificamos la relación
-      if (table.isMainTable || table.isSecondaryTable) {
-        toast.info(`Esta tabla está relacionada con ${table.relatedTableName}`);
-      }
-    }
-  };
-
-  const handleEditClick = (e, table) => {
-    e.stopPropagation();
-    setEditingTable(table);
-    setNewTableName(table.name);
-  };
-
-  const handleEditSubmit = async (oldName, newName) => {
-    try {
-      setIsLoading(true);
-      await tableService.renameTable(oldName, newName);
-      // Refresh the table list after successful rename
-      await loadTables();
-      setEditingTable(null);
-      setNewTableName('');
-      toast.success(`Table renamed from ${oldName} to ${newName} successfully`);
-    } catch (error) {
-      console.error('Error renaming table:', error);
-      toast.error(error.message || 'Error renaming table');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (e, table) => {
-    e.stopPropagation();
-    setShowConfirmDelete(table);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!showConfirmDelete) return;
-
-    try {
-      await tableService.deleteTable(showConfirmDelete.name);
-      await loadTables();
-      setShowConfirmDelete(null);
-      if (selectedTableProp?.name === showConfirmDelete.name) {
-        onTableSelect(null);
-      }
-    } catch (err) {
-      console.error('Error deleting table:', err);
-      setError('Failed to delete table. Please try again.');
-    }
-  };
-
-  const getTableClassName = (table) => {
-    const classes = ['table-item'];
-    if (selectedTableProp?.name === table.name) classes.push('selected');
-    if (table.isMainTable) classes.push('main-table');
-    if (table.isSecondaryTable) classes.push('secondary-table');
-    return classes.join(' ');
-  };
-
-  const renderTableRelationship = (table) => {
-    if (!table.isMainTable && !table.isSecondaryTable) return null;
-
-    return (
-      <div className="table-relationship-indicator">
-        <span>
-          {table.relatedTableName}
-        </span>
-      </div>
-    );
   };
 
   const handleCreateGroup = async () => {
@@ -142,18 +69,39 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
       );
       
       if (result.success) {
-        toast.success('Grupo de tablas creado exitosamente');
+        toast.success('Table group created successfully');
         loadTables();
         setShowGroupModal(false);
         setGroupData({
           mainTableName: '',
           secondaryTableName: '',
-          groupType: 'default'
+          groupType: 'GMM'
         });
       }
     } catch (error) {
       console.error('Error creating table group:', error);
-      toast.error(error.message || 'Error al crear el grupo de tablas');
+      toast.error(error.message || 'Error creating table group');
+    }
+  };
+
+  const toggleTableExpand = (tableName) => {
+    setExpandedTables(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tableName)) {
+        newSet.delete(tableName);
+      } else {
+        newSet.add(tableName);
+      }
+      return newSet;
+    });
+  };
+
+  const handleTableClick = (table, isSecondary = false) => {
+    if (!isSecondary && table.secondaryTable) {
+      toggleTableExpand(table.name);
+    }
+    if (onTableSelect) {
+      onTableSelect(table);
     }
   };
 
@@ -164,168 +112,151 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
           <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
             {isCollapsed ? '>' : 'v'}
           </span>
-          Tablas {tables.length > 0 && `(${tables.length})`}
+          Tables {tables.length > 0 && `(${tables.length})`}
         </h3>
         <div className="header-actions">
           <button
             onClick={() => setShowGroupModal(true)}
             className="create-group-btn"
           >
-            <span>🔗</span> Nuevo Grupo
+            <span>🔗</span> New Table
           </button>
         </div>
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      {/* Modal para crear grupo de tablas */}
+      {/* Modal for creating tables */}
       <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
         <div className="modal-header">
-          <h2>Crear Grupo de Tablas</h2>
+          <h2>Create Insurance Table</h2>
           <button onClick={() => setShowGroupModal(false)}>×</button>
         </div>
         <div className="modal-content">
           <div className="form-group">
-            <label>Nombre de Tabla Principal:</label>
-            <input
-              type="text"
-              value={groupData.mainTableName}
-              onChange={(e) => setGroupData(prev => ({
-                ...prev,
-                mainTableName: e.target.value
-              }))}
-              placeholder="Nombre de tabla principal"
-              className="form-input"
-            />
-          </div>
-          <div className="form-group">
-            <label>Nombre de Tabla Secundaria:</label>
-            <input
-              type="text"
-              value={groupData.secondaryTableName}
-              onChange={(e) => setGroupData(prev => ({
-                ...prev,
-                secondaryTableName: e.target.value
-              }))}
-              placeholder="Nombre de tabla secundaria"
-              className="form-input"
-            />
-          </div>
-          <div className="form-group">
-            <label>Tipo de Grupo:</label>
+            <label>Insurance Type:</label>
             <select
               value={groupData.groupType}
               onChange={(e) => setGroupData(prev => ({
                 ...prev,
-                groupType: e.target.value
+                groupType: e.target.value,
+                mainTableName: e.target.value === 'GMM' ? 'GruposGMM' :
+                             e.target.value === 'AUTOS' ? 'GruposAutos' :
+                             e.target.value === 'VIDA' ? 'GruposVida' :
+                             e.target.value === 'MASCOTAS' ? 'Mascotas' :
+                             e.target.value === 'TRANSPORTE' ? 'Transporte' :
+                             e.target.value === 'NEGOCIO' ? 'Negocio' :
+                             e.target.value === 'HOGAR' ? 'Hogar' :
+                             e.target.value === 'RC' ? 'ResponsabilidadCivil' : '',
+                secondaryTableName: e.target.value === 'GMM' ? 'GMMListado' :
+                                  e.target.value === 'AUTOS' ? 'AutosListado' :
+                                  e.target.value === 'VIDA' ? 'VidaListado' : ''
               }))}
               className="form-select"
             >
-              <option value="default">Emant (Default)</option>
-              <option value="GMM">GMM</option>
-              <option value="basic">Básico</option>
+              {Object.entries(TABLE_TYPES).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
             <small className="help-text">
-              {groupData.groupType === 'default' && 'Estructura igual a emant/listado'}
-              {groupData.groupType === 'GMM' && 'Estructura para pólizas GMM'}
-              {groupData.groupType === 'basic' && 'Estructura básica de grupo'}
+              {groupData.groupType === 'GMM' && 'GMM policy with insured persons list'}
+              {groupData.groupType === 'AUTOS' && 'Auto policy with vehicles list'}
+              {groupData.groupType === 'VIDA' && 'Life insurance with insured persons list'}
+              {groupData.groupType === 'MASCOTAS' && 'Pet insurance policy'}
+              {groupData.groupType === 'TRANSPORTE' && 'Transport insurance policy'}
+              {groupData.groupType === 'NEGOCIO' && 'Business insurance policy'}
+              {groupData.groupType === 'HOGAR' && 'Home insurance policy'}
+              {groupData.groupType === 'RC' && 'Civil liability insurance policy'}
             </small>
           </div>
+
+          {/* Show table names for group tables */}
+          {['GMM', 'AUTOS', 'VIDA'].includes(groupData.groupType) && (
+            <>
+              <div className="form-group">
+                <label>Main Table Name:</label>
+                <input
+                  type="text"
+                  value={groupData.mainTableName}
+                  readOnly
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Secondary Table Name:</label>
+                <input
+                  type="text"
+                  value={groupData.secondaryTableName}
+                  readOnly
+                  className="form-input"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Show single table name for individual tables */}
+          {!['GMM', 'AUTOS', 'VIDA'].includes(groupData.groupType) && (
+            <div className="form-group">
+              <label>Table Name:</label>
+              <input
+                type="text"
+                value={groupData.mainTableName}
+                readOnly
+                className="form-input"
+              />
+            </div>
+          )}
+
           <div className="modal-actions">
             <button
               onClick={handleCreateGroup}
               className="btn btn-primary"
-              disabled={!groupData.mainTableName || !groupData.secondaryTableName}
+              disabled={!groupData.mainTableName}
             >
-              Crear Grupo
+              Create Table
             </button>
           </div>
         </div>
       </Modal>
 
       {!isCollapsed && (
-        <>
-          {error && <div className="error-message">{error}</div>}
-
-          <div className="tables-list">
-            {tables.length === 0 && !isLoading ? (
-              <div className="no-tables-message">No tables available</div>
-            ) : (
-              tables.map(table => (
-                <div
-                  key={table.name}
-                  className={getTableClassName(table)}
-                  onClick={() => handleTableSelect(table)}
-                >
-                  <div className="table-info">
-                    {editingTable?.name === table.name ? (
-                      <form onSubmit={(e) => {
-                        e.preventDefault();
-                        handleEditSubmit(table.name, newTableName);
-                      }} className="edit-form">
-                        <input
-                          type="text"
-                          value={newTableName}
-                          onChange={(e) => setNewTableName(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          autoFocus
-                        />
-                        <button type="submit" onClick={(e) => e.stopPropagation()}>✓</button>
-                        <button type="button" onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTable(null);
-                        }}>✕</button>
-                      </form>
-                    ) : (
-                      <>
-                        <span className="table-name">{table.name}</span>
-                        {renderTableRelationship(table)}
-                      </>
-                    )}
-                  </div>
-                  <div className="table-actions">
-                    <button
-                      className="action-btn edit-btn"
-                      onClick={(e) => handleEditClick(e, table)}
-                      title="Edit Name"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="action-btn delete-btn"
-                      onClick={(e) => handleDeleteClick(e, table)}
-                      title="Delete Table"
-                    >
-                      ×
-                    </button>
-                  </div>
+        <div className="tables-list">
+          {tables.map(table => (
+            <div key={table.name} className="table-group">
+              <div
+                className={`table-item ${selectedTableProp === table.name ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''}`}
+                onClick={() => handleTableClick(table)}
+              >
+                <div className="table-info">
+                  <span className="table-name">{table.name}</span>
+                  {table.secondaryTable && (
+                    <span className="expand-icon">
+                      {expandedTables.has(table.name) ? '▼' : '▶'}
+                    </span>
+                  )}
                 </div>
-              ))
-            )}
-          </div>
-
-          {/* Delete Confirmation Modal */}
-          {showConfirmDelete && (
-            <div className="modal-overlay">
-              <div className="modal-content">
-                <h4>Delete Table</h4>
-                <p>Are you sure you want to delete the table "{showConfirmDelete.name}"?</p>
-                {(showConfirmDelete.isMainTable || showConfirmDelete.isSecondaryTable) && (
-                  <p className="warning">
-                    ¡Advertencia! Esta tabla está relacionada con {showConfirmDelete.relatedTableName}
-                  </p>
+                {table.relationshipType && (
+                  <span className="table-relationship-indicator" data-type={table.relationshipType}>
+                    {table.relationshipType.split('_')[0].toUpperCase()}
+                  </span>
                 )}
-                <div className="modal-actions">
-                  <button onClick={handleConfirmDelete} className="danger-btn">
-                    Delete
-                  </button>
-                  <button onClick={() => setShowConfirmDelete(null)}>
-                    Cancel
-                  </button>
-                </div>
               </div>
+              
+              {table.secondaryTable && expandedTables.has(table.name) && (
+                <div className="secondary-table">
+                  <div
+                    className={`table-item ${selectedTableProp === table.secondaryTable.name ? 'selected' : ''}`}
+                    onClick={() => handleTableClick(table.secondaryTable, true)}
+                  >
+                    <span className="table-name">{table.secondaryTable.name}</span>
+                    <span className="table-relationship-indicator" data-type={table.relationshipType}>
+                      Details
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   );

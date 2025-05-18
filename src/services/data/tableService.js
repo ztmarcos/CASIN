@@ -27,30 +27,16 @@ class TableService {
     }
   }
 
-  async getData(tableName, filters = {}) {
+  async getData(tableName, options = {}) {
     try {
-      const queryParams = new URLSearchParams(filters).toString();
-      const response = await fetch(`${this.apiUrl}/${tableName}?${queryParams}`);
+      const response = await fetch(`${this.apiUrl}/${tableName}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const data = await response.json();
-
-      // Verificar si la tabla es relacionada
-      const tables = await this.getTables();
-      const table = tables.find(t => t.name === tableName);
-      
-      if (table && !table.isMainTable && !table.isSecondaryTable) {
-        // Si es una tabla individual, filtrar la columna status de los datos
-        data.data = data.data.map(row => {
-          const { status, ...rest } = row;
-          return rest;
-        });
-      }
-      
-      return data;
+      const result = await response.json();
+      return result;
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error getting data:', error);
       throw error;
     }
   }
@@ -153,52 +139,54 @@ class TableService {
           const numStr = value.toString().replace(/[$,]/g, '');
           cleanData[column.name] = parseFloat(numStr) || null;
         } else if (column.type.includes('varchar')) {
-          // Get length from varchar(X)
           const maxLength = parseInt(column.type.match(/\((\d+)\)/)?.[1]) || 255;
           cleanData[column.name] = String(value).substring(0, maxLength);
         } else if (column.type.includes('date')) {
-          // Handle date format conversion
           try {
-            if (value.includes('/')) {
-              // Convert from DD/MM/YYYY to YYYY-MM-DD
-              const [day, month, year] = value.split('/');
-              cleanData[column.name] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            } else if (value.includes('-')) {
-              // Ensure YYYY-MM-DD format
-              const date = new Date(value);
-              cleanData[column.name] = date.toISOString().split('T')[0];
-            } else {
-              // Try to parse as date
-              const date = new Date(value);
-              if (!isNaN(date)) {
-                cleanData[column.name] = date.toISOString().split('T')[0];
-              } else {
-                cleanData[column.name] = null;
+            if (typeof value === 'string') {
+              if (value.includes('/')) {
+                const [day, month, year] = value.split('/');
+                cleanData[column.name] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              } else if (value.includes('-')) {
+                cleanData[column.name] = value;
               }
+            } else if (value instanceof Date) {
+              cleanData[column.name] = value.toISOString().split('T')[0];
             }
           } catch (e) {
-            console.warn(`Failed to parse date: ${value}`);
+            console.warn(`Failed to parse date: ${value}`, e);
             cleanData[column.name] = null;
           }
         }
       });
 
+      // Remove created_at and updated_at as they are handled by MySQL
+      delete cleanData.created_at;
+      delete cleanData.updated_at;
+
       console.log('Clean data before insertion:', cleanData);
 
-      // Insert data
+      // Check if this is a policy-related table and has a policy number
+      if (tableName.toLowerCase().includes('gmm') && cleanData.numero_de_poliza) {
+        // Try to find existing policy
+        const existingPolicy = await this.getData(tableName, {
+          where: { numero_de_poliza: cleanData.numero_de_poliza }
+        });
+
+        if (existingPolicy && existingPolicy.length > 0) {
+          // Update existing policy
+          await this.updateData(tableName, cleanData, {
+            where: { numero_de_poliza: cleanData.numero_de_poliza }
+          });
+          return { success: true, message: 'Policy updated successfully' };
+        }
+      }
+
+      // If no existing policy found or not a policy table, proceed with insert
       const response = await axios.post(`${this.apiUrl}/${tableName}`, cleanData);
       
       if (!response.data.success) {
         throw new Error(response.data.error || 'Failed to insert data');
-      }
-
-      // If table has relationships, handle them
-      if (targetTable.isMainTable || targetTable.isSecondaryTable) {
-        console.log('Table has relationships:', {
-          isMain: targetTable.isMainTable,
-          isSecondary: targetTable.isSecondaryTable,
-          relatedTable: targetTable.relatedTableName
-        });
       }
 
       return response.data;
@@ -302,25 +290,35 @@ class TableService {
     }
   }
 
-  async updateData(tableName, id, column, value) {
+  async updateData(tableName, data, options = {}) {
     try {
-      const response = await fetch(`${this.apiUrl}/${tableName}/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          column,
-          value
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Failed to update ${column} in ${tableName}`);
+      if (!options.where) {
+        throw new Error('Update operation requires where clause');
       }
 
-      return await response.json();
+      const setValues = [];
+      const values = [];
+      Object.entries(data).forEach(([key, value]) => {
+        if (key !== 'id' && !Object.keys(options.where).includes(key)) {
+          setValues.push(`${key} = ?`);
+          values.push(value);
+        }
+      });
+
+      const whereConditions = [];
+      Object.entries(options.where).forEach(([key, value]) => {
+        whereConditions.push(`${key} = ?`);
+        values.push(value);
+      });
+
+      const query = `
+        UPDATE ${tableName}
+        SET ${setValues.join(', ')}
+        WHERE ${whereConditions.join(' AND ')}
+      `;
+
+      await this.executeQuery(query, values);
+      return true;
     } catch (error) {
       console.error('Error updating data:', error);
       throw error;
@@ -765,93 +763,6 @@ class TableService {
     }
   }
 
-  // Modified getData method to use existing API method
-  async getData(tableName) {
-    try {
-      const response = await fetch(`${this.apiUrl}/${tableName}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Error getting data from ${tableName}:`, error);
-      throw error;
-    }
-  }
-
-  async updateColumnType(tableName, columnName, newType) {
-    try {
-      // Map frontend types to SQL types
-      const sqlType = newType === 'TEXT' ? 'TEXT' :
-                     newType === 'INT' ? 'INT' :
-                     newType === 'DECIMAL' ? 'DECIMAL(10,2)' :
-                     newType === 'DATE' ? 'DATE' :
-                     newType === 'BOOLEAN' ? 'BOOLEAN' :
-                     'TEXT';
-
-      // Clean the column name
-      const cleanColumnName = columnName.trim()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_]/g, '_')
-        .toLowerCase();
-
-      // Use the correct endpoint for updating column type
-      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${cleanColumnName}/type`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: sqlType
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Failed to update column type: ${response.statusText}`);
-      }
-
-      // Dispatch an event to notify other components
-      const event = new CustomEvent('tableStructureUpdated', {
-        detail: { tableName, columnName: cleanColumnName, type: sqlType }
-      });
-      window.dispatchEvent(event);
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating column type:', error);
-      throw error;
-    }
-  }
-
-  async updateColumns(tableName, columns) {
-    try {
-      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ columns }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update columns: ${response.statusText}`);
-      }
-
-      // Dispatch an event to notify other components
-      const event = new CustomEvent('tableStructureUpdated', {
-        detail: { tableName }
-      });
-      window.dispatchEvent(event);
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error updating columns:', error);
-      throw error;
-    }
-  }
-
   // Helper method to execute table operations
   async executeTableOperation(tableName, operation) {
     try {
@@ -878,14 +789,14 @@ class TableService {
   }
 
   // Helper method to execute SQL query
-  async executeQuery(query) {
+  async executeQuery(query, values = []) {
     try {
       const response = await fetch(`${this.apiUrl}/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ query, values })
       });
 
       if (!response.ok) {
@@ -910,6 +821,19 @@ class TableService {
     if (dbType.includes('DATE') || dbType.includes('TIME')) return 'DATE';
     if (dbType === 'BOOLEAN' || dbType === 'TINYINT(1)') return 'BOOLEAN';
     return 'TEXT';
+  }
+
+  async getTableTypes() {
+    try {
+      const response = await fetch(`${this.apiUrl}/table-types`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting table types:', error);
+      throw error;
+    }
   }
 }
 
