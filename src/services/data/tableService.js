@@ -290,23 +290,42 @@ class TableService {
     }
   }
 
-  async updateData(tableName, data, options = {}) {
+  async updateData(tableName, id, column, value) {
     try {
-      if (!options.where) {
+      // If id is a number and column/value are provided, it's a single cell update
+      if (typeof id === 'number' && column && value !== undefined) {
+        const response = await fetch(`${this.apiUrl}/${tableName}/${id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ column, value })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Error updating data');
+        }
+
+        return await response.json();
+      }
+      
+      // Otherwise, treat it as a where clause update (legacy behavior)
+      if (!id.where) {
         throw new Error('Update operation requires where clause');
       }
 
       const setValues = [];
       const values = [];
-      Object.entries(data).forEach(([key, value]) => {
-        if (key !== 'id' && !Object.keys(options.where).includes(key)) {
+      Object.entries(id).forEach(([key, value]) => {
+        if (key !== 'where' && !Object.keys(id.where).includes(key)) {
           setValues.push(`${key} = ?`);
           values.push(value);
         }
       });
 
       const whereConditions = [];
-      Object.entries(options.where).forEach(([key, value]) => {
+      Object.entries(id.where).forEach(([key, value]) => {
         whereConditions.push(`${key} = ?`);
         values.push(value);
       });

@@ -471,14 +471,19 @@ class MySQLDatabaseService {
           // Check if the value is in DD/MM/YYYY format
           const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
           if (dateMatch) {
-            // Keep the DD/MM/YYYY format as is, since we're using VARCHAR for dates
-            processedValue = value;
+            // Convert to YYYY-MM-DD format for MySQL
+            const [_, day, month, year] = dateMatch;
+            processedValue = `${year}-${month}-${day}`;
           }
         }
       }
       
       const query = `UPDATE \`${tableName}\` SET \`${column}\` = ? WHERE id = ?`;
       const [result] = await connection.execute(query, [processedValue, id]);
+      
+      if (result.affectedRows === 0) {
+        throw new Error(`No record found with id ${id}`);
+      }
       
       return {
         success: true,

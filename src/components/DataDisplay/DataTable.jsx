@@ -6,6 +6,7 @@ import TableMail from './TableMail';
 import PDFParser from '../PDFParser_new/PDFParser';
 import Modal from '../Modal/Modal';
 import './DataTable.css';
+import { toast } from 'react-hot-toast';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
   // Add console logs for debugging
@@ -150,11 +151,30 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     const row = data[rowIndex];
     
     try {
+      // First update the UI optimistically
+      const updatedData = filteredData.map((r, index) => 
+        index === rowIndex ? { ...r, [column]: editValue } : r
+      );
+      setFilteredData(updatedData);
+      
+      // Then make the API call
       await onCellUpdate(row.id, column, editValue);
+      
+      // Close the edit popup
       handleCancelEdit();
-      await refreshData();
+      
+      // Show success message
+      toast.success('Cell updated successfully');
     } catch (error) {
       console.error('Failed to update cell:', error);
+      
+      // Revert the optimistic update
+      setFilteredData(data);
+      
+      // Show error message
+      toast.error(error.message || 'Failed to update cell');
+      
+      // Keep the edit popup open so user can try again
     }
   };
 

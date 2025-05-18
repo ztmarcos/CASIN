@@ -87,7 +87,8 @@ export default function Reports() {
       identifiers: {
         numero_poliza: policy.numero_poliza || policy.n__mero_de_p__liza || policy.numero_de_poliza,
         contratante: policy.contratante || policy.nombre_contratante,
-        asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante
+        asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
+        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada'
       }
     });
 
@@ -111,7 +112,7 @@ export default function Reports() {
         forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
         pagos_fraccionados: policy.pagos_fraccionados,
         pago_parcial: policy.monto_parcial,
-        aseguradora: policy.aseguradora === 'Grupo Nacional Provincial S.A.B.' ? 'GNP' : (policy.aseguradora || 'No especificada'),
+        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
         fecha_proximo_pago: calculateNextPaymentDate(
           policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
           policy.forma_de_pago || policy.forma_pago
@@ -125,6 +126,7 @@ export default function Reports() {
         numero_poliza: normalized.numero_poliza,
         contratante: normalized.contratante,
         asegurado: normalized.asegurado,
+        aseguradora: normalized.aseguradora,
         fecha_inicio: normalized.fecha_inicio,
         fecha_fin: normalized.fecha_fin
       });
@@ -150,7 +152,7 @@ export default function Reports() {
         forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
         pagos_fraccionados: null,
         pago_parcial: null,
-        aseguradora: policy.aseguradora === 'Grupo Nacional Provincial S.A.B.' ? 'GNP' : (policy.aseguradora || 'No especificada'),
+        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
         fecha_proximo_pago: calculateNextPaymentDate(
           policy.fecha_inicio || policy.vigencia_inicio || policy.desde_vigencia,
           policy.forma_de_pago || policy.forma_pago
@@ -164,6 +166,7 @@ export default function Reports() {
         numero_poliza: normalized.numero_poliza,
         contratante: normalized.contratante,
         asegurado: normalized.asegurado,
+        aseguradora: normalized.aseguradora,
         fecha_inicio: normalized.fecha_inicio,
         fecha_fin: normalized.fecha_fin
       });
@@ -185,7 +188,7 @@ export default function Reports() {
         prima_neta: primaTotal,
         prima_total: primaTotal,
         forma_pago: policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago || 'No especificado',
-        aseguradora: policy.aseguradora === 'Grupo Nacional Provincial S.A.B.' ? 'GNP' : (policy.aseguradora || 'No especificada'),
+        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
         fecha_proximo_pago: calculateNextPaymentDate(
           policy.fecha_inicio || policy.vigencia_inicio,
           policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago
@@ -199,6 +202,7 @@ export default function Reports() {
         numero_poliza: normalized.numero_poliza,
         contratante: normalized.contratante,
         asegurado: normalized.asegurado,
+        aseguradora: normalized.aseguradora,
         fecha_inicio: normalized.fecha_inicio,
         fecha_fin: normalized.fecha_fin
       });
@@ -471,10 +475,24 @@ export default function Reports() {
   useEffect(() => {
     if (!policies.length) return;
 
+    // Add debugging logs
+    console.log('Building matrix with policies:', policies.map(p => ({
+      contratante: p.contratante,
+      aseguradora: p.aseguradora,
+      ramo: p.ramo
+    })));
+
     // Extract unique values
     const clients = [...new Set(policies.map(p => p.contratante))].sort();
     const companies = [...new Set(policies.map(p => p.aseguradora))].sort();
     const ramos = [...new Set(policies.map(p => p.ramo))].sort();
+
+    // Log unique values
+    console.log('Unique values found:', {
+      clients: clients,
+      companies: companies,
+      ramos: ramos
+    });
 
     // Create client matrix
     const matrix = {};
@@ -500,6 +518,9 @@ export default function Reports() {
         }
       });
     });
+
+    // Log final matrix
+    console.log('Final matrix structure:', matrix);
 
     setUniqueClients(clients);
     setUniqueCompanies(companies);
