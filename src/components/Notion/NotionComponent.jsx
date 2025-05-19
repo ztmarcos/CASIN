@@ -1,12 +1,16 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 // Use relative path for API requests to leverage Vite proxy
 const API_URL = '/api';
 
 const NotionComponent = () => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   
   // Enhanced debugging with frontend port information
   const logDebug = (message, data) => {
@@ -19,44 +23,92 @@ const NotionComponent = () => {
   };
 
   const getStatusColor = (status) => {
-    if (!status || status === 'No Status') return 'bg-gray-100 text-gray-800';
+    if (!status || status === 'No Status') return {};
     
+    const baseStyle = {
+      padding: '4px 8px',
+      borderRadius: '4px',
+      display: 'inline-block'
+    };
+
     switch (status.toLowerCase()) {
       case 'completed':
       case 'completado':
       case 'done':
-        return 'bg-green-100 text-green-800';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#065f46' : '#d1fae5',
+          color: isDark ? '#34d399' : '#065f46'
+        };
       case 'in progress':
       case 'en progreso':
       case 'doing':
-        return 'bg-yellow-100 text-yellow-800';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#854d0e' : '#fef3c7',
+          color: isDark ? '#fbbf24' : '#854d0e'
+        };
       case 'not started':
       case 'no iniciado':
       case 'to do':
-        return 'bg-blue-100 text-blue-800';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#1e40af' : '#dbeafe',
+          color: isDark ? '#60a5fa' : '#1e40af'
+        };
       case 'blocked':
       case 'bloqueado':
-        return 'bg-red-100 text-red-800';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#991b1b' : '#fee2e2',
+          color: isDark ? '#f87171' : '#991b1b'
+        };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#374151' : '#f3f4f6',
+          color: isDark ? '#9ca3af' : '#374151'
+        };
     }
   };
 
   const getPriorityColor = (priority) => {
-    if (!priority || priority === 'No Priority') return 'text-gray-500';
+    if (!priority || priority === 'No Priority') return {};
     
+    const baseStyle = {
+      padding: '4px 8px',
+      borderRadius: '4px',
+      display: 'inline-block'
+    };
+
     switch (priority.toLowerCase()) {
       case 'high':
       case 'alta':
-        return 'text-red-600';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#991b1b' : '#fee2e2',
+          color: isDark ? '#f87171' : '#991b1b'
+        };
       case 'medium':
       case 'media':
-        return 'text-yellow-600';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#854d0e' : '#fef3c7',
+          color: isDark ? '#fbbf24' : '#854d0e'
+        };
       case 'low':
       case 'baja':
-        return 'text-green-600';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#065f46' : '#d1fae5',
+          color: isDark ? '#34d399' : '#065f46'
+        };
       default:
-        return 'text-gray-500';
+        return {
+          ...baseStyle,
+          backgroundColor: isDark ? '#374151' : '#f3f4f6',
+          color: isDark ? '#9ca3af' : '#374151'
+        };
     }
   };
 
@@ -197,147 +249,175 @@ const NotionComponent = () => {
     fetchNotionData();
   }, [fetchNotionData]);
 
-  const TaskTable = ({ tasks }) => {
-    return (
-      <div className="overflow-x-auto bg-white rounded-lg shadow">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {tasks.map((task) => (
-              <tr key={task.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <a href={task.url} target="_blank" rel="noopener noreferrer" 
-                     className="text-blue-600 hover:text-blue-800 hover:underline">
-                    {task.title}
-                  </a>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${task.status === 'In progress' ? 'bg-yellow-100 text-yellow-800' : 
-                      task.status === 'Not started' ? 'bg-red-100 text-red-800' : 
-                      task.status === 'Done' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {task.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${task.priority === 'High' ? 'bg-red-100 text-red-800' : 
-                      task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
-                      task.priority === 'Low' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {task.priority || 'No Priority'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {task.dueDate || 'No date'}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {task.assignee || 'Unassigned'}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 max-w-md truncate">
-                  {task.description || 'No description'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortedData = useCallback(() => {
+    if (!data) return [];
+    const sortedData = [...data];
+    if (sortConfig.key) {
+      sortedData.sort((a, b) => {
+        let aVal = a[sortConfig.key] || '';
+        let bVal = b[sortConfig.key] || '';
+        
+        if (sortConfig.key === 'dueDate') {
+          aVal = aVal ? new Date(aVal).getTime() : 0;
+          bVal = bVal ? new Date(bVal).getTime() : 0;
+        }
+        
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortedData;
+  }, [data, sortConfig]);
+
+  const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontFamily: 'monospace',
+    backgroundColor: isDark ? '#1f2937' : '#ffffff'
+  };
+
+  const thStyle = {
+    borderBottom: isDark ? '2px solid #4b5563' : '2px solid #ccc',
+    padding: '12px 8px',
+    textAlign: 'left',
+    color: isDark ? '#e5e7eb' : '#111827',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    cursor: 'pointer'
+  };
+
+  const tdStyle = {
+    padding: '8px',
+    borderBottom: isDark ? '1px solid #374151' : '1px solid #eee',
+    color: isDark ? '#e5e7eb' : '#111827',
+    fontSize: '0.875rem'
+  };
+
+  const linkStyle = {
+    color: isDark ? '#60a5fa' : '#2563eb',
+    textDecoration: 'none'
   };
 
   return (
-    <div className="p-4 min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800">Notion Tasks</h2>
-          <button
-            onClick={fetchNotionData}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Refresh Tasks
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-6 bg-red-100 border-l-4 border-red-500 p-4 rounded" role="alert">
-            <p className="font-bold text-red-700">Error</p>
-            <p className="text-red-700">{error}</p>
-          </div>
-        )}
-
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
-          </div>
-        ) : data && data.length > 0 ? (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assignee</th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {data.map((task) => (
-                    <tr key={task.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <a href={task.url} target="_blank" rel="noopener noreferrer" 
-                           className="text-blue-600 hover:text-blue-800 hover:underline">
-                          {task.title || 'Untitled'}
-                        </a>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
-                          {task.status || 'No Status'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          task.priority === 'High' ? 'bg-red-100 text-red-800' : 
-                          task.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' : 
-                          task.priority === 'Low' ? 'bg-green-100 text-green-800' : 
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {task.priority || 'No Priority'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDate(task.dueDate) || 'No date'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {task.assignee || 'Unassigned'}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <div className="max-w-xs truncate">
-                          {task.description || 'No description'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <p className="text-gray-500 text-lg">No tasks found</p>
-          </div>
-        )}
+    <div style={{ padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <h2 style={{ 
+          margin: 0, 
+          color: isDark ? '#e5e7eb' : '#111827',
+          fontSize: '1.5rem',
+          fontWeight: '600'
+        }}>
+          Tareas de Notion
+        </h2>
+        <button
+          onClick={fetchNotionData}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            border: isDark ? 'none' : '1px solid #e5e7eb',
+            backgroundColor: isDark ? '#374151' : '#ffffff',
+            color: isDark ? '#e5e7eb' : '#111827',
+            cursor: 'pointer',
+            fontSize: '0.875rem'
+          }}
+          disabled={loading}
+        >
+          {loading ? "Actualizando..." : "Actualizar"}
+        </button>
       </div>
+
+      {error && (
+        <div style={{
+          padding: '16px',
+          marginBottom: '16px',
+          borderRadius: '6px',
+          backgroundColor: isDark ? 'rgba(220, 38, 38, 0.1)' : '#fee2e2',
+          color: isDark ? '#fca5a5' : '#991b1b'
+        }}>
+          {error}
+        </div>
+      )}
+
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            {[
+              { key: 'title', label: 'Tarea' },
+              { key: 'status', label: 'Estado' },
+              { key: 'priority', label: 'Prioridad' },
+              { key: 'dueDate', label: 'Fecha' },
+              { key: 'assignee', label: 'Asignado' },
+              { key: 'description', label: 'Descripción' },
+              { key: 'taskType', label: 'Tipo' }
+            ].map((column) => (
+              <th 
+                key={column.key}
+                style={thStyle}
+                onClick={() => requestSort(column.key)}
+              >
+                {column.label} {sortConfig.key === column.key && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {loading ? (
+            <tr>
+              <td colSpan="7" style={{ ...tdStyle, textAlign: 'center' }}>
+                Cargando tareas...
+              </td>
+            </tr>
+          ) : getSortedData().length === 0 ? (
+            <tr>
+              <td colSpan="7" style={{ ...tdStyle, textAlign: 'center' }}>
+                No hay tareas disponibles
+              </td>
+            </tr>
+          ) : (
+            getSortedData().map((task) => (
+              <tr key={task.id}>
+                <td style={tdStyle}>
+                  <a 
+                    href={task.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    style={linkStyle}
+                  >
+                    {task.title || 'Sin título'}
+                  </a>
+                </td>
+                <td style={tdStyle}>
+                  <span style={getStatusColor(task.status)}>
+                    {task.status || 'Sin estado'}
+                  </span>
+                </td>
+                <td style={tdStyle}>
+                  <span style={getPriorityColor(task.priority)}>
+                    {task.priority || 'Sin prioridad'}
+                  </span>
+                </td>
+                <td style={tdStyle}>{formatDate(task.dueDate) || 'Sin fecha'}</td>
+                <td style={tdStyle}>{task.assignee || 'Sin asignar'}</td>
+                <td style={tdStyle}>
+                  <div style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {task.description || 'Sin descripción'}
+                  </div>
+                </td>
+                <td style={tdStyle}>{task.taskType || 'Sin tipo'}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };

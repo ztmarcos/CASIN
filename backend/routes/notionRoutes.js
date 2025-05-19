@@ -34,33 +34,27 @@ router.use((req, res, next) => {
   next();
 });
 
-// Enhanced property extraction function
+// Helper function to extract property value based on type
 const extractPropertyValue = (property) => {
   if (!property) return null;
 
-  try {
-    switch (property.type) {
-      case 'title':
-        return (property.title || []).map(t => t.plain_text).join('') || null;
-      case 'rich_text':
-        return (property.rich_text || []).map(t => t.plain_text).join('') || null;
-      case 'select':
-        return property.select?.name || null;
-      case 'multi_select':
-        return property.multi_select?.map(item => item.name).join(', ') || null;
-      case 'date':
-        return property.date?.start || null;
-      case 'status':
-        return property.status?.name || null;
-      case 'people':
-        return property.people?.map(person => person.name).join(', ') || null;
-      default:
-        logNotionDebug('Unhandled property type:', { type: property.type, property });
-        return null;
-    }
-  } catch (error) {
-    logNotionDebug('Error extracting property value:', { error, property });
-    return null;
+  switch (property.type) {
+    case 'title':
+      return property.title[0]?.plain_text || null;
+    case 'rich_text':
+      return property.rich_text[0]?.plain_text || null;
+    case 'select':
+      return property.select?.name || null;
+    case 'multi_select':
+      return property.multi_select?.map(item => item.name) || [];
+    case 'date':
+      return property.date?.start || null;
+    case 'people':
+      return property.people?.map(person => person.name).join(', ') || null;
+    case 'status':
+      return property.status?.name || null;
+    default:
+      return null;
   }
 };
 
@@ -89,137 +83,45 @@ router.get('/tasks', async (req, res) => {
       database_id: databaseId
     });
 
-    console.log('📚 Database Structure:', {
-      properties: Object.entries(database.properties).map(([key, value]) => ({
-        name: key,
-        type: value.type
-      }))
-    });
-    
-    // Query the Notion database
-    console.log('🔑 Querying database with ID:', databaseId);
-    
-    let response;
-    try {
-      response = await notion.databases.query({
-        database_id: databaseId,
-        page_size: 10 // Let's get a few pages
-      });
-
-      // Log the raw response to see what we're getting
-      console.log('📦 Raw database query response:', {
-        resultCount: response.results.length,
-        results: response.results.map(page => ({
-          id: page.id,
-          // Log the raw properties object
-          rawProperties: page.properties, 
-          hasProperties: !!page.properties,
-          propertyCount: page.properties ? Object.keys(page.properties).length : 0,
-          propertyNames: page.properties ? Object.keys(page.properties) : []
-        }))
-      });
-
-    } catch (error) {
-      if (error.code === 'object_not_found') {
-        console.error('❌ Database not found. Check your database ID:', databaseId);
-        throw new Error('Database not found. Please verify your database ID.');
-      }
-      
-      if (error.code === 'unauthorized') {
-        console.error('❌ Integration lacks permission. Please check:');
-        console.error('1. The integration token is correct');
-        console.error('2. The integration has been added to the database');
-        console.error('3. The integration has read permissions');
-        throw new Error('Unauthorized access to database. Please check integration permissions.');
-      }
-      
-      throw error;
-    }
-    
-    // Log the full response for debugging
-    // console.log('Full Notion Response:', JSON.stringify(response.results[0], null, 2));
-
-    console.log('📊 Raw Response from query:', {
-      resultCount: response.results.length,
-      firstPage: response.results[0] ? {
-        id: response.results[0].id,
-        // Log raw properties of the first page
-        rawProperties: response.results[0].properties 
-      } : null
-    });
-
-    // Transform the data into a more usable format
-    const transformedResults = response.results.map(page => {
-      // Log the raw page data for debugging
-      console.log('📄 Raw Page for transformation:', {
-        id: page.id,
-        url: page.url,
-        // Log raw properties before transformation
-        rawProperties: page.properties, 
-        hasProperties: !!page.properties,
-        propertiesForTransformation: page.properties ? Object.entries(page.properties).map(([key, prop]) => ({
-          key,
-          type: prop.type,
-          value: extractPropertyValue(prop)
-        })) : []
-      });
-
-      if (!page.properties) {
-        console.error('❌ Page is missing properties during transformation:', {
-          id: page.id,
-          rawPage: JSON.stringify(page, null, 2)
-        });
-        return null;
-      }
-      
-      const properties = page.properties; // Define properties here
-
-      // Simplified title extraction for now - just find the first text-based property
-      let titleValue = '';
-      let titlePropertyKey = '';
-
-      for (const [key, prop] of Object.entries(properties)) {
-        const value = extractPropertyValue(prop);
-        if (typeof value === 'string' && value.trim() !== '') {
-          titlePropertyKey = key;
-          titleValue = value;
-          break; 
+    // Query the database with sorting
+    const response = await notion.databases.query({
+      database_id: databaseId,
+      sorts: [
+        {
+          property: 'Due Date',
+          direction: 'ascending'
         }
-      }
-      
-      console.log('📝 Title Extraction Attempt:', {
-        pageId: page.id,
-        titlePropertyKey,
-        titleValue,
-        allPropertyKeys: Object.keys(properties),
-        propertyTypes: Object.entries(properties).map(([key, prop]) => `${key}: ${prop.type}`)
-      });
+      ]
+    });
 
-      if (!titleValue) {
-        console.warn('⚠️ No usable title found for page:', page.id);
-        // return null; // Let's still process it to see other fields
-      }
+    // Transform the results
+    const transformedResults = response.results.map(page => {
+      const properties = page.properties;
 
+      // Find the title property (it might be named differently)
+      const titleProperty = Object.values(properties).find(
+        prop => prop.type === 'title'
+      );
+
+      const title = titleProperty ? extractPropertyValue(titleProperty) : null;
+
+      // Extract all other properties
       const task = {
         id: page.id,
         url: page.url,
-        title: titleValue || 'No Title Found', // Default if no title
-        status: extractPropertyValue(properties.Status) || 'No Status',
-        dueDate: extractPropertyValue(properties['Due Date']) || '',
-        priority: extractPropertyValue(properties.Priority) || 'No Priority',
-        assignee: extractPropertyValue(properties.Assignee) || '',
-        description: extractPropertyValue(properties.Description) || '',
-        taskType: extractPropertyValue(properties['Task Type']) || ''
+        title: title || 'Sin título',
+        status: extractPropertyValue(properties.Status) || extractPropertyValue(properties.status) || 'Sin estado',
+        priority: extractPropertyValue(properties.Priority) || extractPropertyValue(properties.priority) || 'Sin prioridad',
+        dueDate: extractPropertyValue(properties['Due Date']) || extractPropertyValue(properties['due_date']) || null,
+        assignee: extractPropertyValue(properties.Assignee) || extractPropertyValue(properties.assignee) || 'Sin asignar',
+        description: extractPropertyValue(properties.Description) || extractPropertyValue(properties.description) || '',
+        taskType: extractPropertyValue(properties['Task Type']) || extractPropertyValue(properties['task_type']) || 'Sin tipo',
+        tags: extractPropertyValue(properties.Tags) || extractPropertyValue(properties.tags) || [],
+        createdTime: page.created_time,
+        lastEditedTime: page.last_edited_time
       };
 
-      console.log('✨ Transformed Task:', task);
-
       return task;
-    }).filter(task => task !== null); // Filter out nulls from pages missing properties earlier
-
-    console.log('🎯 Final Result:', {
-      count: transformedResults.length,
-      tasks: transformedResults
     });
 
     res.json(transformedResults);
