@@ -14,6 +14,35 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     // Move tableName to component scope so it's available everywhere
     const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
 
+    // Función para formatear valores
+    const formatValue = (value) => {
+        if (value === null || value === undefined) return 'N/A';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number') return value.toString();
+        if (typeof value === 'boolean') return value.toString();
+        if (value instanceof Date) return value.toLocaleDateString();
+        if (Array.isArray(value)) {
+            return value.map(item => 
+                typeof item === 'object' ? JSON.stringify(item, null, 2) : item
+            ).join(', ');
+        }
+        if (typeof value === 'object') {
+            try {
+                // Formatear objetos de manera más legible
+                return Object.entries(value)
+                    .map(([k, v]) => {
+                        const formattedValue = typeof v === 'object' ? JSON.stringify(v, null, 2) : v;
+                        return `${k}: ${formattedValue}`;
+                    })
+                    .join('\n');
+            } catch (err) {
+                console.error('Error formatting object:', err);
+                return 'Invalid Object';
+            }
+        }
+        return 'N/A';
+    };
+
     useEffect(() => {
         if (mappedData && !editedData) {
             setEditedData({...mappedData});
@@ -54,16 +83,14 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             } else if (tableInfo.type === 'group') {
                 columns = tableInfo.childFields;
             } else {
-                // If no specific type, use all columns from the table except 'id'
                 columns = targetTable.columns
                     .filter(col => col.name !== 'id')
                     .map(col => col.name);
             }
 
-            // Create prompt for GPT
             const prompt = {
                 text: parsedData.text,
-                tables: [targetTable], // Only send the target table
+                tables: [targetTable],
                 metadata: parsedData.metadata,
                 targetColumns: columns,
                 tableName: tableName,
@@ -99,10 +126,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             const result = await response.json();
             
             if (result.mappedData) {
-                // Clean the data before setting it
                 const cleanData = {};
-                
-                // Only include fields that are in our columns list
                 columns.forEach(column => {
                     cleanData[column] = result.mappedData[column] || null;
                 });
@@ -126,30 +150,30 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 throw new Error('Invalid table information');
             }
 
-            // Create a copy of the data and remove the id field
             const cleanData = { ...data };
-            delete cleanData.id;  // Remove id field as it's auto-incremented
+            delete cleanData.id;
 
-            // Define field types based on table type
             const fieldTypes = {
                 numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo'],
                 date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago'],
                 status: ['status']
             };
 
-            // Clean and format data based on field types
             Object.entries(cleanData).forEach(([key, value]) => {
                 if (value === null || value === undefined || value === '') {
                     cleanData[key] = null;
                     return;
                 }
 
+                // Si el valor es un objeto, lo dejamos como está
+                if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+                    return;
+                }
+
                 if (fieldTypes.numeric.includes(key)) {
-                    // Remove currency symbols and commas
                     const numStr = value.toString().replace(/[$,]/g, '');
                     cleanData[key] = parseFloat(numStr) || null;
                 } else if (fieldTypes.date.includes(key)) {
-                    // Format date to YYYY-MM-DD
                     try {
                         if (typeof value === 'string') {
                             if (value.includes('/')) {
@@ -166,20 +190,17 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                         cleanData[key] = null;
                     }
                 } else if (fieldTypes.status.includes(key)) {
-                    // Normalize status values
                     const status = value.toString().toLowerCase();
                     cleanData[key] = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
                 }
             });
 
-            // Insert the data
             const result = await tableService.insertData(tableName, cleanData);
             console.log('Data insertion result:', result);
             
             setMessage('Data inserted successfully');
             setError(null);
 
-            // Emit a custom event to notify other components
             const event = new CustomEvent('policyDataUpdated', {
                 detail: { table: tableName }
             });
@@ -193,9 +214,18 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     };
 
     const handleCellEdit = (column, value) => {
+        let processedValue = value;
+        if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+            try {
+                processedValue = JSON.parse(value);
+            } catch (err) {
+                // Keep as string if JSON parsing fails
+                console.warn('Failed to parse JSON:', err);
+            }
+        }
         setEditedData(prev => ({
             ...prev,
-            [column]: value
+            [column]: processedValue
         }));
     };
 
@@ -239,32 +269,66 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Field</th>
-                                    <th>Value</th>
+                                    <th className="email-column">
+                                        <div className="header-content">
+                                            <span>Email</span>
+                                        </div>
+                                    </th>
+                                    {Object.keys(mappedData).map(column => (
+                                        <th key={column} className="sortable-header">
+                                            <div className="th-content">
+                                                <span>{column}</span>
+                                            </div>
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody>
-                                {Object.entries(editedData || {}).map(([key, value]) => (
-                                    <tr key={key}>
-                                        <td>{key}</td>
-                                        <td>
+                                <tr className="table-row">
+                                    <td className="email-cell">
+                                        <button className="email-icon-btn" title="Send Email" disabled>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="email-icon">
+                                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                                <path d="M22 6l-10 7L2 6" />
+                                            </svg>
+                                        </button>
+                                    </td>
+                                    {Object.entries(editedData || {}).map(([key, value]) => (
+                                        <td key={key} 
+                                            className={`editable-cell ${key === 'id' ? 'id-cell' : ''} ${
+                                                key === 'status' ? 'status-cell' : ''
+                                            }`}
+                                            onClick={() => setEditingCell(key)}
+                                        >
                                             {editingCell === key ? (
                                                 <input
                                                     type="text"
-                                                    value={value || ''}
-                                                    onChange={(e) => handleCellEdit(key, e.target.value)}
+                                                    value={typeof value === 'object' ? JSON.stringify(value, null, 2) : (value || '')}
+                                                    onChange={(e) => {
+                                                        let newValue = e.target.value;
+                                                        try {
+                                                            if ((newValue.startsWith('{') && newValue.endsWith('}')) ||
+                                                                (newValue.startsWith('[') && newValue.endsWith(']'))) {
+                                                                newValue = JSON.parse(newValue);
+                                                            }
+                                                        } catch (err) {
+                                                            console.warn('Failed to parse JSON:', err);
+                                                        }
+                                                        handleCellEdit(key, newValue);
+                                                    }}
                                                     onBlur={() => setEditingCell(null)}
                                                     onKeyDown={(e) => handleKeyDown(e, key)}
+                                                    className="edit-cell-input"
                                                     autoFocus
                                                 />
                                             ) : (
-                                                <span onClick={() => setEditingCell(key)}>
-                                                    {value || 'N/A'}
+                                                <span className={`cell-content ${typeof value === 'object' ? 'object-value' : ''}`}>
+                                                    {formatValue(value)}
                                                 </span>
                                             )}
                                         </td>
-                                    </tr>
-                                ))}
+                                    ))}
+                                </tr>
                             </tbody>
                         </table>
                     </div>
