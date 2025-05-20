@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { fetchNotionTasks } = require('./src/api/notion');
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // Routes
 app.get('/api/notion/tasks', fetchNotionTasks);
+app.get('/api/notion/raw-table', fetchNotionTasks);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -24,4 +26,8 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log('Environment variables loaded:', {
+    hasNotionKey: !!process.env.NOTION_SECRET_KEY,
+    hasNotionDB: !!process.env.NOTION_DATABASE_ID
+  });
 });

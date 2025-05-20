@@ -38,8 +38,31 @@ const extractPropertyValue = (property) => {
     case 'date':
       return property.date?.start || null;
     case 'people':
-      return property.people?.[0]?.name || 
-             property.people?.[0]?.person?.email || null;
+      // Enhanced people property handling with detailed logging
+      if (property.people && property.people.length > 0) {
+        const person = property.people[0];
+        console.log('Person object from Notion:', JSON.stringify(person, null, 2));
+        
+        // Try to get the email from the person object
+        const email = person.person?.email;
+        if (email) {
+          console.log('Found email:', email);
+          return email;
+        }
+        
+        // Fallback to name if available
+        const name = person.name;
+        if (name) {
+          console.log('Using name as fallback:', name);
+          return name;
+        }
+        
+        // Last resort, use the ID
+        console.log('Using ID as last resort:', person.id);
+        return person.id;
+      }
+      console.log('No people found in property');
+      return null;
     case 'status':
       return property.status?.name || null;
     case 'phone_number':
@@ -206,71 +229,173 @@ router.get('/debug', async (req, res) => {
   }
 });
 
-// Get raw table data from Notion
+// Get database structure and columns
 router.get('/raw-table', async (req, res) => {
   try {
-    // Validate environment variables
-    if (!process.env.VITE_NOTION_API_KEY && !process.env.NOTION_SECRET_KEY) {
-      return res.status(500).json({ 
-        error: 'Notion API Key not configured'
-      });
-    }
-
-    if (!process.env.VITE_NOTION_DATABASE_ID && !process.env.NOTION_DATABASE_ID) {
-      return res.status(500).json({ 
-        error: 'Notion Database ID not configured'
-      });
-    }
-
     const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
-
+    
     // Get database structure first
     const database = await notion.databases.retrieve({
       database_id: databaseId
     });
 
-    // Query the database
+    console.log('Database properties:', JSON.stringify(database.properties, null, 2));
+
+    // Get the pages
     const response = await notion.databases.query({
       database_id: databaseId,
-      sorts: [
-        {
-          timestamp: 'created_time',
-          direction: 'descending'
-        }
-      ]
+      page_size: 100 // Ensure we get all pages
     });
 
-    // Transform the results to match Notion's table structure
-    const transformedResults = response.results.map(page => {
-      const result = {};
-      
-      // Add all properties from the database
-      Object.entries(database.properties).forEach(([key, schema]) => {
-        const property = page.properties[key];
-        result[key] = extractPropertyValue(property);
-      });
+    // Get current properties from database
+    const validProperties = Object.keys(database.properties);
+    console.log('Valid properties:', validProperties);
 
-      // Add system properties
-      result.PageURL = page.url;
-      result.Created = new Date(page.created_time).toLocaleString();
-      result.LastEdited = new Date(page.last_edited_time).toLocaleString();
+    // Transform the results using only valid properties
+    const transformedResults = response.results.map(page => {
+      // Log the raw page data for debugging
+      console.log('Processing page:', page.id);
+      console.log('Raw properties:', JSON.stringify(page.properties, null, 2));
+
+      const result = {
+        id: page.id,
+        PageURL: page.url,
+        Created: page.created_time,
+        LastEdited: page.last_edited_time
+      };
+
+      // Only include properties that exist in the database
+      validProperties.forEach(propName => {
+        if (page.properties[propName]) {
+          const value = extractPropertyValue(page.properties[propName]);
+          console.log(`Property ${propName}:`, value);
+          result[propName] = value;
+        }
+      });
 
       return result;
     });
 
-    console.log('Sending Notion data:', {
-      totalItems: transformedResults.length,
-      firstItem: transformedResults[0],
-      availableColumns: Object.keys(transformedResults[0] || {})
-    });
-
+    console.log('Transformed results:', JSON.stringify(transformedResults, null, 2));
     res.json(transformedResults);
   } catch (error) {
-    console.error('Notion Error:', error);
+    console.error('Error fetching Notion data:', error);
     res.status(500).json({ 
-      error: 'Failed to fetch Notion data',
-      details: error.message
+      error: 'Failed to fetch data from Notion',
+      details: error.message 
     });
+  }
+});
+
+// Update Notion page
+router.post('/update-cell', async (req, res) => {
+  try {
+    const { taskId, column, value } = req.body;
+
+    if (!taskId || !column) {
+      return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    // Get the database structure to check property types
+    const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
+    const database = await notion.databases.retrieve({ database_id: databaseId });
+    const propertyType = database.properties[column]?.type || 'rich_text';
+
+    // Prepare the property update based on the column type
+    const properties = {};
+    
+    switch (propertyType) {
+      case 'title':
+        properties[column] = {
+          title: [{ text: { content: value || '' } }]
+        };
+        break;
+      case 'select':
+        properties[column] = {
+          select: value ? { name: value } : null
+        };
+        break;
+      case 'multi_select':
+        properties[column] = {
+          multi_select: Array.isArray(value) ? value.map(name => ({ name })) : []
+        };
+        break;
+      case 'date':
+        properties[column] = {
+          date: value ? { start: value } : null
+        };
+        break;
+      case 'people':
+        // Enhanced people property handling
+        properties[column] = {
+          people: value ? [
+            {
+              object: 'user',
+              id: value // If value is a user ID
+            }
+          ] : []
+        };
+        
+        // If value looks like an email, try to find the user
+        if (value && value.includes('@')) {
+          try {
+            const users = await notion.users.list();
+            const user = users.results.find(u => u.person?.email === value);
+            if (user) {
+              properties[column].people[0].id = user.id;
+            }
+          } catch (error) {
+            console.error('Error finding user:', error);
+          }
+        }
+        break;
+      case 'number':
+        properties[column] = {
+          number: value ? Number(value) : null
+        };
+        break;
+      case 'rich_text':
+      default:
+        properties[column] = {
+          rich_text: [{ text: { content: value || '' } }]
+        };
+    }
+
+    // Update the Notion page
+    await notion.pages.update({
+      page_id: taskId,
+      properties
+    });
+
+    res.status(200).json({ message: 'Cell updated successfully' });
+  } catch (error) {
+    console.error('Error updating cell:', error);
+    res.status(500).json({ message: 'Failed to update cell', error: error.message });
+  }
+});
+
+// Delete Notion pages (archive them)
+router.post('/delete-tasks', async (req, res) => {
+  try {
+    const { taskIds } = req.body;
+
+    if (!Array.isArray(taskIds) || taskIds.length === 0) {
+      return res.status(400).json({ message: 'Invalid task IDs provided' });
+    }
+
+    // Delete tasks in parallel
+    const deletePromises = taskIds.map(taskId =>
+      notion.pages.update({
+        page_id: taskId,
+        archived: true,
+      })
+    );
+
+    await Promise.all(deletePromises);
+    res.status(200).json({ message: 'Tasks deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting tasks:', error);
+    res.status(500).json({ message: 'Failed to delete tasks', error: error.message });
   }
 });
 

@@ -1,35 +1,35 @@
-import { Client } from '@notionhq/client';
+const { Client } = require('@notionhq/client');
 
 const notion = new Client({
-  auth: process.env.REACT_APP_NOTION_TOKEN
+  auth: process.env.NOTION_SECRET_KEY
 });
 
-export async function fetchNotionTasks(req, res) {
+async function fetchNotionTasks(req, res) {
   try {
     console.log('🔍 Fetching Notion tasks...');
     
     // Validate environment variables
-    if (!process.env.REACT_APP_NOTION_TOKEN || !process.env.REACT_APP_NOTION_DATABASE_ID) {
+    if (!process.env.NOTION_SECRET_KEY || !process.env.NOTION_DATABASE_ID) {
       console.error('❌ Missing environment variables');
       return res.status(500).json({
         error: 'Missing configuration',
         details: {
-          hasToken: !!process.env.REACT_APP_NOTION_TOKEN,
-          hasDbId: !!process.env.REACT_APP_NOTION_DATABASE_ID
+          hasToken: !!process.env.NOTION_SECRET_KEY,
+          hasDbId: !!process.env.NOTION_DATABASE_ID
         }
       });
     }
 
     // First get database schema
     const database = await notion.databases.retrieve({
-      database_id: process.env.REACT_APP_NOTION_DATABASE_ID
+      database_id: process.env.NOTION_DATABASE_ID
     });
 
     console.log('📚 Database Schema:', database.properties);
 
     // Query the database with proper filtering
     const response = await notion.databases.query({
-      database_id: process.env.REACT_APP_NOTION_DATABASE_ID,
+      database_id: process.env.NOTION_DATABASE_ID,
       filter: {
         and: [
           {
@@ -99,4 +99,8 @@ export async function fetchNotionTasks(req, res) {
       details: error.message
     });
   }
-} 
+}
+
+module.exports = {
+  fetchNotionTasks
+}; 
