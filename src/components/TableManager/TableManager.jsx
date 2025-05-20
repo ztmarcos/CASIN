@@ -1,8 +1,97 @@
 import React, { useState, useEffect } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import tableService from '../../services/data/tableService';
 import './TableManager.css';
 import { toast } from 'react-hot-toast';
 import Modal from '../Modal/Modal';
+
+// Sortable table item component
+const SortableTableItem = ({ 
+  table, 
+  isSecondary, 
+  onTableClick, 
+  onTableDoubleClick, 
+  onDeleteTable, 
+  isSelected, 
+  isEditing, 
+  editingName, 
+  onNameChange, 
+  onNameSubmit,
+  expandedTables
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: table.name });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''}`}
+      onClick={() => onTableClick(table, isSecondary)}
+      onDoubleClick={(e) => onTableDoubleClick(e, table)}
+    >
+      <div className="table-info" {...attributes} {...listeners}>
+        {isEditing ? (
+          <input
+            type="text"
+            value={editingName}
+            onChange={onNameChange}
+            onKeyDown={onNameSubmit}
+            autoFocus
+            onClick={(e) => e.stopPropagation()}
+            className="table-name-input"
+          />
+        ) : (
+          <span className="table-name">{table.name}</span>
+        )}
+        {table.secondaryTable && (
+          <span className="expand-icon">
+            {expandedTables.has(table.name) ? '▼' : '▶'}
+          </span>
+        )}
+      </div>
+      <div className="table-actions">
+        {table.relationshipType && (
+          <span className="table-relationship-indicator" data-type={table.relationshipType}>
+            {isSecondary ? 'Details' : table.relationshipType.split('_')[0].toUpperCase()}
+          </span>
+        )}
+        <button
+          className="delete-button"
+          onClick={(e) => onDeleteTable(e, table)}
+          title="Delete table"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [tables, setTables] = useState([]);
@@ -18,6 +107,13 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     secondaryTableName: '',
     groupType: 'GMM'
   });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Define table types
   const TABLE_TYPES = {
@@ -119,14 +215,29 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
   const handleNameSubmit = async (e) => {
     if (e.key === 'Enter') {
+      // Don't submit if the name is empty or unchanged
+      if (!editingName.trim() || editingName.trim() === editingTable.name) {
+        setEditingTable(null);
+        setEditingName('');
+        return;
+      }
+
       try {
-        await tableService.renameTable(editingTable.name, editingName);
+        setIsLoading(true);
+        await tableService.renameTable(editingTable.name, editingName.trim());
         toast.success('Table renamed successfully');
-        loadTables();
+        await loadTables(); // Reload tables to get updated data
       } catch (error) {
         console.error('Error renaming table:', error);
         toast.error(error.message || 'Error renaming table');
+        // Reset to original name on error
+        setEditingName(editingTable.name);
+        return; // Keep editing mode active on error
+      } finally {
+        setIsLoading(false);
       }
+      
+      // Only clear editing state if successful
       setEditingTable(null);
       setEditingName('');
     } else if (e.key === 'Escape') {
@@ -145,6 +256,33 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
       } catch (error) {
         console.error('Error deleting table:', error);
         toast.error(error.message || 'Error deleting table');
+      }
+    }
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      try {
+        // Update local state
+        setTables((items) => {
+          const oldIndex = items.findIndex((item) => item.name === active.id);
+          const newIndex = items.findIndex((item) => item.name === over.id);
+          return arrayMove(items, oldIndex, newIndex);
+        });
+
+        // Get the new order of table names
+        const newOrder = tables.map(table => table.name);
+
+        // Persist the order in the backend
+        await tableService.updateTableOrder(newOrder);
+        toast.success('Table order updated successfully');
+      } catch (error) {
+        console.error('Error updating table order:', error);
+        toast.error('Failed to update table order');
+        // Reload tables to ensure consistent state
+        await loadTables();
       }
     }
   };
@@ -263,90 +401,54 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
       </Modal>
 
       {!isCollapsed && (
-        <div className="tables-list">
-          {tables.map(table => (
-            <div key={table.name} className="table-group">
-              <div
-                className={`table-item ${selectedTableProp === table.name ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''}`}
-                onClick={() => handleTableClick(table)}
-                onDoubleClick={(e) => handleTableDoubleClick(e, table)}
-              >
-                <div className="table-info">
-                  {editingTable === table ? (
-                    <input
-                      type="text"
-                      value={editingName}
-                      onChange={handleNameChange}
-                      onKeyDown={handleNameSubmit}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      className="table-name-input"
-                    />
-                  ) : (
-                    <span className="table-name">{table.name}</span>
-                  )}
-                  {table.secondaryTable && (
-                    <span className="expand-icon">
-                      {expandedTables.has(table.name) ? '▼' : '▶'}
-                    </span>
-                  )}
-                </div>
-                <div className="table-actions">
-                  {table.relationshipType && (
-                    <span className="table-relationship-indicator" data-type={table.relationshipType}>
-                      {table.relationshipType.split('_')[0].toUpperCase()}
-                    </span>
-                  )}
-                  <button
-                    className="delete-button"
-                    onClick={(e) => handleDeleteTable(e, table)}
-                    title="Delete table"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-              
-              {table.secondaryTable && expandedTables.has(table.name) && (
-                <div className="secondary-table">
-                  <div
-                    className={`table-item ${selectedTableProp === table.secondaryTable.name ? 'selected' : ''}`}
-                    onClick={() => handleTableClick(table.secondaryTable, true)}
-                    onDoubleClick={(e) => handleTableDoubleClick(e, table.secondaryTable)}
-                  >
-                    <div className="table-info">
-                      {editingTable === table.secondaryTable ? (
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={handleNameChange}
-                          onKeyDown={handleNameSubmit}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          className="table-name-input"
-                        />
-                      ) : (
-                        <span className="table-name">{table.secondaryTable.name}</span>
-                      )}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="tables-list">
+            <SortableContext
+              items={tables.map(table => table.name)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tables.map(table => (
+                <div key={table.name} className="table-group">
+                  <SortableTableItem
+                    table={table}
+                    isSecondary={false}
+                    onTableClick={handleTableClick}
+                    onTableDoubleClick={handleTableDoubleClick}
+                    onDeleteTable={handleDeleteTable}
+                    isSelected={selectedTableProp === table.name}
+                    isEditing={editingTable === table}
+                    editingName={editingName}
+                    onNameChange={handleNameChange}
+                    onNameSubmit={handleNameSubmit}
+                    expandedTables={expandedTables}
+                  />
+                  
+                  {table.secondaryTable && expandedTables.has(table.name) && (
+                    <div className="secondary-table">
+                      <SortableTableItem
+                        table={table.secondaryTable}
+                        isSecondary={true}
+                        onTableClick={handleTableClick}
+                        onTableDoubleClick={handleTableDoubleClick}
+                        onDeleteTable={handleDeleteTable}
+                        isSelected={selectedTableProp === table.secondaryTable.name}
+                        isEditing={editingTable === table.secondaryTable}
+                        editingName={editingName}
+                        onNameChange={handleNameChange}
+                        onNameSubmit={handleNameSubmit}
+                        expandedTables={expandedTables}
+                      />
                     </div>
-                    <div className="table-actions">
-                      <span className="table-relationship-indicator" data-type={table.relationshipType}>
-                        Details
-                      </span>
-                      <button
-                        className="delete-button"
-                        onClick={(e) => handleDeleteTable(e, table.secondaryTable)}
-                        title="Delete table"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+              ))}
+            </SortableContext>
+          </div>
+        </DndContext>
       )}
     </div>
   );

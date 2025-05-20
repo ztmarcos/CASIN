@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const mysqlDatabase = require('../services/mysqlDatabase');
 
+// Update table order - MUST BE FIRST to avoid route conflicts
+router.put('/tables/order', async (req, res) => {
+  try {
+    const { tableOrder } = req.body;
+    
+    if (!tableOrder || !Array.isArray(tableOrder)) {
+      return res.status(400).json({ error: 'Table order must be an array' });
+    }
+
+    const result = await mysqlDatabase.updateTableOrder(tableOrder);
+    res.json(result);
+  } catch (error) {
+    console.error('Error updating table order:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get table types
 router.get('/table-types', async (req, res) => {
   try {
@@ -47,11 +64,22 @@ router.get('/table-types', async (req, res) => {
 // Get all tables
 router.get('/tables', async (req, res) => {
   try {
+    console.log('Fetching tables...');
     const tables = await mysqlDatabase.getTables();
+    console.log('Tables fetched successfully:', tables);
     res.json(tables);
   } catch (error) {
-    console.error('Error getting tables:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Detailed error in /tables route:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      sqlMessage: error.sqlMessage,
+      sqlState: error.sqlState
+    });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.sqlMessage || 'Internal server error while fetching tables'
+    });
   }
 });
 
@@ -390,6 +418,24 @@ router.post('/import-csv', async (req, res) => {
   } catch (error) {
     console.error('Error importing CSV:', error);
     throw error;
+  }
+});
+
+// Rename table
+router.put('/tables/:tableName/rename', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const { newName } = req.body;
+    
+    if (!tableName || !newName) {
+      return res.status(400).json({ error: 'Table name and new name are required' });
+    }
+    
+    const result = await mysqlDatabase.renameTable(tableName, newName);
+    res.json(result);
+  } catch (error) {
+    console.error('Error renaming table:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

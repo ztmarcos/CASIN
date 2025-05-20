@@ -7,20 +7,6 @@ const notion = new Client({
   auth: process.env.VITE_NOTION_API_KEY || process.env.NOTION_SECRET_KEY,
 });
 
-// Detailed logging function
-const logNotionDebug = (message, data) => {
-  console.group('Notion Route Debug');
-  console.log(message);
-  if (data) {
-    try {
-      console.log(JSON.stringify(data, null, 2));
-    } catch (e) {
-      console.log('Could not stringify data:', data);
-    }
-  }
-  console.groupEnd();
-};
-
 // Enable CORS middleware for Notion routes
 router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
@@ -41,6 +27,8 @@ const extractPropertyValue = (property) => {
   switch (property.type) {
     case 'title':
       return property.title[0]?.plain_text || null;
+    case 'email':
+      return property.email || null;
     case 'rich_text':
       return property.rich_text[0]?.plain_text || null;
     case 'select':
@@ -50,9 +38,20 @@ const extractPropertyValue = (property) => {
     case 'date':
       return property.date?.start || null;
     case 'people':
-      return property.people?.map(person => person.name).join(', ') || null;
+      return property.people?.[0]?.name || 
+             property.people?.[0]?.person?.email || null;
     case 'status':
       return property.status?.name || null;
+    case 'phone_number':
+      return property.phone_number || null;
+    case 'number':
+      return property.number?.toString() || null;
+    case 'checkbox':
+      return property.checkbox ? 'Yes' : 'No';
+    case 'url':
+      return property.url || null;
+    case 'files':
+      return property.files?.map(file => file.name).join(', ') || null;
     default:
       return null;
   }
@@ -78,17 +77,12 @@ router.get('/tasks', async (req, res) => {
 
     const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
 
-    // First, retrieve the database to understand its structure
-    const database = await notion.databases.retrieve({
-      database_id: databaseId
-    });
-
-    // Query the database with sorting
+    // Query the database
     const response = await notion.databases.query({
       database_id: databaseId,
       sorts: [
         {
-          property: 'Due Date',
+          property: 'title',
           direction: 'ascending'
         }
       ]
@@ -97,31 +91,40 @@ router.get('/tasks', async (req, res) => {
     // Transform the results
     const transformedResults = response.results.map(page => {
       const properties = page.properties;
+      
+      // Get each property using the correct property name with exact case
+      const title = extractPropertyValue(properties['Name']) || extractPropertyValue(properties['title']);
+      const status = extractPropertyValue(properties['Status']);
+      const priority = extractPropertyValue(properties['Priority']);
+      const dueDate = extractPropertyValue(properties['Due date']);
+      const assignee = extractPropertyValue(properties['Assignee']);
+      const description = extractPropertyValue(properties['Description']);
+      const taskType = extractPropertyValue(properties['Task type']);
+      const email = extractPropertyValue(properties['Email']);
 
-      // Find the title property (it might be named differently)
-      const titleProperty = Object.values(properties).find(
-        prop => prop.type === 'title'
-      );
+      // Log the extracted data for debugging
+      console.log(`Processing page ${page.id}:`, {
+        title,
+        status,
+        dueDate,
+        assignee,
+        email
+      });
 
-      const title = titleProperty ? extractPropertyValue(titleProperty) : null;
-
-      // Extract all other properties
-      const task = {
+      return {
         id: page.id,
         url: page.url,
-        title: title || 'Sin título',
-        status: extractPropertyValue(properties.Status) || extractPropertyValue(properties.status) || 'Sin estado',
-        priority: extractPropertyValue(properties.Priority) || extractPropertyValue(properties.priority) || 'Sin prioridad',
-        dueDate: extractPropertyValue(properties['Due Date']) || extractPropertyValue(properties['due_date']) || null,
-        assignee: extractPropertyValue(properties.Assignee) || extractPropertyValue(properties.assignee) || 'Sin asignar',
-        description: extractPropertyValue(properties.Description) || extractPropertyValue(properties.description) || '',
-        taskType: extractPropertyValue(properties['Task Type']) || extractPropertyValue(properties['task_type']) || 'Sin tipo',
-        tags: extractPropertyValue(properties.Tags) || extractPropertyValue(properties.tags) || [],
+        title: title || email || 'Sin título',  // Use email as fallback for title
+        status: status || 'Sin estado',
+        priority: priority || 'Sin prioridad',
+        dueDate: dueDate || 'Sin fecha',
+        assignee: assignee || 'Sin asignar',
+        description: description || 'Sin descripción',
+        taskType: taskType || 'Sin tipo',
+        email: email || '',
         createdTime: page.created_time,
         lastEditedTime: page.last_edited_time
       };
-
-      return task;
     });
 
     res.json(transformedResults);
@@ -153,7 +156,7 @@ router.get('/tasks/:id', async (req, res) => {
       url: response.url,
       createdTime: response.created_time,
       lastEditedTime: response.last_edited_time,
-      title: extractPropertyValue(properties['Task type']) || extractPropertyValue(properties['Name']) || 'Sin título',
+      title: extractPropertyValue(properties['title']),
       status: extractPropertyValue(properties['Status']),
       dueDate: extractPropertyValue(properties['Due date']),
       priority: extractPropertyValue(properties['Priority']),
@@ -171,6 +174,102 @@ router.get('/tasks/:id', async (req, res) => {
       details: error.message,
       code: error.code,
       status: error.status
+    });
+  }
+});
+
+// Debug endpoint to get raw Notion data
+router.get('/debug', async (req, res) => {
+  try {
+    const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
+    
+    // Get database structure
+    const database = await notion.databases.retrieve({
+      database_id: databaseId
+    });
+
+    // Get first few pages
+    const pages = await notion.databases.query({
+      database_id: databaseId,
+      page_size: 3
+    });
+
+    res.json({
+      database_structure: database,
+      sample_pages: pages.results,
+      property_names: Object.keys(database.properties),
+      sample_properties: pages.results[0]?.properties
+    });
+  } catch (error) {
+    console.error('Debug endpoint error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get raw table data from Notion
+router.get('/raw-table', async (req, res) => {
+  try {
+    // Validate environment variables
+    if (!process.env.VITE_NOTION_API_KEY && !process.env.NOTION_SECRET_KEY) {
+      return res.status(500).json({ 
+        error: 'Notion API Key not configured'
+      });
+    }
+
+    if (!process.env.VITE_NOTION_DATABASE_ID && !process.env.NOTION_DATABASE_ID) {
+      return res.status(500).json({ 
+        error: 'Notion Database ID not configured'
+      });
+    }
+
+    const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
+
+    // Get database structure first
+    const database = await notion.databases.retrieve({
+      database_id: databaseId
+    });
+
+    // Query the database
+    const response = await notion.databases.query({
+      database_id: databaseId,
+      sorts: [
+        {
+          timestamp: 'created_time',
+          direction: 'descending'
+        }
+      ]
+    });
+
+    // Transform the results to match Notion's table structure
+    const transformedResults = response.results.map(page => {
+      const result = {};
+      
+      // Add all properties from the database
+      Object.entries(database.properties).forEach(([key, schema]) => {
+        const property = page.properties[key];
+        result[key] = extractPropertyValue(property);
+      });
+
+      // Add system properties
+      result.PageURL = page.url;
+      result.Created = new Date(page.created_time).toLocaleString();
+      result.LastEdited = new Date(page.last_edited_time).toLocaleString();
+
+      return result;
+    });
+
+    console.log('Sending Notion data:', {
+      totalItems: transformedResults.length,
+      firstItem: transformedResults[0],
+      availableColumns: Object.keys(transformedResults[0] || {})
+    });
+
+    res.json(transformedResults);
+  } catch (error) {
+    console.error('Notion Error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch Notion data',
+      details: error.message
     });
   }
 });

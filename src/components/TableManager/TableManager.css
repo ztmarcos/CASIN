@@ -1,15 +1,15 @@
 .table-manager {
-  padding: 1rem;
-  background: #f8f9fa;
+  padding: 10px;
+  background: #f5f5f5;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 10px;
 }
 
 .section-header h3 {
@@ -23,137 +23,127 @@
 
 .collapse-icon {
   cursor: pointer;
-  font-weight: bold;
-  padding: 0 4px;
+  margin-right: 8px;
+  user-select: none;
 }
 
 .header-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .create-group-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #4CAF50;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #2196f3;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: background-color 0.2s;
+  transition: background 0.2s;
 }
 
 .create-group-btn:hover {
-  background: #45a049;
+  background: #1976d2;
 }
 
 .tables-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .table-group {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
 .table-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 1rem;
+  padding: 8px 12px;
   background: white;
-  border: 1px solid #e1e4e8;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.2s;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  user-select: none;
 }
 
-.table-item:hover {
-  background: #f1f8ff;
-  border-color: #0366d6;
+.table-item:active {
+  cursor: grabbing;
 }
 
 .table-item.selected {
-  background: #f1f8ff;
-  border-color: #0366d6;
+  background: #e3f2fd;
+  border-color: #2196f3;
 }
 
 .table-item.has-secondary {
-  border-left: 3px solid #0366d6;
+  border-left: 3px solid #2196f3;
 }
 
 .table-info {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  flex: 1;
 }
 
 .table-name {
-  font-weight: 500;
-  color: #24292e;
+  font-size: 14px;
+  color: #333;
+}
+
+.table-name-input {
+  font-size: 14px;
+  padding: 2px 6px;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  outline: none;
+}
+
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.delete-button {
+  background: none;
+  border: none;
+  color: #f44336;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.delete-button:hover {
+  background: rgba(244, 67, 54, 0.1);
 }
 
 .expand-icon {
-  font-size: 0.8rem;
-  color: #586069;
-  transition: transform 0.2s;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
 }
 
 .secondary-table {
-  margin-left: 1.5rem;
-  position: relative;
-}
-
-.secondary-table::before {
-  content: '';
-  position: absolute;
-  left: -1rem;
-  top: 0;
-  height: 100%;
-  width: 2px;
-  background: #e1e4e8;
-}
-
-.secondary-table .table-item {
-  border-left: 3px solid #6f42c1;
-  background: #f8f9fa;
-}
-
-.secondary-table .table-item:hover {
-  background: #f1f8ff;
-  border-color: #6f42c1;
+  margin-left: 20px;
 }
 
 .table-relationship-indicator {
-  font-size: 0.8rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  background: #e1e4e8;
-  color: #586069;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.table-relationship-indicator[data-type="gmm_policy"] {
-  background: #ddf4ff;
-  color: #0969da;
-}
-
-.table-relationship-indicator[data-type="autos_policy"] {
-  background: #fff8c5;
-  color: #9a6700;
-}
-
-.table-relationship-indicator[data-type="vida_policy"] {
-  background: #ffeff7;
-  color: #bf3989;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e3f2fd;
+  color: #1976d2;
 }
 
 /* Modal styles */
@@ -222,9 +212,9 @@
 }
 
 .loading-spinner {
-  font-size: 0.9rem;
-  color: #586069;
-  margin-left: 1rem;
+  color: #666;
+  font-size: 14px;
+  margin-left: 10px;
 }
 
 /* Dark mode styles */
@@ -649,4 +639,41 @@
 
 [data-theme='dark'] .table-name-input:focus {
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Drag and drop styles */
+.table-item[data-dragging="true"] {
+  opacity: 0.5;
+  background: #f5f5f5;
+}
+
+.table-item[data-over="true"] {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
+}
+
+.error-message {
+  color: #f44336;
+  padding: 8px;
+  margin: 8px 0;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.refresh-btn {
+  background: none;
+  border: 1px solid #f44336;
+  color: #f44336;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #f44336;
+  color: white;
 } 

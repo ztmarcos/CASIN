@@ -29,129 +29,113 @@ class MySQLDatabaseService {
   async getTables() {
     let connection;
     try {
+      console.log('Getting connection for getTables...');
       connection = await this.getConnection();
+      console.log('Connection obtained successfully');
+      
+      // Create table_order table if it doesn't exist
+      console.log('Creating table_order table if not exists...');
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS table_order (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          table_name VARCHAR(255) NOT NULL,
+          display_order INT NOT NULL,
+          UNIQUE KEY unique_table_name (table_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log('table_order table created/verified');
 
-      // Get all tables
-      const [tables] = await connection.execute(
-        'SHOW TABLES'
-      );
+      // Create table_relationships table if it doesn't exist
+      console.log('Creating table_relationships table if not exists...');
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS table_relationships (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          main_table_name VARCHAR(255) NOT NULL,
+          secondary_table_name VARCHAR(255) NOT NULL,
+          relationship_type VARCHAR(50) DEFAULT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_relationship (main_table_name, secondary_table_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+      `);
+      console.log('table_relationships table created/verified');
+      
+      // Get tables with their order
+      console.log('Fetching tables from information_schema...');
+      const [tables] = await connection.execute(`
+        SELECT DISTINCT 
+          t.TABLE_NAME,
+          t.TABLE_TYPE,
+          tord.display_order
+        FROM information_schema.TABLES t
+        LEFT JOIN table_order tord ON LOWER(t.table_name) = LOWER(tord.table_name)
+        WHERE t.TABLE_SCHEMA = DATABASE()
+          AND t.TABLE_NAME NOT IN ('table_order', 'table_relationships', 'policy_status')
+          AND t.TABLE_TYPE = 'BASE TABLE'
+        ORDER BY tord.display_order IS NULL, tord.display_order, t.TABLE_NAME
+      `);
+      console.log('Found tables:', tables.map(t => t.TABLE_NAME));
 
-      // Get all relationships
-      const [relationships] = await connection.execute(
-        'SELECT * FROM table_relationships'
-      );
-
-      // Process each table and add relationship and type information
-      const processedTables = await Promise.all(tables.map(async (tableRow) => {
-        const tableName = tableRow[`Tables_in_${this.config.database}`];
-        
-        // Find if table is in relationships
-        const asMain = relationships.find(r => r.main_table_name === tableName);
-        const asSecondary = relationships.find(r => r.secondary_table_name === tableName);
-
-        // Get columns
-        const [columns] = await connection.execute(
-          `SHOW COLUMNS FROM \`${tableName}\``
-        );
-
-        // Determine table type from TABLE_DEFINITIONS
-        let tableType = null;
-        let isGroup = false;
-        let childTable = null;
-
+      // Get columns for each table
+      console.log('Getting columns for each table...');
+      const tablesWithColumns = await Promise.all(tables.map(async (table) => {
         try {
-          // Step 1: Check exact matches for main and secondary tables
-          for (const [type, definition] of Object.entries(TABLE_DEFINITIONS)) {
-            if (definition.main && definition.main.name === tableName) {
-              tableType = type;
-              isGroup = true;
-              childTable = definition.secondary?.name;
-              break;
-            } else if (definition.secondary && definition.secondary.name === tableName) {
-              tableType = type;
-              break;
-            } else if (definition.name === tableName) {
-              tableType = type;
-              break;
-            }
-          }
+          console.log(`Getting columns for table ${table.TABLE_NAME}...`);
+          const [columns] = await connection.execute(
+            'SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION',
+            [table.TABLE_NAME]
+          );
+          console.log(`Got ${columns.length} columns for table ${table.TABLE_NAME}`);
 
-          // Step 2: If no exact match, check for type name in table name
-          if (!tableType) {
-            for (const [type] of Object.entries(TABLE_DEFINITIONS)) {
-              const typeRegex = new RegExp(`\\b${type}\\b`, 'i');
-              if (typeRegex.test(tableName)) {
-                tableType = type;
-                break;
-              }
-            }
-          }
+          // Get relationships for this table
+          console.log(`Getting relationships for table ${table.TABLE_NAME}...`);
+          const [relationships] = await connection.execute(
+            'SELECT * FROM table_relationships WHERE LOWER(main_table_name) = LOWER(?) OR LOWER(secondary_table_name) = LOWER(?)',
+            [table.TABLE_NAME, table.TABLE_NAME]
+          );
+          console.log(`Found ${relationships.length} relationships for table ${table.TABLE_NAME}`);
 
-          // Step 3: Check for type as substring (case insensitive)
-          if (!tableType) {
-            for (const [type] of Object.entries(TABLE_DEFINITIONS)) {
-              if (tableName.toLowerCase().includes(type.toLowerCase())) {
-                tableType = type;
-                break;
-              }
-            }
-          }
+          const isMainTable = relationships.some(rel => rel.main_table_name.toLowerCase() === table.TABLE_NAME.toLowerCase());
+          const isSecondaryTable = relationships.some(rel => rel.secondary_table_name.toLowerCase() === table.TABLE_NAME.toLowerCase());
 
-          // Step 4: For numbered tables (e.g. autos1), extract base type
-          if (!tableType) {
-            const baseNameMatch = tableName.match(/^([a-zA-Z]+)\d+$/);
-            if (baseNameMatch) {
-              const baseName = baseNameMatch[1].toUpperCase();
-              if (TABLE_DEFINITIONS[baseName]) {
-                tableType = baseName;
-              }
-            }
-          }
-
-          // Step 5: For tables in relationships, inherit type from relationship
-          if (!tableType && (asMain || asSecondary)) {
-            const relatedTable = asMain ? asMain.secondary_table_name : asSecondary.main_table_name;
-            for (const [type, definition] of Object.entries(TABLE_DEFINITIONS)) {
-              if (definition.main?.name === relatedTable || definition.secondary?.name === relatedTable) {
-                tableType = type;
-                break;
-              }
-            }
-          }
-        } catch (typeError) {
-          console.error(`Error determining type for table ${tableName}:`, typeError);
-          // Don't let type determination errors block the whole process
-          tableType = 'UNKNOWN';
+          return {
+            name: table.TABLE_NAME,
+            columns: columns.map(col => ({
+              name: col.COLUMN_NAME,
+              type: col.DATA_TYPE.toUpperCase(),
+              nullable: col.IS_NULLABLE === 'YES',
+              key: col.COLUMN_KEY
+            })),
+            isMainTable,
+            isSecondaryTable
+          };
+        } catch (error) {
+          console.error(`Error processing table ${table.TABLE_NAME}:`, {
+            message: error.message,
+            stack: error.stack,
+            code: error.code,
+            sqlMessage: error.sqlMessage,
+            sqlState: error.sqlState
+          });
+          throw error;
         }
-
-        return {
-          name: tableName,
-          type: tableType || 'UNKNOWN',
-          isMainTable: !!asMain,
-          isSecondaryTable: !!asSecondary,
-          isGroup,
-          childTable,
-          relatedTableName: asMain ? asMain.secondary_table_name : 
-                           asSecondary ? asSecondary.main_table_name : null,
-          relationshipType: asMain ? asMain.relationship_type : 
-                          asSecondary ? asSecondary.relationship_type : null,
-          columns: columns.map(col => ({
-            name: col.Field,
-            type: col.Type,
-            nullable: col.Null === 'YES',
-            key: col.Key,
-            default: col.Default
-          }))
-        };
       }));
 
-      return processedTables;
+      console.log('Successfully processed all tables');
+      return tablesWithColumns;
     } catch (error) {
-      console.error('Error getting tables:', error);
+      console.error('Detailed error in getTables:', {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        sqlMessage: error.sqlMessage,
+        sqlState: error.sqlState
+      });
       throw error;
     } finally {
       if (connection) {
+        console.log('Releasing connection...');
         connection.release();
+        console.log('Connection released');
       }
     }
   }
@@ -931,6 +915,53 @@ class MySQLDatabaseService {
       };
     } catch (error) {
       console.error('Error removing status column:', error);
+      throw error;
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  async updateTableOrder(tableOrder) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Create or update the table_order table if it doesn't exist
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS table_order (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          table_name VARCHAR(255) NOT NULL,
+          display_order INT NOT NULL,
+          UNIQUE KEY unique_table_name (table_name)
+        )
+      `);
+
+      // Start a transaction
+      await connection.beginTransaction();
+
+      try {
+        // Clear existing order
+        await connection.execute('DELETE FROM table_order');
+
+        // Insert new order
+        for (let i = 0; i < tableOrder.length; i++) {
+          await connection.execute(
+            'INSERT INTO table_order (table_name, display_order) VALUES (?, ?)',
+            [tableOrder[i], i]
+          );
+        }
+
+        // Commit the transaction
+        await connection.commit();
+      } catch (error) {
+        // If there's an error, rollback the transaction
+        await connection.rollback();
+        throw error;
+      }
+      
+      return { success: true, message: 'Table order updated successfully' };
+    } catch (error) {
+      console.error('Error updating table order:', error);
       throw error;
     } finally {
       if (connection) connection.release();

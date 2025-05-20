@@ -92,126 +92,67 @@ export default function Reports() {
       }
     });
 
-    if (source === 'gmm') {
-      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0);
-      const normalized = {
-        id: policy.id,
-        numero_poliza: policy.n__mero_de_p__liza || policy.numero_de_poliza || policy.numero_poliza,
-        contratante: policy.contratante || policy.nombre_contratante,
-        asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
-        rfc: policy.rfc,
-        email: policy.e_mail || policy.email,
-        fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
-        fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
-        prima_neta: primaTotal,
-        prima_total: primaTotal,
-        derecho_poliza: parseFloat(policy.derecho_de_p__liza || policy.derecho_de_poliza || 0),
-        recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
-        iva: parseFloat(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16 || 0),
-        pago_total: primaTotal,
-        forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
-        pagos_fraccionados: policy.pagos_fraccionados,
-        pago_parcial: policy.monto_parcial,
-        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
-        fecha_proximo_pago: calculateNextPaymentDate(
-          policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
-          policy.forma_de_pago || policy.forma_pago
-        ),
-        ramo: 'GMM',
-        sourceTable: source
-      };
+    // Common fields for all policy types
+    const commonFields = {
+      id: policy.id,
+      numero_poliza: policy.numero_poliza || policy.n__mero_de_p__liza || policy.numero_de_poliza,
+      contratante: policy.contratante || policy.nombre_contratante,
+      asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
+      rfc: policy.rfc,
+      email: policy.e_mail || policy.email,
+      fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
+      fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
+      aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
+      forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
+      sourceTable: source
+    };
 
-      // Log the normalized policy
-      console.log('Normalized GMM policy:', {
-        numero_poliza: normalized.numero_poliza,
-        contratante: normalized.contratante,
-        asegurado: normalized.asegurado,
-        aseguradora: normalized.aseguradora,
-        fecha_inicio: normalized.fecha_inicio,
-        fecha_fin: normalized.fecha_fin
-      });
+    // Calculate prima total
+    const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0);
 
-      return normalized;
-    } else if (source === 'autos') {
-      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.pago_total_o_prima_total || 0);
-      const normalized = {
-        id: policy.id,
-        numero_poliza: policy.numero_de_poliza || policy.numero_poliza,
-        contratante: policy.nombre_contratante || policy.contratante,
-        asegurado: policy.nombre_contratante || policy.contratante,
-        rfc: policy.rfc,
-        email: policy.e_mail || policy.email,
-        fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio || policy.desde_vigencia,
-        fecha_fin: policy.fecha_fin || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
-        prima_neta: primaTotal,
-        prima_total: primaTotal,
-        derecho_poliza: parseFloat(policy.derecho_de_poliza || 0),
-        recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
-        iva: parseFloat(policy.i_v_a || policy.iva_16 || 0),
-        pago_total: primaTotal,
-        forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
-        pagos_fraccionados: null,
-        pago_parcial: null,
-        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
-        fecha_proximo_pago: calculateNextPaymentDate(
-          policy.fecha_inicio || policy.vigencia_inicio || policy.desde_vigencia,
-          policy.forma_de_pago || policy.forma_pago
-        ),
-        ramo: 'Autos',
-        sourceTable: source
-      };
+    // Common financial fields
+    const financialFields = {
+      prima_neta: primaTotal,
+      prima_total: primaTotal,
+      derecho_poliza: parseFloat(policy.derecho_de_p__liza || policy.derecho_de_poliza || 0),
+      recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
+      iva: parseFloat(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16 || 0),
+      pago_total: primaTotal,
+      pagos_fraccionados: policy.pagos_fraccionados,
+      pago_parcial: policy.monto_parcial,
+      fecha_proximo_pago: calculateNextPaymentDate(
+        commonFields.fecha_inicio,
+        commonFields.forma_pago
+      )
+    };
 
-      // Log the normalized policy
-      console.log('Normalized Autos policy:', {
-        numero_poliza: normalized.numero_poliza,
-        contratante: normalized.contratante,
-        asegurado: normalized.asegurado,
-        aseguradora: normalized.aseguradora,
-        fecha_inicio: normalized.fecha_inicio,
-        fecha_fin: normalized.fecha_fin
-      });
+    // Combine common fields with financial fields
+    const basePolicy = {
+      ...commonFields,
+      ...financialFields
+    };
 
-      return normalized;
-    } else if (source === 'mascotas') {
-      // Special handling for mascotas table
-      const primaTotal = parseFloat(policy.prima_total || policy.pago_total || 0);
-      
-      const normalized = {
-        id: policy.id,
-        numero_poliza: policy.numero_poliza || policy.id,
-        contratante: policy.contratante || policy.nombre || policy.nombre_contratante,
-        asegurado: policy.asegurado || policy.nombre || policy.nombre_contratante,
-        rfc: policy.rfc,
-        email: policy.email || policy.e_mail,
-        fecha_inicio: policy.fecha_inicio || policy.vigencia_inicio,
-        fecha_fin: policy.fecha_fin || policy.vigencia_fin,
-        prima_neta: primaTotal,
-        prima_total: primaTotal,
-        forma_pago: policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago || 'No especificado',
-        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
-        fecha_proximo_pago: calculateNextPaymentDate(
-          policy.fecha_inicio || policy.vigencia_inicio,
-          policy.forma_de_pago || policy.FORMA_DE_PAGO || policy.formaPago
-        ),
-        ramo: 'mascotas',
-        sourceTable: source
-      };
-
-      // Log the normalized policy
-      console.log('Normalized Mascotas policy:', {
-        numero_poliza: normalized.numero_poliza,
-        contratante: normalized.contratante,
-        asegurado: normalized.asegurado,
-        aseguradora: normalized.aseguradora,
-        fecha_inicio: normalized.fecha_inicio,
-        fecha_fin: normalized.fecha_fin
-      });
-
-      return normalized;
+    // Add ramo based on source
+    switch (source) {
+      case 'gmm':
+        return { ...basePolicy, ramo: 'GMM' };
+      case 'autos':
+        return { ...basePolicy, ramo: 'Autos' };
+      case 'mascotas':
+        return { ...basePolicy, ramo: 'Mascotas' };
+      case 'vida':
+        return { ...basePolicy, ramo: 'Vida' };
+      case 'hogar':
+        return { ...basePolicy, ramo: 'Hogar' };
+      case 'empresarial':
+        return { ...basePolicy, ramo: 'Empresarial' };
+      case 'responsabilidad':
+        return { ...basePolicy, ramo: 'Responsabilidad Civil' };
+      case 'accidentes':
+        return { ...basePolicy, ramo: 'Accidentes Personales' };
+      default:
+        return { ...basePolicy, ramo: 'Otros' };
     }
-
-    // Handle other table types
-    return null;
   };
 
   const matchesSearch = (value, term) => {
@@ -262,9 +203,10 @@ export default function Reports() {
 
       // Define paired tables
       const pairedTables = {
-        'gmm': 'gmm-listado',
-        'grupos_autos': 'grupos_autos_listado',
-        'grupos_vida': 'grupos_vida_listado'
+        'autos': 'AutosListado',
+        'vida': 'VidaListado',
+        'GruposAutos': 'AutosListado',
+        'GruposVida': 'VidaListado'
       };
 
       // Get data from all tables
@@ -313,6 +255,11 @@ export default function Reports() {
         if (tableName.toLowerCase().includes('gmm')) policyType = 'gmm';
         else if (tableName.toLowerCase().includes('auto')) policyType = 'autos';
         else if (tableName.toLowerCase().includes('mascota')) policyType = 'mascotas';
+        else if (tableName.toLowerCase().includes('vida')) policyType = 'vida';
+        else if (tableName.toLowerCase().includes('hogar')) policyType = 'hogar';
+        else if (tableName.toLowerCase().includes('empresarial')) policyType = 'empresarial';
+        else if (tableName.toLowerCase().includes('responsabilidad')) policyType = 'responsabilidad';
+        else if (tableName.toLowerCase().includes('accidentes')) policyType = 'accidentes';
         
         return data.map(policy => {
           try {

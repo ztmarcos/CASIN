@@ -10,6 +10,7 @@
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  overflow: hidden;
 }
 
 .confirmation-dialog {
@@ -114,65 +115,116 @@
 
 .table-wrapper {
   flex: 1;
-  min-height: 0;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
   position: relative;
   width: 100%;
-  max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 .data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: max-content;
   width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
   background: #ffffff;
 }
 
-.data-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: white;
+.data-table th,
+.data-table td {
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 32px;
+  vertical-align: middle;
 }
 
 .data-table th {
-  position: relative;
-  background: white;
+  position: sticky;
+  top: 0;
   z-index: 10;
-  border-bottom: 2px solid #eaeaea;
-  padding: 8px 6px;
-  text-align: left;
+  background: #f8fafc;
+  padding: 8px 12px;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #1e293b;
-  cursor: pointer;
-  user-select: none;
-  border: 1px solid #e2e8f0;
-  white-space: nowrap;
-  font-size: 0.7rem;
-  letter-spacing: 0.025em;
   text-transform: uppercase;
-  height: 32px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  letter-spacing: 0.025em;
+  color: #1e293b;
 }
 
 .data-table td {
-  padding: 6px;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  padding: 6px 12px;
   font-size: 0.75rem;
-  line-height: 1.2;
+  color: #334155;
   background: #ffffff;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  height: 32px;
-  vertical-align: middle;
-  user-select: none;
-  min-width: 100px;
-  max-width: 300px;
+}
+
+/* Fixed width columns */
+.email-column, .email-cell { 
+  width: 50px !important; 
+  min-width: 50px !important;
+  max-width: 50px !important;
+}
+
+.delete-column, .delete-cell { 
+  width: 50px !important; 
+  min-width: 50px !important;
+  max-width: 50px !important;
+}
+
+.id-cell { 
+  width: 60px !important; 
+  min-width: 60px !important;
+  max-width: 60px !important;
+}
+
+.status-cell { 
+  width: 140px !important; 
+  min-width: 140px !important;
+  max-width: 140px !important;
+}
+
+/* Data columns with fixed widths */
+.data-table td:nth-child(3), .data-table th:nth-child(3) { 
+  width: 180px !important; 
+  min-width: 180px !important;
+} /* numero poliza */
+
+.data-table td:nth-child(4), .data-table th:nth-child(4) { 
+  width: 250px !important; 
+  min-width: 250px !important;
+} /* contratante */
+
+.data-table td:nth-child(5), .data-table th:nth-child(5) { 
+  width: 140px !important; 
+  min-width: 140px !important;
+} /* rfc */
+
+.data-table td:nth-child(6), .data-table th:nth-child(6) { 
+  width: 220px !important; 
+  min-width: 220px !important;
+} /* nombre */
+
+.data-table td:nth-child(7), .data-table th:nth-child(7) { 
+  width: 300px !important; 
+  min-width: 300px !important;
+} /* direccion */
+
+.data-table td:nth-child(8), .data-table th:nth-child(8) { 
+  width: 140px !important; 
+  min-width: 140px !important;
+} /* telefono */
+
+/* Regular cell styles */
+.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  width: 200px; /* Default width for regular cells */
+  min-width: 200px;
+  padding: 6px 12px;
+  line-height: 1.2;
+  font-size: 0.75rem;
+  color: var(--text-primary, #334155);
+  background: var(--background-primary, white);
 }
 
 /* Regular styling for ID cells */
@@ -187,34 +239,6 @@
   max-width: 60px;
   background: #ffffff;
 }
-
-/* Column widths - ensure total width is enough for scrolling */
-.data-table th:nth-child(2),
-.data-table td:nth-child(2) { 
-  min-width: 100px; /* status */
-  text-align: center;
-}
-
-.data-table th:nth-child(3),
-.data-table td:nth-child(3) { min-width: 120px; } /* numero poliza */
-
-.data-table th:nth-child(4),
-.data-table td:nth-child(4) { min-width: 200px; } /* contratante */
-
-.data-table th:nth-child(5),
-.data-table td:nth-child(5) { min-width: 120px; } /* rfc */
-
-.data-table th:nth-child(6),
-.data-table td:nth-child(6) { min-width: 200px; } /* nombre */
-
-.data-table th:nth-child(7),
-.data-table td:nth-child(7) { min-width: 300px; } /* direccion */
-
-.data-table th:nth-child(8),
-.data-table td:nth-child(8) { min-width: 120px; } /* telefono */
-
-.data-table th:nth-child(9),
-.data-table td:nth-child(9) { min-width: 120px; } /* codigo */
 
 /* Address cell specific styling */
 .data-table td.address-cell {
@@ -389,30 +413,6 @@ td .edit-cell-input[type="select"] {
   display: none;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .table-header {
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-  }
-
-  .search-box {
-    max-width: 100%;
-  }
-
-  .data-table th,
-  .data-table td {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-  }
-
-  .table-stats {
-    text-align: center;
-    width: 100%;
-  }
-}
-
 /* Animation for row updates */
 @keyframes highlight {
   0% {
@@ -526,23 +526,18 @@ td .edit-cell-input[type="select"] {
 
 /* Scrollbar styling */
 .table-wrapper::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 .table-wrapper::-webkit-scrollbar-track {
   background: #f1f5f9;
-  border-radius: 4px;
 }
 
 .table-wrapper::-webkit-scrollbar-thumb {
   background-color: #94a3b8;
   border-radius: 4px;
   border: 2px solid #f1f5f9;
-}
-
-.table-wrapper::-webkit-scrollbar-thumb:hover {
-  background-color: #64748b;
 }
 
 .table-wrapper::-webkit-scrollbar-corner {
@@ -921,10 +916,6 @@ td .edit-cell-input[type="select"] {
 
 [data-theme='dark'] .table-wrapper::-webkit-scrollbar-thumb:hover {
   background-color: #6B7280;
-}
-
-[data-theme='dark'] .table-wrapper::-webkit-scrollbar-corner {
-  background: #1F2937;
 }
 
 /* Edit cell styles for dark mode */
@@ -1910,17 +1901,87 @@ td .edit-cell-input[type="select"] {
 }
 
 /* Ensure table cells are visible */
-.data-table td:not(.id-cell):not(.status-cell) {
-  min-width: 120px;
-  padding: 6px 8px;
+.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  min-width: 180px;
+  max-width: 400px;
+  padding: 6px 12px;
+  line-height: 1.2;
+  font-size: 0.75rem;
+  color: var(--text-primary, #334155);
+  background: var(--background-primary, white);
+  border: 1px solid var(--border-color, #e2e8f0);
+  transition: all 0.2s ease;
+  height: 32px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 /* Add hover effect to make cells more visible */
-.data-table tr:hover td {
-  background-color: #f8fafc;
+.data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  background-color: var(--hover-bg, #f8fafc);
+}
+
+/* Selected state */
+.data-table td.selected-cell {
+  background-color: var(--selected-bg, rgba(59, 130, 246, 0.1));
+  border-color: var(--primary-color, #3b82f6);
+}
+
+/* Header cells */
+.data-table th {
+  padding: 8px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  background: var(--header-bg, #f8fafc);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+/* Table wrapper improvements */
+.table-wrapper {
+  padding: 0.5rem;
+  background: var(--background-primary, white);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Dark mode adjustments */
+[data-theme='dark'] .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  background: var(--background-primary-dark, #1F2937);
+  border-color: var(--border-color-dark, #374151);
+  color: var(--text-primary-dark, #F3F4F6);
+}
+
+[data-theme='dark'] .data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  background-color: var(--hover-bg-dark, #2D3748);
+}
+
+[data-theme='dark'] .data-table th {
+  background: var(--header-bg-dark, #111827);
+  border-color: var(--border-color-dark, #374151);
+  color: var(--text-primary-dark, #F3F4F6);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+    min-width: 150px;
+    max-width: 300px;
+    padding: 4px 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+    min-width: 120px;
+    max-width: 250px;
+    padding: 4px 8px;
+  }
 }
 
 .search-section {
@@ -1942,6 +2003,7 @@ td .edit-cell-input[type="select"] {
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.2s ease;
+  max-width: 10rem;
 }
 
 .capturador-btn:hover {

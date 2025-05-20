@@ -12,6 +12,7 @@ import Birthdays from './components/Birthdays/Birthdays'
 import Reports from './components/Reports/Reports'
 import Login from './components/Auth/Login'
 import UserManagement from './components/UserManagement/UserManagement'
+import Tasks from './pages/Tasks'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import './styles/theme.css'
@@ -35,6 +36,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <Dashboard />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/tasks" element={
+        <ProtectedRoute>
+          <Layout>
+            <Tasks />
           </Layout>
         </ProtectedRoute>
       } />

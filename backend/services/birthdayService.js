@@ -113,8 +113,20 @@ class BirthdayService {
                     
                     // 2. If no RFC birthday, try from birthdate field
                     if (!birthDate && birthday.birthdate) {
+                        console.log('Attempting to parse birthdate:', birthday.birthdate);
                         birthDate = this.parseDate(birthday.birthdate);
-                        if (birthDate) birthdaySource = 'Campo birthdate';
+                        if (birthDate) {
+                            console.log('Successfully parsed birthdate:', {
+                                original: birthday.birthdate,
+                                parsed: birthDate,
+                                month: birthDate.getMonth() + 1,
+                                day: birthDate.getDate(),
+                                year: birthDate.getFullYear()
+                            });
+                            birthdaySource = 'Campo birthdate';
+                        } else {
+                            console.log('Failed to parse birthdate:', birthday.birthdate);
+                        }
                     }
 
                     if (!birthDate) return null;
@@ -122,18 +134,54 @@ class BirthdayService {
                     // Clean and validate email
                     const email = birthday.email ? birthday.email.trim().toLowerCase() : null;
 
+                    // Create a unique identifier
+                    const uniqueId = `${birthday.source}-${birthday.rfc || ''}-${birthday.policy_number || ''}-${Date.now()}`;
+
                     return {
+                        id: uniqueId,
                         date: birthDate,
-                        name: birthday.name,
+                        name: birthday.name ? birthday.name.trim() : '',
                         email: email,
-                        rfc: birthday.rfc,
+                        rfc: birthday.rfc ? birthday.rfc.trim().toUpperCase() : null,
                         source: birthday.source,
+                        policy_number: birthday.policy_number,
                         details: `Póliza: ${birthday.policy_number || 'N/A'}`,
                         age: birthDate ? this.calculateAge(birthDate) : null,
                         birthdaySource
                     };
                 })
-                .filter(birthday => birthday !== null)
+                .filter(birthday => birthday !== null);
+
+            // Deduplicate birthdays based on RFC and name
+            const uniqueBirthdays = allBirthdays.reduce((acc, birthday) => {
+                // Create a composite key using multiple fields
+                const key = birthday.rfc ? 
+                    birthday.rfc : // If RFC exists, use it as the key
+                    `${birthday.name.toLowerCase()}-${birthday.policy_number || ''}-${birthday.source}-${birthday.date.toISOString().split('T')[0]}`;
+                
+                // If we already have this birthday, keep the one with more information
+                if (acc[key]) {
+                    const existing = acc[key];
+                    // Score each record based on available information
+                    const existingScore = (existing.email ? 1 : 0) + 
+                                        (existing.rfc ? 2 : 0) + 
+                                        (existing.policy_number ? 1 : 0);
+                    const newScore = (birthday.email ? 1 : 0) + 
+                                   (birthday.rfc ? 2 : 0) + 
+                                   (birthday.policy_number ? 1 : 0);
+                    
+                    // Keep the record with the higher score
+                    if (newScore > existingScore) {
+                        acc[key] = birthday;
+                    }
+                } else {
+                    acc[key] = birthday;
+                }
+                return acc;
+            }, {});
+
+            // Convert back to array and sort
+            const sortedBirthdays = Object.values(uniqueBirthdays)
                 .sort((a, b) => {
                     const monthA = a.date.getMonth();
                     const monthB = b.date.getMonth();
@@ -141,8 +189,8 @@ class BirthdayService {
                     return a.date.getDate() - b.date.getDate();
                 });
 
-            console.log('Total birthdays found:', allBirthdays.length);
-            return allBirthdays;
+            console.log('Total birthdays found:', sortedBirthdays.length);
+            return sortedBirthdays;
         } catch (error) {
             console.error('Error getting all birthdays:', error);
             throw error;
@@ -215,6 +263,7 @@ class BirthdayService {
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                         .join(' ');
                         
+                        
                     await emailService.sendBirthdayEmail(person.email, {
                         nombre: properName,
                         companyName: process.env.COMPANY_NAME || 'CASIN Seguros',
@@ -260,21 +309,44 @@ class BirthdayService {
     parseDate(dateStr) {
         if (!dateStr) return null;
         
-        // Try DD/MM/YYYY format
-        let parts = dateStr.split('/');
-        if (parts.length === 3) {
-            const [day, month, year] = parts;
-            return new Date(year, month - 1, day);
+        try {
+            // Try DD/MM/YYYY format
+            let parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const day = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // JS months are 0-based
+                const year = parseInt(parts[2], 10);
+                
+                const date = new Date(year, month, day);
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Try YYYY-MM-DD format
+            parts = dateStr.split('-');
+            if (parts.length === 3) {
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1; // JS months are 0-based
+                const day = parseInt(parts[2], 10);
+                
+                const date = new Date(year, month, day);
+                if (!isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            // Try to parse as a regular date string
+            const date = new Date(dateStr);
+            if (!isNaN(date.getTime())) {
+                return date;
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Error parsing date:', dateStr, error);
+            return null;
         }
-        
-        // Try YYYY-MM-DD format
-        parts = dateStr.split('-');
-        if (parts.length === 3) {
-            const [year, month, day] = parts;
-            return new Date(year, month - 1, day);
-        }
-        
-        return null;
     }
 
     calculateAge(birthDate) {

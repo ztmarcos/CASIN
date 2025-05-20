@@ -166,8 +166,9 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
-  const [newColumnType, setNewColumnType] = useState('text');
+  const [newColumnType, setNewColumnType] = useState('TEXT');
   const [showEditColumns, setShowEditColumns] = useState(false);
+  const [pdfEnabledColumns, setPdfEnabledColumns] = useState({});
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -178,17 +179,22 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   const loadColumns = async () => {
     try {
+      console.log('Loading columns for table:', selectedTable?.name);
       setIsLoading(true);
       setError(null);
       
       const structure = await tableService.getTableStructure(selectedTable.name);
+      console.log('Received table structure:', structure);
       
       if (structure && structure.columns) {
-        setColumns(structure.columns.map(col => ({
+        const newColumns = structure.columns.map(col => ({
           name: col.name,
           type: col.type || 'TEXT'
-        })));
+        }));
+        console.log('Setting columns state:', newColumns);
+        setColumns(newColumns);
       } else {
+        console.log('No columns found in structure');
         setColumns([]);
         setError('No columns found in table');
       }
@@ -247,18 +253,24 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
     try {
       setIsLoading(true);
+      setError(null); // Clear any previous errors
+      
+      // Add the column
       await tableService.addColumn(selectedTable.name, {
         name: newColumnName.trim(),
         type: newColumnType
       });
       
-      // Refresh columns
-      await loadColumns();
-      
-      // Reset form
+      // Reset form state
       setNewColumnName('');
-      setNewColumnType('text');
+      setNewColumnType('TEXT');
       setShowCreateForm(false);
+      
+      // Show success message
+      toast.success('Column created successfully');
+      
+      // Refresh the columns list
+      await loadColumns();
       
       // Notify parent
       if (onOrderChange) {
@@ -266,7 +278,8 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       }
     } catch (err) {
       console.error('Failed to create column:', err);
-      setError('Failed to create column');
+      setError(err.message || 'Failed to create column');
+      toast.error(err.message || 'Failed to create column');
     } finally {
       setIsLoading(false);
     }
@@ -457,10 +470,11 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
                 value={newColumnType}
                 onChange={(e) => setNewColumnType(e.target.value)}
               >
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="date">Date</option>
-                <option value="boolean">Boolean</option>
+                <option value="TEXT">Text</option>
+                <option value="INT">Integer</option>
+                <option value="DECIMAL">Decimal</option>
+                <option value="DATE">Date</option>
+                <option value="BOOLEAN">Boolean</option>
               </select>
               <button type="submit" disabled={isLoading}>
                 {isLoading ? 'Creating...' : 'Add Column'}

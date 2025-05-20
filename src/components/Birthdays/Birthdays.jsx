@@ -150,7 +150,7 @@ const Birthdays = () => {
               <h3 className="month-title">{month}</h3>
               <div className="birthdays-grid">
                 {monthBirthdays.map((birthday) => (
-                  <div key={`${birthday.source}-${birthday.rfc}-${birthday.email || ''}`} className="birthday-card">
+                  <div key={birthday.id} className="birthday-card">
                     <div className="birthday-info">
                       <span className="birthday-date">
                         {formatDate(birthday.date)} ({birthday.age} años)
@@ -198,7 +198,7 @@ const Birthdays = () => {
             </thead>
             <tbody>
               {filteredBirthdays.map((birthday) => (
-                <tr key={`${birthday.source}-${birthday.rfc}-${birthday.email || ''}`}>
+                <tr key={birthday.id}>
                   <td>{formatDate(birthday.date)}</td>
                   <td>{birthday.name}</td>
                   <td>{birthday.email || '-'}</td>

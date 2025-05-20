@@ -728,20 +728,52 @@ class TableService {
 
   async renameTable(oldName, newName) {
     try {
-      const response = await fetch(`${this.apiUrl}/tables/rename`, {
+      // Clean the table names
+      const cleanOldName = oldName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
+
+      const cleanNewName = newName.trim()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
+
+      const response = await fetch(`${this.apiUrl}/tables/${cleanOldName}/rename`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({ oldName, newName })
+        body: JSON.stringify({ newName: cleanNewName })
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Error renaming table');
+        const contentType = response.headers.get('content-type');
+        let errorMessage;
+        
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          errorMessage = error.error || error.message;
+        } else {
+          errorMessage = await response.text();
+          // If we got HTML, provide a more user-friendly error
+          if (errorMessage.includes('<!DOCTYPE')) {
+            errorMessage = 'Server error occurred while renaming table';
+          }
+        }
+        
+        throw new Error(errorMessage || 'Error renaming table');
       }
 
-      return await response.json();
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      
+      return { message: `Table renamed from ${oldName} to ${newName} successfully` };
     } catch (error) {
       console.error('Error renaming table:', error);
       throw error;
@@ -859,6 +891,26 @@ class TableService {
       return data;
     } catch (error) {
       console.error('Error getting table types:', error);
+      throw error;
+    }
+  }
+
+  async updateTableOrder(tableOrder) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/order`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tableOrder })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating table order:', error);
       throw error;
     }
   }

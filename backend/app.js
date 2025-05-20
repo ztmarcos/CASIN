@@ -21,6 +21,7 @@ const emailRoutes = require('./routes/emailRoutes');
 const gptRoutes = require('./routes/gptRoutes');
 const birthdayRoutes = require('./routes/birthdayRoutes');
 const authRoutes = require('./routes/authRoutes');
+const notionRoutes = require('./routes/notionRoutes'); // Added Notion routes
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.use('/api/email', emailRoutes);
 app.use('/api/gpt', gptRoutes);
 app.use('/api/birthday', birthdayRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/notion', notionRoutes); // Added Notion routes
 
 // Schedule birthday check every day at 9:00 AM
 cron.schedule('0 9 * * *', async () => {
@@ -66,6 +68,7 @@ console.log('- /api/email');
 console.log('- /api/gpt');
 console.log('- /api/birthday');
 console.log('- /api/auth');
+console.log('- /api/notion');
 
 // Error handling middleware
 app.use((err, req, res, next) => {
