@@ -47,15 +47,32 @@ const SortableTableItem = ({
     transition,
   };
 
+  const handleCardClick = (e) => {
+    // Don't trigger if clicking delete button or input
+    if (e.target.closest('.delete-button') || e.target.closest('.table-name-input')) {
+      return;
+    }
+    onTableClick(table, isSecondary);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''}`}
-      onClick={() => onTableClick(table, isSecondary)}
-      onDoubleClick={(e) => onTableDoubleClick(e, table)}
+      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''} ${isSecondary ? 'secondary' : 'primary'}`}
+      onClick={handleCardClick}
+      onDoubleClick={(e) => {
+        if (!e.target.closest('.delete-button') && !e.target.closest('.table-name-input')) {
+          onTableDoubleClick(e, table);
+        }
+      }}
     >
-      <div className="table-info" {...attributes} {...listeners}>
+      <div className="table-info">
+        {!isSecondary && table.secondaryTable && (
+          <span className="expand-icon" {...attributes} {...listeners}>
+            {expandedTables.has(table.name) ? '▼' : '▶'}
+          </span>
+        )}
         {isEditing ? (
           <input
             type="text"
@@ -67,24 +84,26 @@ const SortableTableItem = ({
             className="table-name-input"
           />
         ) : (
-          <span className="table-name">{table.name}</span>
-        )}
-        {table.secondaryTable && (
-          <span className="expand-icon">
-            {expandedTables.has(table.name) ? '▼' : '▶'}
-          </span>
+          <div className="table-name-container" {...attributes} {...listeners}>
+            <span className="table-name">{table.name}</span>
+            {isSecondary && <span className="table-badge">Child</span>}
+            {!isSecondary && table.secondaryTable && <span className="table-badge">Parent</span>}
+          </div>
         )}
       </div>
       <div className="table-actions">
         {table.relationshipType && (
           <span className="table-relationship-indicator" data-type={table.relationshipType}>
-            {isSecondary ? 'Details' : table.relationshipType.split('_')[0].toUpperCase()}
+            {isSecondary ? 'Details' : 'GROUP'}
           </span>
         )}
         <button
           className="delete-button"
-          onClick={(e) => onDeleteTable(e, table)}
-          title="Delete table"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteTable(e, table);
+          }}
+          title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
         >
           ×
         </button>
@@ -105,7 +124,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [groupData, setGroupData] = useState({
     mainTableName: '',
     secondaryTableName: '',
-    groupType: 'GMM'
+    groupType: 'GRUPAL'
   });
 
   const sensors = useSensors(
@@ -115,16 +134,10 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     })
   );
 
-  // Define table types
+  // Replace TABLE_TYPES with simpler options
   const TABLE_TYPES = {
-    'GMM': 'Gastos Médicos Mayores',
-    'AUTOS': 'Autos',
-    'VIDA': 'Vida',
-    'MASCOTAS': 'Mascotas',
-    'TRANSPORTE': 'Transporte',
-    'NEGOCIO': 'Negocio',
-    'HOGAR': 'Hogar',
-    'RC': 'Responsabilidad Civil'
+    'INDIVIDUAL': 'Individual',
+    'GRUPAL': 'Grupal'
   };
 
   useEffect(() => {
@@ -138,17 +151,40 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
       
       // Group tables by relationships
       const groupedTables = tables.reduce((acc, table) => {
+        // Skip tables that are already processed as secondary tables
+        if (table.isSecondaryTable && tables.some(t => 
+          t.isMainTable && t.relatedTableName?.toLowerCase() === table.name.toLowerCase()
+        )) {
+          return acc;
+        }
+
+        // If it's a main table, add it with its secondary table
         if (table.isMainTable) {
+          const secondaryTable = tables.find(t => 
+            t.name.toLowerCase() === table.relatedTableName?.toLowerCase() && t.isSecondaryTable
+          );
+          
+          if (secondaryTable) {
+            acc.push({
+              ...table,
+              secondaryTable: secondaryTable,
+              relationshipType: table.relationshipType || 'grupal_policy',
+              isGrouped: true
+            });
+          } else {
+            acc.push(table);
+          }
+        } else if (!table.isSecondaryTable) {
+          // If it's not a main or secondary table, add it as is
           acc.push({
             ...table,
-            secondaryTable: tables.find(t => t.name === table.relatedTableName)
+            isGrouped: false
           });
-        } else if (!table.isSecondaryTable) {
-          acc.push(table);
         }
         return acc;
       }, []);
 
+      console.log('Grouped tables:', groupedTables); // Add this for debugging
       setTables(groupedTables);
     } catch (err) {
       console.error('Error loading tables:', err);
@@ -173,7 +209,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         setGroupData({
           mainTableName: '',
           secondaryTableName: '',
-          groupType: 'GMM'
+          groupType: 'GRUPAL'
         });
       }
     } catch (error) {
@@ -248,14 +284,27 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
   const handleDeleteTable = async (e, table) => {
     e.stopPropagation();
-    if (window.confirm(`Are you sure you want to delete table "${table.name}"?`)) {
+    const isChild = table.isSecondaryTable;
+    const message = isChild 
+      ? `Are you sure you want to delete the child table "${table.name}"? This will also remove its relationship with the parent table.`
+      : `Are you sure you want to delete table "${table.name}"?${table.secondaryTable ? ' This will also delete its child table.' : ''}`;
+
+    if (window.confirm(message)) {
       try {
+        setIsLoading(true);
         await tableService.deleteTable(table.name);
-        toast.success('Table deleted successfully');
-        loadTables();
+        toast.success(`Table ${table.name} deleted successfully`);
+        await loadTables(); // Reload tables after deletion
+        
+        // If the deleted table was selected, clear the selection
+        if (selectedTableProp === table.name) {
+          onTableSelect(null);
+        }
       } catch (error) {
         console.error('Error deleting table:', error);
         toast.error(error.message || 'Error deleting table');
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -307,99 +356,6 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      {/* Modal for creating tables */}
-      <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
-        <div className="modal-header">
-          <h2>Create Insurance Table</h2>
-          <button onClick={() => setShowGroupModal(false)}>×</button>
-        </div>
-        <div className="modal-content">
-          <div className="form-group">
-            <label>Insurance Type:</label>
-            <select
-              value={groupData.groupType}
-              onChange={(e) => setGroupData(prev => ({
-                ...prev,
-                groupType: e.target.value,
-                mainTableName: e.target.value === 'GMM' ? 'GruposGMM' :
-                             e.target.value === 'AUTOS' ? 'GruposAutos' :
-                             e.target.value === 'VIDA' ? 'GruposVida' :
-                             e.target.value === 'MASCOTAS' ? 'Mascotas' :
-                             e.target.value === 'TRANSPORTE' ? 'Transporte' :
-                             e.target.value === 'NEGOCIO' ? 'Negocio' :
-                             e.target.value === 'HOGAR' ? 'Hogar' :
-                             e.target.value === 'RC' ? 'ResponsabilidadCivil' : '',
-                secondaryTableName: e.target.value === 'GMM' ? 'GMMListado' :
-                                  e.target.value === 'AUTOS' ? 'AutosListado' :
-                                  e.target.value === 'VIDA' ? 'VidaListado' : ''
-              }))}
-              className="form-select"
-            >
-              {Object.entries(TABLE_TYPES).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
-            <small className="help-text">
-              {groupData.groupType === 'GMM' && 'GMM policy with insured persons list'}
-              {groupData.groupType === 'AUTOS' && 'Auto policy with vehicles list'}
-              {groupData.groupType === 'VIDA' && 'Life insurance with insured persons list'}
-              {groupData.groupType === 'MASCOTAS' && 'Pet insurance policy'}
-              {groupData.groupType === 'TRANSPORTE' && 'Transport insurance policy'}
-              {groupData.groupType === 'NEGOCIO' && 'Business insurance policy'}
-              {groupData.groupType === 'HOGAR' && 'Home insurance policy'}
-              {groupData.groupType === 'RC' && 'Civil liability insurance policy'}
-            </small>
-          </div>
-
-          {/* Show table names for group tables */}
-          {['GMM', 'AUTOS', 'VIDA'].includes(groupData.groupType) && (
-            <>
-              <div className="form-group">
-                <label>Main Table Name:</label>
-                <input
-                  type="text"
-                  value={groupData.mainTableName}
-                  readOnly
-                  className="form-input"
-                />
-              </div>
-              <div className="form-group">
-                <label>Secondary Table Name:</label>
-                <input
-                  type="text"
-                  value={groupData.secondaryTableName}
-                  readOnly
-                  className="form-input"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Show single table name for individual tables */}
-          {!['GMM', 'AUTOS', 'VIDA'].includes(groupData.groupType) && (
-            <div className="form-group">
-              <label>Table Name:</label>
-              <input
-                type="text"
-                value={groupData.mainTableName}
-                readOnly
-                className="form-input"
-              />
-            </div>
-          )}
-
-          <div className="modal-actions">
-            <button
-              onClick={handleCreateGroup}
-              className="btn btn-primary"
-              disabled={!groupData.mainTableName}
-            >
-              Create Table
-            </button>
-          </div>
-        </div>
-      </Modal>
-
       {!isCollapsed && (
         <DndContext
           sensors={sensors}
@@ -412,7 +368,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
               strategy={verticalListSortingStrategy}
             >
               {tables.map(table => (
-                <div key={table.name} className="table-group">
+                <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
                   <SortableTableItem
                     table={table}
                     isSecondary={false}
@@ -428,20 +384,23 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
                   />
                   
                   {table.secondaryTable && expandedTables.has(table.name) && (
-                    <div className="secondary-table">
-                      <SortableTableItem
-                        table={table.secondaryTable}
-                        isSecondary={true}
-                        onTableClick={handleTableClick}
-                        onTableDoubleClick={handleTableDoubleClick}
-                        onDeleteTable={handleDeleteTable}
-                        isSelected={selectedTableProp === table.secondaryTable.name}
-                        isEditing={editingTable === table.secondaryTable}
-                        editingName={editingName}
-                        onNameChange={handleNameChange}
-                        onNameSubmit={handleNameSubmit}
-                        expandedTables={expandedTables}
-                      />
+                    <div className="secondary-table-container">
+                      <div className="connector-line"></div>
+                      <div className="secondary-table">
+                        <SortableTableItem
+                          table={table.secondaryTable}
+                          isSecondary={true}
+                          onTableClick={handleTableClick}
+                          onTableDoubleClick={handleTableDoubleClick}
+                          onDeleteTable={handleDeleteTable}
+                          isSelected={selectedTableProp === table.secondaryTable.name}
+                          isEditing={editingTable === table.secondaryTable}
+                          editingName={editingName}
+                          onNameChange={handleNameChange}
+                          onNameSubmit={handleNameSubmit}
+                          expandedTables={expandedTables}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -450,6 +409,93 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
           </div>
         </DndContext>
       )}
+
+      {/* Modal for creating tables */}
+      <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
+        <div className="modal-header">
+          <h2>Crear Nueva Tabla</h2>
+          <button onClick={() => setShowGroupModal(false)}>×</button>
+        </div>
+        <div className="modal-content">
+          <div className="form-group">
+            <label>Tipo de Tabla:</label>
+            <select
+              value={groupData.groupType}
+              onChange={(e) => setGroupData(prev => ({
+                ...prev,
+                groupType: e.target.value,
+                mainTableName: e.target.value === 'GRUPAL' ? 'Grupos' : 'Individual',
+                secondaryTableName: e.target.value === 'GRUPAL' ? 'Listado' : ''
+              }))}
+              className="form-select"
+            >
+              {Object.entries(TABLE_TYPES).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <small className="help-text">
+              {groupData.groupType === 'GRUPAL' && 'Tabla para pólizas grupales con listado de asegurados'}
+              {groupData.groupType === 'INDIVIDUAL' && 'Tabla para pólizas individuales'}
+            </small>
+          </div>
+
+          {/* Show table names based on type */}
+          {groupData.groupType === 'GRUPAL' ? (
+            <>
+              <div className="form-group">
+                <label>Nombre de Tabla Principal:</label>
+                <input
+                  type="text"
+                  value={groupData.mainTableName}
+                  onChange={(e) => setGroupData(prev => ({
+                    ...prev,
+                    mainTableName: e.target.value
+                  }))}
+                  placeholder="Nombre de la tabla principal"
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Nombre de Tabla Secundaria:</label>
+                <input
+                  type="text"
+                  value={groupData.secondaryTableName}
+                  onChange={(e) => setGroupData(prev => ({
+                    ...prev,
+                    secondaryTableName: e.target.value
+                  }))}
+                  placeholder="Nombre de la tabla secundaria"
+                  className="form-input"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="form-group">
+              <label>Nombre de Tabla:</label>
+              <input
+                type="text"
+                value={groupData.mainTableName}
+                onChange={(e) => setGroupData(prev => ({
+                  ...prev,
+                  mainTableName: e.target.value
+                }))}
+                placeholder="Nombre de la tabla"
+                className="form-input"
+              />
+            </div>
+          )}
+
+          <div className="modal-actions">
+            <button
+              onClick={handleCreateGroup}
+              className="btn btn-primary"
+              disabled={!groupData.mainTableName || (groupData.groupType === 'GRUPAL' && !groupData.secondaryTableName)}
+            >
+              Crear Tabla
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
