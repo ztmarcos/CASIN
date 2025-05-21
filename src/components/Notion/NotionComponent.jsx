@@ -356,25 +356,15 @@ const NotionComponent = () => {
   const handleTaskSave = async (taskData) => {
     try {
       if (taskData.isNew) {
-        // For new tasks, format properties according to Notion's API requirements
-        const properties = {};
-        Object.entries(taskData.properties)
-          .filter(([key]) => key !== 'id')
-          .forEach(([column, value]) => {
-            const config = PROPERTY_CONFIGS[column];
-            if (config) {
-              properties[column] = config.formatValue(value);
-            }
-          });
-
-        console.log('Creating new task with properties:', properties);
+        // For new tasks, send properties directly to create-task endpoint
+        console.log('Creating new task with properties:', taskData.properties);
 
         const response = await fetch(`${API_BASE_URL}/notion/create-task`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ properties }),
+          body: JSON.stringify({ properties: taskData.properties }),
         });
 
         if (!response.ok) {
@@ -408,7 +398,7 @@ const NotionComponent = () => {
           const requestBody = {
             taskId: update.taskId,
             column: update.column,
-            value: update.value,  // Send the raw value, let the backend handle formatting
+            value: update.value,
             propertyType: config.type
           };
           

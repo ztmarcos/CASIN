@@ -60,33 +60,68 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
       setIsSaving(true);
       console.log('Preparing task data from:', editedTask);
       
-      const updates = Object.entries(editedTask)
-        .filter(([key, value]) => key !== 'id' && value !== undefined)
-        .map(([column, value]) => {
-          const config = PROPERTY_CONFIGS[column];
-          if (!config) {
-            console.warn(`No config found for column: ${column}`);
-            return null;
+      const properties = {
+        title: {
+          title: [{
+            text: {
+              content: editedTask.title
+            }
+          }]
+        },
+        Encargado: {
+          people: editedTask.Encargado ? [{ object: 'user', id: editedTask.Encargado }] : []
+        },
+        Status: {
+          status: {
+            name: editedTask.Status || 'Por iniciar'
           }
+        },
+        'Fecha límite': editedTask['Fecha límite'] ? {
+          date: {
+            start: editedTask['Fecha límite']
+          }
+        } : null,
+        Descripción: {
+          rich_text: [{
+            text: {
+              content: editedTask.Descripción || ''
+            }
+          }]
+        }
+      };
 
-          const update = {
-            taskId: editedTask.id,
-            column,
-            value: value || '', // Send raw value, let the parent component handle formatting
-            propertyType: config.type
-          };
-          console.log(`Prepared update for ${column}:`, update);
-          return update;
-        })
-        .filter(Boolean);
+      if (!editedTask.id) {
+        // For new tasks
+        await onSave({
+          isNew: true,
+          properties
+        });
+      } else {
+        // For existing tasks, prepare updates
+        const updates = Object.entries(editedTask)
+          .filter(([key, value]) => key !== 'id' && value !== undefined)
+          .map(([column, value]) => {
+            const config = PROPERTY_CONFIGS[column];
+            if (!config) {
+              console.warn(`No config found for column: ${column}`);
+              return null;
+            }
 
-      console.log('Final updates to send:', updates);
+            return {
+              taskId: editedTask.id,
+              column,
+              value,
+              propertyType: config.type
+            };
+          })
+          .filter(Boolean);
 
-      await onSave({
-        isNew: !editedTask.id,
-        updates,
-        properties: editedTask
-      });
+        await onSave({
+          isNew: false,
+          updates,
+          properties: editedTask
+        });
+      }
       
       // Only close the modal after successful save
       onClose();

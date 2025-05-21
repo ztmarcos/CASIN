@@ -572,7 +572,7 @@ router.post('/create-task', async (req, res) => {
   try {
     console.log('📝 Creating new Notion task with body:', req.body);
     
-    const { title, Encargado, Status, 'Fecha límite': dueDate, Descripción } = req.body;
+    const { properties } = req.body;
 
     // Get database ID from environment variables
     const databaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
@@ -585,7 +585,7 @@ router.post('/create-task', async (req, res) => {
     }
 
     // Validate required fields
-    if (!title) {
+    if (!properties.title) {
       return res.status(400).json({
         error: 'Title is required'
       });
@@ -593,11 +593,7 @@ router.post('/create-task', async (req, res) => {
 
     console.log('Creating Notion page with properties:', {
       databaseId,
-      title,
-      Encargado,
-      Status,
-      dueDate,
-      Descripción
+      properties
     });
 
     // Create the page in Notion
@@ -610,33 +606,12 @@ router.post('/create-task', async (req, res) => {
           title: [
             {
               text: {
-                content: title
+                content: properties.title
               }
             }
           ]
         },
-        Encargado: {
-          people: Encargado ? [{ id: Encargado }] : []
-        },
-        Status: {
-          status: {
-            name: Status || 'Por iniciar'
-          }
-        },
-        'Fecha límite': {
-          date: dueDate ? {
-            start: dueDate
-          } : null
-        },
-        Descripción: {
-          rich_text: [
-            {
-              text: {
-                content: Descripción || ''
-              }
-            }
-          ]
-        }
+        ...properties
       }
     });
 
