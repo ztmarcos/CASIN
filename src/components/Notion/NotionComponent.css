@@ -15,6 +15,17 @@
   font-size: 14px;
 }
 
+/* Title Column Style */
+.titlecolumn {
+  background-color: #000000;
+  color: #ffffff !important;
+}
+
+.titlecolumn .notion-td-content {
+  color: #ffffff;
+}
+
+/* Table Headers */
 .notion-th {
   background: transparent;
   padding: 6px 8px;
@@ -56,12 +67,12 @@
 
 /* Light theme status colors */
 .status-listo {
-  background-color: #22C55E;  /* Green */
+  background-color: #32ca67;  /* Green */
   color: white;
 }
 
 .status-en-progreso {
-  background-color: #F59E0B;  /* Yellow */
+  background-color: #ffac1b;  /* Yellow */
   color: white;
 }
 

@@ -508,10 +508,10 @@ const NotionComponent = () => {
                     setIsTaskModalOpen(true);
                   }}
                 >
-                  {TABLE_COLUMNS.map(column => (
+                  {TABLE_COLUMNS.map((column, colIndex) => (
                     <td 
                       key={`${task.id}-${column.key}`} 
-                      className={`notion-td ${column.key === 'Status' ? getStatusClass(task[column.key]) : ''}`}
+                      className={`notion-td ${column.key === 'Status' ? getStatusClass(task[column.key]) : ''} ${colIndex === 0 ? 'titlecolumn' : ''}`}
                     >
                       {renderCell(task, column.key)}
                     </td>

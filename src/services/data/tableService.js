@@ -343,7 +343,12 @@ class TableService {
         throw new Error(data.error || data.message || 'Failed to update data');
       }
 
-      return data;
+      // Return the updated data
+      return {
+        success: true,
+        message: data.message,
+        updatedData: data.updatedData
+      };
     } catch (error) {
       console.error('Error updating data:', error);
       throw error;

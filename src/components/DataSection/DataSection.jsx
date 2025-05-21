@@ -289,13 +289,17 @@ const DataSection = () => {
     if (!selectedTable) return;
     
     try {
-      await tableService.updateData(selectedTable.name, id, column, value);
+      const result = await tableService.updateData(selectedTable.name, id, column, value);
+      
       // Update the local data to reflect the change
       setTableData(prevData => 
         prevData.map(row => 
           row.id === id ? { ...row, [column]: value } : row
         )
       );
+
+      // Return the result from the server
+      return result;
     } catch (error) {
       console.error('Error updating cell:', error);
       throw error; // Let DataTable handle the error

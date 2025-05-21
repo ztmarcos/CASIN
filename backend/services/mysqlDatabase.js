@@ -440,8 +440,8 @@ class MySQLDatabaseService {
 
       // Get column type
       const [columnInfo] = await connection.execute(
-        'SHOW COLUMNS FROM ?? WHERE Field = ?',
-        [cleanTableName, cleanColumn]
+        'SHOW COLUMNS FROM `' + cleanTableName + '` WHERE Field = ?',
+        [cleanColumn]
       );
       
       if (!columnInfo || columnInfo.length === 0) {
@@ -452,7 +452,7 @@ class MySQLDatabaseService {
       const columnType = columnInfo[0].Type.toUpperCase();
       
       // Handle different data types
-      if (typeof value === 'string') {
+      if (value !== null && value !== undefined) {
         if (columnType.includes('INT')) {
           processedValue = parseInt(value, 10);
           if (isNaN(processedValue)) {
@@ -470,23 +470,41 @@ class MySQLDatabaseService {
             throw new Error(`Invalid date value: ${value}`);
           }
           processedValue = dateValue.toISOString().split('T')[0];
+        } else if (columnType.includes('JSON')) {
+          // Handle JSON data
+          try {
+            if (typeof value === 'string') {
+              processedValue = JSON.parse(value);
+            }
+            processedValue = JSON.stringify(processedValue);
+          } catch (e) {
+            throw new Error(`Invalid JSON value: ${value}`);
+          }
         }
+      } else {
+        // Handle null values
+        processedValue = null;
       }
       
-      // Execute the update
-      const [result] = await connection.execute(
-        'UPDATE ?? SET ?? = ? WHERE id = ?',
-        [cleanTableName, cleanColumn, processedValue, id]
-      );
+      // Execute the update using a simpler query format
+      const updateQuery = `UPDATE \`${cleanTableName}\` SET \`${cleanColumn}\` = ? WHERE id = ?`;
+      console.log('Executing query:', updateQuery, [processedValue, id]);
+      
+      const [result] = await connection.execute(updateQuery, [processedValue, id]);
       
       if (result.affectedRows === 0) {
         throw new Error(`No record found with id ${id}`);
       }
       
+      // Get the updated row to return
+      const selectQuery = `SELECT * FROM \`${cleanTableName}\` WHERE id = ?`;
+      const [updatedRow] = await connection.execute(selectQuery, [id]);
+      
       return {
         success: true,
         message: 'Update successful',
-        affectedRows: result.affectedRows
+        affectedRows: result.affectedRows,
+        updatedData: updatedRow[0]
       };
     } catch (error) {
       console.error('Error updating data:', error);

@@ -255,14 +255,40 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     const row = data[rowIndex];
     
     try {
-      // First update the UI optimistically
-      const updatedData = filteredData.map((r, index) => 
-        index === rowIndex ? { ...r, [column]: editValue } : r
-      );
-      setFilteredData(updatedData);
+      // Validate the data before updating
+      if (editValue === undefined || editValue === null) {
+        throw new Error('Invalid value: Value cannot be empty');
+      }
+
+      // Validate that we have the necessary data
+      if (!row || !row.id) {
+        throw new Error('Invalid row data');
+      }
+
+      console.log('Updating cell with:', {
+        id: row.id,
+        column,
+        value: editValue
+      });
+
+      // Make the API call first
+      const result = await onCellUpdate(row.id, column, editValue);
       
-      // Then make the API call
-      await onCellUpdate(row.id, column, editValue);
+      // Log the result for debugging
+      console.log('Update result:', result);
+
+      // Check if result exists and has success property
+      if (!result || result.success === false) {
+        throw new Error(result?.message || 'Failed to update cell');
+      }
+
+      // Update the UI with the returned data
+      if (result.updatedData) {
+        const updatedData = filteredData.map((r) => 
+          r.id === row.id ? { ...r, ...result.updatedData } : r
+        );
+        setFilteredData(updatedData);
+      }
       
       // Close the edit popup
       handleCancelEdit();
@@ -272,13 +298,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     } catch (error) {
       console.error('Failed to update cell:', error);
       
-      // Revert the optimistic update
-      setFilteredData(data);
+      // Show error message with more specific information
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to update cell';
+      toast.error(`Update failed: ${errorMessage}`);
       
-      // Show error message
-      toast.error(error.message || 'Failed to update cell');
-      
-      // Keep the edit popup open so user can try again
+      // Keep the edit popup open so user can try again or cancel
     }
   };
 

@@ -194,6 +194,14 @@ router.patch('/:tableName/:id', async (req, res) => {
     const { tableName, id } = req.params;
     const { column, value } = req.body;
     
+    console.log('Update request received:', {
+      tableName,
+      id,
+      column,
+      value,
+      body: req.body
+    });
+    
     // Validate required fields
     if (!tableName || !id) {
       return res.status(400).json({
@@ -209,9 +217,21 @@ router.patch('/:tableName/:id', async (req, res) => {
       });
     }
 
+    // Clean and validate inputs
+    const cleanTableName = tableName.trim().toLowerCase();
+    const cleanId = parseInt(id, 10);
+    const cleanColumn = column.trim();
+
+    if (isNaN(cleanId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid ID format'
+      });
+    }
+
     // Attempt to update the data
     try {
-      const result = await mysqlDatabase.updateData(tableName, id, column, value);
+      const result = await mysqlDatabase.updateData(cleanTableName, cleanId, cleanColumn, value);
       res.json(result);
     } catch (dbError) {
       // Handle specific database errors
