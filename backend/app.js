@@ -26,6 +26,12 @@ const notionRoutes = require('./routes/notionRoutes'); // Added Notion routes
 const app = express();
 const port = process.env.PORT || 3001;
 
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`🔍 ${req.method} ${req.path}`);
+  next();
+});
+
 // Middleware
 app.use(cors());
 app.use(express.json());

@@ -10,7 +10,7 @@ const rl = readline.createInterface({
 
 console.log('\n=== Configuración de Notion API ===\n');
 console.log('Este script te ayudará a configurar las variables de entorno necesarias para la integración con Notion.');
-console.log('Necesitarás tu Notion Secret Key y Database ID.\n');
+console.log('Necesitarás tu Notion API Key y Database ID.\n');
 
 // Intenta cargar el archivo .env existente
 const envPath = path.resolve(process.cwd(), '.env');
@@ -25,9 +25,9 @@ try {
   console.log('No se encontró un archivo .env existente. Se creará uno nuevo.');
 }
 
-rl.question('Notion Secret Key (de tu integración de Notion): ', (secretKey) => {
-  if (!secretKey.trim()) {
-    console.log('\x1b[31m%s\x1b[0m', 'Error: Debes proporcionar un Secret Key válido.');
+rl.question('Notion API Key (de tu integración de Notion): ', (apiKey) => {
+  if (!apiKey.trim()) {
+    console.log('\x1b[31m%s\x1b[0m', 'Error: Debes proporcionar un API Key válido.');
     rl.close();
     return;
   }
@@ -43,16 +43,16 @@ rl.question('Notion Secret Key (de tu integración de Notion): ', (secretKey) =>
     const cleanDatabaseId = databaseId.replace(/-/g, '');
 
     // Verificar si las variables ya existen en el archivo .env
-    const notionKeyExists = existingEnv.includes('NOTION_SECRET_KEY=');
+    const notionKeyExists = existingEnv.includes('NOTION_API_KEY=');
     const notionDbExists = existingEnv.includes('NOTION_DATABASE_ID=');
 
     let newEnv = existingEnv;
 
-    // Actualizar o añadir NOTION_SECRET_KEY
+    // Actualizar o añadir NOTION_API_KEY
     if (notionKeyExists) {
-      newEnv = newEnv.replace(/NOTION_SECRET_KEY=.*(\r?\n|$)/, `NOTION_SECRET_KEY=${secretKey}$1`);
+      newEnv = newEnv.replace(/NOTION_API_KEY=.*(\r?\n|$)/, `NOTION_API_KEY=${apiKey}$1`);
     } else {
-      newEnv += `\n# Notion API\nNOTION_SECRET_KEY=${secretKey}\n`;
+      newEnv += `\n# Notion API\nNOTION_API_KEY=${apiKey}\n`;
     }
 
     // Actualizar o añadir NOTION_DATABASE_ID

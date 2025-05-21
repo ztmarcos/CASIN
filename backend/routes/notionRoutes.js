@@ -2,9 +2,30 @@ const express = require('express');
 const { Client } = require('@notionhq/client');
 const router = express.Router();
 
+// Debug environment variables
+console.log('🔑 Notion Environment Variables:', {
+  NOTION_API_KEY: process.env.NOTION_API_KEY ? '✅ Present' : '❌ Missing',
+  VITE_NOTION_API_KEY: process.env.VITE_NOTION_API_KEY ? '✅ Present' : '❌ Missing',
+  NOTION_DATABASE_ID: process.env.NOTION_DATABASE_ID ? '✅ Present' : '❌ Missing',
+  VITE_NOTION_DATABASE_ID: process.env.VITE_NOTION_DATABASE_ID ? '✅ Present' : '❌ Missing'
+});
+
 // Initialize the Notion client
+const apiKey = process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY;
+if (!apiKey) {
+  console.error('❌ No Notion API key found in environment variables');
+  throw new Error('Notion API key is required');
+}
+
 const notion = new Client({
-  auth: process.env.VITE_NOTION_API_KEY || process.env.NOTION_SECRET_KEY,
+  auth: apiKey
+});
+
+// Test Notion client initialization
+notion.users.me().then(response => {
+  console.log('✅ Notion client initialized successfully:', response.name);
+}).catch(error => {
+  console.error('❌ Failed to initialize Notion client:', error.message);
 });
 
 // Enable CORS middleware for Notion routes
@@ -38,31 +59,16 @@ const extractPropertyValue = (property) => {
     case 'date':
       return property.date?.start || null;
     case 'people':
-      // Enhanced people property handling with detailed logging
+      // Return the full people array with all user information
       if (property.people && property.people.length > 0) {
-        const person = property.people[0];
-        console.log('Person object from Notion:', JSON.stringify(person, null, 2));
-        
-        // Try to get the email from the person object
-        const email = person.person?.email;
-        if (email) {
-          console.log('Found email:', email);
-          return email;
-        }
-        
-        // Fallback to name if available
-        const name = person.name;
-        if (name) {
-          console.log('Using name as fallback:', name);
-          return name;
-        }
-        
-        // Last resort, use the ID
-        console.log('Using ID as last resort:', person.id);
-        return person.id;
+        return property.people.map(person => ({
+          id: person.id,
+          name: person.name,
+          email: person.person?.email,
+          avatarUrl: person.avatar_url
+        }));
       }
-      console.log('No people found in property');
-      return null;
+      return [];
     case 'status':
       return property.status?.name || null;
     case 'phone_number':
@@ -84,21 +90,22 @@ const extractPropertyValue = (property) => {
 router.get('/tasks', async (req, res) => {
   try {
     // Validate environment variables
-    if (!process.env.VITE_NOTION_API_KEY && !process.env.NOTION_SECRET_KEY) {
+    const apiKey = process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY;
+    const databaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
+
+    if (!apiKey) {
       return res.status(500).json({ 
-        error: 'Notion Secret Key not configured',
-        details: 'Please set the VITE_NOTION_API_KEY or NOTION_SECRET_KEY environment variable'
+        error: 'Notion API Key not configured',
+        details: 'Please set either NOTION_API_KEY or VITE_NOTION_API_KEY environment variable'
       });
     }
 
-    if (!process.env.VITE_NOTION_DATABASE_ID && !process.env.NOTION_DATABASE_ID) {
+    if (!databaseId) {
       return res.status(500).json({ 
         error: 'Notion Database ID not configured',
-        details: 'Please set the VITE_NOTION_DATABASE_ID or NOTION_DATABASE_ID environment variable'
+        details: 'Please set either NOTION_DATABASE_ID or VITE_NOTION_DATABASE_ID environment variable'
       });
     }
-
-    const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
 
     // Query the database
     const response = await notion.databases.query({
@@ -267,9 +274,14 @@ router.get('/raw-table', async (req, res) => {
       // Only include properties that exist in the database
       validProperties.forEach(propName => {
         if (page.properties[propName]) {
-          const value = extractPropertyValue(page.properties[propName]);
-          console.log(`Property ${propName}:`, value);
-          result[propName] = value;
+          if (propName === 'Encargado') {
+            // For Encargado (people) property, keep the full user object
+            result[propName] = page.properties[propName].people;
+          } else {
+            const value = extractPropertyValue(page.properties[propName]);
+            console.log(`Property ${propName}:`, value);
+            result[propName] = value;
+          }
         }
       });
 
@@ -323,35 +335,10 @@ router.post('/update-cell', async (req, res) => {
         if (!value) {
           properties[column] = { people: [] };
         } else {
-          try {
-            // First try to find the user by email
-            const users = await notion.users.list();
-            const user = users.results.find(u => 
-              u.person?.email?.toLowerCase() === value.toLowerCase()
-            );
-
-            if (user) {
-              properties[column] = {
-                people: [{
-                  object: 'user',
-                  id: user.id
-                }]
-              };
-            } else {
-              return res.status(400).json({
-                success: false,
-                message: 'No Notion user found',
-                error: `No Notion user found with email: ${value}`
-              });
-            }
-          } catch (error) {
-            console.error('Error finding Notion user:', error);
-            return res.status(500).json({
-              success: false,
-              message: 'Error finding Notion user',
-              error: error.message
-            });
-          }
+          // If value is already a user ID, use it directly
+          properties[column] = {
+            people: [{ id: value }]
+          };
         }
         break;
 
@@ -460,6 +447,155 @@ router.get('/users', async (req, res) => {
     res.status(500).json({ 
       message: 'Failed to fetch Notion users', 
       error: error.message 
+    });
+  }
+});
+
+// Delete (archive) a task
+router.delete('/delete-task/:taskId', async (req, res) => {
+  try {
+    console.log('🗑️ Deleting Notion task:', req.params.taskId);
+    
+    const { taskId } = req.params;
+
+    if (!taskId) {
+      console.error('❌ No taskId provided');
+      return res.status(400).json({
+        error: 'Task ID is required',
+        details: 'No taskId provided in URL parameters'
+      });
+    }
+
+    try {
+      // First verify the page exists
+      await notion.pages.retrieve({
+        page_id: taskId
+      });
+    } catch (error) {
+      console.error('❌ Failed to find task:', error.message);
+      return res.status(404).json({
+        error: 'Task not found',
+        details: `No task found with ID: ${taskId}`
+      });
+    }
+
+    // Delete (archive) the page in Notion
+    await notion.pages.update({
+      page_id: taskId,
+      archived: true
+    });
+
+    console.log('✅ Task deleted successfully');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Task deleted successfully',
+      taskId
+    });
+
+  } catch (error) {
+    console.error('❌ Notion API Error:', error);
+    // Check if it's a Notion API error
+    if (error.code) {
+      return res.status(500).json({
+        error: 'Notion API Error',
+        code: error.code,
+        details: error.message
+      });
+    }
+    return res.status(500).json({
+      error: 'Failed to delete Notion task',
+      details: error.message
+    });
+  }
+});
+
+// Create a new task
+router.post('/create-task', async (req, res) => {
+  try {
+    console.log('📝 Creating new Notion task with body:', req.body);
+    
+    const { title, Encargado, Status, 'Fecha límite': dueDate, Descripción } = req.body;
+
+    // Get database ID from environment variables
+    const databaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
+    if (!databaseId) {
+      console.error('❌ No database ID configured');
+      return res.status(500).json({
+        error: 'Configuration error',
+        details: 'Notion database ID is not configured'
+      });
+    }
+
+    // Validate required fields
+    if (!title) {
+      return res.status(400).json({
+        error: 'Title is required'
+      });
+    }
+
+    console.log('Creating Notion page with properties:', {
+      databaseId,
+      title,
+      Encargado,
+      Status,
+      dueDate,
+      Descripción
+    });
+
+    // Create the page in Notion
+    const response = await notion.pages.create({
+      parent: {
+        database_id: databaseId
+      },
+      properties: {
+        title: {
+          title: [
+            {
+              text: {
+                content: title
+              }
+            }
+          ]
+        },
+        Encargado: {
+          people: Encargado ? [{ id: Encargado }] : []
+        },
+        Status: {
+          status: {
+            name: Status || 'Por iniciar'
+          }
+        },
+        'Fecha límite': {
+          date: dueDate ? {
+            start: dueDate
+          } : null
+        },
+        Descripción: {
+          rich_text: [
+            {
+              text: {
+                content: Descripción || ''
+              }
+            }
+          ]
+        }
+      }
+    });
+
+    console.log('✅ Task created successfully:', response);
+
+    return res.status(201).json({
+      success: true,
+      task: response
+    });
+
+  } catch (error) {
+    console.error('❌ Notion API Error:', error);
+    return res.status(500).json({
+      error: 'Failed to create Notion task',
+      details: error.message,
+      stack: error.stack
     });
   }
 });

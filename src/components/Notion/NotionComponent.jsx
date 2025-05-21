@@ -3,7 +3,7 @@ import NotionErrorBoundary from './NotionErrorBoundary';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = '/api';
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -26,10 +26,10 @@ const formatDateForInput = (dateString) => {
 // Define columns configuration outside the component
 const TABLE_COLUMNS = [
   { key: 'title', label: 'Title' },
-  { key: 'Encargado', label: 'Assignee' },
+  { key: 'Encargado', label: 'Encargado' },
   { key: 'Status', label: 'Status' },
-  { key: 'Fecha límite', label: 'Due Date' },
-  { key: 'Descripción', label: 'Description' }
+  { key: 'Fecha límite', label: 'Fecha límite' },
+  { key: 'Descripción', label: 'Descripción' }
 ];
 
 const NotionComponent = () => {
@@ -58,7 +58,7 @@ const NotionComponent = () => {
   const fetchNotionUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await fetch(`${API_BASE_URL}/api/notion/users`);
+      const response = await fetch(`${API_BASE_URL}/notion/users`);
       if (!response.ok) {
         throw new Error('Failed to fetch Notion users');
       }
@@ -77,7 +77,7 @@ const NotionComponent = () => {
   const fetchTasks = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await fetch(`${API_BASE_URL}/api/notion/raw-table`);
+      const response = await fetch(`${API_BASE_URL}/notion/raw-table`);
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -97,7 +97,7 @@ const NotionComponent = () => {
     try {
       console.log('Updating cell:', { taskId, column, value, propertyType });
 
-      const response = await fetch(`${API_BASE_URL}/api/notion/update-cell`, {
+      const response = await fetch(`${API_BASE_URL}/notion/update-cell`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -176,37 +176,38 @@ const NotionComponent = () => {
     const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
     const value = task[column];
 
-    if (column === 'Encargado' || column === 'Assignee') {
+    if (column === 'Encargado') {
+      // Handle Notion's people property format
+      const currentUser = Array.isArray(value) && value.length > 0 ? value[0] : null;
+      const currentUserId = currentUser?.id || '';
+      
+      console.log('Current Encargado value:', { value, currentUserId, currentUser });
+
+      // Always show dropdown for Encargado
       return (
         <select
           className="notion-select"
-          value={value || ''}
+          value={currentUserId}
           onChange={(e) => {
             const selectedValue = e.target.value;
-            handleCellEdit(task.id, column, selectedValue)
+            handleCellEdit(task.id, column, selectedValue, 'people')
               .catch(error => {
                 console.error('Failed to update assignee:', error);
               });
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <option value="">Select assignee...</option>
+          <option value="">Seleccionar encargado...</option>
           {notionUsers.map(user => (
-            <option key={user.id} value={user.email}>
-              {user.name} ({user.email})
+            <option key={user.id} value={user.id}>
+              {user.name || user.email}
             </option>
           ))}
         </select>
       );
     }
 
-    if (column === 'Status' || column === 'Estado') {
-      const statusOptions = [
-        { value: '', label: 'Seleccionar estado...' },
-        { value: 'En progreso', label: 'En progreso' },
-        { value: 'Listo', label: 'Listo' }
-      ];
-
+    if (column === 'Status') {
       return (
         <select
           className="notion-select"
@@ -229,11 +230,10 @@ const NotionComponent = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {statusOptions.map(option => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
+          <option value="">Seleccionar estado...</option>
+          <option value="Por iniciar">Por iniciar</option>
+          <option value="En progreso">En progreso</option>
+          <option value="Listo">Listo</option>
         </select>
       );
     }
@@ -364,26 +364,80 @@ const NotionComponent = () => {
     return '';
   };
 
+  // Delete task
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) {
+      return;
+    }
+
+    try {
+      console.log('Deleting task:', taskId);
+      setIsDeleting(true);
+      
+      const response = await fetch(`${API_BASE_URL}/notion/delete-task/${taskId}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      // Try to parse JSON response
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Server returned invalid response');
+      }
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.message || 'Failed to delete task');
+      }
+
+      console.log('Delete successful:', responseData);
+      await fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error.message || 'Failed to delete task');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Create new task
   const handleCreateTask = async () => {
     try {
       console.log('Creating task with data:', newTask);
       
-      const response = await fetch(`${API_BASE_URL}/api/notion/create-task`, {
+      const response = await fetch(`${API_BASE_URL}/notion/create-task`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(newTask),
+        body: JSON.stringify({
+          title: newTask.title,
+          Status: newTask.Status || 'Por iniciar',
+          'Fecha límite': newTask['Fecha límite'] || null,
+          Encargado: newTask.Encargado || null,
+          Descripción: newTask.Descripción || ''
+        }),
       });
 
-      const responseData = await response.json();
-      console.log('Server response:', responseData);
+      // Try to parse JSON response
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Server returned invalid response');
+      }
 
       if (!response.ok) {
         throw new Error(responseData.error || responseData.message || 'Failed to create task');
       }
 
+      console.log('Task created successfully:', responseData);
       await fetchTasks();
       setIsNewTaskModalOpen(false);
       setNewTask({
@@ -397,36 +451,6 @@ const NotionComponent = () => {
       console.error('Error creating task:', error);
       setError(error.message || 'Failed to create task');
       // Keep modal open on error
-    }
-  };
-
-  // Delete task
-  const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) {
-      return;
-    }
-
-    try {
-      console.log('Deleting task:', taskId);
-      setIsDeleting(true);
-      
-      const response = await fetch(`${API_BASE_URL}/api/notion/delete-task/${taskId}`, {
-        method: 'DELETE',
-      });
-
-      const responseData = await response.json();
-      console.log('Delete response:', responseData);
-
-      if (!response.ok) {
-        throw new Error(responseData.error || responseData.message || 'Failed to delete task');
-      }
-
-      await fetchTasks();
-    } catch (error) {
-      console.error('Error deleting task:', error);
-      setError(error.message || 'Failed to delete task');
-    } finally {
-      setIsDeleting(false);
     }
   };
 
@@ -485,7 +509,7 @@ const NotionComponent = () => {
                 >
                   <option value="">Seleccionar encargado...</option>
                   {notionUsers.map(user => (
-                    <option key={user.id} value={user.email}>
+                    <option key={user.id} value={user.id}>
                       {user.name} ({user.email})
                     </option>
                   ))}
@@ -496,6 +520,7 @@ const NotionComponent = () => {
                   className="notion-select"
                 >
                   <option value="">Seleccionar estado...</option>
+                  <option value="Por iniciar">Por iniciar</option>
                   <option value="En progreso">En progreso</option>
                   <option value="Listo">Listo</option>
                 </select>

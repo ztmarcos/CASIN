@@ -1,7 +1,7 @@
 const { Client } = require('@notionhq/client');
 
 const notion = new Client({
-  auth: process.env.NOTION_SECRET_KEY
+  auth: process.env.NOTION_API_KEY
 });
 
 async function fetchNotionTasks(req, res) {
@@ -9,12 +9,12 @@ async function fetchNotionTasks(req, res) {
     console.log('🔍 Fetching Notion tasks...');
     
     // Validate environment variables
-    if (!process.env.NOTION_SECRET_KEY || !process.env.NOTION_DATABASE_ID) {
+    if (!process.env.NOTION_API_KEY || !process.env.NOTION_DATABASE_ID) {
       console.error('❌ Missing environment variables');
       return res.status(500).json({
         error: 'Missing configuration',
         details: {
-          hasToken: !!process.env.NOTION_SECRET_KEY,
+          hasToken: !!process.env.NOTION_API_KEY,
           hasDbId: !!process.env.NOTION_DATABASE_ID
         }
       });
@@ -106,12 +106,12 @@ async function createNotionTask(req, res) {
     console.log('📝 Creating new Notion task with body:', req.body);
     
     // Validate environment variables
-    if (!process.env.NOTION_SECRET_KEY || !process.env.NOTION_DATABASE_ID) {
+    if (!process.env.NOTION_API_KEY || !process.env.NOTION_DATABASE_ID) {
       console.error('❌ Missing environment variables');
       return res.status(500).json({
         error: 'Missing configuration',
         details: {
-          hasToken: !!process.env.NOTION_SECRET_KEY,
+          hasToken: !!process.env.NOTION_API_KEY,
           hasDbId: !!process.env.NOTION_DATABASE_ID
         }
       });
@@ -201,36 +201,61 @@ async function deleteNotionTask(req, res) {
     console.log('🗑️ Deleting Notion task:', req.params.taskId);
     
     // Validate environment variables
-    if (!process.env.NOTION_SECRET_KEY) {
-      console.error('❌ Missing environment variables');
+    if (!process.env.NOTION_API_KEY) {
+      console.error('❌ Missing NOTION_API_KEY');
       return res.status(500).json({
-        error: 'Missing configuration'
+        error: 'Missing configuration',
+        details: 'NOTION_API_KEY is required'
       });
     }
 
     const { taskId } = req.params;
 
     if (!taskId) {
+      console.error('❌ No taskId provided');
       return res.status(400).json({
-        error: 'Task ID is required'
+        error: 'Task ID is required',
+        details: 'No taskId provided in URL parameters'
       });
     }
 
-    // Delete the page in Notion
+    try {
+      // First verify the page exists
+      await notion.pages.retrieve({
+        page_id: taskId
+      });
+    } catch (error) {
+      console.error('❌ Failed to find task:', error.message);
+      return res.status(404).json({
+        error: 'Task not found',
+        details: `No task found with ID: ${taskId}`
+      });
+    }
+
+    // Delete (archive) the page in Notion
     await notion.pages.update({
       page_id: taskId,
-      archived: true // This is how we "delete" in Notion - by archiving
+      archived: true
     });
 
     console.log('✅ Task deleted successfully');
 
     return res.status(200).json({
       success: true,
-      message: 'Task deleted successfully'
+      message: 'Task deleted successfully',
+      taskId
     });
 
   } catch (error) {
     console.error('❌ Notion API Error:', error);
+    // Check if it's a Notion API error
+    if (error.code) {
+      return res.status(500).json({
+        error: 'Notion API Error',
+        code: error.code,
+        details: error.message
+      });
+    }
     return res.status(500).json({
       error: 'Failed to delete Notion task',
       details: error.message
