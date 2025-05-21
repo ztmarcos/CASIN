@@ -801,16 +801,15 @@ td[data-priority="Low"] {
 .notion-card-assignee {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: #f3f4f6;
-  border-radius: 8px;
-  color: #4b5563;
+  gap: 8px;
+  padding: 8px;
+  background-color: #f7f6f3;
+  border-radius: 4px;
+  margin-top: 12px;
 }
 
-.user-icon {
-  font-size: 1.2rem;
-  opacity: 0.8;
+.notion-card-assignee .user-icon {
+  font-size: 16px;
 }
 
 /* Fechas */
@@ -1060,4 +1059,148 @@ td[data-priority="Low"] {
   .notion-card-header {
     padding: 0.75rem;
   }
+}
+
+.notion-assignee {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  min-height: 32px;
+  position: relative;
+  width: 100%;
+}
+
+.notion-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  color: #37352f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.notion-select:hover {
+  border-color: #b6b6b6;
+}
+
+.notion-select:focus {
+  border-color: #2eaadc;
+  box-shadow: 0 0 0 2px rgba(46, 170, 220, 0.2);
+  outline: none;
+}
+
+.notion-select option {
+  padding: 8px;
+  font-size: 14px;
+  background-color: white;
+  color: #37352f;
+}
+
+.notion-email-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #2eaadc;
+  text-decoration: none;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background-color: transparent;
+}
+
+.notion-email-link:hover {
+  opacity: 1;
+  background-color: rgba(46, 170, 220, 0.1);
+}
+
+.notion-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.notion-error {
+  padding: 12px;
+  margin: 12px 0;
+  background-color: #fee2e2;
+  border-radius: 4px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.notion-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.notion-user-avatar {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #e9ecef;
+  border-radius: 50%;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.notion-user-email {
+  font-size: 14px;
+  color: #37352f;
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notion-empty-user {
+  color: #787774;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.notion-td-editable[type="email"] {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.notion-td-editable[type="email"]:focus {
+  border-color: #0066ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.2);
+}
+
+.notion-error-message {
+  color: #eb5757;
+  font-size: 14px;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  position: absolute;
+  z-index: 1000;
 } 

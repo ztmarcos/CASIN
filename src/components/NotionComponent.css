@@ -1,0 +1,238 @@
+.notion-container {
+  padding: 20px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.notion-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.notion-th {
+  background-color: #f7f6f3;
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #e3e2e0;
+}
+
+.notion-td {
+  padding: 8px 16px;
+  border-bottom: 1px solid #e3e2e0;
+}
+
+.notion-tr:hover {
+  background-color: #f7f6f3;
+}
+
+.notion-assignee {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  min-height: 32px;
+  position: relative;
+  width: 100%;
+}
+
+.notion-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  color: #37352f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.notion-select:hover {
+  border-color: #b6b6b6;
+}
+
+.notion-select:focus {
+  border-color: #2eaadc;
+  box-shadow: 0 0 0 2px rgba(46, 170, 220, 0.2);
+  outline: none;
+}
+
+.notion-select option {
+  padding: 8px;
+  font-size: 14px;
+  background-color: white;
+  color: #37352f;
+}
+
+.notion-email-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  color: #2eaadc;
+  text-decoration: none;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background-color: transparent;
+}
+
+.notion-email-link:hover {
+  opacity: 1;
+  background-color: rgba(46, 170, 220, 0.1);
+}
+
+.notion-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.notion-error {
+  padding: 12px;
+  margin: 12px 0;
+  background-color: #fee2e2;
+  border-radius: 4px;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+/* Editable fields */
+.notion-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  color: #37352f;
+  transition: all 0.2s ease;
+}
+
+.notion-input:hover {
+  border-color: #b6b6b6;
+}
+
+.notion-input:focus {
+  border-color: #2eaadc;
+  box-shadow: 0 0 0 2px rgba(46, 170, 220, 0.2);
+  outline: none;
+}
+
+/* Card view specific styles */
+.notion-card-field {
+  padding: 8px;
+  margin: 4px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.notion-card-field:hover {
+  background-color: rgba(55, 53, 47, 0.03);
+}
+
+.notion-card-label {
+  font-weight: 500;
+  margin-right: 8px;
+  color: #6b7280;
+}
+
+.notion-card-value {
+  color: #37352f;
+}
+
+/* Table view specific styles */
+.notion-td-editable {
+  position: relative;
+  cursor: pointer;
+}
+
+.notion-td-editable:hover {
+  background-color: rgba(55, 53, 47, 0.03);
+}
+
+/* Dropdown styles */
+.notion-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.notion-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 14px;
+  color: #37352f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 32px;
+}
+
+.notion-select:hover {
+  border-color: #b6b6b6;
+}
+
+.notion-select:focus {
+  border-color: #2eaadc;
+  box-shadow: 0 0 0 2px rgba(46, 170, 220, 0.2);
+  outline: none;
+}
+
+/* Date input styles */
+input[type="date"].notion-input {
+  padding-right: 8px;
+}
+
+/* Status colors */
+.status-not-started {
+  color: #ff4d4d;
+}
+
+.status-in-progress {
+  color: #ff9f1a;
+}
+
+.status-completed {
+  color: #2eaadc;
+}
+
+/* Priority colors */
+.priority-high {
+  color: #ff4d4d;
+  font-weight: 500;
+}
+
+.priority-medium {
+  color: #ff9f1a;
+  font-weight: 500;
+}
+
+.priority-low {
+  color: #2eaadc;
+  font-weight: 500;
+} 

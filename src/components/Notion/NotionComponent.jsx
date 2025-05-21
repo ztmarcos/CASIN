@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NotionErrorBoundary from './NotionErrorBoundary';
-import NotionCardView from './NotionCardView';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -23,71 +22,282 @@ const formatDateForInput = (dateString) => {
   return date.toISOString().split('T')[0];
 };
 
+// Define columns configuration outside the component
+const TABLE_COLUMNS = [
+  { key: 'title', label: 'Title' },
+  { key: 'Encargado', label: 'Assignee' },
+  { key: 'Status', label: 'Status' },
+  { key: 'Fecha límite', label: 'Due Date' },
+  { key: 'Descripción', label: 'Description' }
+];
+
 const NotionComponent = () => {
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [notionUsers, setNotionUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [filters, setFilters] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState(null);
-  const [columns, setColumns] = useState([]);
-  const [viewMode, setViewMode] = useState('card'); // 'card' or 'table'
+  const [editingValue, setEditingValue] = useState('');
 
   const notionDatabaseUrl = "https://www.notion.so/1f7385297f9a80a3bc5bcec8a3c2debb?v=1f7385297f9a80de9d66000cfeaf4e83";
 
-  const fetchNotionTasks = useCallback(async () => {
+  // Fetch Notion users
+  const fetchNotionUsers = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/notion/raw-table');
-      
+      setIsLoadingUsers(true);
+      const response = await fetch('/api/notion/users');
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error('Failed to fetch Notion users');
       }
-      
-      const data = await response.json();
-      console.log('Raw Notion data:', data); // Debug log
-      
-      // Get unique columns from all tasks, excluding any undefined or null values
-      const allColumns = data.reduce((cols, task) => {
-        Object.keys(task).forEach(key => {
-          if (!cols.includes(key) && task[key] !== undefined && task[key] !== null) {
-            cols.push(key);
-          }
-        });
-        return cols;
-      }, []);
-
-      console.log('Available columns:', allColumns); // Debug log
-
-      // Sort columns to keep important ones first
-      const orderedColumns = [
-        'title',
-        'Name',
-        'Status',
-        'Priority',
-        'Due date',
-        'Assignee'
-      ].concat(
-        allColumns.filter(col => 
-          !['id', 'title', 'Name', 'Status', 'Priority', 'Due date', 'Assignee'].includes(col)
-        )
-      ).filter(col => allColumns.includes(col) && col !== 'id'); // Exclude id column
-
-      setColumns(orderedColumns);
-      setTasks(data);
-      setCurrentPage(1); // Reset to first page on refresh
-    } catch (err) {
-      console.error('Failed to fetch Notion tasks:', err);
-      setError(err.message);
+      const users = await response.json();
+      console.log('Fetched Notion users:', users);
+      setNotionUsers(users);
+    } catch (error) {
+      console.error('Error fetching Notion users:', error);
+      setError('Failed to load Notion users');
     } finally {
-      setLoading(false);
+      setIsLoadingUsers(false);
     }
-  }, []);
+  };
 
+  // Fetch tasks
+  const fetchTasks = async () => {
+    try {
+      setIsLoadingUsers(true);
+      const response = await fetch('/api/notion/raw-table');
+      if (!response.ok) {
+        throw new Error('Failed to fetch tasks');
+      }
+      const data = await response.json();
+      console.log('Fetched tasks:', data);
+      setTasks(data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+      setError('Failed to load tasks');
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // Handle cell edit
+  const handleCellEdit = async (taskId, column, value, propertyType = null) => {
+    try {
+      console.log('Updating cell:', { taskId, column, value, propertyType });
+
+      const response = await fetch('/api/notion/update-cell', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          column,
+          value,
+          propertyType
+        }),
+      });
+
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log('Raw server response:', responseData);
+      } catch (parseError) {
+        console.error('Failed to parse server response:', parseError);
+        throw new Error('Server response was not valid JSON');
+      }
+
+      if (!response.ok) {
+        console.error('Server returned error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: responseData
+        });
+        throw new Error(responseData.message || `Failed to update cell: ${response.statusText}`);
+      }
+
+      // Update local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId ? { ...task, [column]: value } : task
+        )
+      );
+
+      return responseData;
+    } catch (err) {
+      console.error('Error in handleCellEdit:', {
+        error: err,
+        message: err.message,
+        stack: err.stack
+      });
+      setError(err.message);
+      setTimeout(() => setError(null), 3000);
+      throw err;
+    }
+  };
+
+  // Start editing a cell
+  const startEditing = (task, column) => {
+    setEditingCell({ taskId: task.id, column });
+    setEditingValue(task[column] || '');
+  };
+
+  // Handle input change
+  const handleInputChange = (e) => {
+    setEditingValue(e.target.value);
+  };
+
+  // Handle input blur
+  const handleInputBlur = async () => {
+    if (editingCell) {
+      try {
+        await handleCellEdit(editingCell.taskId, editingCell.column, editingValue);
+        setEditingCell(null);
+        setEditingValue('');
+      } catch (error) {
+        // Keep the cell in edit mode if there's an error
+        console.error('Error in handleInputBlur:', error);
+      }
+    }
+  };
+
+  // Handle input key press with error handling
+  const handleInputKeyPress = async (e) => {
+    if (e.key === 'Enter') {
+      try {
+        await handleInputBlur();
+      } catch (error) {
+        // Error is already handled in handleCellEdit
+        console.log('Error handled in key press');
+      }
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+      setEditingValue('');
+    }
+  };
+
+  const renderCell = (task, column) => {
+    const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
+    const value = task[column];
+
+    if (column === 'Encargado' || column === 'Assignee') {
+      return (
+        <select
+          className="notion-select"
+          value={value || ''}
+          onChange={(e) => {
+            const selectedValue = e.target.value;
+            handleCellEdit(task.id, column, selectedValue)
+              .catch(error => {
+                console.error('Failed to update assignee:', error);
+              });
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <option value="">Select assignee...</option>
+          {notionUsers.map(user => (
+            <option key={user.id} value={user.email}>
+              {user.name} ({user.email})
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (column === 'Status' || column === 'Estado') {
+      const statusOptions = [
+        { value: '', label: 'Seleccionar estado...' },
+        { value: 'No iniciado', label: 'No iniciado' },
+        { value: 'En progreso', label: 'En progreso' },
+        { value: 'Completado', label: 'Completado' }
+      ];
+
+      return (
+        <select
+          className="notion-select"
+          value={value || ''}
+          onChange={(e) => {
+            const selectedValue = e.target.value;
+            if (!selectedValue && value) {
+              console.log('Preventing empty status update');
+              e.target.value = value;
+              return;
+            }
+
+            handleCellEdit(task.id, column, selectedValue, 'status')
+              .catch(error => {
+                console.error('Status update failed:', error);
+                e.target.value = value || '';
+              });
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {statusOptions.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    if (column === 'Priority' || column === 'Prioridad') {
+      return (
+        <select
+          className="notion-select"
+          value={value || ''}
+          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <option value="">Select priority...</option>
+          <option value="Alta">Alta</option>
+          <option value="Media">Media</option>
+          <option value="Baja">Baja</option>
+        </select>
+      );
+    }
+
+    if (column.toLowerCase().includes('date') || column.toLowerCase().includes('fecha')) {
+      return (
+        <input
+          type="date"
+          className="notion-input"
+          value={value || ''}
+          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      );
+    }
+
+    // Enhanced text cell rendering
+    return isEditing ? (
+      <input
+        type="text"
+        className="notion-input"
+        value={editingValue}
+        onChange={handleInputChange}
+        onBlur={handleInputBlur}
+        onKeyDown={handleInputKeyPress}
+        onClick={(e) => e.stopPropagation()}
+        autoFocus
+      />
+    ) : (
+      <div
+        className="notion-td-editable"
+        onClick={() => startEditing(task, column)}
+      >
+        {value || ''}
+      </div>
+    );
+  };
+
+  // Initial data fetch
   useEffect(() => {
-    fetchNotionTasks();
-  }, [fetchNotionTasks]);
+    fetchTasks();
+    fetchNotionUsers();
+  }, []);
 
   // Sort function
   const requestSort = (key) => {
@@ -159,237 +369,22 @@ const NotionComponent = () => {
     return '';
   };
 
-  const renderCell = (task, column) => {
-    const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
-    const value = task[column];
-
-    // Handle read-only columns
-    if (column === 'PageURL') {
-      return (
-        <a href={value} target="_blank" rel="noopener noreferrer">
-          Abrir en Notion
-        </a>
-      );
-    }
-
-    if (column === 'Created' || column === 'LastEdited') {
-      return formatDate(value);
-    }
-
-    // Enhanced Assignee field handling
-    if (column === 'Assignee') {
-      console.log('Assignee value:', value); // Debug log
-      return isEditing ? (
-        <input
-          type="text"
-          className="notion-td-editable"
-          value={value || ''}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-          placeholder="Email del asignado"
-        />
-      ) : (
-        <div
-          className="notion-td-editable"
-          onClick={() => setEditingCell({ taskId: task.id, column })}
-          data-type="assignee"
-        >
-          {Array.isArray(value) 
-            ? value.join(', ') 
-            : value || 'Sin asignar'}
-        </div>
-      );
-    }
-
-    // Handle date fields
-    if (column === 'Due date') {
-      return isEditing ? (
-        <input
-          type="date"
-          className="notion-date-input"
-          value={formatDateForInput(value)}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        />
-      ) : (
-        <div
-          className="notion-td-editable"
-          onClick={() => setEditingCell({ taskId: task.id, column })}
-        >
-          {value ? formatDate(value) : 'Establecer fecha'}
-        </div>
-      );
-    }
-
-    // Handle multi-select fields
-    if (Array.isArray(value)) {
-      return isEditing ? (
-        <input
-          type="text"
-          className="notion-td-editable"
-          value={value.join(', ')}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value.split(',').map(v => v.trim()))}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        />
-      ) : (
-        <div
-          className="notion-td-editable"
-          onClick={() => setEditingCell({ taskId: task.id, column })}
-        >
-          {value.map((tag, index) => (
-            <span key={index} className="notion-tag">
-              {tag}
-            </span>
-          ))}
-        </div>
-      );
-    }
-
-    // Handle Status field with colors
-    if (column === 'Status') {
-      return isEditing ? (
-        <input
-          type="text"
-          className="notion-td-editable"
-          value={value || ''}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        />
-      ) : (
-        <div
-          className={`notion-td-editable ${getStatusClass(value)}`}
-          onClick={() => setEditingCell({ taskId: task.id, column })}
-        >
-          {value || 'Establecer estado'}
-        </div>
-      );
-    }
-
-    // Handle Priority field with colors
-    if (column === 'Priority') {
-      return isEditing ? (
-        <input
-          type="text"
-          className="notion-td-editable"
-          value={value || ''}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onBlur={() => setEditingCell(null)}
-          autoFocus
-        />
-      ) : (
-        <div
-          className="notion-td-editable"
-          data-priority={value}
-          onClick={() => setEditingCell({ taskId: task.id, column })}
-        >
-          {value || 'Establecer prioridad'}
-        </div>
-      );
-    }
-
-    // Make other fields editable
-    return isEditing ? (
-      <input
-        type="text"
-        className="notion-td-editable"
-        value={value || ''}
-        onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-        onBlur={() => setEditingCell(null)}
-        autoFocus
-      />
-    ) : (
-      <div
-        className="notion-td-editable"
-        onClick={() => setEditingCell({ taskId: task.id, column })}
-      >
-        {value || ''}
-      </div>
-    );
-  };
-
-  const handleCellEdit = async (taskId, column, value) => {
-    try {
-      // Special handling for dates
-      if (column === 'Due date') {
-        // Ensure the date is in ISO format for Notion
-        value = value ? new Date(value).toISOString().split('T')[0] : null;
-      }
-
-      const response = await fetch('/api/notion/update-cell', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId,
-          column,
-          value,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to update cell: ${response.statusText}`);
-      }
-
-      // Update local state
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === taskId ? { ...task, [column]: value } : task
-        )
-      );
-
-      // Clear editing state
-      setEditingCell(null);
-    } catch (err) {
-      console.error('Error updating cell:', err);
-      setError(err.message);
-    }
-  };
-
-  const handleCardClick = (task) => {
-    // Open the task in Notion
-    if (task.PageURL) {
-      window.open(task.PageURL, '_blank');
-    }
-  };
-
-  if (loading) return <div className="notion-loading">Cargando tareas...</div>;
-  if (error) return <div className="notion-error">Error: {error}</div>;
-  if (!tasks.length) return <div className="notion-empty">No se encontraron tareas</div>;
+  if (isLoadingUsers) return <div className="notion-loading">Loading...</div>;
+  if (error) return <div className="notion-error">{error}</div>;
 
   return (
     <NotionErrorBoundary>
       <div className="notion-container">
         <div className="notion-header">
-          <h2>Tareas </h2>
+          <h2>Tareas</h2>
           <div className="notion-controls">
-            <div className="notion-view-toggle">
-              <button
-                className={`notion-view-button ${viewMode === 'card' ? 'active' : ''}`}
-                onClick={() => setViewMode('card')}
-              >
-                Card View
-              </button>
-              <button
-                className={`notion-view-button ${viewMode === 'table' ? 'active' : ''}`}
-                onClick={() => setViewMode('table')}
-              >
-                Table View
-              </button>
-            </div>
-            
             <div className="notion-actions">
               <button 
-                onClick={fetchNotionTasks} 
+                onClick={fetchTasks} 
                 className="notion-button refresh"
-                disabled={loading}
+                disabled={isLoadingUsers}
               >
-                {loading ? 'Actualizando...' : '↻ Actualizar'}
+                {isLoadingUsers ? 'Actualizando...' : '↻ Actualizar'}
               </button>
               <a
                 href={notionDatabaseUrl}
@@ -403,51 +398,44 @@ const NotionComponent = () => {
           </div>
         </div>
 
-        {viewMode === 'card' ? (
-          <NotionCardView
-            tasks={paginatedTasks}
-            onCardClick={handleCardClick}
-          />
-        ) : (
-          <div className="notion-table-container">
-            <table className="notion-table">
-              <thead>
-                <tr>
-                  {columns.map(column => (
-                    <th 
-                      key={column} 
-                      className="notion-th"
-                      onClick={() => requestSort(column)}
+        <div className="notion-table-container">
+          <table className="notion-table">
+            <thead>
+              <tr>
+                {TABLE_COLUMNS.map(column => (
+                  <th 
+                    key={column.key} 
+                    className="notion-th"
+                    onClick={() => requestSort(column.key)}
+                  >
+                    <div className="notion-th-content">
+                      <span>{column.label}</span>
+                      {sortConfig.key === column.key && (
+                        <span className="notion-sort-indicator">
+                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedTasks.map((task, index) => (
+                <tr key={task.id || index} className="notion-tr">
+                  {TABLE_COLUMNS.map(column => (
+                    <td 
+                      key={`${task.id}-${column.key}`} 
+                      className={`notion-td ${column.key === 'Status' ? getStatusClass(task[column.key]) : ''}`}
                     >
-                      <div className="notion-th-content">
-                        <span>{column}</span>
-                        {sortConfig.key === column && (
-                          <span className="notion-sort-indicator">
-                            {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                          </span>
-                        )}
-                      </div>
-                    </th>
+                      {renderCell(task, column.key)}
+                    </td>
                   ))}
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedTasks.map((task, index) => (
-                  <tr key={task.id || index} className="notion-tr">
-                    {columns.map(column => (
-                      <td 
-                        key={column} 
-                        className={`notion-td ${column === 'Status' ? getStatusClass(task[column]) : ''}`}
-                      >
-                        {renderCell(task, column)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         {totalPages > 1 && (
           <div className="notion-pagination">

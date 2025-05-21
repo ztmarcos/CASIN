@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './NotionComponent.css';
 
-const NotionCardView = ({ tasks, onCardClick }) => {
+const NotionCardView = ({ tasks, onCardClick, onUpdateCell, notionUsers }) => {
+  const [editingField, setEditingField] = useState(null);
+
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -48,38 +50,100 @@ const NotionCardView = ({ tasks, onCardClick }) => {
     }
   };
 
-  const renderField = (key, value) => {
+  const renderEditableField = (task, key, value) => {
     // Skip certain fields we don't want to display
     if ([
       'id', 
-      'Name', 
-      'Nombre', 
-      'Status', 
-      'Estado', 
-      'Title', 
-      'Titulo',
       'PageURL', 
       'URL',
-      'Description',
-      'Descripcion'
+      'Created',
+      'LastEdited',
+      'Last Edited'
     ].includes(key)) return null;
 
-    // Format the label
+    const isEditing = editingField === `${task.id}-${key}`;
     const label = key.replace(/([A-Z])/g, ' $1').trim();
+
+    const handleEdit = (newValue) => {
+      setEditingField(null);
+      onUpdateCell(task.id, key, newValue);
+    };
 
     return (
       <div 
         key={key}
         className="notion-card-field"
+        onClick={(e) => {
+          e.stopPropagation();
+          setEditingField(`${task.id}-${key}`);
+        }}
       >
         <span className="notion-card-label">{label}:</span>
-        <span className="notion-card-value">
-          {Array.isArray(value) 
-            ? value.join(', ')
-            : key.toLowerCase().includes('date') || key.toLowerCase().includes('fecha')
-              ? formatDate(value)
-              : value || ''}
-        </span>
+        {isEditing ? (
+          key === 'Encargado' || key === 'Assignee' ? (
+            <select
+              className="notion-select"
+              value={value || ''}
+              onChange={(e) => handleEdit(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Select assignee...</option>
+              {notionUsers.map(user => (
+                <option key={user.id} value={user.email}>
+                  {user.name} ({user.email})
+                </option>
+              ))}
+            </select>
+          ) : key === 'Status' || key === 'Estado' ? (
+            <select
+              className="notion-select"
+              value={value || ''}
+              onChange={(e) => handleEdit(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Select status...</option>
+              <option value="No iniciado">No iniciado</option>
+              <option value="En progreso">En progreso</option>
+              <option value="Completado">Completado</option>
+            </select>
+          ) : key === 'Priority' || key === 'Prioridad' ? (
+            <select
+              className="notion-select"
+              value={value || ''}
+              onChange={(e) => handleEdit(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Select priority...</option>
+              <option value="Alta">Alta</option>
+              <option value="Media">Media</option>
+              <option value="Baja">Baja</option>
+            </select>
+          ) : key.toLowerCase().includes('date') || key.toLowerCase().includes('fecha') ? (
+            <input
+              type="date"
+              className="notion-input"
+              value={value || ''}
+              onChange={(e) => handleEdit(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <input
+              type="text"
+              className="notion-input"
+              value={value || ''}
+              onChange={(e) => handleEdit(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )
+        ) : (
+          <span className="notion-card-value">
+            {Array.isArray(value) 
+              ? value.join(', ')
+              : key.toLowerCase().includes('date') || key.toLowerCase().includes('fecha')
+                ? formatDate(value)
+                : value || ''}
+          </span>
+        )}
       </div>
     );
   };
@@ -94,54 +158,33 @@ const NotionCardView = ({ tasks, onCardClick }) => {
         >
           {/* Título destacado */}
           <div className="notion-card-header">
-            <h3 className="notion-card-title">
-              {task.title || 'Sin título'}
+            <h3 
+              className="notion-card-title"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingField(`${task.id}-title`);
+              }}
+            >
+              {editingField === `${task.id}-title` ? (
+                <input
+                  type="text"
+                  className="notion-input"
+                  value={task.title || ''}
+                  onChange={(e) => onUpdateCell(task.id, 'title', e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  onBlur={() => setEditingField(null)}
+                />
+              ) : (
+                task.title || 'Sin título'
+              )}
             </h3>
           </div>
 
           <div className="notion-card-content">
-            {/* Tipo y Prioridad en la misma línea */}
-            <div className="notion-card-meta">
-              {task['Tipo de tarea'] && (
-                <span className="notion-card-type">
-                  {task['Tipo de tarea']}
-                </span>
-              )}
-              <span className={`notion-card-priority ${getPriorityClass(task.Prioridad || task.Priority)}`}>
-                {task.Prioridad || task.Priority || 'Sin prioridad'}
-              </span>
-            </div>
-
-            {/* Descripción */}
-            {(task.Descripción || task.Description) && (
-              <div className="notion-card-description">
-                <span className="notion-card-value">
-                  {task.Descripción || task.Description}
-                </span>
-              </div>
+            {/* Render all editable fields */}
+            {Object.entries(task).map(([key, value]) => 
+              renderEditableField(task, key, value)
             )}
-
-            {/* Información del encargado */}
-            <div className="notion-card-assignee">
-              <i className="user-icon">👤</i>
-              <span>{task.Encargado || task.Assignee || 'Sin asignar'}</span>
-            </div>
-
-            {/* Fechas importantes */}
-            <div className="notion-card-dates">
-              <div className="notion-card-deadline">
-                <i className="date-icon">⏰</i>
-                <span>Fecha límite: {task['Fecha límite'] ? formatDate(task['Fecha límite']) : 'No establecida'}</span>
-              </div>
-              <div className="notion-card-created">
-                <i className="date-icon">📅</i>
-                <span>Creado: {formatDate(task.Created)}</span>
-              </div>
-              <div className="notion-card-edited">
-                <i className="date-icon">✏️</i>
-                <span>Última edición: {formatDate(task['Last Edited'])}</span>
-              </div>
-            </div>
           </div>
         </div>
       ))}

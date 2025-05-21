@@ -290,7 +290,7 @@ router.get('/raw-table', async (req, res) => {
 // Update Notion page
 router.post('/update-cell', async (req, res) => {
   try {
-    const { taskId, column, value } = req.body;
+    const { taskId, column, value, propertyType } = req.body;
 
     if (!taskId || !column) {
       return res.status(400).json({ message: 'Missing required fields' });
@@ -299,78 +299,119 @@ router.post('/update-cell', async (req, res) => {
     // Get the database structure to check property types
     const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
     const database = await notion.databases.retrieve({ database_id: databaseId });
-    const propertyType = database.properties[column]?.type || 'rich_text';
+    
+    // Use provided propertyType or get it from database
+    const actualPropertyType = propertyType || database.properties[column]?.type || 'rich_text';
 
     // Prepare the property update based on the column type
     const properties = {};
     
-    switch (propertyType) {
+    switch (actualPropertyType) {
+      case 'status':
+        properties[column] = {
+          status: {
+            name: value
+          }
+        };
+        break;
+
+      case 'people':
+        if (!value) {
+          properties[column] = { people: [] };
+        } else {
+          try {
+            // First try to find the user by email
+            const users = await notion.users.list();
+            const user = users.results.find(u => 
+              u.person?.email?.toLowerCase() === value.toLowerCase()
+            );
+
+            if (user) {
+              properties[column] = {
+                people: [{
+                  object: 'user',
+                  id: user.id
+                }]
+              };
+            } else {
+              // If no user found, return error
+              return res.status(400).json({ 
+                message: `No Notion user found with email: ${value}` 
+              });
+            }
+          } catch (error) {
+            console.error('Error finding Notion user:', error);
+            return res.status(500).json({ 
+              message: 'Error finding Notion user',
+              error: error.message 
+            });
+          }
+        }
+        break;
+
       case 'title':
         properties[column] = {
           title: [{ text: { content: value || '' } }]
         };
         break;
+
       case 'select':
         properties[column] = {
           select: value ? { name: value } : null
         };
         break;
+
       case 'multi_select':
         properties[column] = {
           multi_select: Array.isArray(value) ? value.map(name => ({ name })) : []
         };
         break;
+
       case 'date':
         properties[column] = {
           date: value ? { start: value } : null
         };
         break;
-      case 'people':
-        // Enhanced people property handling
-        properties[column] = {
-          people: value ? [
-            {
-              object: 'user',
-              id: value // If value is a user ID
-            }
-          ] : []
-        };
-        
-        // If value looks like an email, try to find the user
-        if (value && value.includes('@')) {
-          try {
-            const users = await notion.users.list();
-            const user = users.results.find(u => u.person?.email === value);
-            if (user) {
-              properties[column].people[0].id = user.id;
-            }
-          } catch (error) {
-            console.error('Error finding user:', error);
-          }
-        }
-        break;
+
       case 'number':
         properties[column] = {
           number: value ? Number(value) : null
         };
         break;
+
       case 'rich_text':
       default:
         properties[column] = {
           rich_text: [{ text: { content: value || '' } }]
         };
+        break;
     }
 
     // Update the Notion page
-    await notion.pages.update({
-      page_id: taskId,
-      properties
-    });
+    try {
+      const response = await notion.pages.update({
+        page_id: taskId,
+        properties
+      });
 
-    res.status(200).json({ message: 'Cell updated successfully' });
+      res.json({ 
+        message: 'Cell updated successfully',
+        data: response
+      });
+    } catch (error) {
+      console.error('Error updating Notion page:', error);
+      res.status(500).json({ 
+        message: 'Failed to update Notion page',
+        error: error.message,
+        details: error.body || error.response?.data
+      });
+    }
   } catch (error) {
-    console.error('Error updating cell:', error);
-    res.status(500).json({ message: 'Failed to update cell', error: error.message });
+    console.error('Error in update-cell route:', error);
+    res.status(500).json({ 
+      message: 'Failed to process update request',
+      error: error.message 
+    });
   }
 });
 
@@ -396,6 +437,31 @@ router.post('/delete-tasks', async (req, res) => {
   } catch (error) {
     console.error('Error deleting tasks:', error);
     res.status(500).json({ message: 'Failed to delete tasks', error: error.message });
+  }
+});
+
+// Get all Notion users
+router.get('/users', async (req, res) => {
+  try {
+    const users = await notion.users.list();
+    
+    // Transform users to only include necessary information
+    const transformedUsers = users.results
+      .filter(user => user.type === 'person' && user.person?.email) // Only include users with emails
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.person.email,
+        avatarUrl: user.avatar_url
+      }));
+
+    res.json(transformedUsers);
+  } catch (error) {
+    console.error('Error fetching Notion users:', error);
+    res.status(500).json({ 
+      message: 'Failed to fetch Notion users', 
+      error: error.message 
+    });
   }
 });
 

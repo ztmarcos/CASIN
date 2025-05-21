@@ -159,27 +159,89 @@ app.get('/api/notion/raw-table', async (req, res) => {
 // Update Notion page
 app.post('/api/notion/update-cell', async (req, res) => {
   try {
-    console.log('Received update request:', req.body);
+    console.log('Received update request:', {
+      body: req.body,
+      headers: req.headers
+    });
+    
+    // Ensure database structure is initialized
+    if (!databaseStructure) {
+      console.log('Database structure not initialized, initializing now...');
+      try {
+        await initializeDatabase();
+      } catch (error) {
+        console.error('Failed to initialize database:', error);
+        return res.status(500).json({
+          message: 'Failed to initialize database',
+          error: error.message
+        });
+      }
+    }
+
+    console.log('Current database structure:', {
+      properties: Object.keys(databaseStructure.properties),
+      databaseId: process.env.NOTION_DATABASE_ID
+    });
     
     const { taskId, column, value } = req.body;
 
-    if (!taskId || !column) {
-      console.log('Missing required fields:', { taskId, column });
-      return res.status(400).json({ message: 'Missing required fields' });
+    // Log the exact values we're working with
+    console.log('Processing update for:', {
+      taskId,
+      column,
+      value,
+      valueType: typeof value
+    });
+
+    // Enhanced validation
+    if (!taskId) {
+      return res.status(400).json({ message: 'Missing taskId' });
+    }
+    if (!column) {
+      return res.status(400).json({ message: 'Missing column' });
     }
 
     // Verify the page exists and get its current properties
     let pageCheck;
     try {
       pageCheck = await notion.pages.retrieve({ page_id: taskId });
-      console.log('Page exists:', pageCheck.id);
+      console.log('Page exists:', {
+        id: pageCheck.id,
+        properties: Object.keys(pageCheck.properties)
+      });
     } catch (error) {
-      console.error('Page does not exist or no access:', error);
+      console.error('Page does not exist or no access:', {
+        error: error.message,
+        body: error.body,
+        code: error.code
+      });
       return res.status(404).json({ 
         message: 'Page not found or no access', 
-        error: error.message 
+        error: error.message,
+        details: error.body
       });
     }
+
+    // Get the property type from the database structure
+    const propertyConfig = databaseStructure.properties[column];
+    if (!propertyConfig) {
+      console.error('Column not found in database structure:', {
+        requestedColumn: column,
+        availableColumns: Object.keys(databaseStructure.properties),
+        databaseStructure: databaseStructure
+      });
+      return res.status(400).json({ 
+        message: `Column "${column}" not found in Notion database`,
+        availableColumns: Object.keys(databaseStructure.properties)
+      });
+    }
+
+    console.log('Property config for column:', {
+      column,
+      type: propertyConfig.type,
+      config: propertyConfig,
+      value
+    });
 
     // Special handling for read-only properties
     if (['Created', 'LastEdited', 'PageURL'].includes(column)) {
@@ -188,66 +250,88 @@ app.post('/api/notion/update-cell', async (req, res) => {
       });
     }
 
-    // Get the property type from the database structure
-    const propertyConfig = databaseStructure.properties[column];
-    if (!propertyConfig) {
-      return res.status(400).json({ 
-        message: `Column "${column}" not found in Notion database`,
-        availableColumns: Object.keys(databaseStructure.properties)
-      });
-    }
-
     // Prepare the property update based on the actual property type
     const properties = {};
     
     try {
+      // Normalize the value
+      const normalizedValue = value === null || value === undefined ? '' : value;
+      
+      console.log('Preparing property update:', {
+        column,
+        type: propertyConfig.type,
+        normalizedValue,
+        originalValue: value
+      });
+
       switch (propertyConfig.type) {
+        case 'select':
+          properties[column] = {
+            select: normalizedValue ? { name: normalizedValue } : null
+          };
+          break;
+        case 'status':  // Separate case for status type
+          properties[column] = {
+            status: {
+              name: normalizedValue
+            }
+          };
+          break;
         case 'title':
           properties[column] = {
-            title: [{ text: { content: value || '' } }]
+            title: [{ text: { content: normalizedValue } }]
           };
           break;
         case 'rich_text':
           properties[column] = {
-            rich_text: [{ text: { content: value || '' } }]
-          };
-          break;
-        case 'select':
-          properties[column] = {
-            select: value ? { name: value } : null
+            rich_text: [{ text: { content: normalizedValue } }]
           };
           break;
         case 'multi_select':
-          const multiSelectValues = Array.isArray(value) ? value : [value];
+          const multiSelectValues = Array.isArray(normalizedValue) ? normalizedValue : [normalizedValue];
           properties[column] = {
             multi_select: multiSelectValues.filter(Boolean).map(name => ({ name }))
           };
           break;
         case 'date':
           properties[column] = {
-            date: value ? { start: value } : null
+            date: normalizedValue ? { start: normalizedValue } : null
           };
           break;
         case 'people':
-          properties[column] = {
-            people: value ? [{ email: value }] : []
-          };
+          // Special handling for people properties
+          console.log('Handling people property:', {
+            column,
+            value: normalizedValue,
+            type: propertyConfig.type
+          });
+          
+          if (!normalizedValue) {
+            properties[column] = { people: [] };
+          } else {
+            // Handle both email and user ID formats
+            properties[column] = {
+              people: [{
+                // If it's an email, use it directly
+                ...(normalizedValue.includes('@') ? { email: normalizedValue } : { id: normalizedValue })
+              }]
+            };
+          }
           break;
         case 'files':
-          // Files can't be updated directly through the API
           return res.status(400).json({ 
             message: `Cannot update files through this interface`
           });
         case 'checkbox':
           properties[column] = {
-            checkbox: Boolean(value)
+            checkbox: Boolean(normalizedValue)
           };
           break;
         case 'number':
-          const numValue = value === '' || value === null ? null : Number(value);
-          if (value !== '' && value !== null && isNaN(numValue)) {
+          const numValue = normalizedValue === '' ? null : Number(normalizedValue);
+          if (normalizedValue !== '' && isNaN(numValue)) {
             return res.status(400).json({ 
-              message: `Invalid number value for column ${column}: ${value}`
+              message: `Invalid number value for column ${column}: ${normalizedValue}`
             });
           }
           properties[column] = {
@@ -256,17 +340,17 @@ app.post('/api/notion/update-cell', async (req, res) => {
           break;
         case 'email':
           properties[column] = {
-            email: value || ''
+            email: normalizedValue
           };
           break;
         case 'phone_number':
           properties[column] = {
-            phone_number: value || ''
+            phone_number: normalizedValue
           };
           break;
         case 'url':
           properties[column] = {
-            url: value || ''
+            url: normalizedValue
           };
           break;
         case 'formula':
@@ -279,13 +363,47 @@ app.post('/api/notion/update-cell', async (req, res) => {
           });
         default:
           console.log(`Attempting default text handling for type: ${propertyConfig.type}`);
-          // Try handling unknown types as rich_text
           properties[column] = {
-            rich_text: [{ text: { content: value || '' } }]
+            rich_text: [{ text: { content: normalizedValue } }]
           };
       }
+
+      // Log the final properties object
+      console.log('Final properties object:', properties);
+
+      // Update the Notion page
+      try {
+        const response = await notion.pages.update({
+          page_id: taskId,
+          properties
+        });
+
+        console.log('Notion update response:', response);
+        res.status(200).json({ message: 'Cell updated successfully', response });
+      } catch (updateError) {
+        console.error('Error updating Notion page:', {
+          error: updateError.message,
+          code: updateError.code,
+          status: updateError.status,
+          body: updateError.body,
+          properties: properties
+        });
+        
+        return res.status(updateError.status || 500).json({ 
+          message: 'Failed to update Notion page',
+          error: updateError.message,
+          details: updateError.body,
+          properties: properties
+        });
+      }
     } catch (error) {
-      console.error('Error preparing property value:', error);
+      console.error('Error preparing property value:', {
+        error: error.message,
+        stack: error.stack,
+        column,
+        value,
+        propertyType: propertyConfig.type
+      });
       return res.status(400).json({ 
         message: 'Error preparing property value',
         error: error.message,
@@ -294,41 +412,19 @@ app.post('/api/notion/update-cell', async (req, res) => {
         propertyType: propertyConfig.type
       });
     }
-
-    // Log the update request for debugging
-    console.log('Updating Notion page:', {
-      page_id: taskId,
-      properties,
-      column,
-      value,
-      propertyType: propertyConfig.type
-    });
-
-    // Update the Notion page
-    const response = await notion.pages.update({
-      page_id: taskId,
-      properties
-    });
-
-    console.log('Notion update response:', response);
-    res.status(200).json({ message: 'Cell updated successfully', response });
   } catch (error) {
-    console.error('Error updating cell:', {
+    console.error('Unexpected error in update-cell:', {
       error: error.message,
+      stack: error.stack,
       code: error.code,
       status: error.status,
       body: error.body
     });
     
-    // Determine the appropriate error status code
-    const statusCode = error.status || 500;
-    
-    res.status(statusCode).json({ 
-      message: 'Failed to update cell', 
+    res.status(500).json({ 
+      message: 'Unexpected error updating cell',
       error: error.message,
-      details: error.body || error.response?.data,
-      code: error.code,
-      status: error.status
+      details: error.body || error.response?.data
     });
   }
 });
