@@ -95,6 +95,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     loadParentData();
   }, [tableName]);
 
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredData(sortedData);
+      return;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = sortedData.filter(row => {
+      return Object.values(row).some(value => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(searchLower);
+      });
+    });
+    setFilteredData(filtered);
+  }, [searchTerm, sortedData]);
+
   // If no data but we have a tableName, show empty state with capture button
   if ((!data || !Array.isArray(data) || data.length === 0) && tableName) {
     return (

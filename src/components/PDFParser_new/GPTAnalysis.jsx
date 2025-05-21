@@ -13,6 +13,19 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     
     // Move tableName to component scope so it's available everywhere
     const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
+    
+    // Debug logs
+    console.log('GPTAnalysis - selectedTable:', selectedTable);
+    console.log('GPTAnalysis - tableName derived:', tableName);
+    console.log('GPTAnalysis - typeof selectedTable:', typeof selectedTable);
+    console.log('GPTAnalysis - tableInfo:', tableInfo);
+
+    // Define field types at component level
+    const fieldTypes = {
+        numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo'],
+        date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago'],
+        status: ['status']
+    };
 
     // Función para formatear valores
     const formatValue = (value) => {
@@ -150,65 +163,103 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 throw new Error('Invalid table information');
             }
 
-            const cleanData = { ...data };
-            delete cleanData.id;
+            console.log('Starting data insertion with raw data:', data);
+            console.log('Table name:', tableName);
+            console.log('Table info:', tableInfo);
 
-            const fieldTypes = {
-                numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo'],
-                date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago'],
-                status: ['status']
-            };
+            // Get the correct columns based on table type
+            let targetColumns;
+            if (tableInfo.type === 'simple') {
+                targetColumns = tableInfo.fields;
+            } else if (tableInfo.type === 'group') {
+                targetColumns = tableInfo.childFields;
+            }
 
-            Object.entries(cleanData).forEach(([key, value]) => {
-                if (value === null || value === undefined || value === '') {
-                    cleanData[key] = null;
-                    return;
-                }
+            console.log('Target columns:', targetColumns);
 
-                // Si el valor es un objeto, lo dejamos como está
-                if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
-                    return;
-                }
+            if (!targetColumns) {
+                throw new Error('No columns defined for table');
+            }
 
-                if (fieldTypes.numeric.includes(key)) {
-                    const numStr = value.toString().replace(/[$,]/g, '');
-                    cleanData[key] = parseFloat(numStr) || null;
-                } else if (fieldTypes.date.includes(key)) {
-                    try {
-                        if (typeof value === 'string') {
-                            if (value.includes('/')) {
-                                const [day, month, year] = value.split('/');
-                                cleanData[key] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                            } else if (value.includes('-')) {
-                                cleanData[key] = value;
+            // Filter data to only include valid columns
+            const cleanData = {};
+            targetColumns.forEach(columnName => {
+                if (data[columnName] !== undefined) {
+                    let value = data[columnName];
+                    console.log(`Processing column ${columnName} with value:`, value);
+                    console.log(`Value type:`, typeof value);
+
+                    // Handle different field types
+                    if (fieldTypes.numeric.includes(columnName)) {
+                        const numStr = value?.toString().replace(/[$,]/g, '') || '0';
+                        value = parseFloat(numStr) || null;
+                        console.log(`Numeric field ${columnName} processed:`, value);
+                    } else if (fieldTypes.date.includes(columnName)) {
+                        try {
+                            if (typeof value === 'string') {
+                                if (value.includes('/')) {
+                                    // Convert DD/MM/YYYY to YYYY-MM-DD
+                                    const [day, month, year] = value.split('/');
+                                    value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                                } else if (value.includes('-')) {
+                                    // If already in YYYY-MM-DD format, keep it
+                                    value = value;
+                                }
+                            } else if (value instanceof Date) {
+                                value = value.toISOString().split('T')[0];
                             }
-                        } else if (value instanceof Date) {
-                            cleanData[key] = value.toISOString().split('T')[0];
+                            console.log(`Date field ${columnName} processed:`, value);
+                        } catch (e) {
+                            console.warn(`Failed to parse date: ${value}`, e);
+                            value = null;
                         }
-                    } catch (e) {
-                        console.warn(`Failed to parse date: ${value}`, e);
-                        cleanData[key] = null;
+                    } else if (fieldTypes.status.includes(columnName)) {
+                        const status = value?.toString().toLowerCase();
+                        value = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
+                        console.log(`Status field ${columnName} processed:`, value);
+                    } else if (typeof value === 'object' && value !== null) {
+                        // For object values, stringify them
+                        value = JSON.stringify(value);
+                        console.log(`Object field ${columnName} stringified:`, value);
                     }
-                } else if (fieldTypes.status.includes(key)) {
-                    const status = value.toString().toLowerCase();
-                    cleanData[key] = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
+
+                    cleanData[columnName] = value;
                 }
             });
 
-            const result = await tableService.insertData(tableName, cleanData);
-            console.log('Data insertion result:', result);
+            console.log('Final clean data before insertion:', cleanData);
+            console.log('Clean data structure:', Object.keys(cleanData));
             
-            setMessage('Data inserted successfully');
-            setError(null);
+            try {
+                const result = await tableService.insertData(tableName, cleanData);
+                console.log('Data insertion result:', result);
+                
+                setMessage('Data inserted successfully');
+                setError(null);
 
-            const event = new CustomEvent('policyDataUpdated', {
-                detail: { table: tableName }
-            });
-            window.dispatchEvent(event);
-
+                const event = new CustomEvent('policyDataUpdated', {
+                    detail: { table: tableName }
+                });
+                window.dispatchEvent(event);
+            } catch (insertError) {
+                console.error('Error during data insertion:', insertError);
+                console.error('Error details:', {
+                    message: insertError.message,
+                    stack: insertError.stack
+                });
+                
+                // Show more detailed error message
+                const errorMessage = insertError.message || 'Failed to insert data';
+                setError(`Error inserting data into ${tableName}: ${errorMessage}`);
+                setMessage(null);
+            }
         } catch (err) {
-            console.error('Error inserting data:', err);
-            setError(err.message || 'Failed to insert data');
+            console.error('Error preparing data for insertion:', err);
+            console.error('Error details:', {
+                message: err.message,
+                stack: err.stack
+            });
+            setError(err.message || 'Failed to prepare data for insertion');
             setMessage(null);
         }
     };

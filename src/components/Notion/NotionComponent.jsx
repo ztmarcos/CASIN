@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NotionErrorBoundary from './NotionErrorBoundary';
+import NotionCardView from './NotionCardView';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -28,11 +29,12 @@ const NotionComponent = () => {
   const [error, setError] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [filters, setFilters] = useState({});
-  const [selectedRows, setSelectedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
   const [columns, setColumns] = useState([]);
+  const [viewMode, setViewMode] = useState('card'); // 'card' or 'table'
+
+  const notionDatabaseUrl = "https://www.notion.so/1f7385297f9a80a3bc5bcec8a3c2debb?v=1f7385297f9a80de9d66000cfeaf4e83";
 
   const fetchNotionTasks = useCallback(async () => {
     try {
@@ -108,85 +110,6 @@ const NotionComponent = () => {
 
     return () => clearTimeout(timeoutId);
   }, []);
-
-  // Row selection
-  const toggleRowSelection = (taskId) => {
-    setSelectedRows(prev => {
-      if (prev.includes(taskId)) {
-        return prev.filter(id => id !== taskId);
-      }
-      return [...prev, taskId];
-    });
-  };
-
-  const handleDeleteSelected = async () => {
-    if (!selectedRows.length || !window.confirm('¿Estás seguro de que quieres eliminar los elementos seleccionados?')) {
-      return;
-    }
-
-    try {
-      setDeleteLoading(true);
-      const response = await fetch('/api/notion/delete-tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ taskIds: selectedRows }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete tasks: ${response.statusText}`);
-      }
-
-      await fetchNotionTasks();
-      setSelectedRows([]);
-    } catch (err) {
-      console.error('Error deleting tasks:', err);
-      setError(err.message);
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const handleCellEdit = async (taskId, column, value) => {
-    try {
-      // Special handling for dates
-      if (column === 'Due date') {
-        // Ensure the date is in ISO format for Notion
-        value = value ? new Date(value).toISOString().split('T')[0] : null;
-      }
-
-      const response = await fetch('/api/notion/update-cell', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId,
-          column,
-          value,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to update cell: ${response.statusText}`);
-      }
-
-      // Update local state
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === taskId ? { ...task, [column]: value } : task
-        )
-      );
-
-      // Clear editing state
-      setEditingCell(null);
-    } catch (err) {
-      console.error('Error updating cell:', err);
-      setError(err.message);
-    }
-  };
 
   // Get sorted and filtered data
   const processedTasks = useMemo(() => {
@@ -388,6 +311,53 @@ const NotionComponent = () => {
     );
   };
 
+  const handleCellEdit = async (taskId, column, value) => {
+    try {
+      // Special handling for dates
+      if (column === 'Due date') {
+        // Ensure the date is in ISO format for Notion
+        value = value ? new Date(value).toISOString().split('T')[0] : null;
+      }
+
+      const response = await fetch('/api/notion/update-cell', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          taskId,
+          column,
+          value,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `Failed to update cell: ${response.statusText}`);
+      }
+
+      // Update local state
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId ? { ...task, [column]: value } : task
+        )
+      );
+
+      // Clear editing state
+      setEditingCell(null);
+    } catch (err) {
+      console.error('Error updating cell:', err);
+      setError(err.message);
+    }
+  };
+
+  const handleCardClick = (task) => {
+    // Open the task in Notion
+    if (task.PageURL) {
+      window.open(task.PageURL, '_blank');
+    }
+  };
+
   if (loading) return <div className="notion-loading">Cargando tareas...</div>;
   if (error) return <div className="notion-error">Error: {error}</div>;
   if (!tasks.length) return <div className="notion-empty">No se encontraron tareas</div>;
@@ -396,85 +366,88 @@ const NotionComponent = () => {
     <NotionErrorBoundary>
       <div className="notion-container">
         <div className="notion-header">
-          <h2>Tareas de Notion</h2>
-          <div className="notion-actions">
-            <button 
-              onClick={fetchNotionTasks} 
-              className="notion-button refresh"
-              disabled={loading}
-            >
-              {loading ? 'Actualizando...' : '↻ Actualizar'}
-            </button>
-            {selectedRows.length > 0 && (
-              <button 
-                className="notion-button delete"
-                onClick={handleDeleteSelected}
-                disabled={deleteLoading}
+          <h2>Tareas </h2>
+          <div className="notion-controls">
+            <div className="notion-view-toggle">
+              <button
+                className={`notion-view-button ${viewMode === 'card' ? 'active' : ''}`}
+                onClick={() => setViewMode('card')}
               >
-                {deleteLoading ? 'Eliminando...' : `Eliminar seleccionados (${selectedRows.length})`}
+                Card View
               </button>
-            )}
+              <button
+                className={`notion-view-button ${viewMode === 'table' ? 'active' : ''}`}
+                onClick={() => setViewMode('table')}
+              >
+                Table View
+              </button>
+            </div>
+            
+            <div className="notion-actions">
+              <button 
+                onClick={fetchNotionTasks} 
+                className="notion-button refresh"
+                disabled={loading}
+              >
+                {loading ? 'Actualizando...' : '↻ Actualizar'}
+              </button>
+              <a
+                href={notionDatabaseUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="notion-database-link"
+              >
+                Ver en Notion
+              </a>
+            </div>
           </div>
         </div>
 
-        <div className="notion-table-container">
-          <table className="notion-table">
-            <thead>
-              <tr>
-                <th className="notion-th checkbox">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedRows(processedTasks.map(task => task.id));
-                      } else {
-                        setSelectedRows([]);
-                      }
-                    }}
-                    checked={selectedRows.length === processedTasks.length}
-                  />
-                </th>
-                {columns.map(column => (
-                  <th 
-                    key={column} 
-                    className="notion-th"
-                    onClick={() => requestSort(column)}
-                  >
-                    <div className="notion-th-content">
-                      <span>{column}</span>
-                      {sortConfig.key === column && (
-                        <span className="notion-sort-indicator">
-                          {sortConfig.direction === 'asc' ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedTasks.map((task, index) => (
-                <tr key={task.id || index} className="notion-tr">
-                  <td className="notion-td checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedRows.includes(task.id)}
-                      onChange={() => toggleRowSelection(task.id)}
-                    />
-                  </td>
+        {viewMode === 'card' ? (
+          <NotionCardView
+            tasks={paginatedTasks}
+            onCardClick={handleCardClick}
+          />
+        ) : (
+          <div className="notion-table-container">
+            <table className="notion-table">
+              <thead>
+                <tr>
                   {columns.map(column => (
-                    <td 
+                    <th 
                       key={column} 
-                      className={`notion-td ${column === 'Status' ? getStatusClass(task[column]) : ''}`}
+                      className="notion-th"
+                      onClick={() => requestSort(column)}
                     >
-                      {renderCell(task, column)}
-                    </td>
+                      <div className="notion-th-content">
+                        <span>{column}</span>
+                        {sortConfig.key === column && (
+                          <span className="notion-sort-indicator">
+                            {sortConfig.direction === 'asc' ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </div>
+                    </th>
                   ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {paginatedTasks.map((task, index) => (
+                  <tr key={task.id || index} className="notion-tr">
+                    {columns.map(column => (
+                      <td 
+                        key={column} 
+                        className={`notion-td ${column === 'Status' ? getStatusClass(task[column]) : ''}`}
+                      >
+                        {renderCell(task, column)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {totalPages > 1 && (
           <div className="notion-pagination">

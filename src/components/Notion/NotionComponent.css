@@ -32,11 +32,17 @@
   background: #2eaadc;
   color: white;
   font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .notion-button:hover {
   background: #2591bb;
   transform: translateY(-1px);
+  text-decoration: none;
+  color: white;
 }
 
 .notion-button:disabled {
@@ -683,4 +689,375 @@ td[data-priority="Low"] {
 
 .notion-button.refresh:disabled {
   background-color: #e0e0e0;
+}
+
+/* Card View Styles */
+.notion-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.notion-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 300px;
+  border: 1px solid #e0e0e0;
+}
+
+.notion-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notion-card-header {
+  padding: 1.25rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.notion-card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #2c3e50;
+  line-height: 1.4;
+}
+
+.notion-card-content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex-grow: 1;
+}
+
+/* Meta información (tipo y prioridad) */
+.notion-card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.notion-card-type {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.notion-card-priority {
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+/* Clases de prioridad */
+.priority-high {
+  background-color: #fef2f2;
+  color: #dc2626;
+}
+
+.priority-medium {
+  background-color: #fffbeb;
+  color: #d97706;
+}
+
+.priority-low {
+  background-color: #f0fdf4;
+  color: #16a34a;
+}
+
+.priority-default {
+  background-color: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Descripción */
+.notion-card-description {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #4b5563;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+/* Información del encargado */
+.notion-card-assignee {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  border-radius: 8px;
+  color: #4b5563;
+}
+
+.user-icon {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+
+/* Fechas */
+.notion-card-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.notion-card-deadline,
+.notion-card-created,
+.notion-card-edited {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-icon {
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .notion-card {
+    min-height: 250px;
+  }
+
+  .notion-card-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .notion-card-type,
+  .notion-card-priority {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+.notion-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0 1.5rem;
+}
+
+.notion-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.notion-button.refresh {
+  background: #00b894;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notion-button.refresh:hover {
+  background: #00a382;
+  transform: translateY(-1px);
+}
+
+.notion-button.refresh:disabled {
+  background: #e0e0e0;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .notion-controls {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+
+  .notion-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .notion-button.refresh,
+  .notion-database-link {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+}
+
+.notion-view-toggle {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.notion-view-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notion-view-button:hover {
+  background: #f9fafb;
+}
+
+.notion-view-button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+.notion-database-link {
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border-radius: 6px;
+  color: #4b5563;
+  text-decoration: none;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.notion-database-link:hover {
+  background: #e5e7eb;
+}
+
+/* Card field background colors - Using light blue, yellow, and red variations */
+.notion-card-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin: 0.25rem 0;
+  transition: background-color 0.2s ease;
+}
+
+/* Title section - Light blue */
+.notion-card-header {
+  background-color: #f0f7ff;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+/* Priority field - Light red */
+.notion-card-field:has(.notion-card-label:contains("Prioridad")) {
+  background-color: #fff1f1;
+}
+
+/* Encargado field - Light yellow */
+.notion-card-field:has(.notion-card-label:contains("Encargado")) {
+  background-color: #fffbeb;
+}
+
+/* Asignado field - Light blue */
+.notion-card-field:has(.notion-card-label:contains("Asignado")) {
+  background-color: #f0f9ff;
+}
+
+/* Email field - Light red */
+.notion-card-field:has(.notion-card-label:contains("Correo")) {
+  background-color: #fff4f4;
+}
+
+/* Due date field - Light yellow */
+.notion-card-field:has(.notion-card-label:contains("Vencimiento")) {
+  background-color: #fefce8;
+}
+
+/* Description field - Light blue */
+.notion-card-field.notion-card-description {
+  background-color: #f0f7ff;
+}
+
+/* Created field - Light red */
+.notion-card-field:has(.notion-card-label:contains("Creado")) {
+  background-color: #fff1f1;
+}
+
+/* Last Edited field - Light yellow */
+.notion-card-field:has(.notion-card-label:contains("Editado")) {
+  background-color: #fffbeb;
+}
+
+/* Tags field - Light blue */
+.notion-card-field:has(.notion-card-label:contains("Etiquetas")) {
+  background-color: #f0f7ff;
+}
+
+/* Hover effect */
+.notion-card-field:hover {
+  filter: brightness(0.98);
+}
+
+/* Update card styling */
+.notion-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #e5e7eb;
+}
+
+.notion-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Adjust tag styling */
+.notion-card .notion-tag {
+  background-color: #f0f7ff;
+  color: #1e40af;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin: 0.125rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .notion-card-field {
+    padding: 0.375rem;
+  }
+  
+  .notion-card-header {
+    padding: 0.75rem;
+  }
 } 

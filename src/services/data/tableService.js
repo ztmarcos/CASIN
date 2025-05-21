@@ -2,7 +2,7 @@ import axios from 'axios';
 
 class TableService {
   constructor() {
-    this.apiUrl = 'http://localhost:3001/api/data';
+    this.apiUrl = 'http://localhost:3001/api';
     this.currentTableName = null;
     this.currentTableTitle = null;
   }
@@ -38,7 +38,7 @@ class TableService {
 
   async getTables() {
     try {
-      const response = await fetch(`${this.apiUrl}/tables`);
+      const response = await fetch(`${this.apiUrl}/data/tables`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -68,7 +68,7 @@ class TableService {
       // Set current table when getting data
       this.setCurrentTable(tableName);
       
-      const response = await fetch(`${this.apiUrl}/${tableName}`);
+      const response = await fetch(`${this.apiUrl}/data/${tableName}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -150,88 +150,82 @@ class TableService {
 
   async insertData(tableName, data) {
     try {
+      console.log('Raw data received:', data);
+      console.log('Target table name:', tableName);
+      
       // Get table structure first to validate data
       const tables = await this.getTables();
       const targetTable = tables.find(t => t.name === tableName);
       
       if (!targetTable) {
-        throw new Error('Table not found');
+        throw new Error(`Table '${tableName}' does not exist`);
       }
+      
+      // Filter out invalid columns and prepare data
+      const validColumns = targetTable.columns
+        .filter(col => col.name !== 'id')
+        .map(col => col.name);
+      
+      // Determine if we're handling a single record or an array of records
+      const isArrayData = Array.isArray(data);
 
-      // Create a copy of data and clean it
-      const cleanData = { ...data };
-      delete cleanData.id;  // Ensure id is not included
+      // Helper to clean a single record
+      const cleanRecord = (record) => {
+        const cleanData = { ...record };
+        delete cleanData.id;
 
-      // Clean and validate data based on column types
-      targetTable.columns.forEach(column => {
-        const value = cleanData[column.name];
-        
-        if (value === undefined || value === null || value === '') {
-          cleanData[column.name] = null;
-          return;
-        }
+        const filtered = {};
 
-        // Handle different column types
-        if (column.type.includes('int')) {
-          cleanData[column.name] = parseInt(value) || null;
-        } else if (column.type.includes('decimal')) {
-          const numStr = value.toString().replace(/[$,]/g, '');
-          cleanData[column.name] = parseFloat(numStr) || null;
-        } else if (column.type.includes('varchar')) {
-          const maxLength = parseInt(column.type.match(/\((\d+)\)/)?.[1]) || 255;
-          cleanData[column.name] = String(value).substring(0, maxLength);
-        } else if (column.type.includes('date')) {
-          try {
-            if (typeof value === 'string') {
-              if (value.includes('/')) {
-                const [day, month, year] = value.split('/');
-                cleanData[column.name] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              } else if (value.includes('-')) {
-                cleanData[column.name] = value;
-              }
+        for (const key in cleanData) {
+          if (validColumns.includes(key)) {
+            let value = cleanData[key];
+            if (value === null || value === undefined) {
+              value = null;
+            } else if (typeof value === 'object' && !(value instanceof Date)) {
+              value = JSON.stringify(value);
             } else if (value instanceof Date) {
-              cleanData[column.name] = value.toISOString().split('T')[0];
+              value = value.toISOString().split('T')[0];
             }
-          } catch (e) {
-            console.warn(`Failed to parse date: ${value}`, e);
-            cleanData[column.name] = null;
+            filtered[key] = value;
           }
         }
-      });
 
-      // Remove created_at and updated_at as they are handled by MySQL
-      delete cleanData.created_at;
-      delete cleanData.updated_at;
+        return filtered;
+      };
 
-      console.log('Clean data before insertion:', cleanData);
+      const payload = isArrayData ? data.map(cleanRecord) : cleanRecord(data);
 
-      // Check if this is a policy-related table and has a policy number
-      if (tableName.toLowerCase().includes('gmm') && cleanData.numero_de_poliza) {
-        // Try to find existing policy
-        const existingPolicy = await this.getData(tableName, {
-          where: { numero_de_poliza: cleanData.numero_de_poliza }
-        });
-
-        if (existingPolicy && existingPolicy.length > 0) {
-          // Update existing policy
-          await this.updateData(tableName, cleanData, {
-            where: { numero_de_poliza: cleanData.numero_de_poliza }
-          });
-          return { success: true, message: 'Policy updated successfully' };
-        }
+      if (!isArrayData && Object.keys(payload).length === 0) {
+        throw new Error('No valid data to insert');
       }
 
-      // If no existing policy found or not a policy table, proceed with insert
-      const response = await axios.post(`${this.apiUrl}/${tableName}`, cleanData);
+      // Send the data to the API
+      const apiUrl = `http://localhost:3001/api/data/${tableName}`;
+      console.log('Request payload:', payload);
       
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to insert data');
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('Server error response:', errorData);
+        throw new Error(errorData.error || 'Failed to insert data');
       }
-
-      return response.data;
+      
+      const result = await response.json();
+      console.log('Insert result:', result);
+      
+      return result;
     } catch (error) {
       console.error('Error inserting data:', error);
-      throw new Error(error.response?.data?.error || error.message || 'Error inserting data');
+      throw error;
     }
   }
 
@@ -241,54 +235,37 @@ class TableService {
   async getTableStructure(tableName) {
     try {
       // First try to get from tables list
-      const response = await fetch(`${this.apiUrl}/tables`);
+      const response = await fetch(`${this.apiUrl}/data/tables/${tableName}/structure`);
       if (!response.ok) {
-        throw new Error(`Failed to get tables: ${response.statusText}`);
+        throw new Error(`Failed to get table structure: ${response.statusText}`);
       }
       
-      const tables = await response.json();
+      const result = await response.json();
+      
+      // Handle MySQL SHOW COLUMNS format
+      if (Array.isArray(result) && result.length > 0 && 'Field' in result[0]) {
+        return {
+          columns: result.map(col => ({
+            name: col.Field,
+            type: this.mapDatabaseTypeToFrontend(col.Type)
+          }))
+        };
+      }
+      
+      // Handle our standard format
+      if (result && result.columns) {
+        return result;
+      }
+
+      // If not found in structure endpoint, try getting from tables list
+      const tables = await this.getTables();
       const table = tables.find(t => t.name === tableName);
       
       if (table && table.columns) {
         return { columns: table.columns };
       }
 
-      // If not found in tables list, try getting schema from database
-      const schemaQuery = `
-        SELECT 
-          COLUMN_NAME as name,
-          DATA_TYPE as type
-        FROM 
-          INFORMATION_SCHEMA.COLUMNS 
-        WHERE 
-          TABLE_NAME = '${tableName}'
-        ORDER BY 
-          ORDINAL_POSITION
-      `;
-
-      const schemaResult = await this.executeQuery(schemaQuery);
-      if (schemaResult && schemaResult.length > 0) {
-        return {
-          columns: schemaResult.map(col => ({
-            name: col.name,
-            type: this.mapDatabaseTypeToFrontend(col.type)
-          }))
-        };
-      }
-
-      // If still no columns found, get from sample data
-      const dataResponse = await this.getData(tableName);
-      if (dataResponse.data && dataResponse.data.length > 0) {
-        const sampleRow = dataResponse.data[0];
-        return {
-          columns: Object.keys(sampleRow).map(name => ({
-            name,
-            type: this.inferColumnTypeFromValue(sampleRow[name])
-          }))
-        };
-      }
-      
-      return { columns: [] };
+      throw new Error('Could not retrieve table structure');
     } catch (error) {
       console.error('Error fetching table structure:', error);
       throw error;
@@ -460,7 +437,7 @@ class TableService {
         .toLowerCase();
 
       // Use the correct endpoint for renaming columns
-      const response = await fetch(`${this.apiUrl}/tables/${tableName}/columns/${cleanOldName}/rename`, {
+      const response = await fetch(`${this.apiUrl}/data/tables/${tableName}/columns/${cleanOldName}/rename`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -566,7 +543,7 @@ class TableService {
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
 
-      const response = await fetch(`${this.apiUrl}/${cleanTableName}/${id}`, {
+      const response = await fetch(`${this.apiUrl}/data/${cleanTableName}/${id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -925,17 +902,20 @@ class TableService {
 
   // Helper method to map database types to frontend types
   mapDatabaseTypeToFrontend(dbType) {
-    dbType = dbType.toUpperCase();
-    if (dbType.includes('INT')) return 'INT';
-    if (dbType.includes('DECIMAL') || dbType.includes('NUMERIC')) return 'DECIMAL';
-    if (dbType.includes('DATE') || dbType.includes('TIME')) return 'DATE';
-    if (dbType === 'BOOLEAN' || dbType === 'TINYINT(1)') return 'BOOLEAN';
+    if (!dbType) return 'TEXT';
+    
+    dbType = dbType.toLowerCase();
+    if (dbType.includes('int')) return 'INT';
+    if (dbType.includes('decimal') || dbType.includes('numeric') || dbType.includes('float') || dbType.includes('double')) return 'DECIMAL';
+    if (dbType.includes('date') || dbType.includes('time')) return 'DATE';
+    if (dbType === 'tinyint(1)' || dbType === 'boolean') return 'BOOLEAN';
+    if (dbType.includes('varchar') || dbType.includes('text') || dbType.includes('char')) return 'TEXT';
     return 'TEXT';
   }
 
   async getTableTypes() {
     try {
-      const response = await fetch(`${this.apiUrl}/table-types`);
+      const response = await fetch(`${this.apiUrl}/data/table-types`);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
@@ -976,7 +956,7 @@ class TableService {
 
   async getChildTables(parentTableName) {
     try {
-      const response = await fetch(`${this.apiUrl}/tables/${parentTableName}/children`);
+      const response = await fetch(`${this.apiUrl}/data/tables/${parentTableName}/children`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

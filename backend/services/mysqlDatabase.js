@@ -517,25 +517,88 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       
-      // First get the column type and other properties
-      const [columns] = await connection.execute(
-        'SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ?',
-        [tableName, oldName]
-      );
-      
-      if (columns.length === 0) {
-        throw new Error(`Column ${oldName} not found in table ${tableName}`);
+      // Start transaction
+      await connection.beginTransaction();
+
+      try {
+        // First get the column type and other properties
+        const [columns] = await connection.execute(
+          'SELECT COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND COLUMN_NAME = ?',
+          [tableName, oldName]
+        );
+        
+        if (columns.length === 0) {
+          throw new Error(`Column ${oldName} not found in table ${tableName}`);
+        }
+        
+        const column = columns[0];
+        const nullable = column.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL';
+        const defaultValue = column.COLUMN_DEFAULT ? `DEFAULT ${column.COLUMN_DEFAULT}` : '';
+        const extra = column.EXTRA ? column.EXTRA : '';
+
+        // Temporarily disable foreign key checks
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+        
+        // Rename the column
+        const query = `ALTER TABLE \`${tableName}\` CHANGE COLUMN \`${oldName}\` \`${newName}\` ${column.COLUMN_TYPE} ${nullable} ${defaultValue} ${extra}`.trim();
+        await connection.execute(query);
+
+        // Check if this table has any relationships
+        const [relationships] = await connection.execute(
+          'SELECT * FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
+          [tableName, tableName]
+        );
+
+        // If this is a main table, update any foreign key references in secondary tables
+        for (const rel of relationships) {
+          if (rel.main_table_name === tableName) {
+            // This is a main table, update foreign key in secondary table
+            const [fkInfo] = await connection.execute(
+              `SELECT CONSTRAINT_NAME, COLUMN_NAME 
+               FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+               WHERE REFERENCED_TABLE_NAME = ? 
+               AND REFERENCED_COLUMN_NAME = ? 
+               AND TABLE_NAME = ?`,
+              [tableName, oldName, rel.secondary_table_name]
+            );
+
+            if (fkInfo.length > 0) {
+              // Drop the foreign key constraint
+              await connection.execute(
+                `ALTER TABLE \`${rel.secondary_table_name}\` 
+                 DROP FOREIGN KEY \`${fkInfo[0].CONSTRAINT_NAME}\``
+              );
+
+              // Rename the column in the secondary table
+              await connection.execute(
+                `ALTER TABLE \`${rel.secondary_table_name}\` 
+                 CHANGE COLUMN \`${fkInfo[0].COLUMN_NAME}\` \`${newName}\` ${column.COLUMN_TYPE}`
+              );
+
+              // Re-add the foreign key constraint
+              await connection.execute(
+                `ALTER TABLE \`${rel.secondary_table_name}\` 
+                 ADD CONSTRAINT \`fk_${rel.secondary_table_name}_${newName}\` 
+                 FOREIGN KEY (\`${newName}\`) 
+                 REFERENCES \`${tableName}\`(\`${newName}\`) 
+                 ON DELETE CASCADE`
+              );
+            }
+          }
+        }
+
+        // Re-enable foreign key checks
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
+        // Commit transaction
+        await connection.commit();
+        
+        return { success: true, message: `Column renamed from ${oldName} to ${newName} successfully` };
+      } catch (error) {
+        // If there's an error, rollback the transaction
+        await connection.rollback();
+        throw error;
       }
-      
-      const column = columns[0];
-      const nullable = column.IS_NULLABLE === 'YES' ? 'NULL' : 'NOT NULL';
-      const defaultValue = column.COLUMN_DEFAULT ? `DEFAULT ${column.COLUMN_DEFAULT}` : '';
-      const extra = column.EXTRA ? column.EXTRA : '';
-      
-      const query = `ALTER TABLE ${tableName} CHANGE COLUMN ${oldName} ${newName} ${column.COLUMN_TYPE} ${nullable} ${defaultValue} ${extra}`.trim();
-      await connection.execute(query);
-      
-      return { success: true, message: `Column renamed from ${oldName} to ${newName} successfully` };
     } catch (error) {
       console.error('Error renaming column:', error);
       throw error;

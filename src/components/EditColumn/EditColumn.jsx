@@ -20,6 +20,11 @@ import { toast } from 'react-hot-toast';
 import './EditColumn.css';
 
 const SortableItem = ({ id, column, onDelete, onEdit }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(column.name);
+  const [editedType, setEditedType] = useState(column.type || 'TEXT');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const {
     attributes,
     listeners,
@@ -33,45 +38,116 @@ const SortableItem = ({ id, column, onDelete, onEdit }) => {
     transition,
   };
 
-  const handleNameChange = (e) => {
-    onEdit(column.name, { ...column, name: e.target.value });
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    if (editedName.trim()) {
+      onEdit(column.name, {
+        ...column,
+        name: editedName.trim(),
+        type: editedType
+      });
+      setIsEditing(false);
+    }
   };
 
-  const handleTypeChange = (e) => {
-    onEdit(column.name, { ...column, type: e.target.value });
-  };
+  const columnTypes = [
+    { value: 'TEXT', label: 'Text' },
+    { value: 'VARCHAR', label: 'Short Text' },
+    { value: 'INT', label: 'Integer' },
+    { value: 'DECIMAL', label: 'Decimal' },
+    { value: 'DATE', label: 'Date' },
+    { value: 'BOOLEAN', label: 'Boolean' },
+    { value: 'TIMESTAMP', label: 'Timestamp' }
+  ];
+
+  if (isEditing) {
+    return (
+      <div ref={setNodeRef} style={style} className="column-item">
+        <form onSubmit={handleEditSubmit} className="column-edit-form">
+          <span className="drag-handle" {...attributes} {...listeners}>⋮⋮</span>
+          <input
+            type="text"
+            className="column-input name-input"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            disabled={column.isPrimary}
+            autoFocus
+            placeholder="Column name"
+          />
+          <select
+            className="column-input type-select"
+            value={editedType}
+            onChange={(e) => setEditedType(e.target.value)}
+            disabled={column.isPrimary}
+          >
+            {columnTypes.map(type => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
+          <div className="column-edit-actions">
+            <button type="button" onClick={() => setIsEditing(false)} className="cancel-btn">
+              Cancel
+            </button>
+            <button type="submit" className="save-btn">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`column-item ${column.isPrimary ? 'primary' : ''}`}
+      className={`column-item${column.isPrimary ? ' primary' : ''}`}
       {...attributes}
     >
       <span className="drag-handle" {...listeners}>⋮⋮</span>
-      <input
-        type="text"
-        className="column-input name-input"
-        value={column.name}
-        onChange={handleNameChange}
-        disabled={column.isPrimary}
-      />
-      <select
-        className="column-input type-select"
-        value={column.type}
-        onChange={handleTypeChange}
-        disabled={column.isPrimary}
+      <span 
+        className="column-name" 
+        onClick={() => !column.isPrimary && setIsEditing(true)}
       >
-        <option value="VARCHAR">VARCHAR</option>
-        <option value="INTEGER">INTEGER</option>
-        <option value="DECIMAL">DECIMAL</option>
-        <option value="DATE">DATE</option>
-        <option value="BOOLEAN">BOOLEAN</option>
-      </select>
+        {column.name}
+      </span>
+      <span 
+        className="column-type"
+        onClick={() => !column.isPrimary && setIsEditing(true)}
+      >
+        {columnTypes.find(t => t.value === column.type)?.label || column.type}
+      </span>
       {column.isPrimary ? (
         <span className="primary-badge">Primary Key</span>
       ) : (
-        <button className="delete-btn" onClick={() => onDelete(column.name)}>×</button>
+        <>
+          {showDeleteConfirm ? (
+            <div className="delete-confirm">
+              <button onClick={() => setShowDeleteConfirm(false)} className="cancel-btn">
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  onDelete(column.name);
+                  setShowDeleteConfirm(false);
+                }} 
+                className="confirm-btn"
+              >
+                Confirm
+              </button>
+            </div>
+          ) : (
+            <button 
+              className="delete-btn" 
+              onClick={() => setShowDeleteConfirm(true)}
+              title="Delete column"
+            >
+              ×
+            </button>
+          )}
+        </>
       )}
     </div>
   );
@@ -130,18 +206,10 @@ const EditColumn = ({ columns, tableName, onSave, onCancel }) => {
         // If name changed, rename the column
         await tableService.renameColumn(tableName, oldName, updatedColumn.name);
       }
-      
-      // Update column type if changed
-      const currentColumn = editableColumns.find(col => col.name === oldName);
-      if (currentColumn.type !== updatedColumn.type) {
-        await tableService.updateColumnType(tableName, updatedColumn.name, updatedColumn.type);
-      }
-
       // Update local state
       setEditableColumns(columns => 
         columns.map(col => col.name === oldName ? updatedColumn : col)
       );
-      
       toast.success(`Column ${oldName} updated`);
     } catch (error) {
       console.error('Failed to update column:', error);
@@ -158,9 +226,7 @@ const EditColumn = ({ columns, tableName, onSave, onCancel }) => {
   const handleSave = async () => {
     try {
       setIsLoading(true);
-      // Save all changes
-      await tableService.updateColumns(tableName, editableColumns);
-      toast.success('All changes saved');
+      // Just call onSave with the current columns
       onSave(editableColumns);
     } catch (error) {
       console.error('Failed to save changes:', error);

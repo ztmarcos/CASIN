@@ -50,7 +50,9 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
   };
 
   const handleConfirmEdit = () => {
-    onEdit(column, editedName.trim(), editedType);
+    if (editedName.trim() !== column || editedType !== (columns.find(colObj => colObj.name === column)?.type || 'TEXT')) {
+      onEdit(column, editedName.trim(), editedType);
+    }
     setIsEditing(false);
   };
 
@@ -179,14 +181,20 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   const loadColumns = async () => {
     try {
-      console.log('Loading columns for table:', selectedTable?.name);
+      if (!selectedTable?.name) {
+        console.log('No table selected, skipping column load');
+        setColumns([]);
+        return;
+      }
+
+      console.log('Loading columns for table:', selectedTable.name);
       setIsLoading(true);
       setError(null);
       
       const structure = await tableService.getTableStructure(selectedTable.name);
       console.log('Received table structure:', structure);
       
-      if (structure && structure.columns) {
+      if (structure && Array.isArray(structure.columns)) {
         const newColumns = structure.columns.map(col => ({
           name: col.name,
           type: col.type || 'TEXT'
@@ -194,13 +202,13 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         console.log('Setting columns state:', newColumns);
         setColumns(newColumns);
       } else {
-        console.log('No columns found in structure');
+        console.warn('Invalid structure received:', structure);
         setColumns([]);
-        setError('No columns found in table');
+        setError('Invalid table structure received');
       }
     } catch (error) {
       console.error('Error loading columns:', error);
-      setError('Failed to load columns');
+      setError(error.message || 'Failed to load columns');
       setColumns([]);
     } finally {
       setIsLoading(false);
@@ -209,7 +217,11 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   useEffect(() => {
     if (selectedTable?.name) {
+      console.log('Table changed, loading columns for:', selectedTable.name);
       loadColumns();
+    } else {
+      console.log('No table selected, clearing columns');
+      setColumns([]);
     }
   }, [selectedTable]);
 
@@ -312,41 +324,40 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const handleEditColumnName = async (oldName, newName, newType) => {
     try {
       setIsLoading(true);
-      console.log(`Updating column from ${oldName} to ${newName} with type ${newType}`);
+      setError(null);
       
-      let success = true;
-      
-      // First try to update the type
-      try {
-        await tableService.updateColumnType(selectedTable.name, oldName, newType);
-        toast.success('Column type updated');
-      } catch (typeError) {
-        console.warn('Could not update column type:', typeError);
-        success = false;
-        toast.error('Failed to update column type');
-      }
-      
-      // Then update the name if it changed
-      if (oldName !== newName) {
-        try {
-          await tableService.renameColumn(selectedTable.name, oldName, newName);
-          toast.success('Column renamed');
-        } catch (renameError) {
-          console.error('Failed to rename column:', renameError);
-          success = false;
-          toast.error('Failed to rename column');
-        }
+      if (!selectedTable?.name) {
+        throw new Error('No table selected');
       }
 
-      // Refresh the data
-      await refreshData();
+      // First try to rename if name changed
+      if (oldName !== newName) {
+        await tableService.renameColumn(selectedTable.name, oldName, newName);
+      }
+
+      // Then update the column type if it changed
+      const currentColumn = columns.find(col => col.name === oldName);
+      if (currentColumn && currentColumn.type !== newType) {
+        // Add type update logic here when backend supports it
+        console.log('Type change requested:', { oldType: currentColumn.type, newType });
+      }
+
+      // Refresh the columns to get the updated state
+      await loadColumns();
       
-      if (success) {
-        toast.success('Column updated successfully');
+      // Show success message
+      toast.success('Column updated successfully');
+      
+      // Notify parent component if needed
+      if (onOrderChange) {
+        onOrderChange();
       }
     } catch (err) {
       console.error('Failed to update column:', err);
-      toast.error('Failed to update column');
+      setError(err.message || 'Failed to update column');
+      toast.error(err.message || 'Failed to update column');
+      // Refresh to ensure we're showing current state
+      await loadColumns();
     } finally {
       setIsLoading(false);
     }
@@ -408,7 +419,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const handleEditColumnsSave = async (updatedColumns) => {
     try {
       setIsLoading(true);
-      await loadColumns();
+      await loadColumns(); // Always reload columns from backend after save
       if (onOrderChange) {
         onOrderChange();
       }

@@ -257,21 +257,21 @@ router.patch('/tables/:tableName/columns/:columnName/rename', async (req, res) =
       [columnName]
     );
     
-    if (!columnInfo) {
+    if (!columnInfo || !columnInfo.length) {
       return res.status(404).json({ error: 'Column not found' });
     }
 
     // Clean the new name to match MySQL naming conventions
     const cleanNewName = newName.toLowerCase()
       .normalize('NFD')
-      .replace(/[\\u0300-\\u036f]/g, '')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9_]/g, '_')
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '');
     
     // Rename column while preserving its type
     await mysqlDatabase.executeQuery(
-      `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${cleanNewName}\` ${columnInfo.Type}`,
+      `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${cleanNewName}\` ${columnInfo[0].Type}`,
       []
     );
     
@@ -523,12 +523,12 @@ router.get('/tables/:tableName/structure', async (req, res) => {
     const { tableName } = req.params;
     
     // Get table structure
-    const [columns] = await mysqlDatabase.executeQuery(
+    const columns = await mysqlDatabase.executeQuery(
       `SHOW COLUMNS FROM \`${tableName}\``,
       []
     );
     
-    if (!columns || columns.length === 0) {
+    if (!columns || !Array.isArray(columns) || columns.length === 0) {
       throw new Error(`Table ${tableName} not found or has no columns`);
     }
 

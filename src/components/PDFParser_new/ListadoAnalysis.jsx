@@ -130,24 +130,19 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                 };
 
                 // Clean and format data based on field types
-                Object.entries(cleanItem).forEach(([key, value]) => {
-                    if (value === null || value === undefined || value === '') {
-                        cleanItem[key] = null;
-                        return;
-                    }
-
+                for (const [key, value] of Object.entries(cleanItem)) {
                     if (fieldTypes.numeric.includes(key)) {
-                        // Remove currency symbols and commas
-                        const numStr = value.toString().replace(/[$,]/g, '');
+                        const numStr = value?.toString().replace(/[$,]/g, '') || '0';
                         cleanItem[key] = parseFloat(numStr) || null;
                     } else if (fieldTypes.date.includes(key)) {
-                        // Format date to YYYY-MM-DD
                         try {
                             if (typeof value === 'string') {
                                 if (value.includes('/')) {
+                                    // Convert DD/MM/YYYY to YYYY-MM-DD
                                     const [day, month, year] = value.split('/');
                                     cleanItem[key] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
                                 } else if (value.includes('-')) {
+                                    // If already in YYYY-MM-DD format, keep it
                                     cleanItem[key] = value;
                                 }
                             } else if (value instanceof Date) {
@@ -158,11 +153,10 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                             cleanItem[key] = null;
                         }
                     } else if (fieldTypes.status.includes(key)) {
-                        // Normalize status values
-                        const status = value.toString().toLowerCase();
+                        const status = value?.toString().toLowerCase();
                         cleanItem[key] = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
                     }
-                });
+                }
 
                 return cleanItem;
             });

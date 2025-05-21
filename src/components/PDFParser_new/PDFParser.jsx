@@ -12,8 +12,16 @@ const PDFParser = ({ selectedTable }) => {
   const [fileName, setFileName] = useState('');
   const [tableTypes, setTableTypes] = useState({});
 
-  // Support both string and object for selectedTable
-  const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
+  // Move tableName logic here for better clarity
+  const getTableName = () => {
+    const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
+    console.log('PDFParser - selectedTable:', selectedTable);
+    console.log('PDFParser - tableName:', tableName);
+    console.log('PDFParser - typeof selectedTable:', typeof selectedTable);
+    return tableName;
+  }
+
+  const tableName = getTableName();
 
   // Fetch table types on component mount
   useEffect(() => {
