@@ -194,15 +194,49 @@ router.patch('/:tableName/:id', async (req, res) => {
     const { tableName, id } = req.params;
     const { column, value } = req.body;
     
+    // Validate required fields
+    if (!tableName || !id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Table name and ID are required'
+      });
+    }
+    
     if (!column || value === undefined) {
-      return res.status(400).json({ error: 'Column and value are required' });
+      return res.status(400).json({
+        success: false,
+        error: 'Column and value are required'
+      });
     }
 
-    const result = await mysqlDatabase.updateData(tableName, id, column, value);
-    res.json(result);
+    // Attempt to update the data
+    try {
+      const result = await mysqlDatabase.updateData(tableName, id, column, value);
+      res.json(result);
+    } catch (dbError) {
+      // Handle specific database errors
+      console.error('Database error:', dbError);
+      
+      // Determine appropriate status code
+      let statusCode = 500;
+      if (dbError.message.includes('not found')) {
+        statusCode = 404;
+      } else if (dbError.message.includes('Invalid')) {
+        statusCode = 400;
+      }
+      
+      res.status(statusCode).json({
+        success: false,
+        error: dbError.message
+      });
+    }
   } catch (error) {
-    console.error('Error updating data:', error);
-    res.status(500).json({ error: error.message });
+    // Handle unexpected errors
+    console.error('Unexpected error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'An unexpected error occurred'
+    });
   }
 });
 

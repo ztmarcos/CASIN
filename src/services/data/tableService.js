@@ -308,52 +308,42 @@ class TableService {
 
   async updateData(tableName, id, column, value) {
     try {
-      // If id is a number and column/value are provided, it's a single cell update
-      if (typeof id === 'number' && column && value !== undefined) {
-        const response = await fetch(`${this.apiUrl}/${tableName}/${id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ column, value })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Error updating data');
-        }
-
-        return await response.json();
-      }
+      // Clean and validate inputs
+      const cleanTableName = tableName.trim().toLowerCase();
       
-      // Otherwise, treat it as a where clause update (legacy behavior)
-      if (!id.where) {
-        throw new Error('Update operation requires where clause');
+      // Log the update attempt
+      console.log('Attempting to update:', {
+        tableName: cleanTableName,
+        id,
+        column,
+        value
+      });
+
+      // Make the API call
+      const response = await fetch(`${this.apiUrl}/data/${cleanTableName}/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ column, value })
+      });
+
+      // Always try to parse response as JSON first
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Failed to parse response as JSON:', parseError);
+        throw new Error('Server returned invalid JSON response');
       }
 
-      const setValues = [];
-      const values = [];
-      Object.entries(id).forEach(([key, value]) => {
-        if (key !== 'where' && !Object.keys(id.where).includes(key)) {
-          setValues.push(`${key} = ?`);
-          values.push(value);
-        }
-      });
+      // Check if the response was successful
+      if (!response.ok) {
+        throw new Error(data.error || data.message || 'Failed to update data');
+      }
 
-      const whereConditions = [];
-      Object.entries(id.where).forEach(([key, value]) => {
-        whereConditions.push(`${key} = ?`);
-        values.push(value);
-      });
-
-      const query = `
-        UPDATE ${tableName}
-        SET ${setValues.join(', ')}
-        WHERE ${whereConditions.join(' AND ')}
-      `;
-
-      await this.executeQuery(query, values);
-      return true;
+      return data;
     } catch (error) {
       console.error('Error updating data:', error);
       throw error;

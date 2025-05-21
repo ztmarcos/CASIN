@@ -426,38 +426,58 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
       
+      // Clean and validate inputs
+      const cleanTableName = tableName.trim().toLowerCase();
+      const cleanColumn = column.trim();
+      
+      // Log the update attempt
+      console.log('Attempting to update:', {
+        tableName: cleanTableName,
+        id,
+        column: cleanColumn,
+        value
+      });
+
       // Get column type
       const [columnInfo] = await connection.execute(
-        `SHOW COLUMNS FROM \`${tableName}\` WHERE Field = ?`,
-        [column]
+        'SHOW COLUMNS FROM ?? WHERE Field = ?',
+        [cleanTableName, cleanColumn]
       );
       
+      if (!columnInfo || columnInfo.length === 0) {
+        throw new Error(`Column ${cleanColumn} not found in table ${cleanTableName}`);
+      }
+
       let processedValue = value;
+      const columnType = columnInfo[0].Type.toUpperCase();
       
       // Handle different data types
-      if (columnInfo && columnInfo[0]) {
-        const columnType = columnInfo[0].Type.toUpperCase();
-        
-        // Handle numeric values
-        if (typeof value === 'string' && !isNaN(value) && 
-            (columnType.includes('INT') || columnType.includes('DECIMAL') || columnType.includes('FLOAT'))) {
-          processedValue = parseFloat(value);
-        }
-        
-        // Handle date values
-        if (columnType.includes('DATE') && typeof value === 'string') {
-          // Check if the value is in DD/MM/YYYY format
-          const dateMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-          if (dateMatch) {
-            // Convert to YYYY-MM-DD format for MySQL
-            const [_, day, month, year] = dateMatch;
-            processedValue = `${year}-${month}-${day}`;
+      if (typeof value === 'string') {
+        if (columnType.includes('INT')) {
+          processedValue = parseInt(value, 10);
+          if (isNaN(processedValue)) {
+            throw new Error(`Invalid integer value: ${value}`);
           }
+        } else if (columnType.includes('DECIMAL') || columnType.includes('FLOAT')) {
+          processedValue = parseFloat(value);
+          if (isNaN(processedValue)) {
+            throw new Error(`Invalid decimal value: ${value}`);
+          }
+        } else if (columnType.includes('DATE')) {
+          // Handle different date formats
+          const dateValue = new Date(value);
+          if (isNaN(dateValue)) {
+            throw new Error(`Invalid date value: ${value}`);
+          }
+          processedValue = dateValue.toISOString().split('T')[0];
         }
       }
       
-      const query = `UPDATE \`${tableName}\` SET \`${column}\` = ? WHERE id = ?`;
-      const [result] = await connection.execute(query, [processedValue, id]);
+      // Execute the update
+      const [result] = await connection.execute(
+        'UPDATE ?? SET ?? = ? WHERE id = ?',
+        [cleanTableName, cleanColumn, processedValue, id]
+      );
       
       if (result.affectedRows === 0) {
         throw new Error(`No record found with id ${id}`);
@@ -465,6 +485,7 @@ class MySQLDatabaseService {
       
       return {
         success: true,
+        message: 'Update successful',
         affectedRows: result.affectedRows
       };
     } catch (error) {
