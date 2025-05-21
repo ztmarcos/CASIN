@@ -3,6 +3,37 @@ import axios from 'axios';
 class TableService {
   constructor() {
     this.apiUrl = 'http://localhost:3001/api/data';
+    this.currentTableName = null;
+    this.currentTableTitle = null;
+  }
+
+  // Add new methods for table title handling
+  setCurrentTable(tableName) {
+    this.currentTableName = tableName;
+    this.currentTableTitle = this.formatTableTitle(tableName);
+  }
+
+  getCurrentTableTitle() {
+    return this.currentTableTitle || this.formatTableTitle(this.currentTableName);
+  }
+
+  formatTableTitle(tableName) {
+    if (!tableName) return '';
+    
+    // Check if it's a combined table name (contains arrow)
+    if (tableName.includes('→')) {
+      const [mainTable, secondaryTable] = tableName.split('→').map(t => t.trim());
+      return `${this.formatSingleTableName(mainTable)} → ${this.formatSingleTableName(secondaryTable)}`;
+    }
+    
+    return this.formatSingleTableName(tableName);
+  }
+
+  formatSingleTableName(tableName) {
+    return tableName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   }
 
   async getTables() {
@@ -13,10 +44,15 @@ class TableService {
       }
       const tables = await response.json();
       
-      // Filtrar la columna status de las tablas no relacionadas
-      return tables.map(table => {
+      // Add formatted titles to tables
+      const tablesWithTitles = tables.map(table => ({
+        ...table,
+        title: this.formatTableTitle(table.name)
+      }));
+      
+      // Filter status column from non-related tables
+      return tablesWithTitles.map(table => {
         if (!table.isMainTable && !table.isSecondaryTable && table.columns) {
-          // Si es una tabla individual, filtrar la columna status
           table.columns = table.columns.filter(col => col.name !== 'status');
         }
         return table;
@@ -29,6 +65,9 @@ class TableService {
 
   async getData(tableName, options = {}) {
     try {
+      // Set current table when getting data
+      this.setCurrentTable(tableName);
+      
       const response = await fetch(`${this.apiUrl}/${tableName}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -475,15 +514,14 @@ class TableService {
 
   async deleteTable(tableName) {
     try {
-      // Clean the table name but preserve brackets
+      // Clean the table name to remove special characters
       const cleanTableName = tableName.trim()
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-        .replace(/[^a-zA-Z0-9_\[\]]/g, '_') // Allow brackets in addition to alphanumeric and underscore
-        .toLowerCase()
-        .replace(/_+/g, '_')
-        .replace(/^_|_$/g, '');
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9_]/g, '_')
+        .toLowerCase();
 
+      // Now proceed with table deletion
       const response = await fetch(`${this.apiUrl}/tables/${cleanTableName}`, {
         method: 'DELETE',
         headers: {
@@ -498,20 +536,19 @@ class TableService {
         
         if (contentType && contentType.includes('application/json')) {
           const error = await response.json();
-          errorMessage = error.message;
+          errorMessage = error.message || error.error;
         } else {
           errorMessage = await response.text();
+          // If we got HTML, provide a more user-friendly error
+          if (errorMessage.includes('<!DOCTYPE')) {
+            errorMessage = `Failed to delete table ${tableName}`;
+          }
         }
         
-        throw new Error(errorMessage || `Failed to delete table ${tableName}`);
+        throw new Error(errorMessage);
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        return await response.json();
-      }
-      
-      return { message: `Table ${tableName} deleted successfully` };
+      return { success: true, message: `Table ${tableName} deleted successfully` };
     } catch (error) {
       console.error('Error deleting table:', error);
       throw error;
@@ -782,15 +819,37 @@ class TableService {
 
   async createTableGroup(mainTableName, secondaryTableName, groupType = 'default') {
     try {
-      const response = await axios.post(`${this.apiUrl}/tables/group`, {
-        mainTableName,
-        secondaryTableName,
-        groupType
+      const response = await fetch(`${this.apiUrl}/tables/group`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          mainTableName,
+          secondaryTableName,
+          groupType
+        })
       });
-      return response.data;
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server response was not JSON');
+      }
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Error al crear el grupo de tablas');
+      }
+
+      return data;
     } catch (error) {
       console.error('Error creating table group:', error);
-      throw new Error(error.response?.data?.message || 'Error al crear el grupo de tablas');
+      if (error.name === 'SyntaxError') {
+        throw new Error('Error en la respuesta del servidor');
+      }
+      throw new Error(error.message || 'Error al crear el grupo de tablas');
     }
   }
 
@@ -911,6 +970,20 @@ class TableService {
       return await response.json();
     } catch (error) {
       console.error('Error updating table order:', error);
+      throw error;
+    }
+  }
+
+  async getChildTables(parentTableName) {
+    try {
+      const response = await fetch(`${this.apiUrl}/tables/${parentTableName}/children`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const tables = await response.json();
+      return tables.map(table => table.name);
+    } catch (error) {
+      console.error('Error getting child tables:', error);
       throw error;
     }
   }

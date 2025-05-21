@@ -29,6 +29,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [statusModal, setStatusModal] = useState({ isOpen: false, rowId: null, currentStatus: null });
   const [showPDFParser, setShowPDFParser] = useState(false);
+  const [tableTitle, setTableTitle] = useState('');
+  const [availableChildTables, setAvailableChildTables] = useState([]);
+  const [selectedChildTable, setSelectedChildTable] = useState('');
+  const [parentData, setParentData] = useState(null);
+  const [parentTableName, setParentTableName] = useState(null);
 
   useEffect(() => {
     console.log('Setting sorted data:', data);
@@ -42,79 +47,162 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     setFilteredData(data);
   }, [data]);
 
-  // Search handler
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      console.log('No search term, showing all data:', sortedData);
-      setFilteredData(sortedData);
-      return;
-    }
-
-    const searchTermLower = searchTerm.toLowerCase();
-    const filtered = sortedData.filter(row => 
-      Object.values(row).some(value => 
-        value !== null && 
-        String(value).toLowerCase().includes(searchTermLower)
-      )
-    );
-    console.log('Filtered data:', filtered);
-    setFilteredData(filtered);
-  }, [searchTerm, sortedData]);
-
-  const handleSort = (column) => {
-    let direction = 'asc';
-    if (sortConfig.key === column && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    } else if (sortConfig.key === column && sortConfig.direction === 'desc') {
-      direction = null;
-    }
-
-    setSortConfig({ key: direction ? column : null, direction });
-
-    if (!direction) {
-      setSortedData([...data]);
-      return;
-    }
-
-    const sorted = [...filteredData].sort((a, b) => {
-      if (a[column] === null) return 1;
-      if (b[column] === null) return -1;
+    if (tableName) {
+      // Get formatted title from tableService
+      const title = tableService.formatTableTitle(tableName);
+      setTableTitle(title);
       
-      let comparison = 0;
-      if (typeof a[column] === 'number') {
-        comparison = a[column] - b[column];
-      } else {
-        comparison = String(a[column]).localeCompare(String(b[column]));
-      }
-      
-      return direction === 'asc' ? comparison : -comparison;
-    });
-
-    setSortedData(sorted);
-  };
-
-  const getSortIcon = (column) => {
-    if (sortConfig.key !== column) {
-      return <span className="sort-icon">↕</span>;
+      // Log for debugging
+      console.log('Table name:', tableName);
+      console.log('Formatted title:', title);
     }
-    return sortConfig.direction === 'asc' ? 
-      <span className="sort-icon active">↑</span> : 
-      <span className="sort-icon active">↓</span>;
-  };
+  }, [tableName]);
 
-  const refreshData = useCallback(async () => {
-    if (onRefresh) {
-      setIsRefreshing(true);
+  // Add effect to fetch available child tables
+  useEffect(() => {
+    const fetchChildTables = async () => {
+      if (!tableName || tableName.includes('→')) return;
       try {
-        await onRefresh();
+        const childTables = await tableService.getChildTables(tableName);
+        setAvailableChildTables(childTables);
       } catch (error) {
-        console.error('Failed to refresh data:', error);
-      } finally {
-        setIsRefreshing(false);
+        console.error('Error fetching child tables:', error);
       }
-    }
-  }, [onRefresh]);
+    };
 
+    fetchChildTables();
+  }, [tableName]);
+
+  // Add effect to handle parent table data
+  useEffect(() => {
+    const loadParentData = async () => {
+      if (!tableName || tableName.includes('→')) return;
+      
+      try {
+        // Store the parent table name
+        setParentTableName(tableName);
+        // Load parent table data
+        const parentResult = await tableService.getData(tableName);
+        // Ensure parentResult is an array
+        setParentData(Array.isArray(parentResult) ? parentResult : []);
+      } catch (error) {
+        console.error('Error loading parent data:', error);
+        setParentData([]);
+      }
+    };
+
+    loadParentData();
+  }, [tableName]);
+
+  // If no data but we have a tableName, show empty state with capture button
+  if ((!data || !Array.isArray(data) || data.length === 0) && tableName) {
+    return (
+      <div className="data-table-container">
+        {tableName && (
+          <div className="table-title">
+            <h2>{tableTitle}</h2>
+            {!tableName.includes('→') && availableChildTables.length > 0 && (
+              <div className="child-table-selector">
+                <select
+                  value={selectedChildTable}
+                  onChange={(e) => handleChildTableSelect(e.target.value)}
+                  className="child-table-dropdown"
+                >
+                  <option value="">Seleccionar tabla secundaria...</option>
+                  {availableChildTables.map(childTable => (
+                    <option key={childTable} value={childTable}>
+                      {tableService.formatSingleTableName(childTable)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {tableName.includes('→') && (
+              <div className="table-subtitle">
+                {(() => {
+                  const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
+                  return (
+                    <>
+                      <div className="parent-table">
+                        <span className="table-label">Tabla Principal:</span>
+                        {tableService.formatSingleTableName(parentTable)}
+                      </div>
+                      <div className="child-table">
+                        <span className="table-label">Tabla Secundaria:</span>
+                        {tableService.formatSingleTableName(childTable)}
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+        <div className="table-controls">
+          <div className="search-section">
+            <button
+              className="capturador-btn"
+              onClick={() => setShowPDFParser(true)}
+              title="Abrir Capturador"
+            >
+              <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+                <path d="M10 9H8" />
+              </svg>
+              Capturador
+            </button>
+          </div>
+        </div>
+
+        {/* Show parent table if available */}
+        {parentData && parentData.length > 0 && (
+          <div className="parent-table-section">
+            <h3>{tableService.formatSingleTableName(parentTableName)}</h3>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  {Object.keys(parentData[0] || {}).map(column => (
+                    <th key={column}>{column}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {parentData.map((row, rowIndex) => (
+                  <tr key={rowIndex}>
+                    {Object.values(row).map((value, colIndex) => (
+                      <td key={colIndex}>{value}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="empty-table-state">
+          <p>No hay datos en esta tabla.</p>
+          <p>Utilice el botón "Capturador" para comenzar a agregar registros.</p>
+        </div>
+
+        {/* PDF Parser Modal */}
+        <Modal 
+          isOpen={showPDFParser} 
+          onClose={() => setShowPDFParser(false)}
+          size="full"
+        >
+          <div style={{ height: '100%', width: '100%' }}>
+            <PDFParser selectedTable={tableName} onDataCaptured={onRefresh} />
+          </div>
+        </Modal>
+      </div>
+    );
+  }
+
+  // If no data and no tableName, show no data message
   if (!data || !Array.isArray(data) || data.length === 0) {
     return <div className="no-data">No data available</div>;
   }
@@ -350,11 +438,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     try {
       await tableService.deleteRow(tableName, deleteConfirm.id);
       setDeleteConfirm(null);
+      
+      // Remove the deleted row from the current data
+      const updatedData = filteredData.filter(row => row.id !== deleteConfirm.id);
+      setFilteredData(updatedData);
+      
+      // Show success message
+      toast.success('Row deleted successfully');
+      
+      // Refresh the data
       if (onRefresh) {
-        await refreshData();
+        await onRefresh();
       }
     } catch (error) {
       console.error('Error deleting row:', error);
+      toast.error('Failed to delete row');
     }
   };
 
@@ -447,7 +545,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         </div>
       );
     }
-    return row[column] !== null ? String(row[column]) : '-';
+    
+    const cellValue = row[column] !== null ? String(row[column]) : '-';
+    return (
+      <div className="cell-content">
+        {cellValue}
+        <span 
+          className="edit-pencil" 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleCellDoubleClick(rowIndex, column, row[column]);
+          }}
+        >
+          ✎
+        </span>
+      </div>
+    );
   };
 
   // Reorder columns to put status after ID only for related tables
@@ -460,8 +573,97 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
   }
 
+  // Add the getSortIcon function
+  const getSortIcon = (column) => {
+    if (!sortConfig || sortConfig.key !== column) {
+      return (
+        <span className="sort-icon">
+          ⇅
+        </span>
+      );
+    }
+
+    return (
+      <span className={`sort-icon active`}>
+        {sortConfig.direction === 'ascending' ? '↑' : '↓'}
+      </span>
+    );
+  };
+
+  // Add handleSort function
+  const handleSort = (column) => {
+    let direction = 'ascending';
+    if (sortConfig.key === column && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+
+    setSortConfig({ key: column, direction });
+
+    const sorted = [...filteredData].sort((a, b) => {
+      if (a[column] === null) return 1;
+      if (b[column] === null) return -1;
+      if (a[column] === b[column]) return 0;
+
+      const compareResult = a[column] < b[column] ? -1 : 1;
+      return direction === 'ascending' ? compareResult : -compareResult;
+    });
+
+    setFilteredData(sorted);
+  };
+
+  // Update handleChildTableSelect
+  const handleChildTableSelect = async (childTableName) => {
+    if (!childTableName) return;
+    setSelectedChildTable(childTableName);
+    const combinedTableName = `${tableName} → ${childTableName}`;
+    // Trigger refresh with new combined table name
+    if (onRefresh) {
+      await onRefresh(combinedTableName);
+    }
+  };
+
   return (
     <div className="data-table-container">
+      {tableTitle && (
+        <div className="table-title">
+          <h2>{tableTitle}</h2>
+          {!tableName.includes('→') && availableChildTables.length > 0 && (
+            <div className="child-table-selector">
+              <select
+                value={selectedChildTable}
+                onChange={(e) => handleChildTableSelect(e.target.value)}
+                className="child-table-dropdown"
+              >
+                <option value="">Seleccionar tabla secundaria...</option>
+                {availableChildTables.map(childTable => (
+                  <option key={childTable} value={childTable}>
+                    {tableService.formatSingleTableName(childTable)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {tableName.includes('→') && (
+            <div className="table-subtitle">
+              {(() => {
+                const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
+                return (
+                  <>
+                    <div className="parent-table">
+                      <span className="table-label">Tabla Principal:</span>
+                      {tableService.formatSingleTableName(parentTable)}
+                    </div>
+                    <div className="child-table">
+                      <span className="table-label">Tabla Secundaria:</span>
+                      {tableService.formatSingleTableName(childTable)}
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
       <div className="table-controls">
         <div className="search-section">
           <input
@@ -505,7 +707,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
             <tr>
               <th className="email-column">
                 <div className="header-content">
-                  <span>Email</span>
+                  <span>Actions</span>
                 </div>
               </th>
               {reorderedColumns.map(column => (
@@ -520,36 +722,44 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   </div>
                 </th>
               ))}
-              <th className="delete-column">
-                <div className="header-content">
-                  <span>Delete</span>
-                </div>
-              </th>
             </tr>
           </thead>
           <tbody>
             {filteredData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
-                <td className="email-cell">
-                  <button 
-                    className="email-icon-btn" 
-                    title="Send Email"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEmailClick(row);
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="email-icon">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                      <path d="M22 6l-10 7L2 6" />
-                    </svg>
-                  </button>
+                <td className="actions-cell">
+                  <div className="row-actions">
+                    <button 
+                      className="email-icon-btn" 
+                      title="Send Email"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEmailClick(row);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="email-icon">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                        <path d="M22 6l-10 7L2 6" />
+                      </svg>
+                    </button>
+                    <button 
+                      className="delete-btn" 
+                      title="Delete Row"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(row);
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="delete-icon">
+                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
                 {reorderedColumns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
-                    onMouseDown={(e) => handleCellSelection(e, rowIndex, column, row[column])}
-                    onDoubleClick={() => handleCellDoubleClick(rowIndex, column, row[column])}
+                    onClick={(e) => handleCellSelection(e, rowIndex, column, row[column])}
                     className={`editable-cell ${column === 'id' ? 'id-cell' : ''} ${
                       column === 'status' ? 'status-cell' : ''
                     } ${selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''}`}
@@ -557,20 +767,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     {renderCell(row, rowIndex, column)}
                   </td>
                 ))}
-                <td className="delete-cell">
-                  <button 
-                    className="delete-btn" 
-                    title="Delete Row"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteClick(row);
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="delete-icon">
-                      <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>

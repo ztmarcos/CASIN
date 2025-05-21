@@ -48,11 +48,21 @@ const SortableTableItem = ({
   };
 
   const handleCardClick = (e) => {
-    // Don't trigger if clicking delete button or input
-    if (e.target.closest('.delete-button') || e.target.closest('.table-name-input')) {
+    // Don't trigger if clicking delete button, input, or drag handles
+    if (e.target.closest('.delete-button') || e.target.closest('.table-name-input') || e.target.closest('.drag-handle')) {
       return;
     }
     onTableClick(table, isSecondary);
+  };
+
+  const getDisplayName = () => {
+    if (isSecondary) {
+      return table.name;
+    }
+    if (table.secondaryTable) {
+      return `${table.name} ⟶ ${table.secondaryTable.name}`;
+    }
+    return table.name;
   };
 
   return (
@@ -60,53 +70,63 @@ const SortableTableItem = ({
       ref={setNodeRef}
       style={style}
       className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''} ${isSecondary ? 'secondary' : 'primary'}`}
-      onClick={handleCardClick}
-      onDoubleClick={(e) => {
-        if (!e.target.closest('.delete-button') && !e.target.closest('.table-name-input')) {
-          onTableDoubleClick(e, table);
-        }
-      }}
+      onDoubleClick={(e) => onTableDoubleClick(e, table)}
     >
-      <div className="table-info">
-        {!isSecondary && table.secondaryTable && (
-          <span className="expand-icon" {...attributes} {...listeners}>
-            {expandedTables.has(table.name) ? '▼' : '▶'}
-          </span>
-        )}
-        {isEditing ? (
-          <input
-            type="text"
-            value={editingName}
-            onChange={onNameChange}
-            onKeyDown={onNameSubmit}
-            autoFocus
-            onClick={(e) => e.stopPropagation()}
-            className="table-name-input"
-          />
-        ) : (
-          <div className="table-name-container" {...attributes} {...listeners}>
-            <span className="table-name">{table.name}</span>
-            {isSecondary && <span className="table-badge">Child</span>}
-            {!isSecondary && table.secondaryTable && <span className="table-badge">Parent</span>}
-          </div>
-        )}
+      <div className="drag-handle left" {...attributes} {...listeners}>
+        <span className="drag-icon">⋮</span>
       </div>
-      <div className="table-actions">
-        {table.relationshipType && (
-          <span className="table-relationship-indicator" data-type={table.relationshipType}>
-            {isSecondary ? 'Details' : 'GROUP'}
-          </span>
-        )}
-        <button
-          className="delete-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteTable(e, table);
-          }}
-          title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
-        >
-          ×
-        </button>
+
+      <div className="table-content" onClick={handleCardClick}>
+        <div className="table-info">
+          {!isSecondary && table.secondaryTable && (
+            <span className="expand-icon">
+              {expandedTables.has(table.name) ? '▼' : '▶'}
+            </span>
+          )}
+          {isEditing ? (
+            <input
+              type="text"
+              value={editingName}
+              onChange={onNameChange}
+              onKeyDown={onNameSubmit}
+              onBlur={() => {
+                setEditingTable(null);
+                setEditingName('');
+              }}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              className="table-name-input"
+            />
+          ) : (
+            <div className="table-name-container">
+              {table.secondaryTable && !isSecondary && (
+                <span className="relationship-icon" title="Combined Table">🔗</span>
+              )}
+              <span 
+                className="table-name"
+                title={getDisplayName()}
+              >
+                {getDisplayName()}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="table-actions">
+          <button
+            className="delete-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteTable(e, table);
+            }}
+            title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div className="drag-handle right" {...attributes} {...listeners}>
+        <span className="drag-icon">⋮</span>
       </div>
     </div>
   );
@@ -143,6 +163,13 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   useEffect(() => {
     loadTables();
   }, []);
+
+  // Add effect to collapse when table is selected
+  useEffect(() => {
+    if (selectedTableProp) {
+      setIsCollapsed(true);
+    }
+  }, [selectedTableProp]);
 
   const loadTables = async () => {
     try {
@@ -231,12 +258,20 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   };
 
   const handleTableClick = (table, isSecondary = false) => {
-    if (!isSecondary && table.secondaryTable) {
-      toggleTableExpand(table.name);
-    }
+    // Always select the table when clicked
     if (onTableSelect) {
-      onTableSelect(table);
+      // If it's a parent table with a child, pass the parent name
+      if (!isSecondary && table.secondaryTable) {
+        onTableSelect(table);
+        toggleTableExpand(table.name);
+      } else {
+        // For single tables or child tables, pass the table directly
+        onTableSelect(table);
+      }
     }
+    
+    // Collapse the section after selection
+    setIsCollapsed(true);
   };
 
   const handleTableDoubleClick = (e, table) => {
@@ -286,12 +321,20 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     e.stopPropagation();
     const isChild = table.isSecondaryTable;
     const message = isChild 
-      ? `Are you sure you want to delete the child table "${table.name}"? This will also remove its relationship with the parent table.`
+      ? `Are you sure you want to delete the child table "${table.name}"?`
       : `Are you sure you want to delete table "${table.name}"?${table.secondaryTable ? ' This will also delete its child table.' : ''}`;
 
     if (window.confirm(message)) {
       try {
         setIsLoading(true);
+        
+        // If it's a parent table with a child, delete the child first
+        if (table.secondaryTable) {
+          await tableService.deleteTable(table.secondaryTable.name);
+          // Small delay to ensure child table is deleted
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
         await tableService.deleteTable(table.name);
         toast.success(`Table ${table.name} deleted successfully`);
         await loadTables(); // Reload tables after deletion
@@ -314,15 +357,19 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
     if (over && active.id !== over.id) {
       try {
-        // Update local state
+        // Get the current tables array
+        const oldIndex = tables.findIndex((item) => item.name === active.id);
+        const newIndex = tables.findIndex((item) => item.name === over.id);
+
+        // Update local state first
         setTables((items) => {
-          const oldIndex = items.findIndex((item) => item.name === active.id);
-          const newIndex = items.findIndex((item) => item.name === over.id);
-          return arrayMove(items, oldIndex, newIndex);
+          const reorderedItems = arrayMove(items, oldIndex, newIndex);
+          return reorderedItems;
         });
 
-        // Get the new order of table names
+        // Get the new order of table names after reordering
         const newOrder = tables.map(table => table.name);
+        newOrder.splice(newIndex, 0, newOrder.splice(oldIndex, 1)[0]);
 
         // Persist the order in the backend
         await tableService.updateTableOrder(newOrder);
@@ -337,7 +384,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   };
 
   return (
-    <div className="table-manager">
+    <div className={`table-manager ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="section-header">
         <h3>
           <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
@@ -356,59 +403,57 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      {!isCollapsed && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="tables-list">
-            <SortableContext
-              items={tables.map(table => table.name)}
-              strategy={verticalListSortingStrategy}
-            >
-              {tables.map(table => (
-                <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
-                  <SortableTableItem
-                    table={table}
-                    isSecondary={false}
-                    onTableClick={handleTableClick}
-                    onTableDoubleClick={handleTableDoubleClick}
-                    onDeleteTable={handleDeleteTable}
-                    isSelected={selectedTableProp === table.name}
-                    isEditing={editingTable === table}
-                    editingName={editingName}
-                    onNameChange={handleNameChange}
-                    onNameSubmit={handleNameSubmit}
-                    expandedTables={expandedTables}
-                  />
-                  
-                  {table.secondaryTable && expandedTables.has(table.name) && (
-                    <div className="secondary-table-container">
-                      <div className="connector-line"></div>
-                      <div className="secondary-table">
-                        <SortableTableItem
-                          table={table.secondaryTable}
-                          isSecondary={true}
-                          onTableClick={handleTableClick}
-                          onTableDoubleClick={handleTableDoubleClick}
-                          onDeleteTable={handleDeleteTable}
-                          isSelected={selectedTableProp === table.secondaryTable.name}
-                          isEditing={editingTable === table.secondaryTable}
-                          editingName={editingName}
-                          onNameChange={handleNameChange}
-                          onNameSubmit={handleNameSubmit}
-                          expandedTables={expandedTables}
-                        />
-                      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="tables-list">
+          <SortableContext
+            items={tables.map(table => table.name)}
+            strategy={verticalListSortingStrategy}
+          >
+            {tables.map(table => (
+              <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
+                <SortableTableItem
+                  table={table}
+                  isSecondary={false}
+                  onTableClick={handleTableClick}
+                  onTableDoubleClick={handleTableDoubleClick}
+                  onDeleteTable={handleDeleteTable}
+                  isSelected={selectedTableProp === table.name}
+                  isEditing={editingTable === table}
+                  editingName={editingName}
+                  onNameChange={handleNameChange}
+                  onNameSubmit={handleNameSubmit}
+                  expandedTables={expandedTables}
+                />
+                
+                {table.secondaryTable && expandedTables.has(table.name) && (
+                  <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
+                    <div className="connector-line"></div>
+                    <div className="secondary-table">
+                      <SortableTableItem
+                        table={table.secondaryTable}
+                        isSecondary={true}
+                        onTableClick={handleTableClick}
+                        onTableDoubleClick={handleTableDoubleClick}
+                        onDeleteTable={handleDeleteTable}
+                        isSelected={selectedTableProp === table.secondaryTable.name}
+                        isEditing={editingTable === table.secondaryTable}
+                        editingName={editingName}
+                        onNameChange={handleNameChange}
+                        onNameSubmit={handleNameSubmit}
+                        expandedTables={expandedTables}
+                      />
                     </div>
-                  )}
-                </div>
-              ))}
-            </SortableContext>
-          </div>
-        </DndContext>
-      )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </SortableContext>
+        </div>
+      </DndContext>
 
       {/* Modal for creating tables */}
       <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
