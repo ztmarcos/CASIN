@@ -209,9 +209,8 @@ const NotionComponent = () => {
     if (column === 'Status' || column === 'Estado') {
       const statusOptions = [
         { value: '', label: 'Seleccionar estado...' },
-        { value: 'No iniciado', label: 'No iniciado' },
         { value: 'En progreso', label: 'En progreso' },
-        { value: 'Completado', label: 'Completado' }
+        { value: 'Listo', label: 'Listo' }
       ];
 
       return (
