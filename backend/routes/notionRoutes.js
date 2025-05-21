@@ -293,7 +293,11 @@ router.post('/update-cell', async (req, res) => {
     const { taskId, column, value, propertyType } = req.body;
 
     if (!taskId || !column) {
-      return res.status(400).json({ message: 'Missing required fields' });
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        error: null
+      });
     }
 
     // Get the database structure to check property types
@@ -334,16 +338,18 @@ router.post('/update-cell', async (req, res) => {
                 }]
               };
             } else {
-              // If no user found, return error
-              return res.status(400).json({ 
-                message: `No Notion user found with email: ${value}` 
+              return res.status(400).json({
+                success: false,
+                message: 'No Notion user found',
+                error: `No Notion user found with email: ${value}`
               });
             }
           } catch (error) {
             console.error('Error finding Notion user:', error);
-            return res.status(500).json({ 
+            return res.status(500).json({
+              success: false,
               message: 'Error finding Notion user',
-              error: error.message 
+              error: error.message
             });
           }
         }
@@ -373,44 +379,37 @@ router.post('/update-cell', async (req, res) => {
         };
         break;
 
-      case 'number':
-        properties[column] = {
-          number: value ? Number(value) : null
-        };
-        break;
-
-      case 'rich_text':
       default:
         properties[column] = {
           rich_text: [{ text: { content: value || '' } }]
         };
-        break;
     }
 
     // Update the Notion page
     try {
-      const response = await notion.pages.update({
+      await notion.pages.update({
         page_id: taskId,
         properties
       });
 
-      res.json({ 
-        message: 'Cell updated successfully',
-        data: response
+      res.status(200).json({
+        success: true,
+        message: 'Cell updated successfully'
       });
     } catch (error) {
       console.error('Error updating Notion page:', error);
-      res.status(500).json({ 
+      return res.status(error.status || 500).json({
+        success: false,
         message: 'Failed to update Notion page',
-        error: error.message,
-        details: error.body || error.response?.data
+        error: error.message || 'Unknown error occurred'
       });
     }
   } catch (error) {
     console.error('Error in update-cell route:', error);
-    res.status(500).json({ 
+    return res.status(error.status || 500).json({
+      success: false,
       message: 'Failed to process update request',
-      error: error.message 
+      error: error.message || 'Unknown error occurred'
     });
   }
 });

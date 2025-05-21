@@ -103,38 +103,22 @@ const NotionComponent = () => {
       let responseData;
       try {
         responseData = await response.json();
-        console.log('Raw server response:', responseData);
       } catch (parseError) {
         console.error('Failed to parse server response:', parseError);
         throw new Error('Server response was not valid JSON');
       }
 
       if (!response.ok) {
-        console.error('Server returned error:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: responseData
-        });
-        throw new Error(responseData.message || `Failed to update cell: ${response.statusText}`);
+        throw new Error(responseData.error || responseData.message || 'Failed to update cell');
       }
 
-      // Update local state
-      setTasks(prevTasks => 
-        prevTasks.map(task => 
-          task.id === taskId ? { ...task, [column]: value } : task
-        )
-      );
+      // Refresh the data after successful update
+      await fetchTasks();
 
       return responseData;
-    } catch (err) {
-      console.error('Error in handleCellEdit:', {
-        error: err,
-        message: err.message,
-        stack: err.stack
-      });
-      setError(err.message);
-      setTimeout(() => setError(null), 3000);
-      throw err;
+    } catch (error) {
+      console.error('Error in handleCellEdit:', { error });
+      throw error;
     }
   };
 
@@ -229,6 +213,8 @@ const NotionComponent = () => {
               .catch(error => {
                 console.error('Status update failed:', error);
                 e.target.value = value || '';
+                setError(error.message);
+                setTimeout(() => setError(null), 5000);
               });
           }}
           onClick={(e) => e.stopPropagation()}
