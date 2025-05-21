@@ -1498,4 +1498,124 @@ td[data-priority="Low"] {
   border-radius: 4px;
   position: absolute;
   z-index: 1000;
+}
+
+/* Modal Styles */
+.notion-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.notion-modal {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.notion-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.5rem;
+  color: #37352f;
+}
+
+.notion-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notion-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.notion-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.notion-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Button Styles */
+.notion-button.create {
+  background-color: #2eaadc;
+  color: white;
+}
+
+.notion-button.create:hover {
+  background-color: #2591bb;
+}
+
+.notion-button.cancel {
+  background-color: #e0e0e0;
+  color: #37352f;
+}
+
+.notion-button.cancel:hover {
+  background-color: #d0d0d0;
+}
+
+.notion-button.delete {
+  background-color: transparent;
+  color: #e03e3e;
+  padding: 4px 8px;
+  border: 1px solid #e03e3e;
+  font-size: 12px;
+}
+
+.notion-button.delete:hover {
+  background-color: #fff1f1;
+}
+
+.notion-button.delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Actions cell */
+.notion-actions-cell {
+  width: 60px;
+  text-align: center;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .notion-modal {
+    width: 95%;
+    padding: 16px;
+  }
+
+  .notion-modal-actions {
+    flex-direction: column;
+  }
+
+  .notion-button {
+    width: 100%;
+  }
 } 

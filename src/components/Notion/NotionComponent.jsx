@@ -3,6 +3,7 @@ import NotionErrorBoundary from './NotionErrorBoundary';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
+const API_BASE_URL = 'http://localhost:3001';
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -41,6 +42,15 @@ const NotionComponent = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingCell, setEditingCell] = useState(null);
   const [editingValue, setEditingValue] = useState('');
+  const [isNewTaskModalOpen, setIsNewTaskModalOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    Encargado: '',
+    Status: '',
+    'Fecha límite': '',
+    Descripción: ''
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const notionDatabaseUrl = "https://www.notion.so/1f7385297f9a80a3bc5bcec8a3c2debb?v=1f7385297f9a80de9d66000cfeaf4e83";
 
@@ -48,7 +58,7 @@ const NotionComponent = () => {
   const fetchNotionUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await fetch('/api/notion/users');
+      const response = await fetch(`${API_BASE_URL}/api/notion/users`);
       if (!response.ok) {
         throw new Error('Failed to fetch Notion users');
       }
@@ -67,7 +77,7 @@ const NotionComponent = () => {
   const fetchTasks = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await fetch('/api/notion/raw-table');
+      const response = await fetch(`${API_BASE_URL}/api/notion/raw-table`);
       if (!response.ok) {
         throw new Error('Failed to fetch tasks');
       }
@@ -87,7 +97,7 @@ const NotionComponent = () => {
     try {
       console.log('Updating cell:', { taskId, column, value, propertyType });
 
-      const response = await fetch('/api/notion/update-cell', {
+      const response = await fetch(`${API_BASE_URL}/api/notion/update-cell`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,6 +364,72 @@ const NotionComponent = () => {
     return '';
   };
 
+  // Create new task
+  const handleCreateTask = async () => {
+    try {
+      console.log('Creating task with data:', newTask);
+      
+      const response = await fetch(`${API_BASE_URL}/api/notion/create-task`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newTask),
+      });
+
+      const responseData = await response.json();
+      console.log('Server response:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.message || 'Failed to create task');
+      }
+
+      await fetchTasks();
+      setIsNewTaskModalOpen(false);
+      setNewTask({
+        title: '',
+        Encargado: '',
+        Status: '',
+        'Fecha límite': '',
+        Descripción: ''
+      });
+    } catch (error) {
+      console.error('Error creating task:', error);
+      setError(error.message || 'Failed to create task');
+      // Keep modal open on error
+    }
+  };
+
+  // Delete task
+  const handleDeleteTask = async (taskId) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) {
+      return;
+    }
+
+    try {
+      console.log('Deleting task:', taskId);
+      setIsDeleting(true);
+      
+      const response = await fetch(`${API_BASE_URL}/api/notion/delete-task/${taskId}`, {
+        method: 'DELETE',
+      });
+
+      const responseData = await response.json();
+      console.log('Delete response:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.error || responseData.message || 'Failed to delete task');
+      }
+
+      await fetchTasks();
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      setError(error.message || 'Failed to delete task');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoadingUsers) return <div className="notion-loading">Loading...</div>;
   if (error) return <div className="notion-error">{error}</div>;
 
@@ -364,6 +440,12 @@ const NotionComponent = () => {
           <h2>Tareas</h2>
           <div className="notion-controls">
             <div className="notion-actions">
+              <button 
+                onClick={() => setIsNewTaskModalOpen(true)} 
+                className="notion-button create"
+              >
+                + Nueva Tarea
+              </button>
               <button 
                 onClick={fetchTasks} 
                 className="notion-button refresh"
@@ -382,6 +464,65 @@ const NotionComponent = () => {
             </div>
           </div>
         </div>
+
+        {/* New Task Modal */}
+        {isNewTaskModalOpen && (
+          <div className="notion-modal-overlay">
+            <div className="notion-modal">
+              <h3>Nueva Tarea</h3>
+              <div className="notion-modal-content">
+                <input
+                  type="text"
+                  placeholder="Título"
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                  className="notion-input"
+                />
+                <select
+                  value={newTask.Encargado}
+                  onChange={(e) => setNewTask({ ...newTask, Encargado: e.target.value })}
+                  className="notion-select"
+                >
+                  <option value="">Seleccionar encargado...</option>
+                  {notionUsers.map(user => (
+                    <option key={user.id} value={user.email}>
+                      {user.name} ({user.email})
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={newTask.Status}
+                  onChange={(e) => setNewTask({ ...newTask, Status: e.target.value })}
+                  className="notion-select"
+                >
+                  <option value="">Seleccionar estado...</option>
+                  <option value="En progreso">En progreso</option>
+                  <option value="Listo">Listo</option>
+                </select>
+                <input
+                  type="date"
+                  value={newTask['Fecha límite']}
+                  onChange={(e) => setNewTask({ ...newTask, 'Fecha límite': e.target.value })}
+                  className="notion-input"
+                />
+                <textarea
+                  placeholder="Descripción"
+                  value={newTask.Descripción}
+                  onChange={(e) => setNewTask({ ...newTask, Descripción: e.target.value })}
+                  className="notion-textarea"
+                />
+                <div className="notion-modal-actions">
+                  <button onClick={() => setIsNewTaskModalOpen(false)} className="notion-button cancel">
+                    Cancelar
+                  </button>
+                  <button onClick={handleCreateTask} className="notion-button create">
+                    Crear Tarea
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="notion-table-container">
           <table className="notion-table">
@@ -403,6 +544,7 @@ const NotionComponent = () => {
                     </div>
                   </th>
                 ))}
+                <th className="notion-th">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -416,6 +558,15 @@ const NotionComponent = () => {
                       {renderCell(task, column.key)}
                     </td>
                   ))}
+                  <td className="notion-td notion-actions-cell">
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="notion-button delete"
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? '...' : '🗑️'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
