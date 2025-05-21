@@ -32,9 +32,13 @@ notion.users.me().then(response => {
 router.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
   
+  // Handle preflight requests
   if (req.method === 'OPTIONS') {
+    if (req.path === '/update-cells') {
+      res.header('Access-Control-Allow-Methods', 'POST');
+    }
     return res.status(200).end();
   }
   
@@ -316,64 +320,98 @@ router.post('/update-cell', async (req, res) => {
     const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
     const database = await notion.databases.retrieve({ database_id: databaseId });
     
-    // Use provided propertyType or get it from database
-    const actualPropertyType = propertyType || database.properties[column]?.type || 'rich_text';
+    // Get the actual property type from the database
+    const dbPropertyType = database.properties[column]?.type;
+    const actualPropertyType = propertyType || dbPropertyType || 'rich_text';
+
+    console.log('Property info:', {
+      column,
+      value,
+      propertyType,
+      dbPropertyType,
+      actualPropertyType
+    });
 
     // Prepare the property update based on the column type
     const properties = {};
     
-    switch (actualPropertyType) {
-      case 'status':
-        properties[column] = {
-          status: {
-            name: value
-          }
-        };
-        break;
-
-      case 'people':
-        if (!value) {
-          properties[column] = { people: [] };
-        } else {
-          // If value is already a user ID, use it directly
-          properties[column] = {
-            people: [{ id: value }]
-          };
-        }
-        break;
-
-      case 'title':
-        properties[column] = {
-          title: [{ text: { content: value || '' } }]
-        };
-        break;
-
-      case 'select':
-        properties[column] = {
-          select: value ? { name: value } : null
-        };
-        break;
-
-      case 'multi_select':
-        properties[column] = {
-          multi_select: Array.isArray(value) ? value.map(name => ({ name })) : []
-        };
-        break;
-
-      case 'date':
-        properties[column] = {
-          date: value ? { start: value } : null
-        };
-        break;
-
-      default:
-        properties[column] = {
-          rich_text: [{ text: { content: value || '' } }]
-        };
-    }
-
-    // Update the Notion page
     try {
+      switch (actualPropertyType) {
+        case 'title':
+          properties[column] = {
+            title: [{ text: { content: String(value || '') } }]
+          };
+          break;
+
+        case 'rich_text':
+          properties[column] = {
+            rich_text: [{ text: { content: String(value || '') } }]
+          };
+          break;
+
+        case 'select':
+          properties[column] = {
+            select: value ? { name: String(value) } : null
+          };
+          break;
+
+        case 'multi_select':
+          const multiSelectValues = Array.isArray(value) ? value : [value];
+          properties[column] = {
+            multi_select: multiSelectValues.map(v => ({ name: String(v) }))
+          };
+          break;
+
+        case 'date':
+          properties[column] = {
+            date: value ? { start: value, end: null } : null
+          };
+          break;
+
+        case 'people':
+          properties[column] = {
+            people: value ? [{ id: value }] : []
+          };
+          break;
+
+        case 'checkbox':
+          properties[column] = {
+            checkbox: Boolean(value)
+          };
+          break;
+
+        case 'number':
+          properties[column] = {
+            number: value !== null && value !== undefined ? Number(value) : null
+          };
+          break;
+
+        case 'url':
+          properties[column] = {
+            url: value || null
+          };
+          break;
+
+        case 'email':
+          properties[column] = {
+            email: value || null
+          };
+          break;
+
+        case 'phone_number':
+          properties[column] = {
+            phone_number: value || null
+          };
+          break;
+
+        default:
+          // For any unknown type, try as rich_text
+          properties[column] = {
+            rich_text: [{ text: { content: String(value || '') } }]
+          };
+      }
+
+      // Update the Notion page
       await notion.pages.update({
         page_id: taskId,
         properties
@@ -383,20 +421,20 @@ router.post('/update-cell', async (req, res) => {
         success: true,
         message: 'Cell updated successfully'
       });
-    } catch (error) {
-      console.error('Error updating Notion page:', error);
-      return res.status(error.status || 500).json({
+    } catch (updateError) {
+      console.error('Error updating Notion page:', updateError);
+      return res.status(400).json({
         success: false,
         message: 'Failed to update Notion page',
-        error: error.message || 'Unknown error occurred'
+        error: updateError.message
       });
     }
   } catch (error) {
     console.error('Error in update-cell route:', error);
-    return res.status(error.status || 500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to process update request',
-      error: error.message || 'Unknown error occurred'
+      error: error.message
     });
   }
 });
@@ -596,6 +634,147 @@ router.post('/create-task', async (req, res) => {
       error: 'Failed to create Notion task',
       details: error.message,
       stack: error.stack
+    });
+  }
+});
+
+// Batch update multiple cells
+router.post('/update-cells', async (req, res) => {
+  try {
+    const { updates } = req.body;
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Updates array is required',
+        error: null
+      });
+    }
+
+    // Get the database structure to check property types
+    const databaseId = process.env.VITE_NOTION_DATABASE_ID || process.env.NOTION_DATABASE_ID;
+    const database = await notion.databases.retrieve({ database_id: databaseId });
+
+    // Process all updates in parallel
+    const updatePromises = updates.map(async ({ taskId, column, value, propertyType }) => {
+      try {
+        // Get the actual property type from the database
+        const dbPropertyType = database.properties[column]?.type;
+        const actualPropertyType = propertyType || dbPropertyType || 'rich_text';
+
+        // Prepare the property update based on the column type
+        const properties = {};
+        
+        switch (actualPropertyType) {
+          case 'title':
+            properties[column] = {
+              title: [{ text: { content: String(value || '') } }]
+            };
+            break;
+
+          case 'rich_text':
+            properties[column] = {
+              rich_text: [{ text: { content: String(value || '') } }]
+            };
+            break;
+
+          case 'select':
+            properties[column] = {
+              select: value ? { name: String(value) } : null
+            };
+            break;
+
+          case 'multi_select':
+            const multiSelectValues = Array.isArray(value) ? value : [value];
+            properties[column] = {
+              multi_select: multiSelectValues.map(v => ({ name: String(v) }))
+            };
+            break;
+
+          case 'date':
+            properties[column] = {
+              date: value ? { start: value, end: null } : null
+            };
+            break;
+
+          case 'people':
+            properties[column] = {
+              people: value ? [{ id: value }] : []
+            };
+            break;
+
+          case 'checkbox':
+            properties[column] = {
+              checkbox: Boolean(value)
+            };
+            break;
+
+          case 'number':
+            properties[column] = {
+              number: value !== null && value !== undefined ? Number(value) : null
+            };
+            break;
+
+          case 'url':
+            properties[column] = {
+              url: value || null
+            };
+            break;
+
+          case 'email':
+            properties[column] = {
+              email: value || null
+            };
+            break;
+
+          case 'phone_number':
+            properties[column] = {
+              phone_number: value || null
+            };
+            break;
+
+          default:
+            properties[column] = {
+              rich_text: [{ text: { content: String(value || '') } }]
+            };
+        }
+
+        // Update the Notion page
+        await notion.pages.update({
+          page_id: taskId,
+          properties
+        });
+
+        return { taskId, success: true };
+      } catch (error) {
+        console.error(`Error updating task ${taskId}:`, error);
+        return { taskId, success: false, error: error.message };
+      }
+    });
+
+    // Wait for all updates to complete
+    const results = await Promise.all(updatePromises);
+
+    // Check if any updates failed
+    const failedUpdates = results.filter(result => !result.success);
+    if (failedUpdates.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Some updates failed',
+        errors: failedUpdates
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'All cells updated successfully'
+    });
+  } catch (error) {
+    console.error('Error in batch update:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process batch update',
+      error: error.message
     });
   }
 });

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import NotionErrorBoundary from './NotionErrorBoundary';
+import TaskModal from './TaskModal';
+import { PROPERTY_CONFIGS } from './config';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
@@ -51,6 +53,8 @@ const NotionComponent = () => {
     Descripción: ''
   });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
 
   const notionDatabaseUrl = "https://www.notion.so/1f7385297f9a80a3bc5bcec8a3c2debb?v=1f7385297f9a80de9d66000cfeaf4e83";
 
@@ -97,6 +101,7 @@ const NotionComponent = () => {
     try {
       console.log('Updating cell:', { taskId, column, value, propertyType });
 
+      // Send the raw value and let the backend handle the formatting
       const response = await fetch(`${API_BASE_URL}/notion/update-cell`, {
         method: 'POST',
         headers: {
@@ -110,24 +115,19 @@ const NotionComponent = () => {
         }),
       });
 
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse server response:', parseError);
-        throw new Error('Server response was not valid JSON');
-      }
-
       if (!response.ok) {
-        throw new Error(responseData.error || responseData.message || 'Failed to update cell');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update cell');
       }
 
-      // Refresh the data after successful update
+      const responseData = await response.json();
+      
+      // Refresh the tasks list after successful update
       await fetchTasks();
-
+      
       return responseData;
     } catch (error) {
-      console.error('Error in handleCellEdit:', { error });
+      console.error('Error in handleCellEdit:', error);
       throw error;
     }
   };
@@ -173,119 +173,51 @@ const NotionComponent = () => {
   };
 
   const renderCell = (task, column) => {
-    const isEditing = editingCell?.taskId === task.id && editingCell?.column === column;
     const value = task[column];
 
+    // Handle null or undefined values
+    if (value === null || value === undefined) {
+      return <div className="notion-td-content">-</div>;
+    }
+
+    // Handle user/person type (Encargado field)
     if (column === 'Encargado') {
-      // Handle Notion's people property format
-      const currentUser = Array.isArray(value) && value.length > 0 ? value[0] : null;
-      const currentUserId = currentUser?.id || '';
-      
-      console.log('Current Encargado value:', { value, currentUserId, currentUser });
-
-      // Always show dropdown for Encargado
-      return (
-        <select
-          className="notion-select"
-          value={currentUserId}
-          onChange={(e) => {
-            const selectedValue = e.target.value;
-            handleCellEdit(task.id, column, selectedValue, 'people')
-              .catch(error => {
-                console.error('Failed to update assignee:', error);
-              });
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <option value="">Seleccionar encargado...</option>
-          {notionUsers.map(user => (
-            <option key={user.id} value={user.id}>
-              {user.name || user.email}
-            </option>
-          ))}
-        </select>
-      );
+      // Check if value is an array of user objects
+      if (Array.isArray(value) && value.length > 0) {
+        const user = value[0];
+        return (
+          <div className="notion-td-content">
+            {user.name || user.person?.email || 'Sin asignar'}
+          </div>
+        );
+      }
+      // Handle single user object
+      if (value.person) {
+        return (
+          <div className="notion-td-content">
+            {value.name || value.person.email || 'Sin asignar'}
+          </div>
+        );
+      }
+      // Handle string value (email)
+      if (typeof value === 'string') {
+        return <div className="notion-td-content">{value}</div>;
+      }
+      return <div className="notion-td-content">Sin asignar</div>;
     }
 
-    if (column === 'Status') {
-      return (
-        <select
-          className="notion-select"
-          value={value || ''}
-          onChange={(e) => {
-            const selectedValue = e.target.value;
-            if (!selectedValue && value) {
-              console.log('Preventing empty status update');
-              e.target.value = value;
-              return;
-            }
-
-            handleCellEdit(task.id, column, selectedValue, 'status')
-              .catch(error => {
-                console.error('Status update failed:', error);
-                e.target.value = value || '';
-                setError(error.message);
-                setTimeout(() => setError(null), 5000);
-              });
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <option value="">Seleccionar estado...</option>
-          <option value="Por iniciar">Por iniciar</option>
-          <option value="En progreso">En progreso</option>
-          <option value="Listo">Listo</option>
-        </select>
-      );
+    // Handle date fields
+    if (column === 'Fecha límite') {
+      return <div className="notion-td-content">{formatDate(value)}</div>;
     }
 
-    if (column === 'Priority' || column === 'Prioridad') {
-      return (
-        <select
-          className="notion-select"
-          value={value || ''}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <option value="">Select priority...</option>
-          <option value="Alta">Alta</option>
-          <option value="Media">Media</option>
-          <option value="Baja">Baja</option>
-        </select>
-      );
+    // Handle regular string values
+    if (typeof value === 'string') {
+      return <div className="notion-td-content">{value}</div>;
     }
 
-    if (column.toLowerCase().includes('date') || column.toLowerCase().includes('fecha')) {
-      return (
-        <input
-          type="date"
-          className="notion-input"
-          value={value || ''}
-          onChange={(e) => handleCellEdit(task.id, column, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-        />
-      );
-    }
-
-    // Enhanced text cell rendering
-    return isEditing ? (
-      <input
-        type="text"
-        className="notion-input"
-        value={editingValue}
-        onChange={handleInputChange}
-        onBlur={handleInputBlur}
-        onKeyDown={handleInputKeyPress}
-        onClick={(e) => e.stopPropagation()}
-        autoFocus
-      />
-    ) : (
-      <div
-        className="notion-td-editable"
-        onClick={() => startEditing(task, column)}
-      >
-        {value || ''}
-      </div>
-    );
+    // For any other type of value, convert to string
+    return <div className="notion-td-content">{String(value)}</div>;
   };
 
   // Initial data fetch
@@ -404,53 +336,69 @@ const NotionComponent = () => {
     }
   };
 
-  // Create new task
-  const handleCreateTask = async () => {
+  // Add handleTaskSave function
+  const handleTaskSave = async (taskData) => {
     try {
-      console.log('Creating task with data:', newTask);
+      // Close modal immediately
+      setIsTaskModalOpen(false);
+      setSelectedTask(null);
+
+      if (taskData.isNew) {
+        // For new tasks, create a new task with all properties
+        const properties = {};
+        
+        for (const update of taskData.updates) {
+          const config = PROPERTY_CONFIGS[update.column];
+          if (config) {
+            properties[update.column] = config.formatValue(update.value);
+          }
+        }
+
+        console.log('Creating new task with properties:', properties);
+
+        const response = await fetch(`${API_BASE_URL}/notion/create-task`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ properties }),
+        });
+
+        const responseData = await response.json();
+        if (!response.ok) {
+          throw new Error(responseData.message || 'Failed to create task');
+        }
+      } else {
+        // For existing tasks, send updates one by one
+        for (const update of taskData.updates) {
+          const response = await fetch(`${API_BASE_URL}/notion/update-cell`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              taskId: update.taskId,
+              column: update.column,
+              value: update.value,
+              propertyType: PROPERTY_CONFIGS[update.column]?.type
+            }),
+          });
+
+          const responseData = await response.json();
+          if (!response.ok) {
+            throw new Error(responseData.message || responseData.error || 'Failed to update task');
+          }
+        }
+      }
       
-      const response = await fetch(`${API_BASE_URL}/notion/create-task`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          title: newTask.title,
-          Status: newTask.Status || 'Por iniciar',
-          'Fecha límite': newTask['Fecha límite'] || null,
-          Encargado: newTask.Encargado || null,
-          Descripción: newTask.Descripción || ''
-        }),
-      });
-
-      // Try to parse JSON response
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Server returned invalid response');
-      }
-
-      if (!response.ok) {
-        throw new Error(responseData.error || responseData.message || 'Failed to create task');
-      }
-
-      console.log('Task created successfully:', responseData);
+      // Fetch tasks only once after all updates are complete
       await fetchTasks();
-      setIsNewTaskModalOpen(false);
-      setNewTask({
-        title: '',
-        Encargado: '',
-        Status: '',
-        'Fecha límite': '',
-        Descripción: ''
-      });
     } catch (error) {
-      console.error('Error creating task:', error);
-      setError(error.message || 'Failed to create task');
-      // Keep modal open on error
+      console.error('Error saving task:', error);
+      // Reopen modal if there was an error
+      setIsTaskModalOpen(true);
+      setSelectedTask(taskData.updates[0]?.taskId ? { id: taskData.updates[0].taskId } : null);
+      throw error;
     }
   };
 
@@ -465,7 +413,10 @@ const NotionComponent = () => {
           <div className="notion-controls">
             <div className="notion-actions">
               <button 
-                onClick={() => setIsNewTaskModalOpen(true)} 
+                onClick={() => {
+                  setSelectedTask(null);
+                  setIsTaskModalOpen(true);
+                }} 
                 className="notion-button create"
               >
                 + Nueva Tarea
@@ -488,66 +439,6 @@ const NotionComponent = () => {
             </div>
           </div>
         </div>
-
-        {/* New Task Modal */}
-        {isNewTaskModalOpen && (
-          <div className="notion-modal-overlay">
-            <div className="notion-modal">
-              <h3>Nueva Tarea</h3>
-              <div className="notion-modal-content">
-                <input
-                  type="text"
-                  placeholder="Título"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="notion-input"
-                />
-                <select
-                  value={newTask.Encargado}
-                  onChange={(e) => setNewTask({ ...newTask, Encargado: e.target.value })}
-                  className="notion-select"
-                >
-                  <option value="">Seleccionar encargado...</option>
-                  {notionUsers.map(user => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={newTask.Status}
-                  onChange={(e) => setNewTask({ ...newTask, Status: e.target.value })}
-                  className="notion-select"
-                >
-                  <option value="">Seleccionar estado...</option>
-                  <option value="Por iniciar">Por iniciar</option>
-                  <option value="En progreso">En progreso</option>
-                  <option value="Listo">Listo</option>
-                </select>
-                <input
-                  type="date"
-                  value={newTask['Fecha límite']}
-                  onChange={(e) => setNewTask({ ...newTask, 'Fecha límite': e.target.value })}
-                  className="notion-input"
-                />
-                <textarea
-                  placeholder="Descripción"
-                  value={newTask.Descripción}
-                  onChange={(e) => setNewTask({ ...newTask, Descripción: e.target.value })}
-                  className="notion-textarea"
-                />
-                <div className="notion-modal-actions">
-                  <button onClick={() => setIsNewTaskModalOpen(false)} className="notion-button cancel">
-                    Cancelar
-                  </button>
-                  <button onClick={handleCreateTask} className="notion-button create">
-                    Crear Tarea
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="notion-table-container">
           <table className="notion-table">
@@ -574,7 +465,14 @@ const NotionComponent = () => {
             </thead>
             <tbody>
               {paginatedTasks.map((task, index) => (
-                <tr key={task.id || index} className="notion-tr">
+                <tr 
+                  key={task.id || index} 
+                  className="notion-tr"
+                  onClick={() => {
+                    setSelectedTask(task);
+                    setIsTaskModalOpen(true);
+                  }}
+                >
                   {TABLE_COLUMNS.map(column => (
                     <td 
                       key={`${task.id}-${column.key}`} 
@@ -585,11 +483,15 @@ const NotionComponent = () => {
                   ))}
                   <td className="notion-td notion-actions-cell">
                     <button
-                      onClick={() => handleDeleteTask(task.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteTask(task.id);
+                      }}
                       className="notion-button delete"
                       disabled={isDeleting}
+                      title="Delete task"
                     >
-                      {isDeleting ? '...' : '🗑️'}
+                      {isDeleting ? '...' : '✕'}
                     </button>
                   </td>
                 </tr>
@@ -619,6 +521,17 @@ const NotionComponent = () => {
             </button>
           </div>
         )}
+
+        <TaskModal
+          task={selectedTask}
+          isOpen={isTaskModalOpen}
+          onClose={() => {
+            setIsTaskModalOpen(false);
+            setSelectedTask(null);
+          }}
+          onSave={handleTaskSave}
+          notionUsers={notionUsers}
+        />
       </div>
     </NotionErrorBoundary>
   );

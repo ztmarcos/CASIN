@@ -67,6 +67,7 @@ cron.schedule('0 9 * * *', async () => {
 // Print available routes
 console.log('Available routes:');
 console.log('- /api/prospeccion');
+console.log('- /api/files');
 console.log('- /api/data');
 console.log('- /api/policy-status');
 console.log('- /api/drive');
