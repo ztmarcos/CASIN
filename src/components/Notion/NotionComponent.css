@@ -54,13 +54,67 @@
   line-height: 20px;
 }
 
-.status-en-progreso {
-  background-color: #0F62FE;
+/* Light theme status colors */
+.status-listo {
+  background-color: #22C55E;  /* Green */
   color: white;
 }
 
-.status-listo {
-  background-color: #2DA44E;
+.status-en-progreso {
+  background-color: #F59E0B;  /* Yellow */
+  color: white;
+}
+
+.status-sin-iniciar {
+  background-color: #6B7280;  /* Gray */
+  color: white;
+}
+
+/* Dark theme status colors */
+.dark .status-listo {
+  background-color: #15803D;  /* Darker Green */
+  color: white;
+}
+
+.dark .status-en-progreso {
+  background-color: #B45309;  /* Darker Yellow */
+  color: white;
+}
+
+.dark .status-sin-iniciar {
+  background-color: #4B5563;  /* Darker Gray */
+  color: white;
+}
+
+/* Status Select Styles */
+.notion-select option[value="Listo"] {
+  background-color: #22C55E;
+  color: white;
+}
+
+.notion-select option[value="En progreso"] {
+  background-color: #F59E0B;
+  color: white;
+}
+
+.notion-select option[value="Sin iniciar"] {
+  background-color: #6B7280;
+  color: white;
+}
+
+/* Dark theme status select */
+.dark .notion-select option[value="Listo"] {
+  background-color: #15803D;
+  color: white;
+}
+
+.dark .notion-select option[value="En progreso"] {
+  background-color: #B45309;
+  color: white;
+}
+
+.dark .notion-select option[value="Sin iniciar"] {
+  background-color: #4B5563;
   color: white;
 }
 
@@ -493,20 +547,13 @@ input.notion-td-editable {
   color: inherit;
 }
 
-/* Status colors */
-.status-not-started {
-  background-color: #ffe8e8;
-  color: #e03e3e;
-}
-
-.status-in-progress {
-  background-color: #fff3dc;
-  color: #d9730d;
-}
-
-.status-completed {
-  background-color: #dbedff;
-  color: #0b6e99;
+/* Remove duplicate status classes */
+.status-not-started,
+.status-in-progress,
+.status-completed,
+.status-blocked,
+.status-default {
+  display: none;
 }
 
 /* Priority colors */
@@ -693,17 +740,19 @@ td[data-priority="Low"] {
 }
 
 /* Status colors */
-.notion-td[data-status="Done"],
-.notion-td[data-status="Completed"] {
-  color: #0b7285;
+.notion-td[data-status="Listo"],
+.notion-td[data-status="Done"] {
+  color: #85b697;
 }
 
+.notion-td[data-status="En progreso"],
 .notion-td[data-status="In Progress"] {
-  color: #ad6700;
+  color: #e1c597;
 }
 
+.notion-td[data-status="Sin iniciar"],
 .notion-td[data-status="Not Started"] {
-  color: #9b2c2c;
+  color: #6B7280;
 }
 
 /* Links */
@@ -1651,4 +1700,36 @@ td[data-priority="Low"] {
 
 .notion-tr:hover .notion-actions-cell {
   opacity: 1;
+}
+
+/* Table cell status colors */
+.notion-td[data-status="Listo"],
+.notion-td[data-status="Done"] {
+  color: #bde7cc;
+}
+
+.notion-td[data-status="En progreso"],
+.notion-td[data-status="In Progress"] {
+  color: #efd6ab;
+}
+
+.notion-td[data-status="Sin iniciar"],
+.notion-td[data-status="Not Started"] {
+  color: #6B7280;
+}
+
+/* Dark theme table cell status colors */
+.dark .notion-td[data-status="Listo"],
+.dark .notion-td[data-status="Done"] {
+  color: #91d5aa;
+}
+
+.dark .notion-td[data-status="En progreso"],
+.dark .notion-td[data-status="In Progress"] {
+  color: #e0b28f;
+}
+
+.dark .notion-td[data-status="Sin iniciar"],
+.dark .notion-td[data-status="Not Started"] {
+  color: #4B5563;
 } 

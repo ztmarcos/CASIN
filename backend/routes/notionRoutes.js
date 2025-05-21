@@ -355,6 +355,22 @@ router.post('/update-cell', async (req, res) => {
           };
           break;
 
+        case 'status':
+          // Get the status ID from the database options
+          const statusOptions = database.properties[column]?.status?.options || [];
+          const statusOption = statusOptions.find(option => option.name === value);
+          
+          if (!statusOption) {
+            throw new Error(`Invalid status value: ${value}. Valid options are: ${statusOptions.map(opt => opt.name).join(', ')}`);
+          }
+
+          properties[column] = {
+            status: {
+              id: statusOption.id
+            }
+          };
+          break;
+
         case 'multi_select':
           const multiSelectValues = Array.isArray(value) ? value : [value];
           properties[column] = {
@@ -369,8 +385,9 @@ router.post('/update-cell', async (req, res) => {
           break;
 
         case 'people':
+          // Handle people property - value should be a user ID
           properties[column] = {
-            people: value ? [{ id: value }] : []
+            people: value ? [{ object: 'user', id: value }] : []
           };
           break;
 
@@ -410,6 +427,8 @@ router.post('/update-cell', async (req, res) => {
             rich_text: [{ text: { content: String(value || '') } }]
           };
       }
+
+      console.log('Updating Notion page with properties:', properties);
 
       // Update the Notion page
       await notion.pages.update({

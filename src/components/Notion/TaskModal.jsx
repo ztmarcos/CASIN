@@ -58,26 +58,37 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
 
     try {
       setIsSaving(true);
+      console.log('Preparing task data from:', editedTask);
+      
       const updates = Object.entries(editedTask)
         .filter(([key, value]) => key !== 'id' && value !== undefined)
         .map(([column, value]) => {
           const config = PROPERTY_CONFIGS[column];
-          if (!config) return null;
+          if (!config) {
+            console.warn(`No config found for column: ${column}`);
+            return null;
+          }
 
-          return {
+          const update = {
             taskId: editedTask.id,
             column,
             value: value || '', // Send raw value, let the parent component handle formatting
             propertyType: config.type
           };
+          console.log(`Prepared update for ${column}:`, update);
+          return update;
         })
         .filter(Boolean);
 
+      console.log('Final updates to send:', updates);
+
       await onSave({
         isNew: !editedTask.id,
-        updates
+        updates,
+        properties: editedTask
       });
       
+      // Only close the modal after successful save
       onClose();
     } catch (error) {
       console.error('Error saving task:', error);

@@ -16,20 +16,27 @@ export const PROPERTY_CONFIGS = {
   Status: {
     type: 'status',
     formatValue: value => ({
-      status: { name: value || 'Por iniciar' }
+      status: {
+        name: value || 'Por iniciar'
+      }
     })
   },
   'Fecha límite': {
     type: 'date',
     formatValue: value => ({
-      date: value ? { start: value, time_zone: null } : null
+      date: value ? {
+        start: value,
+        time_zone: null
+      } : null
     })
   },
   Descripción: {
     type: 'rich_text',
     formatValue: value => ({
       rich_text: [{
-        text: { content: value || '' }
+        text: {
+          content: value || ''
+        }
       }]
     })
   },

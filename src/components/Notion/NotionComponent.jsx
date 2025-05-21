@@ -180,6 +180,15 @@ const NotionComponent = () => {
       return <div className="notion-td-content">-</div>;
     }
 
+    // Handle status field
+    if (column === 'Status') {
+      return (
+        <div className={`notion-status ${getStatusClass(value)}`}>
+          {value || 'Sin iniciar'}
+        </div>
+      );
+    }
+
     // Handle user/person type (Encargado field)
     if (column === 'Encargado') {
       // Check if value is an array of user objects
@@ -288,12 +297,19 @@ const NotionComponent = () => {
 
   // Get status class
   const getStatusClass = (status) => {
-    if (!status) return '';
-    const statusLower = status.toLowerCase();
-    if (statusLower.includes('not started')) return 'status-not-started';
-    if (statusLower.includes('in progress')) return 'status-in-progress';
-    if (statusLower.includes('completed')) return 'status-completed';
-    return '';
+    if (!status) return 'status-sin-iniciar';
+    
+    // Normalize the status string by removing extra spaces and converting to lowercase
+    const normalizedStatus = status.trim().toLowerCase();
+    
+    // Map of normalized status values to their corresponding classes
+    const statusClasses = {
+      'listo': 'status-listo',
+      'en progreso': 'status-en-progreso',
+      'sin iniciar': 'status-sin-iniciar'
+    };
+    
+    return statusClasses[normalizedStatus] || 'status-sin-iniciar';
   };
 
   // Delete task
@@ -339,20 +355,17 @@ const NotionComponent = () => {
   // Add handleTaskSave function
   const handleTaskSave = async (taskData) => {
     try {
-      // Close modal immediately
-      setIsTaskModalOpen(false);
-      setSelectedTask(null);
-
       if (taskData.isNew) {
-        // For new tasks, create a new task with all properties
+        // For new tasks, format properties according to Notion's API requirements
         const properties = {};
-        
-        for (const update of taskData.updates) {
-          const config = PROPERTY_CONFIGS[update.column];
-          if (config) {
-            properties[update.column] = config.formatValue(update.value);
-          }
-        }
+        Object.entries(taskData.properties)
+          .filter(([key]) => key !== 'id')
+          .forEach(([column, value]) => {
+            const config = PROPERTY_CONFIGS[column];
+            if (config) {
+              properties[column] = config.formatValue(value);
+            }
+          });
 
         console.log('Creating new task with properties:', properties);
 
@@ -364,40 +377,72 @@ const NotionComponent = () => {
           body: JSON.stringify({ properties }),
         });
 
-        const responseData = await response.json();
         if (!response.ok) {
-          throw new Error(responseData.message || 'Failed to create task');
+          const responseData = await response.json();
+          throw new Error(responseData.message || responseData.error || 'Failed to create task');
         }
+
+        // Fetch tasks only once after successful creation
+        await fetchTasks();
+        
+        // Close modal only after successful save
+        setIsTaskModalOpen(false);
+        setSelectedTask(null);
       } else {
         // For existing tasks, send updates one by one
+        console.log('Updating existing task with data:', taskData);
+        
         for (const update of taskData.updates) {
+          const config = PROPERTY_CONFIGS[update.column];
+          if (!config) {
+            console.warn('No config found for column:', update.column);
+            continue;
+          }
+
+          console.log('Processing update:', {
+            column: update.column,
+            value: update.value,
+            config: config
+          });
+          
+          const requestBody = {
+            taskId: update.taskId,
+            column: update.column,
+            value: update.value,  // Send the raw value, let the backend handle formatting
+            propertyType: config.type
+          };
+          
+          console.log('Sending request to update-cell:', requestBody);
+          
           const response = await fetch(`${API_BASE_URL}/notion/update-cell`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              taskId: update.taskId,
-              column: update.column,
-              value: update.value,
-              propertyType: PROPERTY_CONFIGS[update.column]?.type
-            }),
+            body: JSON.stringify(requestBody),
           });
 
           const responseData = await response.json();
+          console.log('Update response:', responseData);
+
           if (!response.ok) {
+            console.error('Update failed:', {
+              request: requestBody,
+              response: responseData
+            });
             throw new Error(responseData.message || responseData.error || 'Failed to update task');
           }
         }
+        
+        // Fetch tasks only once after all updates are complete
+        await fetchTasks();
+        
+        // Close modal only after successful save
+        setIsTaskModalOpen(false);
+        setSelectedTask(null);
       }
-      
-      // Fetch tasks only once after all updates are complete
-      await fetchTasks();
     } catch (error) {
       console.error('Error saving task:', error);
-      // Reopen modal if there was an error
-      setIsTaskModalOpen(true);
-      setSelectedTask(taskData.updates[0]?.taskId ? { id: taskData.updates[0].taskId } : null);
       throw error;
     }
   };
