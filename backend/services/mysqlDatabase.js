@@ -1,6 +1,32 @@
 const mysql = require('mysql2');
 const dbConfig = require('../config/database');
-const TABLE_DEFINITIONS = require('./tableDefinitions');
+
+// Table type definitions
+const TABLE_DEFINITIONS = {
+  'GRUPAL': {
+    main: {
+      columns: [
+        { name: 'name', type: 'VARCHAR(255)', nullable: false },
+        { name: 'description', type: 'TEXT', nullable: true },
+        { name: 'status', type: 'VARCHAR(50)', nullable: false, default: 'active' }
+      ]
+    },
+    secondary: {
+      columns: [
+        { name: 'name', type: 'VARCHAR(255)', nullable: false },
+        { name: 'description', type: 'TEXT', nullable: true },
+        { name: 'status', type: 'VARCHAR(50)', nullable: false, default: 'active' }
+      ]
+    }
+  },
+  'INDIVIDUAL': {
+    columns: [
+      { name: 'name', type: 'VARCHAR(255)', nullable: false },
+      { name: 'description', type: 'TEXT', nullable: true },
+      { name: 'status', type: 'VARCHAR(50)', nullable: false, default: 'active' }
+    ]
+  }
+};
 
 class MySQLDatabaseService {
   constructor() {
@@ -29,38 +55,9 @@ class MySQLDatabaseService {
   async getTables() {
     let connection;
     try {
-      console.log('Getting connection for getTables...');
       connection = await this.getConnection();
-      console.log('Connection obtained successfully');
       
-      // Create table_order table if it doesn't exist
-      console.log('Creating table_order table if not exists...');
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS table_order (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          table_name VARCHAR(255) NOT NULL,
-          display_order INT NOT NULL,
-          UNIQUE KEY unique_table_name (table_name)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-      `);
-      console.log('table_order table created/verified');
-
-      // Create table_relationships table if it doesn't exist
-      console.log('Creating table_relationships table if not exists...');
-      await connection.execute(`
-        CREATE TABLE IF NOT EXISTS table_relationships (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          main_table_name VARCHAR(255) NOT NULL,
-          secondary_table_name VARCHAR(255) NOT NULL,
-          relationship_type VARCHAR(50) DEFAULT NULL,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          UNIQUE KEY unique_relationship (main_table_name, secondary_table_name)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-      `);
-      console.log('table_relationships table created/verified');
-      
-      // Get tables with their order
-      console.log('Fetching tables from information_schema...');
+      // First get all tables
       const [tables] = await connection.execute(`
         SELECT DISTINCT 
           t.TABLE_NAME,
@@ -73,70 +70,48 @@ class MySQLDatabaseService {
           AND t.TABLE_TYPE = 'BASE TABLE'
         ORDER BY tord.display_order IS NULL, tord.display_order, t.TABLE_NAME
       `);
-      console.log('Found tables:', tables.map(t => t.TABLE_NAME));
 
-      // Get columns for each table
-      console.log('Getting columns for each table...');
-      const tablesWithColumns = await Promise.all(tables.map(async (table) => {
-        try {
-          console.log(`Getting columns for table ${table.TABLE_NAME}...`);
-          const [columns] = await connection.execute(
-            'SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION',
-            [table.TABLE_NAME]
-          );
-          console.log(`Got ${columns.length} columns for table ${table.TABLE_NAME}`);
+      // Get all relationships at once to avoid multiple queries
+      const [relationships] = await connection.execute(
+        'SELECT * FROM table_relationships'
+      );
 
-          // Get relationships for this table
-          console.log(`Getting relationships for table ${table.TABLE_NAME}...`);
-          const [relationships] = await connection.execute(
-            'SELECT * FROM table_relationships WHERE LOWER(main_table_name) = LOWER(?) OR LOWER(secondary_table_name) = LOWER(?)',
-            [table.TABLE_NAME, table.TABLE_NAME]
-          );
-          console.log(`Found ${relationships.length} relationships for table ${table.TABLE_NAME}`);
+      // Process tables with their relationships
+      const processedTables = await Promise.all(tables.map(async (table) => {
+        const tableName = table.TABLE_NAME.toLowerCase();
+        
+        // Find relationships for this table
+        const asMain = relationships.find(r => r.main_table_name.toLowerCase() === tableName);
+        const asSecondary = relationships.find(r => r.secondary_table_name.toLowerCase() === tableName);
 
-          const isMainTable = relationships.some(rel => rel.main_table_name.toLowerCase() === table.TABLE_NAME.toLowerCase());
-          const isSecondaryTable = relationships.some(rel => rel.secondary_table_name.toLowerCase() === table.TABLE_NAME.toLowerCase());
+        // Get columns for the table
+        const [columns] = await connection.execute(
+          'SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, COLUMN_KEY FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION',
+          [table.TABLE_NAME]
+        );
 
-          return {
-            name: table.TABLE_NAME,
-            columns: columns.map(col => ({
-              name: col.COLUMN_NAME,
-              type: col.DATA_TYPE.toUpperCase(),
-              nullable: col.IS_NULLABLE === 'YES',
-              key: col.COLUMN_KEY
-            })),
-            isMainTable,
-            isSecondaryTable
-          };
-        } catch (error) {
-          console.error(`Error processing table ${table.TABLE_NAME}:`, {
-            message: error.message,
-            stack: error.stack,
-            code: error.code,
-            sqlMessage: error.sqlMessage,
-            sqlState: error.sqlState
-          });
-          throw error;
-        }
+        return {
+          name: table.TABLE_NAME,
+          displayOrder: table.display_order,
+          columns: columns.map(col => ({
+            name: col.COLUMN_NAME,
+            type: col.DATA_TYPE,
+            isNullable: col.IS_NULLABLE === 'YES',
+            isPrimary: col.COLUMN_KEY === 'PRI'
+          })),
+          isMainTable: !!asMain,
+          isSecondaryTable: !!asSecondary,
+          relationshipType: asMain ? 'main' : (asSecondary ? 'secondary' : null),
+          relatedTableName: asMain ? asMain.secondary_table_name : (asSecondary ? asSecondary.main_table_name : null)
+        };
       }));
 
-      console.log('Successfully processed all tables');
-      return tablesWithColumns;
+      return processedTables;
     } catch (error) {
-      console.error('Detailed error in getTables:', {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-        sqlMessage: error.sqlMessage,
-        sqlState: error.sqlState
-      });
+      console.error('Error getting tables:', error);
       throw error;
     } finally {
-      if (connection) {
-        console.log('Releasing connection...');
-        connection.release();
-        console.log('Connection released');
-      }
+      if (connection) connection.release();
     }
   }
 
@@ -147,15 +122,32 @@ class MySQLDatabaseService {
       console.log('Query values:', values);
       
       connection = await this.getConnection();
-      const [results] = await connection.execute(query, values);
       
-      console.log('Query executed successfully. Results count:', results.length);
+      // Transform values before executing query
+      const transformedValues = values.map(value => {
+        if (value === null || value === undefined) {
+          return null;
+        }
+        if (typeof value === 'object' && !(value instanceof Date)) {
+          return JSON.stringify(value);
+        }
+        if (value instanceof Date) {
+          return value.toISOString().split('T')[0];
+        }
+        return value;
+      });
+      
+      console.log('Transformed values:', transformedValues);
+      const [results] = await connection.execute(query, transformedValues);
+      
+      console.log('Query executed successfully. Results:', results);
       return results;
     } catch (error) {
       console.error('Error executing query:', {
         error: error.message,
         query,
-        values
+        values,
+        stack: error.stack
       });
       throw error;
     } finally {
@@ -188,105 +180,107 @@ class MySQLDatabaseService {
 
   async insertData(tableName, data) {
     let connection;
+    let lastValues = null; // track values used in the last query for debugging
     try {
-      connection = await this.getConnection();
-
-      // Handle both single object and array of objects
-      const dataArray = Array.isArray(data) ? data : [data];
-      
-      const results = [];
-      for (const item of dataArray) {
-        // Create a copy of data to avoid modifying the original
-        const cleanedData = {};
+        console.log('Starting insertData with:', {
+            tableName,
+            data: JSON.stringify(data, null, 2)
+        });
+        
+        connection = await this.pool.getConnection();
+        
+        // Verify table exists
+        const [tables] = await connection.execute(
+            'SHOW TABLES LIKE ?',
+            [tableName]
+        );
+        
+        if (!tables || tables.length === 0) {
+            throw new Error(`Table '${tableName}' does not exist`);
+        }
         
         // Get table structure
-        const [tableColumns] = await connection.execute(
-          'SHOW COLUMNS FROM `' + tableName + '`',
-          []
+        const [columns] = await connection.execute(
+            'SHOW COLUMNS FROM ' + connection.escapeId(tableName)
         );
+        
+        console.log('Table structure:', columns);
+        
+        // Normalise data: support single object or array of objects
+        const dataArray = Array.isArray(data) ? data : [data];
 
-        // Clean and validate data based on column types
-        tableColumns.forEach(column => {
-          const value = item[column.Field];
-          
-          if (value === undefined || value === null || value === '') {
-            cleanedData[column.Field] = null;
-            return;
-          }
+        let affectedRows = 0;
+        for (const record of dataArray) {
+            const columnNames = [];
+            const values = [];
+            const placeholders = [];
 
-          // Handle different column types
-          if (column.Type.includes('int')) {
-            cleanedData[column.Field] = parseInt(value) || null;
-          } else if (column.Type.includes('decimal')) {
-            const numStr = value.toString().replace(/[$,]/g, '');
-            cleanedData[column.Field] = parseFloat(numStr) || null;
-          } else if (column.Type.includes('varchar')) {
-            const maxLength = parseInt(column.Type.match(/\((\d+)\)/)?.[1]) || 255;
-            cleanedData[column.Field] = String(value).substring(0, maxLength);
-          } else if (column.Type.includes('date')) {
-            try {
-              if (typeof value === 'string') {
-                if (value.includes('/')) {
-                  const [day, month, year] = value.split('/');
-                  cleanedData[column.Field] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                } else if (value.includes('-')) {
-                  cleanedData[column.Field] = value;
+            for (const column of columns) {
+                if (column.Field === 'id') continue;
+
+                let value = record[column.Field];
+                if (value === undefined) continue;
+
+                // Basic sanitisation for object/date types
+                if (value === null) {
+                    // leave as null
+                } else if (typeof value === 'object' && !(value instanceof Date)) {
+                    value = JSON.stringify(value);
+                } else if (value instanceof Date) {
+                    value = value.toISOString().split('T')[0];
                 }
-              } else if (value instanceof Date) {
-                cleanedData[column.Field] = value.toISOString().split('T')[0];
-              }
-            } catch (e) {
-              console.warn(`Failed to parse date: ${value}`, e);
-              cleanedData[column.Field] = null;
+
+                // Add backticks directly to column names to avoid escaping issues
+                columnNames.push(`\`${column.Field}\``);
+                values.push(value);
+                placeholders.push('?');
             }
-          } else {
-            cleanedData[column.Field] = value;
-          }
-        });
 
-        // Remove id if present
-        delete cleanedData.id;
+            if (columnNames.length === 0) {
+                console.warn('Skipping record with no valid columns:', record);
+                continue;
+            }
 
-        // Get only the columns that exist in the data
-        const insertColumns = Object.keys(cleanedData);
-        const values = Object.values(cleanedData);
-        const placeholders = insertColumns.map(() => '?').join(',');
-        
-        // Build the query with proper escaping
-        const query = `INSERT INTO \`${tableName}\` (\`${insertColumns.join('`,`')}\`) VALUES (${placeholders})`;
-        console.log('Insert query:', query);
-        console.log('Values:', values);
-        
-        const [result] = await connection.execute(query, values);
-        results.push({
-          ...result,
-          insertId: result.insertId
-        });
+            // Use backticks directly for table name to avoid escaping issues
+            const query = `INSERT INTO \`${tableName}\` (${columnNames.join(',')}) VALUES (${placeholders.join(',')})`;
+                            
+            console.log('Executing INSERT:', query, values);
+            lastValues = values; // store for potential error reporting
 
-        // If this table has relationships, handle them
-        const [relationships] = await connection.execute(
-          'SELECT * FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
-          [tableName, tableName]
-        );
-
-        if (relationships.length > 0) {
-          console.log(`Table ${tableName} has relationships:`, relationships);
+            const [result] = await connection.execute(query, values);
+            affectedRows += result.affectedRows;
         }
-      }
-      
-      return {
-        success: true,
-        message: `Data inserted successfully into ${tableName}`,
-        results,
-        insertedIds: results.map(r => r.insertId)
-      };
+        
+        return {
+            success: true,
+            message: `Data inserted successfully into ${tableName}`,
+            affectedRows
+        };
     } catch (error) {
-      console.error('Database error:', error);
-      throw error;
+        console.error('Error in insertData:', {
+            error: error.message,
+            stack: error.stack,
+            queryString: typeof query !== 'undefined' ? query : undefined,
+            values: lastValues
+        });
+        
+        // Add better handling for SQL syntax errors
+        if (error.message && error.message.includes('syntax')) {
+            console.error('SQL SYNTAX ERROR DETAILS:');
+            console.error('- Table name:', tableName);
+            console.error('- Last query (if available):', typeof query !== 'undefined' ? query : 'UNKNOWN');
+            console.error('- Values array length:', lastValues ? lastValues.length : 'NONE');
+            console.error('- Values array content:', lastValues);
+            error.sql = typeof query !== 'undefined' ? query : 'Query not available';
+            error.valueCount = lastValues ? lastValues.length : 0;
+        }
+
+        // Attach additional debug info to error for upstream handling
+        error.query = typeof query !== 'undefined' ? query : undefined;
+        error.values = lastValues;
+        throw error;
     } finally {
-      if (connection) {
-        connection.release();
-      }
+        if (connection) connection.release();
     }
   }
 
@@ -606,25 +600,69 @@ class MySQLDatabaseService {
     try {
       connection = await this.getConnection();
 
-      // Primero eliminar las relaciones donde la tabla es principal o secundaria
-      await connection.execute(
-        'DELETE FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
-        [tableName, tableName]
-      );
+      // Start transaction
+      await connection.beginTransaction();
 
-      // Luego eliminar la tabla
-      const query = `DROP TABLE IF EXISTS \`${tableName}\``;
-      await connection.execute(query);
-      
-      return { 
-        success: true, 
-        message: `Table ${tableName} deleted successfully` 
-      };
+      try {
+        // First check if table exists
+        const [tables] = await connection.execute(
+          'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+          [tableName]
+        );
+
+        if (tables.length === 0) {
+          throw new Error(`Table ${tableName} does not exist`);
+        }
+
+        // Temporarily disable foreign key checks
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 0');
+
+        // Delete any relationships where this table is involved
+        await connection.execute(
+          'DELETE FROM table_relationships WHERE main_table_name = ? OR secondary_table_name = ?',
+          [tableName, tableName]
+        );
+
+        // Delete any entries in table_order
+        await connection.execute(
+          'DELETE FROM table_order WHERE table_name = ?',
+          [tableName]
+        );
+
+        // Delete the table
+        const query = `DROP TABLE IF EXISTS \`${tableName}\``;
+        await connection.execute(query);
+
+        // Re-enable foreign key checks
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+
+        // Commit transaction
+        await connection.commit();
+        
+        return { 
+          success: true, 
+          message: `Table ${tableName} and its relationships deleted successfully` 
+        };
+      } catch (error) {
+        // Rollback transaction on error
+        await connection.rollback();
+        // Make sure to re-enable foreign key checks even if there's an error
+        await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+        throw error;
+      }
     } catch (error) {
       console.error('Error deleting table:', error);
-      throw error;
+      throw new Error(`Failed to delete table ${tableName}: ${error.message}`);
     } finally {
-      if (connection) connection.release();
+      if (connection) {
+        try {
+          // Make absolutely sure foreign key checks are re-enabled
+          await connection.execute('SET FOREIGN_KEY_CHECKS = 1');
+        } catch (e) {
+          console.error('Error re-enabling foreign key checks:', e);
+        }
+        connection.release();
+      }
     }
   }
 
@@ -776,7 +814,7 @@ class MySQLDatabaseService {
         throw new Error(`Invalid group type: ${groupType}`);
       }
 
-      if (tableDefinition.main && tableDefinition.secondary) {
+      if (groupType.toUpperCase() === 'GRUPAL') {
         // Create main table
         const mainTableColumns = [
           'id INT NOT NULL AUTO_INCREMENT',
@@ -825,7 +863,6 @@ class MySQLDatabaseService {
           (main_table_name, secondary_table_name, relationship_type, created_at) 
           VALUES (?, ?, ?, CURRENT_TIMESTAMP)
         `, [mainTableName, secondaryTableName, `${groupType.toLowerCase()}_policy`]);
-
       } else {
         // Create single table
         const tableColumns = [
@@ -963,6 +1000,109 @@ class MySQLDatabaseService {
     } catch (error) {
       console.error('Error updating table order:', error);
       throw error;
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  async ensureTableHasAutoIncrementId(tableName) {
+    let connection;
+    try {
+      connection = await this.getConnection();
+      
+      // Check if table has id column
+      const [columns] = await connection.execute(
+        'SHOW COLUMNS FROM `' + tableName + '` WHERE Field = "id"'
+      );
+      
+      if (columns.length === 0) {
+        // Add id column if it doesn't exist
+        await connection.execute(
+          'ALTER TABLE `' + tableName + '` ADD COLUMN id INT PRIMARY KEY AUTO_INCREMENT FIRST'
+        );
+      } else if (!columns[0].Extra.includes('auto_increment')) {
+        // Modify id column to be auto_increment if it isn't
+        await connection.execute(
+          'ALTER TABLE `' + tableName + '` MODIFY id INT AUTO_INCREMENT PRIMARY KEY'
+        );
+      }
+    } catch (error) {
+      console.error('Error ensuring auto-increment id:', error);
+      throw error;
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  /**
+   * Simple and reliable data insertion function that minimizes SQL syntax issues
+   */
+  async insertDataSimple(tableName, data) {
+    let connection;
+    try {
+      // Log what we're trying to insert
+      console.log(`SIMPLE INSERT into ${tableName}:`, 
+        JSON.stringify(data, null, 2).substring(0, 500) + '...');
+
+      // Get a connection
+      connection = await this.pool.getConnection();
+      
+      // Normalize data to array format
+      const records = Array.isArray(data) ? data : [data];
+      if (records.length === 0) {
+        return { success: true, message: 'No records to insert', affectedRows: 0 };
+      }
+      
+      // Process each record
+      let totalAffected = 0;
+      
+      for (const record of records) {
+        // Skip id from insertion
+        const dataToInsert = { ...record };
+        delete dataToInsert.id;
+        
+        if (Object.keys(dataToInsert).length === 0) {
+          console.warn('Empty record, skipping');
+          continue;
+        }
+        
+        // Prepare column names and placeholders - with proper escaping
+        const columns = Object.keys(dataToInsert)
+          .map(col => `\`${col}\``) // Backtick-escape column names
+          .join(', ');
+          
+        const placeholders = Object.keys(dataToInsert)
+          .map(() => '?')
+          .join(', ');
+        
+        // Extract values, converting objects to JSON strings
+        const values = Object.values(dataToInsert).map(val => {
+          if (val === null || val === undefined) return null;
+          if (typeof val === 'object' && !(val instanceof Date)) return JSON.stringify(val);
+          if (val instanceof Date) return val.toISOString().split('T')[0];
+          return val;
+        });
+        
+        // Construct the query - this format is guaranteed to be correct
+        const query = `INSERT INTO \`${tableName}\` (${columns}) VALUES (${placeholders})`;
+        
+        console.log('Executing basic query:', query);
+        console.log('With values:', values);
+        
+        // Execute the query
+        const [result] = await connection.execute(query, values);
+        totalAffected += result.affectedRows;
+      }
+      
+      return {
+        success: true,
+        message: `Inserted ${totalAffected} rows into ${tableName}`,
+        affectedRows: totalAffected
+      };
+    } catch (error) {
+      console.error(`Error in insertDataSimple(${tableName}):`, error);
+      error.simplifiedInsert = true; // Mark that we used the simplified version
+      throw error; 
     } finally {
       if (connection) connection.release();
     }

@@ -125,20 +125,35 @@ router.post('/:tableName', async (req, res) => {
     const { tableName } = req.params;
     const data = req.body;
     
-    // Get table structure first
-    const [columns] = await mysqlDatabase.executeQuery(
-      `SHOW COLUMNS FROM \`${tableName}\``,
-      []
-    );
+    console.log('Received data for insertion:', {
+      tableName,
+      data
+    });
     
-    // Filter out the id field from the data if it exists
-    const cleanData = { ...data };
-    delete cleanData.id;
+    if (!tableName) {
+      return res.status(400).json({ error: 'Table name is required' });
+    }
+    if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+      return res.status(400).json({ error: 'Valid data object is required' });
+    }
     
-    const result = await mysqlDatabase.insertData(tableName, cleanData);
-    res.json({ success: true, data: result });
+    try {
+      // Use the simplified, more reliable insertion function to avoid SQL errors
+      console.log('Using simplified insert for reliable data insertion');
+      const result = await mysqlDatabase.insertDataSimple(tableName, data);
+      res.json(result);
+    } catch (error) {
+      console.error('Error in data insertion:', error);
+      const status = error.message.includes('does not exist') ? 404 : 500;
+      res.status(status).json({
+        error: error.message,
+        sql: error.query || error.sql || undefined,
+        values: error.values,
+        sqlMessage: error.sqlMessage || undefined
+      });
+    }
   } catch (error) {
-    console.error('Error inserting data:', error);
+    console.error('Error in route handler:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -293,12 +308,26 @@ router.delete('/tables/:tableName', async (req, res) => {
     if (!tableName) {
       return res.status(400).json({ error: 'Table name is required' });
     }
+
+    // Clean the table name
+    const cleanTableName = tableName.trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_]/g, '_')
+      .toLowerCase();
     
-    await mysqlDatabase.deleteTable(tableName);
-    res.json({ success: true, message: `Table ${tableName} deleted successfully` });
+    // Delete the table and its relationships
+    await mysqlDatabase.deleteTable(cleanTableName);
+    res.json({ 
+      success: true, 
+      message: `Table ${tableName} deleted successfully` 
+    });
   } catch (error) {
     console.error('Error deleting table:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      success: false,
+      error: error.message || `Failed to delete table ${tableName}` 
+    });
   }
 });
 
@@ -435,6 +464,90 @@ router.put('/tables/:tableName/rename', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Error renaming table:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create table group
+router.post('/tables/group', async (req, res) => {
+  try {
+    const { mainTableName, secondaryTableName, groupType } = req.body;
+    
+    if (!mainTableName || !secondaryTableName) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Both mainTableName and secondaryTableName are required' 
+      });
+    }
+
+    const result = await mysqlDatabase.createTableGroup(mainTableName, secondaryTableName, groupType);
+    
+    res.json({
+      success: true,
+      message: 'Table group created successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error creating table group:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || 'Error creating table group'
+    });
+  }
+});
+
+// Get child tables for a parent table
+router.get('/tables/:tableName/children', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    
+    // Get all tables and their relationships
+    const tables = await mysqlDatabase.getTables();
+    
+    // Find child tables (tables where this is the main table)
+    const childTables = tables.filter(table => 
+      table.relationshipType === 'secondary' && 
+      table.relatedTableName?.toLowerCase() === tableName.toLowerCase()
+    );
+
+    res.json(childTables);
+  } catch (error) {
+    console.error('Error getting child tables:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get table structure
+router.get('/tables/:tableName/structure', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    
+    // Get table structure
+    const [columns] = await mysqlDatabase.executeQuery(
+      `SHOW COLUMNS FROM \`${tableName}\``,
+      []
+    );
+    
+    if (!columns || columns.length === 0) {
+      throw new Error(`Table ${tableName} not found or has no columns`);
+    }
+
+    // Format columns
+    const formattedColumns = columns.map(col => ({
+      name: col.Field,
+      type: col.Type,
+      nullable: col.Null === 'YES',
+      key: col.Key,
+      default: col.Default,
+      extra: col.Extra
+    }));
+
+    res.json({
+      name: tableName,
+      columns: formattedColumns
+    });
+  } catch (error) {
+    console.error('Error getting table structure:', error);
     res.status(500).json({ error: error.message });
   }
 });
