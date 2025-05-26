@@ -473,9 +473,9 @@ td .edit-cell-input[type="select"] {
 
 /* RFC column specific styling */
 .data-table td.rfc-cell {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
   color: #4b5563;
   text-align: center;
   white-space: nowrap;
@@ -484,9 +484,9 @@ td .edit-cell-input[type="select"] {
 
 /* Phone number styling */
 .data-table td.phone-cell {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
+  font-family: var(--font-family-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
   color: #4b5563;
   text-align: center;
   white-space: nowrap;
@@ -552,7 +552,8 @@ td .edit-cell-input[type="select"] {
   padding: 4px;
   border: none;
   background: #fff;
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-sans);
   color: #334155;
   outline: 2px solid #3b82f6;
   border-radius: 2px;
@@ -2043,9 +2044,9 @@ td .edit-cell-input[type="select"] {
 }
 
 .empty-table-state p:first-child {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   color: #495057;
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .table-title {
@@ -2056,9 +2057,10 @@ td .edit-cell-input[type="select"] {
 
 .table-title h2 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
   color: var(--text-primary, #1e293b);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .table-subtitle {

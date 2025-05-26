@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const emailService = require('../services/email/emailService');
+
+// Configure multer for file uploads
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 16 * 1024 * 1024 // 16MB limit
+  }
+});
 
 // Test email connection
 router.get('/test-connection', async (req, res) => {
@@ -64,13 +73,36 @@ router.get('/test-detailed', async (req, res) => {
     }
 });
 
-// Send welcome email
-router.post('/send-welcome', async (req, res) => {
+// Send welcome email (with file attachments support)
+router.post('/send-welcome', upload.array('attachment', 10), async (req, res) => {
     try {
-        const { to, gptResponse, subject, ...data } = req.body;
+        console.log('=== Send Welcome Email Request ===');
+        console.log('Body keys:', Object.keys(req.body));
+        console.log('Files:', req.files ? req.files.length : 0);
+        
+        // Extract data from FormData or JSON
+        let to, gptResponse, subject, driveLinks, data;
+        
+        if (req.files && req.files.length > 0) {
+            // FormData request with files
+            to = req.body.to;
+            gptResponse = req.body.gptResponse;
+            subject = req.body.subject;
+            driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
+            
+            // Extract other data fields
+            data = { ...req.body };
+            delete data.to;
+            delete data.gptResponse;
+            delete data.subject;
+            delete data.driveLinks;
+        } else {
+            // JSON request without files
+            ({ to, gptResponse, subject, driveLinks = [], ...data } = req.body);
+        }
         
         console.log('Sending welcome email to:', to);
-        console.log('Email data:', { subject, dataKeys: Object.keys(data) });
+        console.log('Email data:', { subject, dataKeys: Object.keys(data), attachments: req.files?.length || 0 });
         
         const result = await emailService.sendWelcomeEmail(to, { 
             gptResponse,
@@ -80,7 +112,9 @@ router.post('/send-welcome', async (req, res) => {
             emergencyPhone: process.env.EMERGENCY_PHONE || '800-123-4567',
             supportEmail: process.env.SUPPORT_EMAIL || 'soporte@casinseguros.com.mx',
             companyName: process.env.COMPANY_NAME || 'CASIN Seguros',
-            companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México'
+            companyAddress: process.env.COMPANY_ADDRESS || 'Ciudad de México',
+            driveLinks,
+            attachments: req.files || []
         });
         
         res.json(result);

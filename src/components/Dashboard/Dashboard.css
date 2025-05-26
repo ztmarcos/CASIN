@@ -5,7 +5,9 @@
 .dashboard-title {
   margin-bottom: 2rem;
   color: var(--text-primary);
-  font-size: 1.75rem;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-tight);
 }
 
 .dashboard-grid {
@@ -30,7 +32,8 @@
 .card-header h3 {
   margin: 0;
   color: var(--text-primary);
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
 }
 
 .card-content {
@@ -62,18 +65,19 @@
 }
 
 .birthday-name {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
   color: var(--text-primary);
+  font-size: var(--font-size-base);
 }
 
 .birthday-date {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--accent-color);
-  font-weight: 500;
+  font-weight: var(--font-weight-medium);
 }
 
 .birthday-age {
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   color: var(--text-secondary);
 }
 

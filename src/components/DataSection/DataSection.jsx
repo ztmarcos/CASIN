@@ -320,6 +320,8 @@ const DataSection = () => {
     }
   };
 
+
+
   const handleReload = async () => {
     try {
       setIsLoading(true);
@@ -386,6 +388,7 @@ const DataSection = () => {
                 </svg>
                 Agregar Entrada
               </button>
+
               <button 
                 className="btn-icon-only" 
                 onClick={toggleViewMode}

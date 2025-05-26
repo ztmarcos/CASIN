@@ -27,15 +27,21 @@ const CellPDFParser = ({ columnName, onValueExtracted }) => {
         targetColumns: [columnName],
         tableName: 'current_table',
         instructions: customPrompt || `
-          Please analyze the document and extract the following information:
-          - ${columnName}: Find the exact value in the text
+          Por favor analiza el documento y extrae la siguiente información:
+          - ${columnName}: Encuentra el valor exacto en el texto
           
-          Important rules:
-          1. Extract EXACT values from the document
-          2. Return null if a value cannot be found
-          3. For dates, maintain the format as shown in the document
-          4. For currency values, include the full amount with decimals
-          5. For text fields, extract the complete text as shown
+          Reglas importantes:
+          1. Extrae valores EXACTOS del documento
+          2. Devuelve null si no se puede encontrar un valor
+          3. Para fechas, mantén el formato como se muestra en el documento
+          4. Para valores monetarios, incluye la cantidad completa con decimales
+          5. Para campos de texto, extrae el texto completo como se muestra
+          
+          REGLAS DE NORMALIZACIÓN:
+          6. NOMBRES DE ASEGURADORA: Normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "GNP Seguros", "G.N.P." a "GNP"
+          7. NOMBRES DE PERSONAS: Formato Título (ej., "JUAN PÉREZ" → "Juan Pérez")
+          8. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia)
+          9. RFC: Solo mayúsculas y sin espacios extra
         `
       };
 
@@ -69,7 +75,7 @@ const CellPDFParser = ({ columnName, onValueExtracted }) => {
       <textarea
         value={customPrompt}
         onChange={(e) => setCustomPrompt(e.target.value)}
-        placeholder={`Custom instructions for extracting ${columnName} from PDF...`}
+        placeholder={`Instrucciones personalizadas para extraer ${columnName} del PDF...`}
         rows={2}
         className="prompt-textarea"
       />
@@ -82,7 +88,7 @@ const CellPDFParser = ({ columnName, onValueExtracted }) => {
           className="file-input"
         />
         <span className="file-input-text">
-          {isAnalyzing ? 'Analyzing...' : 'Choose PDF File'}
+          {isAnalyzing ? 'Analizando...' : 'Seleccionar Archivo PDF'}
         </span>
       </label>
     </div>

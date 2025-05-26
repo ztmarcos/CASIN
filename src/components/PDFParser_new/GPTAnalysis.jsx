@@ -27,6 +27,105 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         status: ['status']
     };
 
+    // Comprehensive text normalization function
+    const normalizeText = (text, fieldType = 'general') => {
+        if (!text || typeof text !== 'string') return text;
+        
+        // Don't normalize RFC fields
+        if (fieldType === 'rfc') return text.toUpperCase().trim();
+        
+        let normalized = text;
+        
+        // Basic cleanup
+        normalized = normalized.trim();
+        
+        // Company name normalization - GNP variations
+        const gnpVariations = [
+            /grupo\s+nacional\s+provincial\s*,?\s*s\.a\.b\.?/gi,
+            /grupo\s+naci[oó]n\s+aprovincial/gi,
+            /grupo\s+nacional\s+aprovincial/gi,
+            /gnp\s+seguros/gi,
+            /g\.n\.p\.?/gi,
+            /grupo\s+nacion\s+aprovincial/gi
+        ];
+        
+        gnpVariations.forEach(pattern => {
+            normalized = normalized.replace(pattern, 'GNP');
+        });
+        
+        // Name normalization (for person names)
+        if (fieldType === 'name' || fieldType === 'contratante') {
+            // Convert to title case
+            normalized = normalized.toLowerCase()
+                .split(' ')
+                .map(word => {
+                    // Handle common prefixes and suffixes
+                    if (['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e'].includes(word)) {
+                        return word;
+                    }
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                })
+                .join(' ');
+            
+            // Fix common name patterns
+            normalized = normalized.replace(/\bDe\b/g, 'de');
+            normalized = normalized.replace(/\bDel\b/g, 'del');
+            normalized = normalized.replace(/\bLa\b/g, 'la');
+            normalized = normalized.replace(/\bY\b/g, 'y');
+        }
+        
+        // Address normalization
+        if (fieldType === 'address' || fieldType === 'direccion') {
+            // Standardize common address abbreviations
+            const addressReplacements = {
+                'av\\.?': 'Avenida',
+                'ave\\.?': 'Avenida',
+                'blvd\\.?': 'Boulevard',
+                'c\\.?': 'Calle',
+                'col\\.?': 'Colonia',
+                'fracc\\.?': 'Fraccionamiento',
+                'no\\.?': 'Número',
+                'num\\.?': 'Número',
+                '#': 'Número',
+                'int\\.?': 'Interior',
+                'ext\\.?': 'Exterior',
+                'depto\\.?': 'Departamento',
+                'dept\\.?': 'Departamento',
+                'piso\\.?': 'Piso',
+                'mz\\.?': 'Manzana',
+                'lt\\.?': 'Lote',
+                'km\\.?': 'Kilómetro',
+                'cp\\.?': 'C.P.',
+                'c\\.p\\.?': 'C.P.'
+            };
+            
+            Object.entries(addressReplacements).forEach(([pattern, replacement]) => {
+                const regex = new RegExp(`\\b${pattern}\\b`, 'gi');
+                normalized = normalized.replace(regex, replacement);
+            });
+            
+            // Title case for address
+            normalized = normalized.toLowerCase()
+                .split(' ')
+                .map(word => {
+                    if (['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'con'].includes(word)) {
+                        return word;
+                    }
+                    return word.charAt(0).toUpperCase() + word.slice(1);
+                })
+                .join(' ');
+        }
+        
+        // General text cleanup
+        normalized = normalized
+            .replace(/\s+/g, ' ') // Multiple spaces to single space
+            .replace(/[""]/g, '"') // Normalize quotes
+            .replace(/['']/g, "'") // Normalize apostrophes
+            .trim();
+        
+        return normalized;
+    };
+
     // Función para formatear valores
     const formatValue = (value) => {
         if (value === null || value === undefined) return 'N/A';
@@ -71,7 +170,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     const analyzeContent = async () => {
         if (!tableName || !tableInfo) {
-            setError('Please select a valid target table first');
+            setError('Por favor selecciona una tabla válida primero');
             return;
         }
 
@@ -109,17 +208,31 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 tableName: tableName,
                 tableType: tableInfo.type || 'simple',
                 instructions: `
-                    Please analyze the document and extract the following information:
-                    ${columns.map(col => `- ${col}: Find the exact value in the text`).join('\n')}
+                    Por favor analiza el documento y extrae la siguiente información:
+                    ${columns.map(col => `- ${col}: Encuentra el valor exacto en el texto`).join('\n')}
                     
-                    Important rules:
-                    1. Extract EXACT values from the document
-                    2. Do not repeat values across different fields
-                    3. Return null if a value cannot be found
-                    4. For dates, maintain the format as shown in the document
-                    5. For currency values, include the full amount with decimals
-                    6. For text fields, extract the complete text as shown
-                    ${tableInfo.type === 'simple' ? '7. This is a simple policy table, focus on basic policy information' : ''}
+                    Reglas importantes:
+                    1. Extrae valores EXACTOS del documento
+                    2. No repitas valores en diferentes campos
+                    3. Devuelve null si no se puede encontrar un valor
+                    4. Para fechas, mantén el formato como se muestra en el documento
+                    5. Para valores monetarios, incluye la cantidad completa con decimales
+                    6. Para campos de texto, extrae el texto completo como se muestra
+                    ${tableInfo.type === 'simple' ? '7. Esta es una tabla de póliza simple, enfócate en información básica de la póliza' : ''}
+                    
+                    REGLAS DE NORMALIZACIÓN DE TEXTO:
+                    8. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
+                    9. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
+                    10. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
+                    11. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra
+                    12. TEXTO GENERAL: Limpia espacios extra, normaliza comillas y apostrofes
+                    13. NO normalices valores RFC más allá de mayúsculas y quitar espacios
+                    
+                    NORMALIZACIÓN ESPECÍFICA POR CAMPO:
+                    - contratante, nombre: Aplicar normalización de nombres (formato Título)
+                    - direccion: Aplicar normalización de direcciones (estandarizar abreviaciones + formato Título)
+                    - rfc: Solo mayúsculas y quitar espacios, sin otros cambios
+                    - Todos los demás campos de texto: Aplicar limpieza general de texto y normalización de nombres de compañías
                 `
             };
 
@@ -141,7 +254,22 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             if (result.mappedData) {
                 const cleanData = {};
                 columns.forEach(column => {
-                    cleanData[column] = result.mappedData[column] || null;
+                    let value = result.mappedData[column] || null;
+                    
+                    // Apply normalization based on field type
+                    if (value && typeof value === 'string') {
+                        if (column.toLowerCase().includes('rfc')) {
+                            value = normalizeText(value, 'rfc');
+                        } else if (column.toLowerCase().includes('nombre') || column.toLowerCase().includes('contratante')) {
+                            value = normalizeText(value, 'name');
+                        } else if (column.toLowerCase().includes('direccion') || column.toLowerCase().includes('address')) {
+                            value = normalizeText(value, 'address');
+                        } else {
+                            value = normalizeText(value, 'general');
+                        }
+                    }
+                    
+                    cleanData[column] = value;
                 });
 
                 setAnalysis(result);
@@ -189,6 +317,20 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     console.log(`Processing column ${columnName} with value:`, value);
                     console.log(`Value type:`, typeof value);
 
+                    // Apply text normalization first (before type-specific processing)
+                    if (typeof value === 'string' && !fieldTypes.numeric.includes(columnName) && !fieldTypes.date.includes(columnName)) {
+                        if (columnName.toLowerCase().includes('rfc')) {
+                            value = normalizeText(value, 'rfc');
+                        } else if (columnName.toLowerCase().includes('nombre') || columnName.toLowerCase().includes('contratante')) {
+                            value = normalizeText(value, 'name');
+                        } else if (columnName.toLowerCase().includes('direccion') || columnName.toLowerCase().includes('address')) {
+                            value = normalizeText(value, 'address');
+                        } else {
+                            value = normalizeText(value, 'general');
+                        }
+                        console.log(`Text field ${columnName} normalized:`, value);
+                    }
+
                     // Handle different field types
                     if (fieldTypes.numeric.includes(columnName)) {
                         const numStr = value?.toString().replace(/[$,]/g, '') || '0';
@@ -234,7 +376,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 const result = await tableService.insertData(tableName, cleanData);
                 console.log('Data insertion result:', result);
                 
-                setMessage('Data inserted successfully');
+                setMessage('Datos insertados exitosamente');
                 setError(null);
 
                 const event = new CustomEvent('policyDataUpdated', {
@@ -266,6 +408,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     const handleCellEdit = (column, value) => {
         let processedValue = value;
+        
+        // Handle JSON parsing first
         if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
             try {
                 processedValue = JSON.parse(value);
@@ -274,6 +418,20 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 console.warn('Failed to parse JSON:', err);
             }
         }
+        
+        // Apply text normalization for string values
+        if (typeof processedValue === 'string') {
+            if (column.toLowerCase().includes('rfc')) {
+                processedValue = normalizeText(processedValue, 'rfc');
+            } else if (column.toLowerCase().includes('nombre') || column.toLowerCase().includes('contratante')) {
+                processedValue = normalizeText(processedValue, 'name');
+            } else if (column.toLowerCase().includes('direccion') || column.toLowerCase().includes('address')) {
+                processedValue = normalizeText(processedValue, 'address');
+            } else {
+                processedValue = normalizeText(processedValue, 'general');
+            }
+        }
+        
         setEditedData(prev => ({
             ...prev,
             [column]: processedValue
@@ -289,15 +447,15 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     return (
         <div className="gpt-analysis">
             {!selectedTable && (
-                <div className="error-message">Please select a table first</div>
+                <div className="error-message">Por favor selecciona una tabla primero</div>
             )}
 
             {!parsedData && (
-                <div className="error-message">Please upload a PDF file first</div>
+                <div className="error-message">Por favor sube un archivo PDF primero</div>
             )}
 
             {loading && (
-                <div className="loading">Analyzing content...</div>
+                <div className="loading">Analizando contenido...</div>
             )}
 
             {error && (

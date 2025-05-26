@@ -26,7 +26,7 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
 
     const analyzeContent = async () => {
         if (!selectedTable || !tableInfo) {
-            setError('Please select a valid target table first');
+            setError('Por favor selecciona una tabla válida primero');
             return;
         }
 
@@ -59,17 +59,24 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                 tableName: selectedTable,
                 tableType: tableInfo.type,
                 instructions: `
-                    Please analyze the document and extract the following information for each item in the list:
-                    ${columns.map(col => `- ${col}: Find the exact value in the text`).join('\n')}
+                    Por favor analiza el documento y extrae la siguiente información para cada elemento en la lista:
+                    ${columns.map(col => `- ${col}: Encuentra el valor exacto en el texto`).join('\n')}
                     
-                    Important rules:
-                    1. Extract EXACT values from the document
-                    2. Do not repeat values across different fields
-                    3. Return null if a value cannot be found
-                    4. For dates, maintain the format as shown in the document
-                    5. For currency values, include the full amount with decimals
-                    6. For text fields, extract the complete text as shown
-                    7. This is a list table, extract all items found in the document
+                    Reglas importantes:
+                    1. Extrae valores EXACTOS del documento
+                    2. No repitas valores en diferentes campos
+                    3. Devuelve null si no se puede encontrar un valor
+                    4. Para fechas, mantén el formato como se muestra en el documento
+                    5. Para valores monetarios, incluye la cantidad completa con decimales
+                    6. Para campos de texto, extrae el texto completo como se muestra
+                    7. Esta es una tabla de lista, extrae todos los elementos encontrados en el documento
+                    
+                    REGLAS DE NORMALIZACIÓN DE TEXTO:
+                    8. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
+                    9. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
+                    10. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
+                    11. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra
+                    12. TEXTO GENERAL: Limpia espacios extra, normaliza comillas y apostrofes
                 `
             };
 
@@ -201,7 +208,7 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
     return (
         <div className="listado-analysis">
             {!selectedTable && (
-                <div className="error-message">Please select a table first</div>
+                <div className="error-message">Por favor selecciona una tabla primero</div>
             )}
 
             {!parsedData && (

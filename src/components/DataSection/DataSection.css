@@ -197,6 +197,55 @@
   cursor: not-allowed;
 }
 
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  border: 1px solid #D1D5DB;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #F9FAFB;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background-color: #F3F4F6;
+  border-color: #9CA3AF;
+}
+
+.btn-secondary:disabled {
+  background-color: #F9FAFB;
+  color: #9CA3AF;
+  cursor: not-allowed;
+  border-color: #E5E7EB;
+}
+
+.normalize-btn {
+  background-color: #10B981;
+  color: white;
+  border-color: #10B981;
+}
+
+.normalize-btn:hover {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+.normalize-all-btn {
+  background-color: #F59E0B;
+  color: white;
+  border-color: #F59E0B;
+}
+
+.normalize-all-btn:hover {
+  background-color: #D97706;
+  border-color: #D97706;
+}
+
 .btn-icon-only {
   background-color: transparent;
   color: #4B5563;
@@ -426,6 +475,45 @@
   border-color: #374151;
 }
 
+[data-theme='dark'] .btn-secondary {
+  background-color: #374151;
+  color: #D1D5DB;
+  border-color: #4B5563;
+}
+
+[data-theme='dark'] .btn-secondary:hover {
+  background-color: #4B5563;
+  border-color: #6B7280;
+}
+
+[data-theme='dark'] .btn-secondary:disabled {
+  background-color: #374151;
+  color: #6B7280;
+  border-color: #4B5563;
+}
+
+[data-theme='dark'] .normalize-btn {
+  background-color: #10B981;
+  color: white;
+  border-color: #10B981;
+}
+
+[data-theme='dark'] .normalize-btn:hover {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+[data-theme='dark'] .normalize-all-btn {
+  background-color: #F59E0B;
+  color: white;
+  border-color: #F59E0B;
+}
+
+[data-theme='dark'] .normalize-all-btn:hover {
+  background-color: #D97706;
+  border-color: #D97706;
+}
+
 [data-theme='dark'] .modal-overlay {
   background-color: rgba(0, 0, 0, 0.7);
 }
@@ -538,6 +626,8 @@
   gap: 10px;
 }
 
+
+
 .reload-btn {
   background: none;
   border: none;
@@ -624,4 +714,6 @@
 
 [data-theme='dark'] .data-display-container .detail-value {
   color: var(--text-primary-dark);
-} 
+}
+
+ 

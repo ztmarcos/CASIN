@@ -99,11 +99,13 @@ class EmailService {
             console.log('1. Received data:', {
                 to,
                 gptResponseLength: data.gptResponse ? data.gptResponse.length : 0,
-                hasGptResponse: !!data.gptResponse
+                hasGptResponse: !!data.gptResponse,
+                attachments: data.attachments ? data.attachments.length : 0,
+                driveLinks: data.driveLinks ? data.driveLinks.length : 0
             });
             
-            // Create plain text email content
-            const text = `${data.gptResponse || 'No hay contenido disponible'}
+            // Create base email content
+            let emailContent = `${data.gptResponse || 'No hay contenido disponible'}
 
 Información de tu póliza:
 - Número de póliza: ${data.policyNumber}
@@ -111,14 +113,22 @@ Información de tu póliza:
 
 Para asistencia:
 - Teléfono: ${data.emergencyPhone}
-- Email: ${data.supportEmail}
+- Email: ${data.supportEmail}`;
 
-© ${new Date().getFullYear()} ${data.companyName}
+            // Add Drive links if any
+            if (data.driveLinks && data.driveLinks.length > 0) {
+                emailContent += '\n\nArchivos adjuntos en Google Drive:\n';
+                data.driveLinks.forEach(link => {
+                    emailContent += `- ${link.name}: ${link.link}\n`;
+                });
+            }
+
+            emailContent += `\n© ${new Date().getFullYear()} ${data.companyName}
 ${data.companyAddress}`;
 
             console.log('2. Email content preview:', {
-                length: text.length,
-                sample: text.substring(0, 200) + '...'
+                length: emailContent.length,
+                sample: emailContent.substring(0, 200) + '...'
             });
 
             const mailOptions = {
@@ -128,18 +138,29 @@ ${data.companyAddress}`;
                 },
                 to,
                 subject: data.subject || '¡Bienvenido a tu Plan de Seguros!',
-                text
+                text: emailContent
             };
 
-            console.log('3. Sending mail with options:', {
+            // Add attachments if any
+            if (data.attachments && data.attachments.length > 0) {
+                mailOptions.attachments = data.attachments.map(file => ({
+                    filename: file.originalname,
+                    content: file.buffer,
+                    contentType: file.mimetype
+                }));
+                console.log('3. Adding attachments:', data.attachments.map(f => f.originalname));
+            }
+
+            console.log('4. Sending mail with options:', {
                 from: mailOptions.from,
                 to,
                 subject: mailOptions.subject,
-                textLength: text.length
+                textLength: emailContent.length,
+                attachmentCount: mailOptions.attachments ? mailOptions.attachments.length : 0
             });
 
             const result = await this.transporter.sendMail(mailOptions);
-            console.log('4. Email sent successfully:', result);
+            console.log('5. Email sent successfully:', result);
             console.log('=== Email Service: Process Complete ===\n');
             return { success: true, messageId: result.messageId };
         } catch (error) {

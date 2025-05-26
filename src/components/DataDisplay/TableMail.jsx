@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import DriveSelector from '../Drive/DriveSelector';
 import './TableMail.css';
 
 const TableMail = ({ isOpen, onClose, rowData }) => {
@@ -9,6 +10,11 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [attachments, setAttachments] = useState([]);
+  const [selectedFolder, setSelectedFolder] = useState(null);
+  const [showDriveSelector, setShowDriveSelector] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Función para extraer el email de diferentes campos posibles
   const extractEmail = (data) => {
@@ -85,6 +91,86 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
     }
   };
 
+  const handleFileSelect = (event) => {
+    const files = Array.from(event.target.files);
+    
+    // Validate file size (16MB limit)
+    const maxSize = 16 * 1024 * 1024; // 16MB in bytes
+    const validFiles = files.filter(file => {
+      if (file.size > maxSize) {
+        setError(`El archivo "${file.name}" excede el límite de 16MB`);
+        return false;
+      }
+      return true;
+    });
+
+    // Add files to attachments
+    const newAttachments = validFiles.map(file => ({
+      id: Date.now() + Math.random(),
+      file,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+
+    setAttachments(prev => [...prev, ...newAttachments]);
+    
+    // Clear the input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (attachmentId) => {
+    setAttachments(prev => prev.filter(att => att.id !== attachmentId));
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const uploadAttachmentsToDrive = async () => {
+    if (!selectedFolder || attachments.length === 0) return [];
+
+    setIsUploading(true);
+    const uploadedFiles = [];
+
+    try {
+      for (const attachment of attachments) {
+        const formData = new FormData();
+        formData.append('file', attachment.file);
+        formData.append('folderId', selectedFolder.id);
+
+        const response = await fetch('http://localhost:3001/api/drive/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error uploading ${attachment.name}`);
+        }
+
+        const result = await response.json();
+        uploadedFiles.push({
+          ...attachment,
+          driveFileId: result.id,
+          driveLink: result.webViewLink
+        });
+      }
+    } catch (error) {
+      console.error('Error uploading to Drive:', error);
+      throw error;
+    } finally {
+      setIsUploading(false);
+    }
+
+    return uploadedFiles;
+  };
+
   const handleSendEmail = async () => {
     const emailAddress = extractEmail(rowData);
     if (!emailAddress) {
@@ -96,26 +182,87 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
     setSuccess(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/email/send-welcome', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      let uploadedFiles = [];
+      
+      // Upload attachments to Drive if folder is selected
+      if (attachments.length > 0 && selectedFolder) {
+        setSuccess('Subiendo archivos a Drive...');
+        uploadedFiles = await uploadAttachmentsToDrive();
+      }
+
+      setSuccess('Enviando correo...');
+
+      // If we have attachments, use FormData approach
+      if (attachments.length > 0) {
+        const formData = new FormData();
+        
+        // Add email data as JSON string
+        formData.append('to', emailAddress);
+        formData.append('subject', emailContent.subject);
+        formData.append('gptResponse', emailContent.message);
+        
+        // Add drive links if any
+        if (uploadedFiles.length > 0) {
+          formData.append('driveLinks', JSON.stringify(uploadedFiles.map(file => ({
+            name: file.name,
+            link: file.driveLink
+          }))));
+        }
+
+        // Add row data
+        Object.keys(rowData).forEach(key => {
+          if (rowData[key] !== null && rowData[key] !== undefined) {
+            formData.append(key, String(rowData[key]));
+          }
+        });
+
+        // Add attachments
+        attachments.forEach((attachment, index) => {
+          formData.append(`attachment`, attachment.file);
+        });
+
+        const response = await fetch('http://localhost:3001/api/email/send-welcome', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al enviar el correo');
+        }
+
+        const result = await response.json();
+        console.log('Email enviado exitosamente:', result);
+      } else {
+        // No attachments, use JSON approach
+        const emailData = {
           to: emailAddress,
           gptResponse: emailContent.message,
           subject: emailContent.subject,
+          driveLinks: uploadedFiles.map(file => ({
+            name: file.name,
+            link: file.driveLink
+          })),
           ...rowData
-        }),
-      });
+        };
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al enviar el correo');
+        const response = await fetch('http://localhost:3001/api/email/send-welcome', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(emailData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Error al enviar el correo');
+        }
+
+        const result = await response.json();
+        console.log('Email enviado exitosamente:', result);
       }
 
-      const result = await response.json();
-      console.log('Email enviado exitosamente:', result);
       setSuccess('¡Correo enviado exitosamente!');
       setTimeout(() => {
         onClose();
@@ -178,15 +325,88 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
               placeholder={isGenerating ? "Generando contenido..." : "Escriba su mensaje..."}
               value={emailContent.message}
               onChange={(e) => setEmailContent(prev => ({ ...prev, message: e.target.value }))}
-              rows={12}
+              rows={8}
               disabled={isGenerating}
             />
           </div>
+
+          {/* Attachments Section */}
+          <div className="mail-field">
+            <label>Adjuntos:</label>
+            <div className="attachments-section">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                multiple
+                style={{ display: 'none' }}
+                accept="*/*"
+              />
+              <div className="attachment-controls">
+                <button 
+                  type="button"
+                  className="attach-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating || isUploading}
+                >
+                  📎 Adjuntar Archivos
+                </button>
+                <button 
+                  type="button"
+                  className="drive-folder-btn"
+                  onClick={() => setShowDriveSelector(true)}
+                  disabled={isGenerating || isUploading}
+                >
+                  📁 Seleccionar Carpeta Drive
+                </button>
+              </div>
+              
+              {selectedFolder && (
+                <div className="selected-folder">
+                  <span className="folder-info">
+                    📁 Carpeta seleccionada: <strong>{selectedFolder.name}</strong>
+                  </span>
+                  <button 
+                    type="button"
+                    className="remove-folder-btn"
+                    onClick={() => setSelectedFolder(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {attachments.length > 0 && (
+                <div className="attachments-list">
+                  {attachments.map(attachment => (
+                    <div key={attachment.id} className="attachment-item">
+                      <div className="attachment-info">
+                        <span className="attachment-name">{attachment.name}</span>
+                        <span className="attachment-size">({formatFileSize(attachment.size)})</span>
+                      </div>
+                      <button 
+                        type="button"
+                        className="remove-attachment-btn"
+                        onClick={() => removeAttachment(attachment.id)}
+                        disabled={isUploading}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                  <div className="attachments-summary">
+                    Total: {attachments.length} archivo(s) - {formatFileSize(attachments.reduce((sum, att) => sum + att.size, 0))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="mail-actions">
             <button 
               className="regenerate-btn"
               onClick={generateEmailContent}
-              disabled={isGenerating}
+              disabled={isGenerating || isUploading}
             >
               {isGenerating ? 'Generando...' : 'Regenerar Contenido'}
             </button>
@@ -202,11 +422,19 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
           <button 
             className="send-btn"
             onClick={handleSendEmail}
-            disabled={isGenerating || !emailContent.subject || !emailContent.message || !extractEmail(rowData)}
+            disabled={isGenerating || isUploading || !emailContent.subject || !emailContent.message || !extractEmail(rowData)}
           >
-            Enviar Correo
+            {isUploading ? 'Subiendo archivos...' : 'Enviar Correo'}
           </button>
         </div>
+
+        {/* Drive Selector Modal */}
+        <DriveSelector
+          isOpen={showDriveSelector}
+          onClose={() => setShowDriveSelector(false)}
+          onFolderSelect={setSelectedFolder}
+          selectedFolderId={selectedFolder?.id}
+        />
       </div>
     </div>
   );

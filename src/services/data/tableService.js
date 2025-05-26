@@ -201,7 +201,7 @@ class TableService {
       // Determine if we're handling a single record or an array of records
       const isArrayData = Array.isArray(data);
 
-      // Helper to clean a single record
+      // Helper to clean and normalize a single record
       const cleanRecord = (record) => {
         const cleanData = { ...record };
         delete cleanData.id;
@@ -217,6 +217,31 @@ class TableService {
               value = JSON.stringify(value);
             } else if (value instanceof Date) {
               value = value.toISOString().split('T')[0];
+            } else if (typeof value === 'string' && value.trim() !== '') {
+              // 🔄 AUTO-NORMALIZE TEXT DATA BASED ON COLUMN NAME
+              console.log(`🔄 Auto-normalizing field "${key}" with value: "${value}"`);
+              
+              // Determine field type based on column name
+              const columnName = key.toLowerCase();
+              if (columnName.includes('rfc')) {
+                value = this.normalizeText(value, 'rfc');
+              } else if (columnName.includes('nombre') || columnName.includes('contratante') || 
+                        columnName.includes('propietario') || columnName.includes('agente') ||
+                        columnName.includes('responsable') || columnName.includes('beneficiario')) {
+                value = this.normalizeText(value, 'name');
+              } else if (columnName.includes('direccion') || columnName.includes('domicilio') || 
+                        columnName.includes('ubicacion') || columnName.includes('origen') ||
+                        columnName.includes('destino')) {
+                value = this.normalizeText(value, 'address');
+              } else if (columnName.includes('aseguradora') || columnName.includes('compania') ||
+                        columnName.includes('empresa')) {
+                value = this.normalizeText(value, 'general');
+              } else {
+                // Apply general normalization for other text fields
+                value = this.normalizeText(value, 'general');
+              }
+              
+              console.log(`✅ Normalized "${key}": "${cleanData[key]}" → "${value}"`);
             }
             filtered[key] = value;
           }
@@ -761,7 +786,7 @@ class TableService {
             
             processedRow[name] = value;
           });
-          return axios.post(`${this.apiUrl}/${cleanTableName}`, processedRow);
+          return this.insertData(cleanTableName, processedRow);
         }));
       }
 
@@ -999,10 +1024,379 @@ class TableService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const tables = await response.json();
-      console.log('Child tables response:', tables); // Debug log
+      
+      // Handle both object and string responses
       return tables.map(table => table.name || table);
     } catch (error) {
       console.error('Error getting child tables:', error);
+      return [];
+    }
+  }
+
+  // Comprehensive text normalization function for database operations
+  normalizeText(text, fieldType = 'general') {
+    if (!text || typeof text !== 'string') return text;
+    
+    // Don't normalize RFC fields
+    if (fieldType === 'rfc') return text.toUpperCase().trim();
+    
+    let normalized = text.trim();
+    
+    // Company name normalization - GNP variations
+    const gnpVariations = [
+      /grupo\s+nacional\s+provincial\s*,?\s*s\.a\.b\.?/gi,
+      /grupo\s+naci[oó]n\s+aprovincial/gi,
+      /grupo\s+nacional\s+aprovincial/gi,
+      /gnp\s+seguros/gi,
+      /g\.n\.p\.?/gi,
+      /grupo\s+nacion\s+aprovincial/gi
+    ];
+    
+    gnpVariations.forEach(pattern => {
+      normalized = normalized.replace(pattern, 'GNP');
+    });
+    
+    // Name normalization (for person names)
+    if (fieldType === 'name' || fieldType === 'contratante') {
+      // Convert to title case
+      normalized = normalized.toLowerCase()
+        .split(' ')
+        .map(word => {
+          // Handle common prefixes and suffixes
+          if (['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e'].includes(word)) {
+            return word;
+          }
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(' ');
+      
+      // Fix common name patterns
+      normalized = normalized.replace(/\bDe\b/g, 'de');
+      normalized = normalized.replace(/\bDel\b/g, 'del');
+      normalized = normalized.replace(/\bLa\b/g, 'la');
+      normalized = normalized.replace(/\bY\b/g, 'y');
+    }
+    
+    // Address normalization
+    if (fieldType === 'address' || fieldType === 'direccion') {
+      // Standardize common address abbreviations
+      const addressReplacements = {
+        'av\\.?': 'Avenida',
+        'ave\\.?': 'Avenida',
+        'blvd\\.?': 'Boulevard',
+        'c\\.?': 'Calle',
+        'col\\.?': 'Colonia',
+        'fracc\\.?': 'Fraccionamiento',
+        'no\\.?': 'Número',
+        'num\\.?': 'Número',
+        '#': 'Número',
+        'int\\.?': 'Interior',
+        'ext\\.?': 'Exterior',
+        'depto\\.?': 'Departamento',
+        'dept\\.?': 'Departamento',
+        'piso\\.?': 'Piso',
+        'mz\\.?': 'Manzana',
+        'lt\\.?': 'Lote',
+        'km\\.?': 'Kilómetro',
+        'cp\\.?': 'C.P.',
+        'c\\.p\\.?': 'C.P.'
+      };
+      
+      Object.entries(addressReplacements).forEach(([pattern, replacement]) => {
+        const regex = new RegExp(`\\b${pattern}\\b`, 'gi');
+        normalized = normalized.replace(regex, replacement);
+      });
+      
+      // Title case for address
+      normalized = normalized.toLowerCase()
+        .split(' ')
+        .map(word => {
+          if (['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'con'].includes(word)) {
+            return word;
+          }
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(' ');
+    }
+    
+    // General text cleanup
+    normalized = normalized
+      .replace(/\s+/g, ' ') // Multiple spaces to single space
+      .replace(/[""]/g, '"') // Normalize quotes
+      .replace(/['']/g, "'") // Normalize apostrophes
+      .trim();
+    
+    return normalized;
+  }
+
+  // Function to normalize all names and addresses in the database
+  async normalizeAllNamesAndAddresses() {
+    try {
+      console.log('🔄 Starting database normalization...');
+      
+      // Get all tables
+      const tables = await this.getTables();
+      console.log(`Found ${tables.length} tables to process`);
+      
+      let totalUpdated = 0;
+      const results = [];
+      
+      for (const table of tables) {
+        console.log(`\n📋 Processing table: ${table.name}`);
+        
+        try {
+          // Get table data
+          const tableData = await this.getData(table.name);
+          const data = tableData.data || [];
+          
+          if (!data.length) {
+            console.log(`  ⚠️  No data found in ${table.name}`);
+            continue;
+          }
+          
+          // Identify columns that contain names or addresses
+          const nameColumns = table.columns.filter(col => 
+            col.name.includes('nombre') || 
+            col.name.includes('contratante') || 
+            col.name.includes('propietario') ||
+            col.name.includes('agente') ||
+            col.name.includes('responsable') ||
+            col.name.includes('beneficiario')
+          ).map(col => col.name);
+          
+          const addressColumns = table.columns.filter(col => 
+            col.name.includes('direccion') || 
+            col.name.includes('domicilio') || 
+            col.name.includes('ubicacion') ||
+            col.name.includes('origen') ||
+            col.name.includes('destino')
+          ).map(col => col.name);
+          
+          const companyColumns = table.columns.filter(col => 
+            col.name.includes('aseguradora') ||
+            col.name.includes('compania') ||
+            col.name.includes('empresa')
+          ).map(col => col.name);
+          
+          console.log(`  📝 Name columns: ${nameColumns.join(', ') || 'none'}`);
+          console.log(`  🏠 Address columns: ${addressColumns.join(', ') || 'none'}`);
+          console.log(`  🏢 Company columns: ${companyColumns.join(', ') || 'none'}`);
+          
+          let tableUpdated = 0;
+          
+          // Process each record
+          for (const record of data) {
+            let hasChanges = false;
+            const updates = {};
+            
+            // Normalize name columns
+            nameColumns.forEach(column => {
+              if (record[column] && typeof record[column] === 'string') {
+                const normalized = this.normalizeText(record[column], 'name');
+                if (normalized !== record[column]) {
+                  updates[column] = normalized;
+                  hasChanges = true;
+                }
+              }
+            });
+            
+            // Normalize address columns
+            addressColumns.forEach(column => {
+              if (record[column] && typeof record[column] === 'string') {
+                const normalized = this.normalizeText(record[column], 'address');
+                if (normalized !== record[column]) {
+                  updates[column] = normalized;
+                  hasChanges = true;
+                }
+              }
+            });
+            
+            // Normalize company columns
+            companyColumns.forEach(column => {
+              if (record[column] && typeof record[column] === 'string') {
+                const normalized = this.normalizeText(record[column], 'general');
+                if (normalized !== record[column]) {
+                  updates[column] = normalized;
+                  hasChanges = true;
+                }
+              }
+            });
+            
+            // Update record if there are changes
+            if (hasChanges) {
+              try {
+                for (const [column, value] of Object.entries(updates)) {
+                  await this.updateData(table.name, record.id, column, value);
+                }
+                tableUpdated++;
+                totalUpdated++;
+                
+                if (tableUpdated % 10 === 0) {
+                  console.log(`    ✅ Updated ${tableUpdated} records so far...`);
+                }
+              } catch (updateError) {
+                console.error(`    ❌ Error updating record ${record.id}:`, updateError.message);
+              }
+            }
+          }
+          
+          results.push({
+            table: table.name,
+            totalRecords: data.length,
+            updatedRecords: tableUpdated,
+            nameColumns,
+            addressColumns,
+            companyColumns
+          });
+          
+          console.log(`  ✅ Completed ${table.name}: ${tableUpdated}/${data.length} records updated`);
+          
+        } catch (tableError) {
+          console.error(`  ❌ Error processing table ${table.name}:`, tableError.message);
+          results.push({
+            table: table.name,
+            error: tableError.message
+          });
+        }
+      }
+      
+      console.log('\n🎉 Database normalization completed!');
+      console.log(`📊 Summary: ${totalUpdated} total records updated across ${tables.length} tables`);
+      
+      return {
+        success: true,
+        totalUpdated,
+        tablesProcessed: tables.length,
+        results
+      };
+      
+    } catch (error) {
+      console.error('❌ Error during database normalization:', error);
+      throw error;
+    }
+  }
+
+  // Function to normalize a specific table
+  async normalizeTable(tableName) {
+    try {
+      console.log(`🔄 Starting normalization for table: ${tableName}`);
+      
+      // Get table structure
+      const tables = await this.getTables();
+      const table = tables.find(t => t.name === tableName);
+      
+      if (!table) {
+        throw new Error(`Table ${tableName} not found`);
+      }
+      
+      // Get table data
+      const tableData = await this.getData(tableName);
+      const data = tableData.data || [];
+      
+      if (!data.length) {
+        console.log(`⚠️  No data found in ${tableName}`);
+        return { success: true, updatedRecords: 0, totalRecords: 0 };
+      }
+      
+      // Identify columns that contain names or addresses
+      const nameColumns = table.columns.filter(col => 
+        col.name.includes('nombre') || 
+        col.name.includes('contratante') || 
+        col.name.includes('propietario') ||
+        col.name.includes('agente') ||
+        col.name.includes('responsable') ||
+        col.name.includes('beneficiario')
+      ).map(col => col.name);
+      
+      const addressColumns = table.columns.filter(col => 
+        col.name.includes('direccion') || 
+        col.name.includes('domicilio') || 
+        col.name.includes('ubicacion') ||
+        col.name.includes('origen') ||
+        col.name.includes('destino')
+      ).map(col => col.name);
+      
+      const companyColumns = table.columns.filter(col => 
+        col.name.includes('aseguradora') ||
+        col.name.includes('compania') ||
+        col.name.includes('empresa')
+      ).map(col => col.name);
+      
+      console.log(`📝 Name columns: ${nameColumns.join(', ') || 'none'}`);
+      console.log(`🏠 Address columns: ${addressColumns.join(', ') || 'none'}`);
+      console.log(`🏢 Company columns: ${companyColumns.join(', ') || 'none'}`);
+      
+      let updatedRecords = 0;
+      
+      // Process each record
+      for (const record of data) {
+        let hasChanges = false;
+        const updates = {};
+        
+        // Normalize name columns
+        nameColumns.forEach(column => {
+          if (record[column] && typeof record[column] === 'string') {
+            const normalized = this.normalizeText(record[column], 'name');
+            if (normalized !== record[column]) {
+              updates[column] = normalized;
+              hasChanges = true;
+            }
+          }
+        });
+        
+        // Normalize address columns
+        addressColumns.forEach(column => {
+          if (record[column] && typeof record[column] === 'string') {
+            const normalized = this.normalizeText(record[column], 'address');
+            if (normalized !== record[column]) {
+              updates[column] = normalized;
+              hasChanges = true;
+            }
+          }
+        });
+        
+        // Normalize company columns
+        companyColumns.forEach(column => {
+          if (record[column] && typeof record[column] === 'string') {
+            const normalized = this.normalizeText(record[column], 'general');
+            if (normalized !== record[column]) {
+              updates[column] = normalized;
+              hasChanges = true;
+            }
+          }
+        });
+        
+        // Update record if there are changes
+        if (hasChanges) {
+          try {
+            for (const [column, value] of Object.entries(updates)) {
+              await this.updateData(tableName, record.id, column, value);
+            }
+            updatedRecords++;
+            
+            if (updatedRecords % 10 === 0) {
+              console.log(`✅ Updated ${updatedRecords} records so far...`);
+            }
+          } catch (updateError) {
+            console.error(`❌ Error updating record ${record.id}:`, updateError.message);
+          }
+        }
+      }
+      
+      console.log(`✅ Completed ${tableName}: ${updatedRecords}/${data.length} records updated`);
+      
+      return {
+        success: true,
+        tableName,
+        totalRecords: data.length,
+        updatedRecords,
+        nameColumns,
+        addressColumns,
+        companyColumns
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error normalizing table ${tableName}:`, error);
       throw error;
     }
   }

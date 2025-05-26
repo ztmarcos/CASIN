@@ -5,6 +5,8 @@ import policyStatusService from '../../services/policyStatusService';
 import { sendReportEmail } from '../../services/reportEmailService';
 import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUtils';
 import { toast } from 'react-hot-toast';
+import VencimientosGraphics from './VencimientosGraphics';
+import MatrixGraphics from './MatrixGraphics';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -37,6 +39,12 @@ export default function Reports() {
   const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
   const [selectedRamoFilter, setSelectedRamoFilter] = useState('');
   const [selectedAseguradoraFilter, setSelectedAseguradoraFilter] = useState('');
+
+  // New state for collapsible layout and graphics
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
+  const [graphicsTimeView, setGraphicsTimeView] = useState('4months'); // '4months', '6months', 'year'
+  const [showGraphicsPanel, setShowGraphicsPanel] = useState(true);
+  const [showMatrixGraphics, setShowMatrixGraphics] = useState(false);
 
   const calculateNextPaymentDate = (startDate, paymentForm) => {
     if (!startDate || !paymentForm) return null;
@@ -738,6 +746,7 @@ export default function Reports() {
               {isSendingEmail ? 'Enviando...' : 'Enviar por Email'}
             </button>
           )}
+
         </div>
       </div>
 
@@ -760,7 +769,10 @@ export default function Reports() {
       ) : isStatusLoading ? (
         <div className="loading-message">Cargando estados de pólizas...</div>
       ) : (
-        <div className={viewMode === 'table' ? 'table-container' : 'cards-grid'}>
+        <div className={`reports-layout ${(selectedType === 'Vencimientos' && showGraphicsPanel) || (selectedType === 'Matriz de Productos' && showMatrixGraphics) ? 'with-graphics' : 'no-graphics'}`}>
+          {/* Left Panel - Main Reports Content */}
+                      <div className={`reports-left-panel ${(selectedType === 'Vencimientos' && showGraphicsPanel) || (selectedType === 'Matriz de Productos' && showMatrixGraphics) ? 'with-right-panel' : 'full-width'}`}>
+            <div className={viewMode === 'table' ? 'table-container' : 'cards-grid'}>
           {selectedType === 'Matriz de Productos' ? (
             <div className="matrix-container">
               <div className="matrix-section">
@@ -1082,6 +1094,60 @@ export default function Reports() {
                 </div>
               ))
             )
+          )}
+            </div>
+          </div>
+          
+          {/* Graphics Control Button - Always visible for Vencimientos and Matrix */}
+          {(selectedType === 'Vencimientos' || selectedType === 'Matriz de Productos') && (
+            <div className="graphics-control-container">
+              <button
+                className={`unified-graphics-btn ${(selectedType === 'Vencimientos' && showGraphicsPanel) || (selectedType === 'Matriz de Productos' && showMatrixGraphics) ? 'active' : ''}`}
+                onClick={() => {
+                  if (selectedType === 'Vencimientos') {
+                    setShowGraphicsPanel(!showGraphicsPanel);
+                  } else if (selectedType === 'Matriz de Productos') {
+                    setShowMatrixGraphics(!showMatrixGraphics);
+                  }
+                  setIsRightPanelCollapsed(false); // Reset collapse state
+                }}
+                title={
+                  selectedType === 'Vencimientos' 
+                    ? (showGraphicsPanel ? 'Ocultar gráficos' : 'Mostrar gráficos')
+                    : (showMatrixGraphics ? 'Ocultar gráficos' : 'Mostrar gráficos')
+                }
+              >
+                {((selectedType === 'Vencimientos' && showGraphicsPanel) || (selectedType === 'Matriz de Productos' && showMatrixGraphics)) ? (
+                  <span>×</span>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                    <path d="M3 3v18h18M8 17l4-4 4 4 6-6" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Right Panel - Graphics for Vencimientos */}
+          {selectedType === 'Vencimientos' && showGraphicsPanel && (
+            <div className="reports-right-panel">
+              <VencimientosGraphics
+                policies={policies}
+                timeView={graphicsTimeView}
+                onTimeViewChange={setGraphicsTimeView}
+              />
+            </div>
+          )}
+
+          {/* Right Panel - Graphics for Matrix */}
+          {selectedType === 'Matriz de Productos' && showMatrixGraphics && (
+            <div className="reports-right-panel">
+              <MatrixGraphics
+                policies={policies}
+                uniqueRamos={uniqueRamos}
+                uniqueCompanies={uniqueCompanies}
+              />
+            </div>
           )}
         </div>
       )}
