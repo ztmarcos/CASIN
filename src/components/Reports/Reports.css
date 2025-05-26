@@ -573,16 +573,159 @@
   opacity: 0.5;
 }
 
+/* Unified matrix styles */
+.matrix-container {
+  max-height: calc(100vh - 300px);
+  overflow: auto;
+  padding: 1rem;
+  background: var(--bg-surface);
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+}
+
+.matrix-section {
+  padding: 1.5rem;
+  background: var(--bg-surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.matrix-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 2rem 0;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, var(--primary-color), #667eea);
+  border-radius: 0.75rem;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.matrix-table {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.matrix-table .client-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-right: 2px solid var(--primary-color);
+}
+
+.matrix-table .policy-count {
+  font-weight: 700;
+  background: var(--primary-light);
+  color: var(--primary-color);
+  font-size: 1.1rem;
+}
+
+.matrix-table .summary-row {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  border-top: 2px solid var(--primary-color);
+}
+
+.matrix-table .ramo-header {
+  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.matrix-table .company-header {
+  background: linear-gradient(135deg, #2196F3, #42A5F5);
+  color: white;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.matrix-table .ramo-total {
+  background: #e8f5e8;
+  color: #2e7d32;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.matrix-table .company-total {
+  background: #e3f2fd;
+  color: #1976d2;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.matrix-table .grand-total {
+  background: var(--primary-color);
+  color: white;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.matrix-table td.has-policy {
+  background: #e8f5e8;
+  color: #2e7d32;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.matrix-table td.no-policy {
+  background: #ffebee;
+  color: #c62828;
+  opacity: 0.7;
+  font-size: 1.1rem;
+}
+
 /* Responsive adjustments for matrix view */
 @media (max-width: 768px) {
   .matrix-container {
     margin: 0 -1rem;
     border-radius: 0;
+    padding: 0.5rem;
+  }
+  
+  .matrix-section {
+    padding: 1rem;
+  }
+  
+  .matrix-title {
+    font-size: 1.2rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .matrix-table {
+    font-size: 0.75rem;
   }
   
   .matrix-table th,
   .matrix-table td {
-    padding: 0.5rem;
+    padding: 0.4rem 0.2rem;
+    font-size: 0.7rem;
+  }
+  
+  .matrix-table .ramo-header,
+  .matrix-table .company-header {
+    font-size: 0.6rem;
+    padding: 0.3rem 0.1rem;
+  }
+  
+  .matrix-table .policy-count,
+  .matrix-table .ramo-total,
+  .matrix-table .company-total,
+  .matrix-table .grand-total {
     font-size: 0.8rem;
+  }
+  
+  .matrix-table .client-name {
+    min-width: 80px;
+    font-size: 0.7rem;
   }
 } 

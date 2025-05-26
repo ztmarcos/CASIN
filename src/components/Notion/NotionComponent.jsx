@@ -444,7 +444,7 @@ const NotionComponent = () => {
     <NotionErrorBoundary>
       <div className="notion-container">
         <div className="notion-header">
-          <h2>Tareas</h2>
+         
           <div className="notion-controls">
             <div className="notion-actions">
               <button 

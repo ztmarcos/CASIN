@@ -931,7 +931,7 @@ class TableService {
 
   async updateTableOrder(tableOrder) {
     try {
-      const response = await fetch(`${this.apiUrl}/tables/order`, {
+      const response = await fetch(`${this.apiUrl}/data/tables/order`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

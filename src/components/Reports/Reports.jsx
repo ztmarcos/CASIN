@@ -97,26 +97,31 @@ export default function Reports() {
       id: policy.id,
       numero_poliza: policy.numero_poliza || policy.n__mero_de_p__liza || policy.numero_de_poliza,
       contratante: policy.contratante || policy.nombre_contratante,
-      asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
+      asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante || policy.nombre_contratante,
       rfc: policy.rfc,
       email: policy.e_mail || policy.email,
-      fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia,
-      fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta,
-      aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada',
+      fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia || policy.vigencia_inicio,
+      fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta || policy.vigencia_fin,
+      aseguradora: policy.aseguradora || 'No especificada',
       forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
       sourceTable: source
     };
 
-    // Calculate prima total
-    const primaTotal = parseFloat(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total || 0);
+    // Calculate prima total - handle comma-separated numbers
+    const cleanNumericValue = (value) => {
+      if (!value) return 0;
+      return parseFloat(value.toString().replace(/,/g, '')) || 0;
+    };
+    
+    const primaTotal = cleanNumericValue(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total);
 
     // Common financial fields
     const financialFields = {
-      prima_neta: primaTotal,
+      prima_neta: cleanNumericValue(policy.prima_neta) || primaTotal,
       prima_total: primaTotal,
-      derecho_poliza: parseFloat(policy.derecho_de_p__liza || policy.derecho_de_poliza || 0),
-      recargo_pago_fraccionado: parseFloat(policy.recargo_por_pago_fraccionado || 0),
-      iva: parseFloat(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16 || 0),
+      derecho_poliza: cleanNumericValue(policy.derecho_de_p__liza || policy.derecho_de_poliza || policy.derecho_poliza),
+      recargo_pago_fraccionado: cleanNumericValue(policy.recargo_por_pago_fraccionado),
+      iva: cleanNumericValue(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16),
       pago_total: primaTotal,
       pagos_fraccionados: policy.pagos_fraccionados,
       pago_parcial: policy.monto_parcial,
@@ -132,27 +137,53 @@ export default function Reports() {
       ...financialFields
     };
 
-    // Add ramo based on source
-    switch (source) {
-      case 'gmm':
-        return { ...basePolicy, ramo: 'GMM' };
-      case 'autos':
-        return { ...basePolicy, ramo: 'Autos' };
-      case 'mascotas':
-        return { ...basePolicy, ramo: 'Mascotas' };
-      case 'vida':
-        return { ...basePolicy, ramo: 'Vida' };
-      case 'hogar':
-        return { ...basePolicy, ramo: 'Hogar' };
-      case 'empresarial':
-        return { ...basePolicy, ramo: 'Empresarial' };
-      case 'responsabilidad':
-        return { ...basePolicy, ramo: 'Responsabilidad Civil' };
-      case 'accidentes':
-        return { ...basePolicy, ramo: 'Accidentes Personales' };
-      default:
-        return { ...basePolicy, ramo: 'Otros' };
+    // Determine ramo - first check if policy already has a ramo field, otherwise use source mapping
+    let ramo = policy.ramo;
+    if (!ramo) {
+      switch (source) {
+        case 'gmm':
+        case 'gruposgmm':
+          ramo = 'GMM';
+          break;
+        case 'autos':
+          ramo = 'Autos';
+          break;
+        case 'mascotas':
+          ramo = 'Mascotas';
+          break;
+        case 'vida':
+          ramo = 'Vida';
+          break;
+        case 'negocio':
+          ramo = 'Negocio';
+          break;
+        case 'diversos':
+          ramo = 'Diversos';
+          break;
+        case 'rc':
+          ramo = 'Responsabilidad Civil';
+          break;
+        case 'transporte':
+          ramo = 'Transporte';
+          break;
+        case 'hogar':
+          ramo = 'Hogar';
+          break;
+        case 'empresarial':
+          ramo = 'Empresarial';
+          break;
+        case 'responsabilidad':
+          ramo = 'Responsabilidad Civil';
+          break;
+        case 'accidentes':
+          ramo = 'Accidentes Personales';
+          break;
+        default:
+          ramo = 'Otros';
+      }
     }
+
+    return { ...basePolicy, ramo };
   };
 
   const matchesSearch = (value, term) => {
@@ -201,10 +232,11 @@ export default function Reports() {
       const tables = await tableService.getTables();
       console.log('All available tables:', tables);
 
-      // Define paired tables
+      // Define paired tables (only for tables that actually have listado tables)
       const pairedTables = {
-        'autos': 'AutosListado',
-        'vida': 'VidaListado',
+        // Removed non-existent paired tables that were causing 500 errors
+        // 'autos': 'AutosListado', // - AutosListado doesn't exist
+        // 'vida': 'VidaListado',   // - VidaListado doesn't exist
         'GruposAutos': 'AutosListado',
         'GruposVida': 'VidaListado'
       };
@@ -213,7 +245,9 @@ export default function Reports() {
       const allResponses = await Promise.all(
         tables.map(async (table) => {
           try {
+            console.log(`Fetching data from table: ${table.name}`);
             const response = await tableService.getData(table.name);
+            console.log(`Table ${table.name} returned ${response.data?.length || 0} records`);
             
             // If this is a main table with a paired listado
             if (pairedTables[table.name]) {
@@ -245,21 +279,30 @@ export default function Reports() {
 
       // Process all responses
       const allPolicies = allResponses.flatMap(({ tableName, data, listadoData }) => {
+        console.log(`Processing table: ${tableName} with ${data.length} records`);
+        
         // Skip listado tables as they're handled with their main tables
         if (tableName.toLowerCase().includes('listado')) {
+          console.log(`Skipping listado table: ${tableName}`);
           return [];
         }
 
-        // Determine the type based on table name
+        // Determine the type based on exact table name matching
         let policyType = 'other';
-        if (tableName.toLowerCase().includes('gmm')) policyType = 'gmm';
-        else if (tableName.toLowerCase().includes('auto')) policyType = 'autos';
-        else if (tableName.toLowerCase().includes('mascota')) policyType = 'mascotas';
-        else if (tableName.toLowerCase().includes('vida')) policyType = 'vida';
-        else if (tableName.toLowerCase().includes('hogar')) policyType = 'hogar';
-        else if (tableName.toLowerCase().includes('empresarial')) policyType = 'empresarial';
-        else if (tableName.toLowerCase().includes('responsabilidad')) policyType = 'responsabilidad';
-        else if (tableName.toLowerCase().includes('accidentes')) policyType = 'accidentes';
+        const lowerTableName = tableName.toLowerCase();
+        
+        if (lowerTableName === 'gmm' || lowerTableName === 'gruposgmm') policyType = 'gmm';
+        else if (lowerTableName === 'autos') policyType = 'autos';
+        else if (lowerTableName === 'mascotas') policyType = 'mascotas';
+        else if (lowerTableName === 'vida') policyType = 'vida';
+        else if (lowerTableName === 'negocio') policyType = 'negocio';
+        else if (lowerTableName === 'diversos') policyType = 'diversos';
+        else if (lowerTableName === 'rc') policyType = 'rc';
+        else if (lowerTableName === 'transporte') policyType = 'transporte';
+        else if (lowerTableName.includes('hogar')) policyType = 'hogar';
+        else if (lowerTableName.includes('empresarial')) policyType = 'empresarial';
+        else if (lowerTableName.includes('responsabilidad')) policyType = 'responsabilidad';
+        else if (lowerTableName.includes('accidentes')) policyType = 'accidentes';
         
         return data.map(policy => {
           try {
@@ -423,22 +466,26 @@ export default function Reports() {
     if (!policies.length) return;
 
     // Add debugging logs
-    console.log('Building matrix with policies:', policies.map(p => ({
+    console.log('Building matrix with policies:', policies.length, 'total policies');
+    console.log('Policy sources and ramos:', policies.map(p => ({
+      id: p.id,
+      numero_poliza: p.numero_poliza,
       contratante: p.contratante,
       aseguradora: p.aseguradora,
-      ramo: p.ramo
+      ramo: p.ramo,
+      sourceTable: p.sourceTable
     })));
 
     // Extract unique values
-    const clients = [...new Set(policies.map(p => p.contratante))].sort();
-    const companies = [...new Set(policies.map(p => p.aseguradora))].sort();
-    const ramos = [...new Set(policies.map(p => p.ramo))].sort();
+    const clients = [...new Set(policies.map(p => p.contratante).filter(Boolean))].sort();
+    const companies = [...new Set(policies.map(p => p.aseguradora).filter(Boolean))].sort();
+    const ramos = [...new Set(policies.map(p => p.ramo).filter(Boolean))].sort();
 
     // Log unique values
     console.log('Unique values found:', {
-      clients: clients,
-      companies: companies,
-      ramos: ramos
+      clients: clients.length + ' clients',
+      companies: companies.length + ' companies: ' + companies.join(', '),
+      ramos: ramos.length + ' ramos: ' + ramos.join(', ')
     });
 
     // Create client matrix
@@ -693,41 +740,115 @@ export default function Reports() {
         <div className={viewMode === 'table' ? 'table-container' : 'cards-grid'}>
           {selectedType === 'Matriz de Productos' ? (
             <div className="matrix-container">
-              <table className="matrix-table">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th colSpan={uniqueCompanies.length}>Aseguradoras</th>
-                    <th colSpan={uniqueRamos.length}>Ramos</th>
-                  </tr>
-                  <tr>
-                    <th></th>
-                    {uniqueCompanies.map(company => (
-                      <th key={company}>{company}</th>
-                    ))}
-                    {uniqueRamos.map(ramo => (
-                      <th key={ramo}>{ramo}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {uniqueClients.map(client => (
-                    <tr key={client}>
-                      <td>{client}</td>
-                      {uniqueCompanies.map(company => (
-                        <td key={`${client}-${company}`} className={clientMatrix[client]?.companies[company] ? 'has-policy' : 'no-policy'}>
-                          {clientMatrix[client]?.companies[company] ? '✓' : '×'}
-                        </td>
-                      ))}
+              <div className="matrix-section">
+                <h3 className="matrix-title">Matriz Comparativa de Clientes por Ramo y Aseguradora</h3>
+                <table className="matrix-table">
+                  <thead>
+                    <tr>
+                      <th rowSpan="2">Cliente</th>
+                      <th colSpan={uniqueRamos.length}>Ramos de Seguros</th>
+                      <th colSpan={uniqueCompanies.length}>Aseguradoras</th>
+                      <th rowSpan="2">Total Pólizas</th>
+                    </tr>
+                    <tr>
                       {uniqueRamos.map(ramo => (
-                        <td key={`${client}-${ramo}`} className={clientMatrix[client]?.ramos[ramo] ? 'has-policy' : 'no-policy'}>
-                          {clientMatrix[client]?.ramos[ramo] ? '✓' : '×'}
-                        </td>
+                        <th key={ramo} className="ramo-header">{ramo}</th>
+                      ))}
+                      {uniqueCompanies.map(company => (
+                        <th key={company} className="company-header">{company}</th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {uniqueClients.map(client => {
+                      const clientPolicies = policies.filter(p => p.contratante === client);
+                      const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
+                      const clientCompanies = [...new Set(clientPolicies.map(p => p.aseguradora))];
+                      
+                      return (
+                        <tr key={client}>
+                          <td className="client-name">{client}</td>
+                          
+                          {/* Ramo columns */}
+                          {uniqueRamos.map(ramo => {
+                            const hasRamo = clientRamos.includes(ramo);
+                            const ramoCompanies = clientPolicies
+                              .filter(p => p.ramo === ramo)
+                              .map(p => p.aseguradora);
+                            
+                            return (
+                              <td 
+                                key={`${client}-ramo-${ramo}`}
+                                className={hasRamo ? 'has-policy' : 'no-policy'}
+                                title={hasRamo ? 
+                                  `${client} tiene ${ramo} con: ${[...new Set(ramoCompanies)].join(', ')}` : 
+                                  `${client} no tiene póliza de ${ramo}`
+                                }
+                              >
+                                {hasRamo ? '✓' : '×'}
+                              </td>
+                            );
+                          })}
+                          
+                          {/* Company columns */}
+                          {uniqueCompanies.map(company => {
+                            const hasCompany = clientCompanies.includes(company);
+                            const companyRamos = clientPolicies
+                              .filter(p => p.aseguradora === company)
+                              .map(p => p.ramo);
+                            
+                            return (
+                              <td 
+                                key={`${client}-company-${company}`}
+                                className={hasCompany ? 'has-policy' : 'no-policy'}
+                                title={hasCompany ? 
+                                  `${client} tiene con ${company}: ${[...new Set(companyRamos)].join(', ')}` : 
+                                  `${client} no tiene póliza con ${company}`
+                                }
+                              >
+                                {hasCompany ? '✓' : '×'}
+                              </td>
+                            );
+                          })}
+                          
+                          {/* Total policies */}
+                          <td className="policy-count">{clientPolicies.length}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="summary-row">
+                      <td><strong>Total por Categoría</strong></td>
+                      
+                      {/* Ramo totals */}
+                      {uniqueRamos.map(ramo => {
+                        const ramoCount = policies.filter(p => p.ramo === ramo).length;
+                        return (
+                          <td key={ramo} className="ramo-total">
+                            <strong>{ramoCount}</strong>
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Company totals */}
+                      {uniqueCompanies.map(company => {
+                        const companyCount = policies.filter(p => p.aseguradora === company).length;
+                        return (
+                          <td key={company} className="company-total">
+                            <strong>{companyCount}</strong>
+                          </td>
+                        );
+                      })}
+                      
+                      {/* Grand total */}
+                      <td className="grand-total">
+                        <strong>{policies.length}</strong>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           ) : (
             filteredPolicies.length === 0 ? (
