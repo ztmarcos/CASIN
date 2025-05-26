@@ -21,13 +21,14 @@ const DataSection = () => {
   const [error, setError] = useState(null);
   const [showImport, setShowImport] = useState(false);
 
-  const loadTableData = useCallback(async () => {
-    if (!selectedTable) return;
+  const loadTableData = useCallback(async (tableName = null) => {
+    const targetTableName = tableName || selectedTable?.name;
+    if (!targetTableName) return;
     
     setIsLoading(true);
     try {
-      console.log('Loading data for table:', selectedTable.name);
-      const result = await tableService.getData(selectedTable.name, filters);
+      console.log('Loading data for table:', targetTableName);
+      const result = await tableService.getData(targetTableName, filters);
       console.log('Received data from API:', result);
       
       if (!result) {
@@ -41,6 +42,15 @@ const DataSection = () => {
       const tableData = result.data || [];
       console.log('Setting table data with', tableData.length, 'rows');
       setTableData(tableData);
+      
+      // Update the selected table name when tableName is provided
+      if (tableName) {
+        console.log('🔄 Updating selectedTable.name from', selectedTable?.name, 'to', tableName);
+        setSelectedTable(prev => ({
+          ...prev,
+          name: tableName
+        }));
+      }
     } catch (error) {
       console.error('Error loading table data:', error);
       setTableData([]);
@@ -289,7 +299,11 @@ const DataSection = () => {
     if (!selectedTable) return;
     
     try {
-      const result = await tableService.updateData(selectedTable.name, id, column, value);
+      // Get the actual table name (could be combined table name)
+      const currentTableName = selectedTable.name;
+      console.log('Updating cell:', { id, column, value, table: currentTableName });
+      
+      const result = await tableService.updateData(currentTableName, id, column, value);
       
       // Update the local data to reflect the change
       setTableData(prevData => 

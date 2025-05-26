@@ -403,57 +403,59 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <div className="tables-list">
-          <SortableContext
-            items={tables.map(table => table.name)}
-            strategy={verticalListSortingStrategy}
-          >
-            {tables.map(table => (
-              <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
-                <SortableTableItem
-                  table={table}
-                  isSecondary={false}
-                  onTableClick={handleTableClick}
-                  onTableDoubleClick={handleTableDoubleClick}
-                  onDeleteTable={handleDeleteTable}
-                  isSelected={selectedTableProp === table.name}
-                  isEditing={editingTable === table}
-                  editingName={editingName}
-                  onNameChange={handleNameChange}
-                  onNameSubmit={handleNameSubmit}
-                  expandedTables={expandedTables}
-                />
-                
-                {table.secondaryTable && expandedTables.has(table.name) && (
-                  <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
-                    <div className="connector-line"></div>
-                    <div className="secondary-table">
-                      <SortableTableItem
-                        table={table.secondaryTable}
-                        isSecondary={true}
-                        onTableClick={handleTableClick}
-                        onTableDoubleClick={handleTableDoubleClick}
-                        onDeleteTable={handleDeleteTable}
-                        isSelected={selectedTableProp === table.secondaryTable.name}
-                        isEditing={editingTable === table.secondaryTable}
-                        editingName={editingName}
-                        onNameChange={handleNameChange}
-                        onNameSubmit={handleNameSubmit}
-                        expandedTables={expandedTables}
-                      />
+      {!isCollapsed && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="tables-list">
+            <SortableContext
+              items={tables.map(table => table.name)}
+              strategy={verticalListSortingStrategy}
+            >
+              {tables.map(table => (
+                <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
+                  <SortableTableItem
+                    table={table}
+                    isSecondary={false}
+                    onTableClick={handleTableClick}
+                    onTableDoubleClick={handleTableDoubleClick}
+                    onDeleteTable={handleDeleteTable}
+                    isSelected={selectedTableProp === table.name}
+                    isEditing={editingTable === table}
+                    editingName={editingName}
+                    onNameChange={handleNameChange}
+                    onNameSubmit={handleNameSubmit}
+                    expandedTables={expandedTables}
+                  />
+                  
+                  {table.secondaryTable && expandedTables.has(table.name) && (
+                    <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
+                      <div className="connector-line"></div>
+                      <div className="secondary-table">
+                        <SortableTableItem
+                          table={table.secondaryTable}
+                          isSecondary={true}
+                          onTableClick={handleTableClick}
+                          onTableDoubleClick={handleTableDoubleClick}
+                          onDeleteTable={handleDeleteTable}
+                          isSelected={selectedTableProp === table.secondaryTable.name}
+                          isEditing={editingTable === table.secondaryTable}
+                          editingName={editingName}
+                          onNameChange={handleNameChange}
+                          onNameSubmit={handleNameSubmit}
+                          expandedTables={expandedTables}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </SortableContext>
-        </div>
-      </DndContext>
+                  )}
+                </div>
+              ))}
+            </SortableContext>
+          </div>
+        </DndContext>
+      )}
 
       {/* Modal for creating tables */}
       <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">

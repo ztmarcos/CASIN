@@ -62,12 +62,33 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   // Add effect to fetch available child tables
   useEffect(() => {
     const fetchChildTables = async () => {
-      if (!tableName || tableName.includes('→')) return;
+      // Get the base parent table name
+      const baseParentTable = tableName?.includes('→') ? tableName.split('→')[0].trim() : tableName;
+      
+      if (!baseParentTable) {
+        setAvailableChildTables([]);
+        setSelectedChildTable('');
+        return;
+      }
+      
       try {
-        const childTables = await tableService.getChildTables(tableName);
+        console.log('Fetching child tables for:', baseParentTable);
+        const childTables = await tableService.getChildTables(baseParentTable);
+        console.log('Available child tables:', childTables);
         setAvailableChildTables(childTables);
+        
+        // Set selected child table if we're in a combined table
+        if (tableName?.includes('→')) {
+          const currentChildTable = tableName.split('→')[1].trim();
+          console.log('Setting selected child table to:', currentChildTable);
+          setSelectedChildTable(currentChildTable);
+        } else {
+          console.log('Resetting selected child table (parent table)');
+          setSelectedChildTable(''); // Reset selection when table changes
+        }
       } catch (error) {
         console.error('Error fetching child tables:', error);
+        setAvailableChildTables([]);
       }
     };
 
@@ -118,19 +139,46 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         {tableName && (
           <div className="table-title">
             <h2>{tableTitle}</h2>
-            {!tableName.includes('→') && availableChildTables.length > 0 && (
+            {(availableChildTables.length > 0 || tableName.includes('→')) && (
               <div className="child-table-selector">
                 <select
-                  value={selectedChildTable}
-                  onChange={(e) => handleChildTableSelect(e.target.value)}
+                  value={tableName.includes('→') ? 'child' : 'parent'}
+                                      onChange={(e) => {
+                      console.log('🔄 Empty state dropdown onChange triggered:', e.target.value);
+                      const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
+                      
+                      if (e.target.value === 'parent') {
+                        console.log('🔄 Switching to parent table:', baseParentTable);
+                        handleChildTableSelect(baseParentTable);
+                      } else if (e.target.value === 'child') {
+                        const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
+                        console.log('🔄 Switching to child table:', childTableName);
+                        handleChildTableSelect(childTableName);
+                      }
+                    }}
                   className="child-table-dropdown"
                 >
-                  <option value="">Seleccionar tabla secundaria...</option>
-                  {availableChildTables.map(childTable => (
-                    <option key={childTable} value={childTable}>
-                      {tableService.formatSingleTableName(childTable)}
-                    </option>
-                  ))}
+                  {tableName.includes('→') ? (
+                    <>
+                      <option value="parent">
+                        {tableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
+                      </option>
+                      <option value="child">
+                        {tableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
+                      </option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="parent">
+                        {tableService.formatSingleTableName(tableName)} (Principal)
+                      </option>
+                      {availableChildTables.map(childTable => (
+                        <option key={childTable} value="child">
+                          {tableService.formatSingleTableName(childTable)} (Secundaria)
+                        </option>
+                      ))}
+                    </>
+                  )}
                 </select>
               </div>
             )}
@@ -652,10 +700,40 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   };
 
   // Update handleChildTableSelect
-  const handleChildTableSelect = async (childTableName) => {
-    if (!childTableName) return;
-    setSelectedChildTable(childTableName);
-    const combinedTableName = `${tableName} → ${childTableName}`;
+  const handleChildTableSelect = async (selectedTableName) => {
+    console.log('🚀 handleChildTableSelect called with:', selectedTableName);
+    
+    if (!selectedTableName) {
+      console.log('❌ No selectedTableName provided');
+      return;
+    }
+    
+    // Get the base parent table name (without arrow if it's a combined table)
+    const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
+    
+    console.log('📊 Current state:', { 
+      selectedTableName, 
+      baseParentTable, 
+      currentTableName: tableName,
+      currentSelectedChild: selectedChildTable 
+    });
+    
+    // If selecting the parent table
+    if (selectedTableName === baseParentTable) {
+      console.log('Loading parent table:', baseParentTable);
+      setSelectedChildTable(''); // Clear child selection
+      if (onRefresh) {
+        await onRefresh(baseParentTable);
+      }
+      return;
+    }
+    
+    // If selecting a child table
+    console.log('Selecting child table:', selectedTableName, 'for parent:', baseParentTable);
+    setSelectedChildTable(selectedTableName);
+    const combinedTableName = `${baseParentTable} → ${selectedTableName}`;
+    console.log('Loading combined table:', combinedTableName);
+    
     // Trigger refresh with new combined table name
     if (onRefresh) {
       await onRefresh(combinedTableName);
@@ -667,19 +745,46 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       {tableTitle && (
         <div className="table-title">
           <h2>{tableTitle}</h2>
-          {!tableName.includes('→') && availableChildTables.length > 0 && (
+                    {(availableChildTables.length > 0 || tableName.includes('→')) && (
             <div className="child-table-selector">
               <select
-                value={selectedChildTable}
-                onChange={(e) => handleChildTableSelect(e.target.value)}
+                value={tableName.includes('→') ? 'child' : 'parent'}
+                onChange={(e) => {
+                  console.log('🔄 DROPDOWN CLICKED! Value:', e.target.value, 'Current table:', tableName);
+                  const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
+                  
+                  if (e.target.value === 'parent') {
+                    console.log('🔄 Switching to parent table:', baseParentTable);
+                    handleChildTableSelect(baseParentTable);
+                  } else if (e.target.value === 'child') {
+                    const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
+                    console.log('🔄 Switching to child table:', childTableName);
+                    handleChildTableSelect(childTableName);
+                  }
+                }}
                 className="child-table-dropdown"
               >
-                <option value="">Seleccionar tabla secundaria...</option>
-                {availableChildTables.map(childTable => (
-                  <option key={childTable} value={childTable}>
-                    {tableService.formatSingleTableName(childTable)}
-                  </option>
-                ))}
+                {tableName.includes('→') ? (
+                  <>
+                    <option value="parent">
+                      {tableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
+                    </option>
+                    <option value="child">
+                      {tableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
+                    </option>
+                  </>
+                ) : (
+                  <>
+                    <option value="parent">
+                      {tableService.formatSingleTableName(tableName)} (Principal)
+                    </option>
+                    {availableChildTables.map(childTable => (
+                      <option key={childTable} value="child">
+                        {tableService.formatSingleTableName(childTable)} (Secundaria)
+                      </option>
+                    ))}
+                  </>
+                )}
               </select>
             </div>
           )}

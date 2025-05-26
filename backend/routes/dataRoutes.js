@@ -83,6 +83,27 @@ router.get('/tables', async (req, res) => {
   }
 });
 
+// Get combined table data (parent with child) - MUST BE BEFORE /:tableName
+router.get('/combined/:parentTable/:childTable', async (req, res) => {
+  try {
+    const { parentTable, childTable } = req.params;
+    
+    console.log('Getting combined data for:', parentTable, 'with', childTable);
+    
+    // Get data from child table with JOIN to parent table
+    const query = `
+      SELECT c.*, p.* 
+      FROM \`${childTable}\` c 
+      LEFT JOIN \`${parentTable}\` p ON c.main_table_id = p.id
+    `;
+    const data = await mysqlDatabase.executeQuery(query, []);
+    res.json(data);
+  } catch (error) {
+    console.error('Error getting combined data:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create new table
 router.post('/tables', async (req, res) => {
   try {
@@ -555,14 +576,18 @@ router.get('/tables/:tableName/children', async (req, res) => {
   try {
     const { tableName } = req.params;
     
-    // Get all tables and their relationships
-    const tables = await mysqlDatabase.getTables();
-    
-    // Find child tables (tables where this is the main table)
-    const childTables = tables.filter(table => 
-      table.relationshipType === 'secondary' && 
-      table.relatedTableName?.toLowerCase() === tableName.toLowerCase()
+    // Query the table_relationships table to find child tables
+    const relationships = await mysqlDatabase.executeQuery(
+      'SELECT secondary_table_name FROM table_relationships WHERE main_table_name = ?',
+      [tableName]
     );
+    
+    // Get the full table information for each child table
+    const allTables = await mysqlDatabase.getTables();
+    const childTables = relationships.map(rel => {
+      const childTable = allTables.find(table => table.name === rel.secondary_table_name);
+      return childTable || { name: rel.secondary_table_name, isSecondaryTable: true, relatedTableName: tableName };
+    });
 
     res.json(childTables);
   } catch (error) {

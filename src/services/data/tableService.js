@@ -30,6 +30,9 @@ class TableService {
   }
 
   formatSingleTableName(tableName) {
+    if (!tableName || typeof tableName !== 'string') {
+      return '';
+    }
     return tableName
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -68,6 +71,35 @@ class TableService {
       // Set current table when getting data
       this.setCurrentTable(tableName);
       
+      // Check if this is a combined table name (contains arrow)
+      if (tableName.includes('→')) {
+        const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
+        console.log('Loading combined table data:', { parentTable, childTable });
+        
+        // Get parent table data
+        const parentResponse = await fetch(`${this.apiUrl}/data/${parentTable}`);
+        if (!parentResponse.ok) {
+          throw new Error(`HTTP error getting parent table! status: ${parentResponse.status}`);
+        }
+        const parentResult = await parentResponse.json();
+        
+        // Get child table data
+        const childResponse = await fetch(`${this.apiUrl}/data/${childTable}`);
+        if (!childResponse.ok) {
+          throw new Error(`HTTP error getting child table! status: ${childResponse.status}`);
+        }
+        const childResult = await childResponse.json();
+        
+        // Return combined result with child table data as primary
+        return {
+          table: tableName,
+          data: childResult.data || [],
+          parentData: parentResult.data || [],
+          timestamp: new Date().toISOString()
+        };
+      }
+      
+      // Regular single table request
       const response = await fetch(`${this.apiUrl}/data/${tableName}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -308,12 +340,23 @@ class TableService {
 
   async updateData(tableName, id, column, value) {
     try {
+      // Handle combined table names
+      let actualTableName = tableName;
+      if (tableName.includes('→')) {
+        // For combined tables, we need to determine which table to update
+        // For now, assume we're updating the child table (secondary table)
+        const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
+        actualTableName = childTable;
+        console.log('Combined table update - using child table:', childTable);
+      }
+      
       // Clean and validate inputs
-      const cleanTableName = tableName.trim().toLowerCase();
+      const cleanTableName = actualTableName.trim().toLowerCase();
       
       // Log the update attempt
       console.log('Attempting to update:', {
-        tableName: cleanTableName,
+        originalTableName: tableName,
+        actualTableName: cleanTableName,
         id,
         column,
         value
@@ -956,7 +999,8 @@ class TableService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const tables = await response.json();
-      return tables.map(table => table.name);
+      console.log('Child tables response:', tables); // Debug log
+      return tables.map(table => table.name || table);
     } catch (error) {
       console.error('Error getting child tables:', error);
       throw error;

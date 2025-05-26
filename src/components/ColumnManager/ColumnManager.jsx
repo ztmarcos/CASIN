@@ -187,6 +187,13 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         return;
       }
 
+      // Skip loading columns for combined tables (containing →)
+      if (selectedTable.name.includes('→')) {
+        console.log('Combined table detected, skipping column structure load');
+        setColumns([]);
+        return;
+      }
+
       console.log('Loading columns for table:', selectedTable.name);
       setIsLoading(true);
       setError(null);
