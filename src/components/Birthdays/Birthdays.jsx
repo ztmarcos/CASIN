@@ -54,6 +54,23 @@ const Birthdays = () => {
     );
   });
 
+  // Get current date info
+  const today = new Date();
+  const currentMonth = today.toLocaleString('es-MX', { month: 'long' });
+  const todayString = today.toDateString();
+
+  // Filter birthdays for today and current month
+  const todayBirthdays = filteredBirthdays.filter(birthday => {
+    if (!birthday.date) return false;
+    return birthday.date.toDateString() === todayString;
+  });
+
+  const currentMonthBirthdays = filteredBirthdays.filter(birthday => {
+    if (!birthday.date) return false;
+    const birthdayMonth = birthday.date.toLocaleString('es-MX', { month: 'long' });
+    return birthdayMonth === currentMonth;
+  });
+
   // Group birthdays by month
   const groupedBirthdays = filteredBirthdays.reduce((groups, birthday) => {
     if (!birthday.date) return groups;
@@ -145,15 +162,18 @@ const Birthdays = () => {
         </div>
       ) : viewMode === 'grid' ? (
         <div className="birthdays-content">
-          {Object.entries(groupedBirthdays).map(([month, monthBirthdays]) => (
-            <div key={month} className="month-section">
-              <h3 className="month-title">{month}</h3>
+          {/* Today's Birthdays Section */}
+          {todayBirthdays.length > 0 && (
+            <div className="highlight-section today-section">
+              <h3 className="highlight-title">
+                🎉 Cumpleaños de Hoy ({todayBirthdays.length})
+              </h3>
               <div className="birthdays-grid">
-                {monthBirthdays.map((birthday) => (
-                  <div key={birthday.id} className="birthday-card">
+                {todayBirthdays.map((birthday) => (
+                  <div key={birthday.id} className="birthday-card today-birthday">
                     <div className="birthday-info">
-                      <span className="birthday-date">
-                        {formatDate(birthday.date)} ({birthday.age} años)
+                      <span className="birthday-date today-badge">
+                        ¡HOY! ({birthday.age} años)
                       </span>
                       <h3 className="birthday-name">{birthday.name}</h3>
                       <p className="birthday-details">{birthday.details}</p>
@@ -179,7 +199,89 @@ const Birthdays = () => {
                 ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Current Month Birthdays Section */}
+          {currentMonthBirthdays.length > 0 && (
+            <div className="highlight-section current-month-section">
+              <h3 className="highlight-title">
+                📅 Cumpleaños de {currentMonth} ({currentMonthBirthdays.length})
+              </h3>
+              <div className="birthdays-grid">
+                {currentMonthBirthdays
+                  .filter(birthday => !todayBirthdays.some(today => today.id === birthday.id)) // Exclude today's birthdays
+                  .sort((a, b) => a.date.getDate() - b.date.getDate()) // Sort by day of month
+                  .map((birthday) => (
+                    <div key={birthday.id} className="birthday-card current-month-birthday">
+                      <div className="birthday-info">
+                        <span className="birthday-date current-month-badge">
+                          {formatDate(birthday.date)} ({birthday.age} años)
+                        </span>
+                        <h3 className="birthday-name">{birthday.name}</h3>
+                        <p className="birthday-details">{birthday.details}</p>
+                        <div className="birthday-contact">
+                          <span className="birthday-rfc">{birthday.rfc}</span>
+                          {birthday.email && (
+                            <span className="birthday-email">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="email-icon">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                              </svg>
+                              {birthday.email}
+                            </span>
+                          )}
+                        </div>
+                        <div className="birthday-metadata">
+                          <span className="birthday-source">{birthday.source}</span>
+                          <span className="birthday-source-type" title="Fuente de la fecha de nacimiento">
+                            {birthday.birthdaySource}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* All Birthdays by Month */}
+          <div className="all-birthdays-section">
+            <h3 className="section-title">Todos los Cumpleaños por Mes</h3>
+            {Object.entries(groupedBirthdays).map(([month, monthBirthdays]) => (
+              <div key={month} className="month-section">
+                <h4 className="month-title">{month}</h4>
+                <div className="birthdays-grid">
+                  {monthBirthdays.map((birthday) => (
+                    <div key={birthday.id} className="birthday-card">
+                      <div className="birthday-info">
+                        <span className="birthday-date">
+                          {formatDate(birthday.date)} ({birthday.age} años)
+                        </span>
+                        <h3 className="birthday-name">{birthday.name}</h3>
+                        <p className="birthday-details">{birthday.details}</p>
+                        <div className="birthday-contact">
+                          <span className="birthday-rfc">{birthday.rfc}</span>
+                          {birthday.email && (
+                            <span className="birthday-email">
+                              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="email-icon">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                              </svg>
+                              {birthday.email}
+                            </span>
+                          )}
+                        </div>
+                        <div className="birthday-metadata">
+                          <span className="birthday-source">{birthday.source}</span>
+                          <span className="birthday-source-type" title="Fuente de la fecha de nacimiento">
+                            {birthday.birthdaySource}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div className="birthdays-table-view">

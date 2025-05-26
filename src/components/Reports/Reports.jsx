@@ -32,6 +32,11 @@ export default function Reports() {
   const [uniqueCompanies, setUniqueCompanies] = useState([]);
   const [uniqueRamos, setUniqueRamos] = useState([]);
   const [clientMatrix, setClientMatrix] = useState({});
+  
+  // Matrix filters
+  const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
+  const [selectedRamoFilter, setSelectedRamoFilter] = useState('');
+  const [selectedAseguradoraFilter, setSelectedAseguradoraFilter] = useState('');
 
   const calculateNextPaymentDate = (startDate, paymentForm) => {
     if (!startDate || !paymentForm) return null;
@@ -387,6 +392,19 @@ export default function Reports() {
     }
   };
 
+  // Normalize company names
+  const normalizeCompanyName = (name) => {
+    if (!name) return '';
+    const normalized = name.toString().trim().toLowerCase();
+    // Fix common duplicates
+    if (normalized.includes('plan seguro')) return 'Plan Seguro';
+    if (normalized.includes('gnp')) return 'GNP';
+    if (normalized.includes('axa')) return 'AXA';
+    if (normalized.includes('seguros monterrey')) return 'Seguros Monterrey';
+    // Return original with proper capitalization
+    return name.toString().trim();
+  };
+
   // Add back the initial data fetch
   useEffect(() => {
     console.log('Initial data fetch starting...');
@@ -476,9 +494,14 @@ export default function Reports() {
       sourceTable: p.sourceTable
     })));
 
-    // Extract unique values
+    // Extract unique values with normalization
     const clients = [...new Set(policies.map(p => p.contratante).filter(Boolean))].sort();
-    const companies = [...new Set(policies.map(p => p.aseguradora).filter(Boolean))].sort();
+    
+    const companies = [...new Set(policies
+      .map(p => normalizeCompanyName(p.aseguradora))
+      .filter(Boolean)
+    )].sort();
+    
     const ramos = [...new Set(policies.map(p => p.ramo).filter(Boolean))].sort();
 
     // Log unique values
@@ -742,112 +765,203 @@ export default function Reports() {
             <div className="matrix-container">
               <div className="matrix-section">
                 <h3 className="matrix-title">Matriz Comparativa de Clientes por Ramo y Aseguradora</h3>
-                <table className="matrix-table">
-                  <thead>
-                    <tr>
-                      <th rowSpan="2">Cliente</th>
-                      <th colSpan={uniqueRamos.length}>Ramos de Seguros</th>
-                      <th colSpan={uniqueCompanies.length}>Aseguradoras</th>
-                      <th rowSpan="2">Total Pólizas</th>
-                    </tr>
-                    <tr>
+                
+                {/* Matrix filters */}
+                <div className="matrix-filters">
+                  <div className="matrix-search-bar">
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={matrixSearchTerm}
+                      onChange={(e) => setMatrixSearchTerm(e.target.value)}
+                      className="matrix-search-input"
+                    />
+                  </div>
+                  <div className="matrix-filter-selects">
+                    <select
+                      className="matrix-filter-select"
+                      value={selectedRamoFilter}
+                      onChange={(e) => setSelectedRamoFilter(e.target.value)}
+                    >
+                      <option value="">Todos los Ramos</option>
                       {uniqueRamos.map(ramo => (
-                        <th key={ramo} className="ramo-header">{ramo}</th>
+                        <option key={ramo} value={ramo}>{ramo}</option>
                       ))}
+                    </select>
+                    <select
+                      className="matrix-filter-select"
+                      value={selectedAseguradoraFilter}
+                      onChange={(e) => setSelectedAseguradoraFilter(e.target.value)}
+                    >
+                      <option value="">Todas las Aseguradoras</option>
                       {uniqueCompanies.map(company => (
-                        <th key={company} className="company-header">{company}</th>
+                        <option key={company} value={company}>{company}</option>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {uniqueClients.map(client => {
-                      const clientPolicies = policies.filter(p => p.contratante === client);
-                      const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
-                      const clientCompanies = [...new Set(clientPolicies.map(p => p.aseguradora))];
-                      
-                      return (
-                        <tr key={client}>
-                          <td className="client-name">{client}</td>
-                          
-                          {/* Ramo columns */}
-                          {uniqueRamos.map(ramo => {
-                            const hasRamo = clientRamos.includes(ramo);
-                            const ramoCompanies = clientPolicies
-                              .filter(p => p.ramo === ramo)
-                              .map(p => p.aseguradora);
+                    </select>
+                  </div>
+                </div>
+                
+{/* Check if we have data to display */}
+                {uniqueClients.length === 0 || uniqueRamos.length === 0 || uniqueCompanies.length === 0 ? (
+                  <div className="matrix-no-data">
+                    <div className="no-data-message">
+                      <h4>No hay datos disponibles para mostrar la matriz</h4>
+                      <p>
+                        {uniqueClients.length === 0 && "No se encontraron clientes. "}
+                        {uniqueRamos.length === 0 && "No se encontraron ramos de seguros. "}
+                        {uniqueCompanies.length === 0 && "No se encontraron aseguradoras. "}
+                      </p>
+                      <p>Verifique que las pólizas tengan datos completos de contratante, ramo y aseguradora.</p>
+                    </div>
+                  </div>
+                ) : (
+                  (() => {
+                    // Filter clients based on search and filter criteria
+                    const filteredClients = uniqueClients
+                      .filter(client => {
+                        // Apply search filter
+                        if (matrixSearchTerm.trim()) {
+                          return client.toLowerCase().includes(matrixSearchTerm.toLowerCase());
+                        }
+                        return true;
+                      })
+                      .filter(client => {
+                        // Apply ramo filter
+                        if (selectedRamoFilter) {
+                          const clientPolicies = policies.filter(p => p.contratante === client);
+                          const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
+                          return clientRamos.includes(selectedRamoFilter);
+                        }
+                        return true;
+                      })
+                      .filter(client => {
+                        // Apply aseguradora filter
+                        if (selectedAseguradoraFilter) {
+                          const clientPolicies = policies.filter(p => p.contratante === client);
+                          const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
+                          return clientCompanies.includes(selectedAseguradoraFilter);
+                        }
+                        return true;
+                      });
+
+                    return filteredClients.length === 0 ? (
+                      <div className="matrix-no-results">
+                        <div className="no-data-message">
+                          <h4>No se encontraron resultados</h4>
+                          <p>No hay clientes que coincidan con los filtros aplicados.</p>
+                          <p>Intente ajustar los criterios de búsqueda o filtros.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <table className="matrix-table">
+                        <thead>
+                          <tr>
+                            <th rowSpan="2">Cliente</th>
+                            <th colSpan={uniqueRamos.length}>Ramos de Seguros</th>
+                            <th colSpan={uniqueCompanies.length}>Aseguradoras</th>
+                            <th rowSpan="2">Total Pólizas</th>
+                          </tr>
+                          <tr>
+                            {uniqueRamos.map(ramo => (
+                              <th key={ramo} className="ramo-header">{ramo}</th>
+                            ))}
+                            {uniqueCompanies.map(company => (
+                              <th key={company} className="company-header">{company}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredClients.map(client => {
+                            const clientPolicies = policies.filter(p => p.contratante === client);
+                            const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
+                            const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
                             
                             return (
-                              <td 
-                                key={`${client}-ramo-${ramo}`}
-                                className={hasRamo ? 'has-policy' : 'no-policy'}
-                                title={hasRamo ? 
-                                  `${client} tiene ${ramo} con: ${[...new Set(ramoCompanies)].join(', ')}` : 
-                                  `${client} no tiene póliza de ${ramo}`
-                                }
-                              >
-                                {hasRamo ? '✓' : '×'}
-                              </td>
+                              <tr key={client}>
+                                <td className="client-name">{client}</td>
+                                
+                                {/* Ramo columns */}
+                                {uniqueRamos.map(ramo => {
+                                  const hasRamo = clientRamos.includes(ramo);
+                                  const ramoCompanies = clientPolicies
+                                    .filter(p => p.ramo === ramo)
+                                    .map(p => p.aseguradora);
+                                  
+                                  return (
+                                    <td 
+                                      key={`${client}-ramo-${ramo}`}
+                                      className={hasRamo ? 'has-policy' : 'no-policy'}
+                                      title={hasRamo ? 
+                                        `${client} tiene ${ramo} con: ${[...new Set(ramoCompanies)].join(', ')}` : 
+                                        `${client} no tiene póliza de ${ramo}`
+                                      }
+                                    >
+                                      {hasRamo ? '✓' : '×'}
+                                    </td>
+                                  );
+                                })}
+                                
+                                {/* Company columns */}
+                                {uniqueCompanies.map(company => {
+                                  const hasCompany = clientCompanies.includes(company);
+                                  const companyRamos = clientPolicies
+                                    .filter(p => normalizeCompanyName(p.aseguradora) === company)
+                                    .map(p => p.ramo);
+                                  
+                                  return (
+                                    <td 
+                                      key={`${client}-company-${company}`}
+                                      className={hasCompany ? 'has-policy' : 'no-policy'}
+                                      title={hasCompany ? 
+                                        `${client} tiene con ${company}: ${[...new Set(companyRamos)].join(', ')}` : 
+                                        `${client} no tiene póliza con ${company}`
+                                      }
+                                    >
+                                      {hasCompany ? '✓' : '×'}
+                                    </td>
+                                  );
+                                })}
+                                
+                                {/* Total policies */}
+                                <td className="policy-count">{clientPolicies.length}</td>
+                              </tr>
                             );
                           })}
-                          
-                          {/* Company columns */}
-                          {uniqueCompanies.map(company => {
-                            const hasCompany = clientCompanies.includes(company);
-                            const companyRamos = clientPolicies
-                              .filter(p => p.aseguradora === company)
-                              .map(p => p.ramo);
+                        </tbody>
+                        <tfoot>
+                          <tr className="summary-row">
+                            <td><strong>Total por Categoría</strong></td>
                             
-                            return (
-                              <td 
-                                key={`${client}-company-${company}`}
-                                className={hasCompany ? 'has-policy' : 'no-policy'}
-                                title={hasCompany ? 
-                                  `${client} tiene con ${company}: ${[...new Set(companyRamos)].join(', ')}` : 
-                                  `${client} no tiene póliza con ${company}`
-                                }
-                              >
-                                {hasCompany ? '✓' : '×'}
-                              </td>
-                            );
-                          })}
-                          
-                          {/* Total policies */}
-                          <td className="policy-count">{clientPolicies.length}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="summary-row">
-                      <td><strong>Total por Categoría</strong></td>
-                      
-                      {/* Ramo totals */}
-                      {uniqueRamos.map(ramo => {
-                        const ramoCount = policies.filter(p => p.ramo === ramo).length;
-                        return (
-                          <td key={ramo} className="ramo-total">
-                            <strong>{ramoCount}</strong>
-                          </td>
-                        );
-                      })}
-                      
-                      {/* Company totals */}
-                      {uniqueCompanies.map(company => {
-                        const companyCount = policies.filter(p => p.aseguradora === company).length;
-                        return (
-                          <td key={company} className="company-total">
-                            <strong>{companyCount}</strong>
-                          </td>
-                        );
-                      })}
-                      
-                      {/* Grand total */}
-                      <td className="grand-total">
-                        <strong>{policies.length}</strong>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                            {/* Ramo totals */}
+                            {uniqueRamos.map(ramo => {
+                              const ramoCount = policies.filter(p => p.ramo === ramo).length;
+                              return (
+                                <td key={ramo} className="ramo-total">
+                                  <strong>{ramoCount}</strong>
+                                </td>
+                              );
+                            })}
+                            
+                            {/* Company totals */}
+                            {uniqueCompanies.map(company => {
+                              const companyCount = policies.filter(p => normalizeCompanyName(p.aseguradora) === company).length;
+                              return (
+                                <td key={company} className="company-total">
+                                  <strong>{companyCount}</strong>
+                                </td>
+                              );
+                            })}
+                            
+                            {/* Grand total */}
+                            <td className="grand-total">
+                              <strong>{policies.length}</strong>
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    );
+                  })()
+                )}
               </div>
             </div>
           ) : (

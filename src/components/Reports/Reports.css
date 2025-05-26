@@ -594,7 +594,7 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: white;
-  margin: 0 0 2rem 0;
+  margin: 0 0 1rem 0;
   padding: 1.5rem 2rem;
   background: linear-gradient(135deg, var(--primary-color), #667eea);
   border-radius: 0.75rem;
@@ -602,6 +602,71 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.matrix-filters {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--bg-hover);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+}
+
+.matrix-search-bar {
+  flex: 1;
+  min-width: 200px;
+}
+
+.matrix-search-input {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.375rem;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.matrix-search-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.matrix-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.matrix-filter-selects {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.matrix-filter-select {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  min-width: 150px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.matrix-filter-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.matrix-filter-select:hover {
+  background-color: var(--bg-hover);
 }
 
 .matrix-table {
@@ -683,6 +748,46 @@
   font-size: 1.1rem;
 }
 
+/* Matrix no-data styles */
+.matrix-no-data,
+.matrix-no-results {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 300px;
+  padding: 2rem;
+}
+
+.no-data-message {
+  text-align: center;
+  background: var(--bg-surface);
+  border: 2px dashed var(--border-color);
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 500px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.no-data-message h4 {
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+}
+
+.no-data-message p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0.5rem 0;
+}
+
+.no-data-message p:last-child {
+  font-style: italic;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+}
+
 /* Responsive adjustments for matrix view */
 @media (max-width: 768px) {
   .matrix-container {
@@ -699,6 +804,26 @@
     font-size: 1.2rem;
     padding: 1rem 1.5rem;
     margin-bottom: 1rem;
+  }
+  
+  .matrix-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .matrix-search-bar {
+    min-width: unset;
+  }
+  
+  .matrix-filter-selects {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .matrix-filter-select {
+    min-width: unset;
+    flex: 1;
   }
   
   .matrix-table {
@@ -727,5 +852,24 @@
   .matrix-table .client-name {
     min-width: 80px;
     font-size: 0.7rem;
+  }
+
+  .matrix-no-data,
+  .matrix-no-results {
+    min-height: 200px;
+    padding: 1rem;
+  }
+
+  .no-data-message {
+    padding: 1.5rem;
+    max-width: 100%;
+  }
+
+  .no-data-message h4 {
+    font-size: 1.1rem;
+  }
+
+  .no-data-message p {
+    font-size: 0.875rem;
   }
 } 

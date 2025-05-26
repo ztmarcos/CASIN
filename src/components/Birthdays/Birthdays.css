@@ -108,6 +108,117 @@
   padding: 1rem 0;
 }
 
+/* Highlight sections for today and current month */
+.highlight-section {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.today-section {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-color: #ffc107;
+  animation: pulse-glow 2s infinite;
+}
+
+.current-month-section {
+  background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+  border-color: #17a2b8;
+}
+
+.highlight-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.today-section .highlight-title {
+  color: #856404;
+}
+
+.current-month-section .highlight-title {
+  color: #0c5460;
+}
+
+/* Special styling for today's birthday cards */
+.today-birthday {
+  background: linear-gradient(135deg, #fff, #fffbf0);
+  border: 2px solid #ffc107;
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.today-birthday:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.4);
+}
+
+.today-badge {
+  background: linear-gradient(135deg, #ffc107, #ffb300);
+  color: #212529;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+/* Special styling for current month birthday cards */
+.current-month-birthday {
+  background: linear-gradient(135deg, #fff, #f0f9ff);
+  border: 1px solid #17a2b8;
+  box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+}
+
+.current-month-birthday:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.current-month-badge {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  color: white;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 15px;
+  text-align: center;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgba(23, 162, 184, 0.3);
+}
+
+/* Section titles */
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.all-birthdays-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px dashed var(--border-color);
+}
+
+/* Pulse animation for today's section */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 0 0 8px rgba(255, 193, 7, 0.1);
+  }
+}
+
 .month-section {
   display: flex;
   flex-direction: column;
@@ -390,5 +501,31 @@
   .birthdays-table-view td {
     padding: 0.5rem;
     font-size: 0.875rem;
+  }
+
+  /* Mobile responsive for highlight sections */
+  .highlight-section {
+    padding: 1rem;
+    margin: 0 -0.5rem;
+  }
+
+  .highlight-title {
+    font-size: 1.25rem;
+  }
+
+  .today-badge,
+  .current-month-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1.125rem;
+    margin: 1.5rem 0 0.75rem 0;
+  }
+
+  .all-birthdays-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
   }
 } 
