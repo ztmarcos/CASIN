@@ -20,6 +20,14 @@ const DataSection = () => {
   const [filters, setFilters] = useState({});
   const [error, setError] = useState(null);
   const [showImport, setShowImport] = useState(false);
+  
+  // New state for collapsible panels
+  const [isTableManagerCollapsed, setIsTableManagerCollapsed] = useState(false);
+  const [isColumnManagerCollapsed, setIsColumnManagerCollapsed] = useState(true); // Start collapsed
+  
+  // New modal states
+  const [showAddColumnModal, setShowAddColumnModal] = useState(false);
+  const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
 
   const loadTableData = useCallback(async (tableName = null) => {
     const targetTableName = tableName || selectedTable?.name;
@@ -70,6 +78,10 @@ const DataSection = () => {
     console.log('Selected table:', table);
     setSelectedTable(table);
     setFilters({}); // Reset filters on table change
+    
+    // Auto-collapse table manager and keep column manager closed when table is selected
+    setIsTableManagerCollapsed(true);
+    setIsColumnManagerCollapsed(true);
     
     // Load data immediately after selecting the table
     try {
@@ -320,8 +332,6 @@ const DataSection = () => {
     }
   };
 
-
-
   const handleReload = async () => {
     try {
       setIsLoading(true);
@@ -421,13 +431,89 @@ const DataSection = () => {
       </div>
 
       <div className="data-section-content">
-        <div className="managers-container">
-          <TableManager onTableSelect={handleTableSelect} />
+        {/* Compact Managers Panel */}
+        <div className="compact-managers-panel">
+          {/* Table Manager Panel */}
+          <div className={`manager-panel ${isTableManagerCollapsed ? 'collapsed' : 'expanded'}`}>
+            <div className="panel-header">
+              <div className="panel-title" onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}>
+                <span className="panel-icon">📋</span>
+                <span>Tablas</span>
+                {selectedTable && <span className="selected-indicator">• {selectedTable.name}</span>}
+              </div>
+              <div className="panel-actions">
+                <button 
+                  className="action-btn create-table-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCreateTableModal(true);
+                  }}
+                  title="Crear nueva tabla"
+                >
+                  ➕
+                </button>
+                <button 
+                  className="collapse-btn"
+                  onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}
+                >
+                  {isTableManagerCollapsed ? '▼' : '▲'}
+                </button>
+              </div>
+            </div>
+            {!isTableManagerCollapsed && (
+              <div className="panel-content">
+                <TableManager onTableSelect={handleTableSelect} />
+              </div>
+            )}
+          </div>
+
+          {/* Column Manager Panel */}
           {selectedTable && (
-            <ColumnManager 
-              selectedTable={selectedTable} 
-              onOrderChange={handleColumnOrderChange}
-            />
+            <div className={`manager-panel ${isColumnManagerCollapsed ? 'collapsed' : 'expanded'}`}>
+              <div className="panel-header">
+                <div className="panel-title" onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}>
+                  <span className="panel-icon">⚙️</span>
+                  <span>Columnas</span>
+                  <span className="table-name">({selectedTable.name})</span>
+                </div>
+                <div className="panel-actions">
+                  <button 
+                    className="action-btn add-column-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAddColumnModal(true);
+                    }}
+                    title="Agregar columna"
+                  >
+                    ➕
+                  </button>
+                  <button 
+                    className="action-btn edit-columns-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowEditColumnsModal(true);
+                    }}
+                    title="Editar columnas"
+                  >
+                    ✏️
+                  </button>
+                  <button 
+                    className="collapse-btn"
+                    onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}
+                  >
+                    {isColumnManagerCollapsed ? '▼' : '▲'}
+                  </button>
+                </div>
+              </div>
+              {!isColumnManagerCollapsed && (
+                <div className="panel-content">
+                  <ColumnManager 
+                    selectedTable={selectedTable} 
+                    onOrderChange={handleColumnOrderChange}
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
 

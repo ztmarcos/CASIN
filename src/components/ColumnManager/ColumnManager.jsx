@@ -163,7 +163,6 @@ const SortableItem = ({ id, column, onDelete, onEdit, onTagChange, onPdfToggle, 
 const ColumnManager = ({ selectedTable, onOrderChange }) => {
   const [columns, setColumns] = useState([]);
   const [columnTags, setColumnTags] = useState({});
-  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -444,9 +443,6 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     <div className="column-manager">
       <div className="section-header">
         <h3>
-          <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
-            {isCollapsed ? '›' : '⌄'}
-          </span>
           Columnas {columns.length > 0 && `(${columns.length})`}
         </h3>
         <div className="header-buttons">
@@ -473,77 +469,73 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         />
       </Modal>
 
-      {!isCollapsed && (
-        <>
-          {showCreateForm && (
-            <form onSubmit={handleCreateColumn} className="create-column-form">
-              <input
-                type="text"
-                value={newColumnName}
-                onChange={(e) => setNewColumnName(e.target.value)}
-                placeholder="Column name"
-                required
-              />
-              <select
-                value={newColumnType}
-                onChange={(e) => setNewColumnType(e.target.value)}
-              >
-                <option value="TEXT">Text</option>
-                <option value="INT">Integer</option>
-                <option value="DECIMAL">Decimal</option>
-                <option value="DATE">Date</option>
-                <option value="BOOLEAN">Boolean</option>
-              </select>
-              <button type="submit" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Add Column'}
-              </button>
-            </form>
-          )}
-
-          {error && (
-            <div className="error-message">
-              {error}
-              <button onClick={refreshData} className="refresh-btn">
-                Retry
-              </button>
-            </div>
-          )}
-
-          <div className="columns-list">
-            {!selectedTable?.name ? (
-              <div className="no-table-message">Select a table</div>
-            ) : columns.length === 0 ? (
-              <div className="no-columns-message">No columns</div>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={columns.map(col => `col-${col.name}`)}
-                  strategy={horizontalListSortingStrategy}
-                >
-                  <div className="columns-tags">
-                    {columns.map((column) => (
-                      <SortableItem 
-                        key={`col-${column.name}`}
-                        id={`col-${column.name}`}
-                        column={column.name}
-                        onDelete={handleDeleteColumn}
-                        onEdit={handleEditColumnName}
-                        onTagChange={handleTagChange}
-                        onPdfToggle={handlePdfToggle}
-                        isPdfEnabled={pdfEnabledColumns[column.name]}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
-        </>
+      {showCreateForm && (
+        <form onSubmit={handleCreateColumn} className="create-column-form">
+          <input
+            type="text"
+            value={newColumnName}
+            onChange={(e) => setNewColumnName(e.target.value)}
+            placeholder="Column name"
+            required
+          />
+          <select
+            value={newColumnType}
+            onChange={(e) => setNewColumnType(e.target.value)}
+          >
+            <option value="TEXT">Text</option>
+            <option value="INT">Integer</option>
+            <option value="DECIMAL">Decimal</option>
+            <option value="DATE">Date</option>
+            <option value="BOOLEAN">Boolean</option>
+          </select>
+          <button type="submit" disabled={isLoading}>
+            {isLoading ? 'Creating...' : 'Add Column'}
+          </button>
+        </form>
       )}
+
+      {error && (
+        <div className="error-message">
+          {error}
+          <button onClick={refreshData} className="refresh-btn">
+            Retry
+          </button>
+        </div>
+      )}
+
+      <div className="columns-list">
+        {!selectedTable?.name ? (
+          <div className="no-table-message">Select a table</div>
+        ) : columns.length === 0 ? (
+          <div className="no-columns-message">No columns</div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={columns.map(col => `col-${col.name}`)}
+              strategy={horizontalListSortingStrategy}
+            >
+              <div className="columns-tags">
+                {columns.map((column) => (
+                  <SortableItem 
+                    key={`col-${column.name}`}
+                    id={`col-${column.name}`}
+                    column={column.name}
+                    onDelete={handleDeleteColumn}
+                    onEdit={handleEditColumnName}
+                    onTagChange={handleTagChange}
+                    onPdfToggle={handlePdfToggle}
+                    isPdfEnabled={pdfEnabledColumns[column.name]}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
     </div>
   );
 };

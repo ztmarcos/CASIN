@@ -14,8 +14,11 @@ export const usePolicyCount = () => {
       // Get all available tables
       const tables = await tableService.getTables();
       
-      // Filter out child/secondary tables to avoid double counting
-      const mainTables = tables.filter(table => !table.isSecondaryTable);
+      // Filter out child/secondary tables and directorio_contactos to avoid double counting
+      const mainTables = tables.filter(table => 
+        !table.isSecondaryTable && 
+        table.name !== 'directorio_contactos'
+      );
       console.log('Fetching policy count from main tables only:', mainTables.map(t => t.name));
 
       // Get data from main tables only
@@ -35,7 +38,7 @@ export const usePolicyCount = () => {
 
       // Sum all counts
       const total = allResponses.reduce((sum, count) => sum + count, 0);
-      console.log('Total policy count (excluding child tables):', total);
+      console.log('Total policy count (excluding child tables and directorio):', total);
       
       setTotalPolicies(total);
     } catch (err) {

@@ -136,7 +136,6 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [tables, setTables] = useState([]);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [expandedTables, setExpandedTables] = useState(new Set());
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
@@ -163,13 +162,6 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   useEffect(() => {
     loadTables();
   }, []);
-
-  // Add effect to collapse when table is selected
-  useEffect(() => {
-    if (selectedTableProp) {
-      setIsCollapsed(true);
-    }
-  }, [selectedTableProp]);
 
   const loadTables = async () => {
     try {
@@ -384,12 +376,9 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   };
 
   return (
-    <div className={`table-manager ${isCollapsed ? 'collapsed' : ''}`}>
+    <div className={`table-manager`}>
       <div className="section-header">
         <h3>
-          <span className="collapse-icon" onClick={() => setIsCollapsed(!isCollapsed)}>
-            {isCollapsed ? '>' : 'v'}
-          </span>
           Tables {tables.length > 0 && `(${tables.length})`}
         </h3>
         <div className="header-actions">
@@ -403,59 +392,57 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         {isLoading && <div className="loading-spinner">Loading...</div>}
       </div>
 
-      {!isCollapsed && (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="tables-list">
-            <SortableContext
-              items={tables.map(table => table.name)}
-              strategy={verticalListSortingStrategy}
-            >
-              {tables.map(table => (
-                <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
-                  <SortableTableItem
-                    table={table}
-                    isSecondary={false}
-                    onTableClick={handleTableClick}
-                    onTableDoubleClick={handleTableDoubleClick}
-                    onDeleteTable={handleDeleteTable}
-                    isSelected={selectedTableProp === table.name}
-                    isEditing={editingTable === table}
-                    editingName={editingName}
-                    onNameChange={handleNameChange}
-                    onNameSubmit={handleNameSubmit}
-                    expandedTables={expandedTables}
-                  />
-                  
-                  {table.secondaryTable && expandedTables.has(table.name) && (
-                    <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
-                      <div className="connector-line"></div>
-                      <div className="secondary-table">
-                        <SortableTableItem
-                          table={table.secondaryTable}
-                          isSecondary={true}
-                          onTableClick={handleTableClick}
-                          onTableDoubleClick={handleTableDoubleClick}
-                          onDeleteTable={handleDeleteTable}
-                          isSelected={selectedTableProp === table.secondaryTable.name}
-                          isEditing={editingTable === table.secondaryTable}
-                          editingName={editingName}
-                          onNameChange={handleNameChange}
-                          onNameSubmit={handleNameSubmit}
-                          expandedTables={expandedTables}
-                        />
-                      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="tables-list">
+          <SortableContext
+            items={tables.map(table => table.name)}
+            strategy={verticalListSortingStrategy}
+          >
+            {tables.map(table => (
+              <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
+                <SortableTableItem
+                  table={table}
+                  isSecondary={false}
+                  onTableClick={handleTableClick}
+                  onTableDoubleClick={handleTableDoubleClick}
+                  onDeleteTable={handleDeleteTable}
+                  isSelected={selectedTableProp === table.name}
+                  isEditing={editingTable === table}
+                  editingName={editingName}
+                  onNameChange={handleNameChange}
+                  onNameSubmit={handleNameSubmit}
+                  expandedTables={expandedTables}
+                />
+                
+                {table.secondaryTable && expandedTables.has(table.name) && (
+                  <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
+                    <div className="connector-line"></div>
+                    <div className="secondary-table">
+                      <SortableTableItem
+                        table={table.secondaryTable}
+                        isSecondary={true}
+                        onTableClick={handleTableClick}
+                        onTableDoubleClick={handleTableDoubleClick}
+                        onDeleteTable={handleDeleteTable}
+                        isSelected={selectedTableProp === table.secondaryTable.name}
+                        isEditing={editingTable === table.secondaryTable}
+                        editingName={editingName}
+                        onNameChange={handleNameChange}
+                        onNameSubmit={handleNameSubmit}
+                        expandedTables={expandedTables}
+                      />
                     </div>
-                  )}
-                </div>
-              ))}
-            </SortableContext>
-          </div>
-        </DndContext>
-      )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </SortableContext>
+        </div>
+      </DndContext>
 
       {/* Modal for creating tables */}
       <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">

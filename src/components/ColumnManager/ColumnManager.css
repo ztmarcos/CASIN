@@ -1,9 +1,9 @@
 .column-manager {
-  padding: 1.5rem;
-  background: #ffffff;
-  border: 1px solid #eaeaea;
-  border-radius: 6px;
-  margin-bottom: 1rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
   position: relative;
 }
 
@@ -11,9 +11,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid #eaeaea;
-  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.75rem;
 }
 
 .collapse-icon {
