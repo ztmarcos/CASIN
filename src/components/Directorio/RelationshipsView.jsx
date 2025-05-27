@@ -11,6 +11,7 @@ const RelationshipsView = () => {
   const [contactPolicies, setContactPolicies] = useState(null);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
 
   useEffect(() => {
     loadRelationships();
@@ -97,6 +98,60 @@ const RelationshipsView = () => {
     }
   };
 
+  const renderTableView = () => {
+    return (
+      <div className="relationships-table-container">
+        <table className="relationships-table">
+          <thead>
+            <tr>
+              <th>Contacto</th>
+              <th>Email</th>
+              <th>Status</th>
+              <th>Pólizas</th>
+              <th>Tablas</th>
+              <th>Tipos de Match</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {relationships.map((relationship) => (
+              <tr key={relationship.contacto.id}>
+                <td className="contact-name">
+                  {relationship.contacto.nombre}
+                </td>
+                <td className="contact-email">
+                  {relationship.contacto.email}
+                </td>
+                <td>
+                  <span className={`status-badge status-${relationship.contacto.status}`}>
+                    {relationship.contacto.status}
+                  </span>
+                </td>
+                <td className="policies-count">
+                  {relationship.polizas.length}
+                </td>
+                <td className="tables-list">
+                  {[...new Set(relationship.polizas.map(p => p.tabla))].join(', ').toUpperCase()}
+                </td>
+                <td className="match-types">
+                  {[...new Set(relationship.polizas.map(p => getMatchTypeLabel(p.match_type)))].join(', ')}
+                </td>
+                <td>
+                  <button 
+                    onClick={() => handleContactClick(relationship.contacto)}
+                    className="btn-view-details"
+                  >
+                    Ver Detalles
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="relationships-container">
@@ -126,19 +181,26 @@ const RelationshipsView = () => {
       <div className="relationships-header">
         <h1>🔗 Análisis de Relaciones</h1>
         <div className="header-actions">
+          <div className="view-mode-buttons">
+            <button 
+              onClick={() => setViewMode('cards')}
+              className={`view-mode-btn ${viewMode === 'cards' ? 'active' : ''}`}
+            >
+              📋 Tarjetas
+            </button>
+            <button 
+              onClick={() => setViewMode('table')}
+              className={`view-mode-btn ${viewMode === 'table' ? 'active' : ''}`}
+            >
+              📊 Tabla
+            </button>
+          </div>
           <button 
             onClick={updateClientStatus}
             disabled={updatingStatus}
             className="btn-update-status"
           >
             {updatingStatus ? '⏳ Actualizando...' : '🔄 Actualizar Status de Clientes'}
-          </button>
-          <button 
-            onClick={loadRelationships}
-            disabled={loading}
-            className="btn-refresh"
-          >
-            {loading ? '⏳ Cargando...' : '🔄 Actualizar'}
           </button>
         </div>
       </div>
@@ -188,6 +250,8 @@ const RelationshipsView = () => {
             <div className="no-relationships">
               <p>No se encontraron relaciones entre el directorio y las pólizas.</p>
             </div>
+          ) : viewMode === 'table' ? (
+            renderTableView()
           ) : (
             <div className="relationships-grid">
               {relationships.map((relationship) => (
