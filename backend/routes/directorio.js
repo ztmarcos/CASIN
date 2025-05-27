@@ -185,55 +185,66 @@ router.get('/', async (req, res) => {
     connection = await getConnection();
     console.log('🔍 Database connection created successfully');
     
-    const { status, origen, genero, page = 1, limit = 20 } = req.query;
+    const { status, origen, genero, search, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(page) || 1;
-    const limitNum = Math.min(parseInt(limit) || 20, 100); // Cap at 100
+    const limitNum = Math.min(parseInt(limit) || 50, 100); // Cap at 100
     const offset = (pageNum - 1) * limitNum;
     
     console.log('🔍 Parsed params:', { pageNum, limitNum, offset });
     
-    // Build conditions array
-    let conditions = ['1=1']; // Always true condition to start with
-    let queryParams = [];
+    // Build WHERE clause without parameters to avoid MySQL issues
+    let whereConditions = ['1=1'];
     
     if (status) {
-      conditions.push('status = ?');
-      queryParams.push(status);
+      whereConditions.push(`status = '${status.replace(/'/g, "''")}'`);
     }
+    
     if (origen) {
-      conditions.push('origen = ?');
-      queryParams.push(origen);
+      whereConditions.push(`origen = '${origen.replace(/'/g, "''")}'`);
     }
+    
     if (genero) {
-      conditions.push('genero = ?');
-      queryParams.push(genero);
+      whereConditions.push(`genero = '${genero.replace(/'/g, "''")}'`);
     }
     
-    // Construct query with parameters
-    const query = `
+    if (search) {
+      const searchTerm = search.replace(/'/g, "''");
+      whereConditions.push(`(
+        nombre_completo LIKE '%${searchTerm}%' OR 
+        email LIKE '%${searchTerm}%' OR 
+        telefono LIKE '%${searchTerm}%'
+      )`);
+    }
+    
+    const whereClause = whereConditions.join(' AND ');
+    
+    // Get total count first
+    const countQuery = `SELECT COUNT(*) as total FROM directorio_contactos WHERE ${whereClause}`;
+    console.log('🔍 Count query:', countQuery);
+    
+    const [countResult] = await connection.query(countQuery);
+    const totalCount = countResult[0].total;
+    
+    // Get paginated data
+    const dataQuery = `
       SELECT * FROM directorio_contactos 
-      WHERE ${conditions.join(' AND ')}
+      WHERE ${whereClause} 
       ORDER BY nombre_completo ASC 
-      LIMIT ? OFFSET ?
+      LIMIT ${limitNum} OFFSET ${offset}
     `;
+    console.log('🔍 Data query:', dataQuery);
     
-    // Add limit and offset to parameters
-    queryParams.push(limitNum, offset);
+    const [rows] = await connection.query(dataQuery);
     
-    console.log('🔍 Main endpoint query:', query);
-    console.log('🔍 Query params:', queryParams);
-    
-    // Use query() with parameters
-    const [rows] = await connection.query(query, queryParams);
-    
-    console.log('🔍 Query executed successfully, got', rows.length, 'rows');
+    console.log('🔍 Query executed successfully. Total:', totalCount, 'Returned:', rows.length);
     
     res.json({
       success: true,
+      data: rows,
+      total: totalCount,
       page: pageNum,
       limit: limitNum,
-      total: rows.length,
-      data: rows
+      totalPages: Math.ceil(totalCount / limitNum)
     });
     
   } catch (error) {

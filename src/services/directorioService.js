@@ -100,9 +100,19 @@ class DirectorioService {
     }
   }
 
-  async searchContactos(searchTerm) {
+  async searchContactos(searchTerm, params = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/directorio/search?q=${encodeURIComponent(searchTerm)}`);
+      const queryParams = new URLSearchParams();
+      queryParams.append('search', searchTerm);
+      
+      // Add pagination and filter params
+      Object.keys(params).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          queryParams.append(key, params[key]);
+        }
+      });
+      
+      const response = await fetch(`${API_BASE_URL}/directorio?${queryParams.toString()}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
