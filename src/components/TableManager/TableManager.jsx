@@ -12,6 +12,8 @@ import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+  rectSortingStrategy,
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -32,7 +34,8 @@ const SortableTableItem = ({
   editingName, 
   onNameChange, 
   onNameSubmit,
-  expandedTables
+  expandedTables,
+  toggleTableExpand
 }) => {
   const {
     attributes,
@@ -49,19 +52,13 @@ const SortableTableItem = ({
 
   const handleCardClick = (e) => {
     // Don't trigger if clicking delete button, input, or drag handles
-    if (e.target.closest('.delete-button') || e.target.closest('.table-name-input') || e.target.closest('.drag-handle')) {
+    if (e.target.closest('.table-actions') || e.target.closest('.table-name-input') || e.target.closest('.drag-handle')) {
       return;
     }
     onTableClick(table, isSecondary);
   };
 
   const getDisplayName = () => {
-    if (isSecondary) {
-      return table.name;
-    }
-    if (table.secondaryTable) {
-      return `${table.name} ⟶ ${table.secondaryTable.name}`;
-    }
     return table.name;
   };
 
@@ -69,29 +66,24 @@ const SortableTableItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable ? 'has-secondary' : ''} ${isSecondary ? 'secondary' : 'primary'}`}
+      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable && !isSecondary ? 'has-secondary' : ''} ${isSecondary ? 'secondary' : ''}`}
+      onClick={handleCardClick}
       onDoubleClick={(e) => onTableDoubleClick(e, table)}
     >
-      <div className="drag-handle left" {...attributes} {...listeners}>
+      <div className="drag-handle" {...attributes} {...listeners}>
         <span className="drag-icon">⋮</span>
       </div>
 
-      <div className="table-content" onClick={handleCardClick}>
+      <div className="table-content">
         <div className="table-info">
-          {!isSecondary && table.secondaryTable && (
-            <span className="expand-icon">
-              {expandedTables.has(table.name) ? '▼' : '▶'}
-            </span>
-          )}
           {isEditing ? (
             <input
               type="text"
               value={editingName}
               onChange={onNameChange}
               onKeyDown={onNameSubmit}
-              onBlur={() => {
-                setEditingTable(null);
-                setEditingName('');
+              onBlur={(e) => {
+                onNameSubmit({ key: 'Escape' });
               }}
               autoFocus
               onClick={(e) => e.stopPropagation()}
@@ -100,33 +92,37 @@ const SortableTableItem = ({
           ) : (
             <div className="table-name-container">
               {table.secondaryTable && !isSecondary && (
-                <span className="relationship-icon" title="Combined Table">🔗</span>
+                <span className="relationship-icon" title="Has Secondary Table">🔗</span>
               )}
-              <span 
-                className="table-name"
-                title={getDisplayName()}
-              >
+              <span className="table-name" title={getDisplayName()}>
                 {getDisplayName()}
               </span>
             </div>
           )}
         </div>
-        <div className="table-actions">
-          <button
-            className="delete-button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteTable(e, table);
-            }}
-            title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
-          >
-            ×
-          </button>
-        </div>
       </div>
 
-      <div className="drag-handle right" {...attributes} {...listeners}>
-        <span className="drag-icon">⋮</span>
+      <div className="table-actions">
+        <button
+          className="action-btn edit-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTableDoubleClick(e, table);
+          }}
+          title={`Edit ${isSecondary ? 'child' : ''} table "${table.name}"`}
+        >
+          ✏️
+        </button>
+        <button
+          className="action-btn delete-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteTable(e, table);
+          }}
+          title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
+        >
+          ×
+        </button>
       </div>
     </div>
   );
@@ -140,6 +136,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingTable, setEditingTable] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [groupData, setGroupData] = useState({
     mainTableName: '',
     secondaryTableName: '',
@@ -252,14 +249,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const handleTableClick = (table, isSecondary = false) => {
     // Always select the table when clicked
     if (onTableSelect) {
-      // If it's a parent table with a child, pass the parent name
-      if (!isSecondary && table.secondaryTable) {
-        onTableSelect(table);
-        toggleTableExpand(table.name);
-      } else {
-        // For single tables or child tables, pass the table directly
-        onTableSelect(table);
-      }
+      onTableSelect(table);
     }
     
     // Collapse the section after selection
@@ -400,10 +390,10 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         <div className="tables-list">
           <SortableContext
             items={tables.map(table => table.name)}
-            strategy={verticalListSortingStrategy}
+            strategy={rectSortingStrategy}
           >
             {tables.map(table => (
-              <div key={table.name} className={`table-group ${table.isMainTable ? 'main-table-group' : ''}`}>
+              <React.Fragment key={table.name}>
                 <SortableTableItem
                   table={table}
                   isSecondary={false}
@@ -416,29 +406,26 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
                   onNameChange={handleNameChange}
                   onNameSubmit={handleNameSubmit}
                   expandedTables={expandedTables}
+                  toggleTableExpand={toggleTableExpand}
                 />
-                
-                {table.secondaryTable && expandedTables.has(table.name) && (
-                  <div className={`secondary-table-container ${!expandedTables.has(table.name) ? 'hidden' : ''}`}>
-                    <div className="connector-line"></div>
-                    <div className="secondary-table">
-                      <SortableTableItem
-                        table={table.secondaryTable}
-                        isSecondary={true}
-                        onTableClick={handleTableClick}
-                        onTableDoubleClick={handleTableDoubleClick}
-                        onDeleteTable={handleDeleteTable}
-                        isSelected={selectedTableProp === table.secondaryTable.name}
-                        isEditing={editingTable === table.secondaryTable}
-                        editingName={editingName}
-                        onNameChange={handleNameChange}
-                        onNameSubmit={handleNameSubmit}
-                        expandedTables={expandedTables}
-                      />
-                    </div>
-                  </div>
+                {table.secondaryTable && (
+                  <SortableTableItem
+                    key={`${table.name}-secondary`}
+                    table={table.secondaryTable}
+                    isSecondary={true}
+                    onTableClick={handleTableClick}
+                    onTableDoubleClick={handleTableDoubleClick}
+                    onDeleteTable={handleDeleteTable}
+                    isSelected={selectedTableProp === table.secondaryTable.name}
+                    isEditing={editingTable === table.secondaryTable}
+                    editingName={editingName}
+                    onNameChange={handleNameChange}
+                    onNameSubmit={handleNameSubmit}
+                    expandedTables={expandedTables}
+                    toggleTableExpand={toggleTableExpand}
+                  />
                 )}
-              </div>
+              </React.Fragment>
             ))}
           </SortableContext>
         </div>

@@ -818,7 +818,7 @@ class TableService {
         .replace(/[^a-zA-Z0-9_]/g, '_')
         .toLowerCase();
 
-      const response = await fetch(`${this.apiUrl}/tables/${cleanOldName}/rename`, {
+      const response = await fetch(`${this.apiUrl}/data/tables/${cleanOldName}/rename`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
