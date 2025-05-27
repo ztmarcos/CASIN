@@ -1,6 +1,6 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
 const router = express.Router();
+const mysqlDatabase = require('../services/mysqlDatabase');
 
 console.log('🚀 BACKEND DIRECTORIO ROUTES FILE LOADED - VERSION 4.1 - TIMESTAMP:', new Date().toISOString());
 
@@ -176,23 +176,15 @@ router.get('/simple-test', async (req, res) => {
 
 // GET /api/directorio - Get all contacts with optional filters
 router.get('/', async (req, res) => {
-  console.log('🔍 GET /api/directorio - Main endpoint hit!');
-  console.log('🔍 Query params:', req.query);
+  console.log('🔍 GET /api/directorio');
   
-  let connection;
   try {
-    console.log('🔍 Creating database connection...');
-    connection = await getConnection();
-    console.log('🔍 Database connection created successfully');
-    
     const { status, origen, genero, search, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(page) || 1;
-    const limitNum = Math.min(parseInt(limit) || 50, 100); // Cap at 100
+    const limitNum = Math.min(parseInt(limit) || 50, 200);
     const offset = (pageNum - 1) * limitNum;
     
-    console.log('🔍 Parsed params:', { pageNum, limitNum, offset });
-    
-    // Build WHERE clause without parameters to avoid MySQL issues
+    // Build WHERE clause
     let whereConditions = ['1=1'];
     
     if (status) {
@@ -212,17 +204,15 @@ router.get('/', async (req, res) => {
       whereConditions.push(`(
         nombre_completo LIKE '%${searchTerm}%' OR 
         email LIKE '%${searchTerm}%' OR 
-        telefono LIKE '%${searchTerm}%'
+        telefono_movil LIKE '%${searchTerm}%'
       )`);
     }
     
     const whereClause = whereConditions.join(' AND ');
     
-    // Get total count first
+    // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM directorio_contactos WHERE ${whereClause}`;
-    console.log('🔍 Count query:', countQuery);
-    
-    const [countResult] = await connection.query(countQuery);
+    const countResult = await mysqlDatabase.executeQuery(countQuery);
     const totalCount = countResult[0].total;
     
     // Get paginated data
@@ -232,11 +222,7 @@ router.get('/', async (req, res) => {
       ORDER BY nombre_completo ASC 
       LIMIT ${limitNum} OFFSET ${offset}
     `;
-    console.log('🔍 Data query:', dataQuery);
-    
-    const [rows] = await connection.query(dataQuery);
-    
-    console.log('🔍 Query executed successfully. Total:', totalCount, 'Returned:', rows.length);
+    const rows = await mysqlDatabase.executeQuery(dataQuery);
     
     res.json({
       success: true,
@@ -250,12 +236,8 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error('Error fetching contacts:', error);
     res.status(500).json({ 
-      error: error.message,
-      code: error.code,
-      errno: error.errno
+      error: error.message
     });
-  } finally {
-    if (connection) await connection.end();
   }
 });
 
@@ -301,15 +283,12 @@ router.get('/search', async (req, res) => {
 
 // GET /api/directorio/stats - Get contact statistics
 router.get('/stats', async (req, res) => {
-  let connection;
   try {
-    connection = await getConnection();
-    
-    const [totalResult] = await connection.execute(
+    const totalResult = await mysqlDatabase.executeQuery(
       'SELECT COUNT(*) as total FROM directorio_contactos'
     );
     
-    const [statusResult] = await connection.execute(`
+    const statusResult = await mysqlDatabase.executeQuery(`
       SELECT 
         status,
         COUNT(*) as count
@@ -335,8 +314,6 @@ router.get('/stats', async (req, res) => {
   } catch (error) {
     console.error('Error fetching stats:', error);
     res.status(500).json({ error: 'Error al obtener estadísticas' });
-  } finally {
-    if (connection) await connection.end();
   }
 });
 

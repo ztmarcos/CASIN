@@ -137,6 +137,53 @@
   line-height: 1.4;
 }
 
+.contacto-policies {
+  margin: 10px 0;
+  padding: 8px;
+  background: #f0f4ff;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.policies-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.policies-icon {
+  font-size: 14px;
+}
+
+.policies-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.policies-content {
+  margin-left: 19px;
+}
+
+.policies-tables {
+  font-size: 11px;
+  font-weight: 600;
+  color: #667eea;
+  background: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.policies-loading {
+  font-size: 11px;
+  color: #999;
+  font-style: italic;
+}
+
 .contacto-actions {
   display: flex;
   gap: 8px;
@@ -223,5 +270,18 @@
   .btn-edit,
   .btn-delete {
     padding: 10px;
+  }
+
+  .contacto-policies {
+    padding: 6px;
+  }
+
+  .policies-label {
+    font-size: 11px;
+  }
+
+  .policies-tables {
+    font-size: 10px;
+    padding: 1px 4px;
   }
 } 

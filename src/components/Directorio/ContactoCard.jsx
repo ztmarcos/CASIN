@@ -1,7 +1,7 @@
 import React from 'react';
 import './ContactoCard.css';
 
-const ContactoCard = ({ contacto, onClick, onDelete }) => {
+const ContactoCard = ({ contacto, onClick, onDelete, policyTables }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'cliente':
@@ -93,6 +93,23 @@ const ContactoCard = ({ contacto, onClick, onDelete }) => {
         {contacto.origen && (
           <div className="contacto-origen">
             <span className="origen-badge">{contacto.origen}</span>
+          </div>
+        )}
+
+        {/* Sección de pólizas - solo para clientes */}
+        {contacto.status === 'cliente' && (
+          <div className="contacto-policies">
+            <div className="policies-header">
+              <span className="policies-icon">📋</span>
+              <span className="policies-label">Pólizas:</span>
+            </div>
+            <div className="policies-content">
+              {policyTables ? (
+                <span className="policies-tables">{policyTables}</span>
+              ) : (
+                <span className="policies-loading">Cargando...</span>
+              )}
+            </div>
           </div>
         )}
 
