@@ -2,17 +2,17 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install ONLY production dependencies
+RUN npm install --only=production
 
-# Copy backend source code
-COPY . .
+# Copy ONLY the files we need
+COPY simple-app.js ./
 
 # Expose port
 EXPOSE $PORT
 
-# Start the backend
-CMD ["node", "simple-app.js"] 
+# Start the app with explicit file
+CMD ["node", "/app/simple-app.js"] 
