@@ -1,3 +1,5 @@
+[providers.node]
+
 [phases.setup]
 nixPkgs = ["nodejs", "npm"]
 
@@ -5,7 +7,7 @@ nixPkgs = ["nodejs", "npm"]
 cmds = ["npm ci"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmd = "npm run build"
 
-[start]
-cmd = "npm start" 
+[phases.start]
+cmd = "npm run start" 
