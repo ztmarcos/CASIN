@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// import './ContactoModal.css';
+import './ContactoModal.css';
 
 const ContactoModal = ({ contacto, onSave, onClose }) => {
   const [formData, setFormData] = useState({
@@ -110,12 +110,14 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
     }
   };
 
+  console.log('🎯 ContactoModal RENDERING - contacto:', contacto, 'formData:', formData);
+
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
-      <div className="modal-content">
-        <div className="modal-header">
+    <div className="contacto-modal-overlay" onClick={handleOverlayClick}>
+      <div className="contacto-modal-content">
+        <div className="contacto-modal-header">
           <h2>{contacto ? 'Editar Contacto' : 'Nuevo Contacto'}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <button className="contacto-modal-close" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} className="contacto-form">
@@ -387,7 +389,7 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
             </div>
           </div>
 
-          <div className="modal-actions">
+          <div className="contacto-modal-actions">
             <button type="button" onClick={onClose} className="btn-cancel">
               Cancelar
             </button>
