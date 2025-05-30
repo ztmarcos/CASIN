@@ -1,21 +1,27 @@
-require('dotenv').config();
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Log environment variables for debugging
-console.log('🔑 Notion Environment Variables:', {
-  NOTION_API_KEY: process.env.NOTION_API_KEY ? '✅ Present' : '❌ Missing',
-  VITE_NOTION_API_KEY: process.env.VITE_NOTION_API_KEY ? '✅ Present' : '❌ Missing',
-  NOTION_DATABASE_ID: process.env.NOTION_DATABASE_ID ? '✅ Present' : '❌ Missing',
-  VITE_NOTION_DATABASE_ID: process.env.VITE_NOTION_DATABASE_ID ? '✅ Present' : '❌ Missing'
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Serve static files from the dist directory
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Simple route for health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', service: 'directorio-frontend' });
 });
 
-// Set environment variables if not present
-if (!process.env.NOTION_API_KEY) {
-  process.env.NOTION_API_KEY = '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';
-}
+// Serve index.html for root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
-if (!process.env.NOTION_DATABASE_ID) {
-  process.env.NOTION_DATABASE_ID = '1f7385297f9a80a3bc5bcec8a3c2debb';
-}
-
-// Start the server
-require('./backend/app.js'); 
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Frontend server running on port ${PORT}`);
+  console.log(`📱 Access at: http://localhost:${PORT}`);
+}); 
