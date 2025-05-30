@@ -1,5 +1,5 @@
-const mysql = require('mysql2/promise');
-const fs = require('fs');
+import mysql from 'mysql2/promise';
+import fs from 'fs';
 
 async function setupDatabase() {
   console.log('🚀 Setting up Railway database...');
@@ -54,8 +54,6 @@ async function setupDatabase() {
 }
 
 // Run if called directly
-if (require.main === module) {
-  setupDatabase().catch(console.error);
-}
+setupDatabase().catch(console.error);
 
-module.exports = setupDatabase; 
+export default setupDatabase; 
