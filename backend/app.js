@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // ES modules fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -88,9 +89,52 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
 });
 
-const server = app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+// Database setup function
+async function initializeDatabase() {
+  if (process.env.RAILWAY_ENVIRONMENT) {
+    console.log('🚀 Initializing Railway database...');
+    try {
+      // Check if data already exists
+      const [existing] = await pool.execute('SELECT COUNT(*) as count FROM directorio_contactos LIMIT 1');
+      
+      if (existing[0].count > 0) {
+        console.log(`✅ Database already has ${existing[0].count} contacts`);
+        return;
+      }
+
+      // Read and import database dump
+      console.log('📥 Importing contacts from dump...');
+      const sqlDump = fs.readFileSync('railway_directorio_dump.sql', 'utf8');
+      const statements = sqlDump.split(';').filter(stmt => stmt.trim().length > 0);
+      
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i].trim();
+        if (statement) {
+          try {
+            await pool.execute(statement);
+          } catch (error) {
+            if (!error.message.includes('Unknown table') && !error.message.includes('already exists')) {
+              console.warn(`Warning on statement ${i}: ${error.message}`);
+            }
+          }
+        }
+      }
+
+      const [final] = await pool.execute('SELECT COUNT(*) as count FROM directorio_contactos');
+      console.log(`✅ Database initialized with ${final[0].count} contacts!`);
+      
+    } catch (error) {
+      console.error('❌ Database initialization failed:', error.message);
+    }
+  }
+}
+
+// Start server
+app.listen(port, '0.0.0.0', async () => {
+  console.log(`🚀 Directorio backend corriendo en puerto ${port}`);
+  
+  // Initialize database on Railway
+  await initializeDatabase();
 });
 
 // Handle graceful shutdown
