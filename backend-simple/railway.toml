@@ -5,13 +5,4 @@ builder = "NIXPACKS"
 startCommand = "npm start"
 numReplicas = 1
 sleepApplication = false
-restartPolicyType = "ON_FAILURE"
-
-[env]
-MYSQLDATABASE = { $ref = "MySQL-IOl2.MYSQLDATABASE" }
-MYSQLHOST = { $ref = "MySQL-IOl2.MYSQLHOST" }
-MYSQLPASSWORD = { $ref = "MySQL-IOl2.MYSQLPASSWORD" }
-MYSQLPORT = { $ref = "MySQL-IOl2.MYSQLPORT" }
-MYSQLUSER = { $ref = "MySQL-IOl2.MYSQLUSER" }
-RAILWAY_TCP_PROXY_DOMAIN = { $ref = "MySQL-IOl2.RAILWAY_TCP_PROXY_DOMAIN" }
-RAILWAY_TCP_PROXY_PORT = { $ref = "MySQL-IOl2.RAILWAY_TCP_PROXY_PORT" } 
+restartPolicyType = "ON_FAILURE" 
