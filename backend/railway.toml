@@ -1,5 +1,5 @@
 [build]
-builder = "NIXPACKS"
+# builder = "NIXPACKS"
 
 [deploy]
 startCommand = "node simple-app.js"
