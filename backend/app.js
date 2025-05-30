@@ -6,6 +6,7 @@ import path from 'path';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import mysql from 'mysql2/promise';
 
 // ES modules fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -16,23 +17,22 @@ dotenv.config();
 console.log('Loading environment from:', path.resolve('.env'));
 console.log('Environment variables loaded:', Object.keys(process.env));
 
-// Import services (you may need to update these to ES modules too)
-// const mysqlDatabase = require('./services/mysqlDatabase');
-// const birthdayService = require('./services/birthdayService');
+// Database configuration - Updated for Railway's new variable names
+const dbConfig = {
+  host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+  user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+  database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'crud_db',
+  port: process.env.MYSQLPORT || process.env.DB_PORT || '3306',
+  charset: 'utf8mb4',
+  collation: 'utf8mb4_unicode_ci'
+};
 
-// Import routes (you may need to update these to ES modules too)
-// const prospeccionRoutes = require('./routes/prospeccionRoutes');
-// const fileRoutes = require('./routes/fileRoutes');
-// const dataRoutes = require('./routes/dataRoutes');
-// const policyStatusRoutes = require('./routes/policyStatusRoutes');
-// const driveRoutes = require('./routes/driveRoutes');
-// const emailRoutes = require('./routes/emailRoutes');
-// const gptRoutes = require('./routes/gptRoutes');
-// const birthdayRoutes = require('./routes/birthdayRoutes');
-// const authRoutes = require('./routes/authRoutes');
-// const notionRoutes = require('./routes/notionRoutes');
+// Create MySQL pool
+const pool = mysql.createPool(dbConfig);
+
+// Import routes
 import directorioRoutes from './routes/directorio.js';
-// const supportChatRoutes = require('./routes/supportChat');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -130,7 +130,7 @@ async function initializeDatabase() {
 }
 
 // Start server
-app.listen(port, '0.0.0.0', async () => {
+const server = app.listen(port, '0.0.0.0', async () => {
   console.log(`🚀 Directorio backend corriendo en puerto ${port}`);
   
   // Initialize database on Railway
