@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "node simple-app.js"
 numReplicas = 1
 sleepApplication = false
 restartPolicyType = "ON_FAILURE" 
