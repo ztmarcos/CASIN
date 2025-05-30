@@ -1,7 +1,7 @@
 import React from 'react';
 import './ContactoCard.css';
 
-const ContactoCard = ({ contacto, onClick, onDelete, policyTables }) => {
+const ContactoCard = ({ contacto, onClick, onDelete, onViewPolicies, policyTables }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'cliente':
@@ -98,7 +98,14 @@ const ContactoCard = ({ contacto, onClick, onDelete, policyTables }) => {
 
         {/* Sección de pólizas - solo para clientes */}
         {contacto.status === 'cliente' && (
-          <div className="contacto-policies">
+          <div 
+            className="contacto-policies clickable"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewPolicies && onViewPolicies();
+            }}
+            title="Click para ver pólizas"
+          >
             <div className="policies-header">
               <span className="policies-icon">📋</span>
               <span className="policies-label">Pólizas:</span>
@@ -127,8 +134,9 @@ const ContactoCard = ({ contacto, onClick, onDelete, policyTables }) => {
             e.stopPropagation();
             onClick();
           }}
+          title="Editar contacto"
         >
-          ✏️ Editar
+          ✏️
         </button>
         <button
           className="btn-delete"
@@ -136,8 +144,9 @@ const ContactoCard = ({ contacto, onClick, onDelete, policyTables }) => {
             e.stopPropagation();
             onDelete();
           }}
+          title="Eliminar contacto"
         >
-          🗑️ Eliminar
+          🗑️
         </button>
       </div>
     </div>

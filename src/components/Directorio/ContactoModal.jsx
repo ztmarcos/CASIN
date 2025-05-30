@@ -13,6 +13,7 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
     telefono_casa: '',
     telefono_asistente: '',
     telefono_movil: '',
+    telefonos_corregidos: '',
     email: '',
     entidad: '',
     genero: '',
@@ -40,6 +41,7 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
         telefono_casa: contacto.telefono_casa || '',
         telefono_asistente: contacto.telefono_asistente || '',
         telefono_movil: contacto.telefono_movil || '',
+        telefonos_corregidos: contacto.telefonos_corregidos || '',
         email: contacto.email || '',
         entidad: contacto.entidad || '',
         genero: contacto.genero || '',
@@ -137,6 +139,18 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
               </div>
 
               <div className="form-group">
+                <label htmlFor="nombre_completo_oficial">Nombre Completo Oficial</label>
+                <input
+                  type="text"
+                  id="nombre_completo_oficial"
+                  name="nombre_completo_oficial"
+                  value={formData.nombre_completo_oficial}
+                  onChange={handleInputChange}
+                  placeholder="Nombre oficial o legal (si es diferente)"
+                />
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="nickname">Nickname</label>
                 <input
                   type="text"
@@ -155,6 +169,18 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
                   name="apellido"
                   value={formData.apellido}
                   onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="display_name">Nombre de Pantalla</label>
+                <input
+                  type="text"
+                  id="display_name"
+                  name="display_name"
+                  value={formData.display_name}
+                  onChange={handleInputChange}
+                  placeholder="Nombre como se mostrará en el sistema"
                 />
               </div>
 
@@ -223,6 +249,29 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
                   onChange={handleInputChange}
                 />
               </div>
+
+              <div className="form-group">
+                <label htmlFor="telefono_asistente">Teléfono Asistente</label>
+                <input
+                  type="tel"
+                  id="telefono_asistente"
+                  name="telefono_asistente"
+                  value={formData.telefono_asistente}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="telefonos_corregidos">Teléfonos Corregidos</label>
+                <input
+                  type="text"
+                  id="telefonos_corregidos"
+                  name="telefonos_corregidos"
+                  value={formData.telefonos_corregidos}
+                  onChange={handleInputChange}
+                  placeholder="Números de teléfono corregidos o adicionales"
+                />
+              </div>
             </div>
 
             {/* Información profesional */}
@@ -259,6 +308,18 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
                   name="entidad"
                   value={formData.entidad}
                   onChange={handleInputChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="status_social">Estado Social</label>
+                <input
+                  type="text"
+                  id="status_social"
+                  name="status_social"
+                  value={formData.status_social}
+                  onChange={handleInputChange}
+                  placeholder="Estado civil, situación social"
                 />
               </div>
             </div>

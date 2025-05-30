@@ -1,21 +1,14 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
-import multer from 'multer';
-import path from 'path';
-import cron from 'node-cron';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
 import mysql from 'mysql2/promise';
 
 // ES modules fix for __dirname
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Load environment variables
 dotenv.config();
-console.log('Loading environment from:', path.resolve('.env'));
-console.log('Environment variables loaded:', Object.keys(process.env));
 
 // Database configuration - Updated for Railway's new variable names
 const dbConfig = {
@@ -24,24 +17,17 @@ const dbConfig = {
   password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
   database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'crud_db',
   port: process.env.MYSQLPORT || process.env.DB_PORT || '3306',
-  charset: 'utf8mb4',
-  collation: 'utf8mb4_unicode_ci'
+  charset: 'utf8mb4'
 };
 
 // Create MySQL pool
 const pool = mysql.createPool(dbConfig);
 
-// Import routes
-import directorioRoutes from './routes/directorio.js';
+// Import ONLY directorio routes
+import directorioRoutes from './routes/directorio-simple.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
-
-// Debug middleware
-app.use((req, res, next) => {
-  console.log(`🔍 ${req.method} ${req.path}`);
-  next();
-});
 
 // Middleware
 app.use(cors({
@@ -57,31 +43,26 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Routes
-app.use('/api/directorio', directorioRoutes);
-
-// Temporary basic routes for other services
-app.get('/api/*', (req, res) => {
   res.json({ 
-    message: 'API endpoint not implemented yet in production',
-    path: req.path,
-    timestamp: new Date().toISOString()
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// Print available routes
-console.log('Available routes:');
-console.log('- /api/directorio (active)');
-console.log('- /health');
+// ONLY directorio routes
+app.use('/api/directorio', directorioRoutes);
+
+// Catch-all for other API endpoints
+app.get('/api/*', (req, res) => {
+  res.json({ 
+    message: 'This is a standalone directorio API',
+    available_endpoints: ['/api/directorio', '/health'],
+    requested_path: req.path
+  });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -89,72 +70,48 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
 });
 
-// Database setup function
+// Database initialization for Railway
 async function initializeDatabase() {
-  if (process.env.RAILWAY_ENVIRONMENT) {
-    console.log('🚀 Initializing Railway database...');
+  if (process.env.RAILWAY_ENVIRONMENT || process.env.MYSQLDATABASE) {
+    console.log('🚀 Checking Railway database...');
     try {
-      // Check if data already exists
-      const [existing] = await pool.execute('SELECT COUNT(*) as count FROM directorio_contactos LIMIT 1');
+      const connection = await pool.getConnection();
+      const [existing] = await connection.execute('SELECT COUNT(*) as count FROM directorio_contactos LIMIT 1');
+      connection.release();
       
-      if (existing[0].count > 0) {
-        console.log(`✅ Database already has ${existing[0].count} contacts`);
-        return;
-      }
-
-      // Read and import database dump
-      console.log('📥 Importing contacts from dump...');
-      const sqlDump = fs.readFileSync('railway_directorio_dump.sql', 'utf8');
-      const statements = sqlDump.split(';').filter(stmt => stmt.trim().length > 0);
-      
-      for (let i = 0; i < statements.length; i++) {
-        const statement = statements[i].trim();
-        if (statement) {
-          try {
-            await pool.execute(statement);
-          } catch (error) {
-            if (!error.message.includes('Unknown table') && !error.message.includes('already exists')) {
-              console.warn(`Warning on statement ${i}: ${error.message}`);
-            }
-          }
-        }
-      }
-
-      const [final] = await pool.execute('SELECT COUNT(*) as count FROM directorio_contactos');
-      console.log(`✅ Database initialized with ${final[0].count} contacts!`);
+      console.log(`✅ Database connected - ${existing[0].count} contacts found`);
       
     } catch (error) {
-      console.error('❌ Database initialization failed:', error.message);
+      console.log('ℹ️ Database initialization not needed or failed:', error.message);
     }
   }
 }
 
 // Start server
 const server = app.listen(port, '0.0.0.0', async () => {
-  console.log(`🚀 Directorio backend corriendo en puerto ${port}`);
+  console.log(`🚀 Directorio standalone backend running on port ${port}`);
+  console.log(`📍 Health check: http://localhost:${port}/health`);
+  console.log(`📱 API endpoint: http://localhost:${port}/api/directorio`);
   
-  // Initialize database on Railway
+  // Initialize database
   await initializeDatabase();
 });
 
-// Handle graceful shutdown
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
-async function gracefulShutdown() {
-  console.log('Received shutdown signal');
-  
-  // Close the HTTP server
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('Received SIGTERM, shutting down gracefully');
   server.close(() => {
-    console.log('HTTP server closed');
+    console.log('Server closed');
     process.exit(0);
   });
+});
 
-  // If server hasn't finished in 10s, force shutdown
-  setTimeout(() => {
-    console.log('Could not close connections in time, forcefully shutting down');
-    process.exit(1);
-  }, 10000);
-}
+process.on('SIGINT', () => {
+  console.log('Received SIGINT, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
 
 export default app; 

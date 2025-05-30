@@ -1,147 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './SearchFilters.css';
 
 const SearchFilters = ({ searchTerm, filters, onSearch, onFilterChange }) => {
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    onSearch(localSearchTerm);
-  };
+  // Debounced search for real-time search without overwhelming the server
+  const debouncedSearch = useCallback(
+    debounce((term) => {
+      onSearch(term);
+    }, 300),
+    [onSearch]
+  );
+
+  useEffect(() => {
+    debouncedSearch(localSearchTerm);
+  }, [localSearchTerm, debouncedSearch]);
+
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
 
   const handleFilterChange = (filterName, value) => {
-    const newFilters = {
-      ...filters,
-      [filterName]: value
-    };
-    onFilterChange(newFilters);
+    onFilterChange({ ...filters, [filterName]: value });
   };
 
-  const clearFilters = () => {
+  const clearAllFilters = () => {
     setLocalSearchTerm('');
     onSearch('');
-    onFilterChange({
-      status: '',
-      origen: '',
-      genero: ''
-    });
+    onFilterChange({ status: '', origen: '', genero: '' });
   };
+
+  const hasActiveFilters = searchTerm || filters.status || filters.origen || filters.genero;
 
   return (
     <div className="search-filters">
-      <div className="search-section">
-        <form onSubmit={handleSearchSubmit} className="search-form">
-          <div className="search-input-group">
-            <input
-              type="text"
-              placeholder="Buscar por nombre, empresa, email o teléfono..."
-              value={localSearchTerm}
-              onChange={(e) => setLocalSearchTerm(e.target.value)}
-              className="search-input"
-            />
-            <button type="submit" className="search-btn">
-              🔍 Buscar
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="filters-section">
-        <div className="filters-row">
-          <div className="filter-group">
-            <label htmlFor="status-filter">Estado:</label>
-            <select
-              id="status-filter"
-              value={filters.status}
-              onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos</option>
-              <option value="cliente">Cliente</option>
-              <option value="prospecto">Prospecto</option>
-              <option value="inactivo">Inactivo</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label htmlFor="origen-filter">Origen:</label>
-            <select
-              id="origen-filter"
-              value={filters.origen}
-              onChange={(e) => handleFilterChange('origen', e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos</option>
-              <option value="MZD">MZD</option>
-              <option value="LORENA">LORENA</option>
-              <option value="MICH">MICH</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label htmlFor="genero-filter">Género:</label>
-            <select
-              id="genero-filter"
-              value={filters.genero}
-              onChange={(e) => handleFilterChange('genero', e.target.value)}
-              className="filter-select"
-            >
-              <option value="">Todos</option>
-              <option value="MASCULINO">Masculino</option>
-              <option value="FEMENINO">Femenino</option>
-              <option value="OTRO">Otro</option>
-            </select>
-          </div>
-
-          <div className="filter-actions">
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="clear-filters-btn"
-            >
-              🗑️ Limpiar Filtros
-            </button>
-          </div>
+      <div className="search-form">
+        <div className="search-section">
+          <input
+            type="text"
+            placeholder="🔍 Buscar contactos..."
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
+            className="search-input"
+          />
         </div>
-      </div>
+        
+        <div className="filters-section">
+          <select
+            value={filters.status}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Estado: Todos</option>
+            <option value="cliente">Cliente</option>
+            <option value="prospecto">Prospecto</option>
+          </select>
 
-      <div className="active-filters">
-        {(searchTerm || filters.status || filters.origen || filters.genero) && (
-          <div className="active-filters-list">
-            <span className="active-filters-label">Filtros activos:</span>
-            
-            {searchTerm && (
-              <span className="filter-tag">
-                Búsqueda: "{searchTerm}"
-                <button onClick={() => onSearch('')}>×</button>
-              </span>
-            )}
-            
-            {filters.status && (
-              <span className="filter-tag">
-                Estado: {filters.status}
-                <button onClick={() => handleFilterChange('status', '')}>×</button>
-              </span>
-            )}
-            
-            {filters.origen && (
-              <span className="filter-tag">
-                Origen: {filters.origen}
-                <button onClick={() => handleFilterChange('origen', '')}>×</button>
-              </span>
-            )}
-            
-            {filters.genero && (
-              <span className="filter-tag">
-                Género: {filters.genero}
-                <button onClick={() => handleFilterChange('genero', '')}>×</button>
-              </span>
-            )}
-          </div>
-        )}
+          <select
+            value={filters.origen}
+            onChange={(e) => handleFilterChange('origen', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Origen: Todos</option>
+            <option value="MZD">MZD</option>
+            <option value="LORENA">LORENA</option>
+            <option value="MICH">MICH</option>
+          </select>
+
+          <select
+            value={filters.genero}
+            onChange={(e) => handleFilterChange('genero', e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Género: Todos</option>
+            <option value="MASCULINO">Masculino</option>
+            <option value="FEMENINO">Femenino</option>
+          </select>
+
+          {hasActiveFilters && (
+            <button type="button" onClick={clearAllFilters} className="clear-btn">
+              ✕ Limpiar
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+
+// Simple debounce function
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 export default SearchFilters; 

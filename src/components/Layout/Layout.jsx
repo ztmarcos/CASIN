@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
 import PolicyCounter from './PolicyCounter';
+import SupportChat from '../SupportChat/SupportChat';
 import logoImage from '/logo.png';
 import './Layout.css';
 
@@ -93,6 +94,9 @@ const Layout = ({ children }) => {
       <main className="main-content">
         {children}
       </main>
+      
+      {/* Support Chat Widget */}
+      <SupportChat />
     </div>
   );
 };

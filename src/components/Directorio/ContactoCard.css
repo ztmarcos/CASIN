@@ -1,19 +1,18 @@
 .contacto-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   padding: 20px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
 }
 
 .contacto-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #2563eb;
 }
 
 .contacto-header {
@@ -27,13 +26,13 @@
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
 }
 
@@ -127,7 +126,7 @@
   padding: 8px;
   background: #f8f9fa;
   border-radius: 6px;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid #2563eb;
 }
 
 .contacto-comentario p {
@@ -140,9 +139,33 @@
 .contacto-policies {
   margin: 10px 0;
   padding: 8px;
-  background: #f0f4ff;
+  background: #eff6ff;
   border-radius: 6px;
-  border-left: 3px solid #667eea;
+  border-left: 3px solid #2563eb;
+}
+
+.contacto-policies.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.contacto-policies.clickable:hover {
+  background: #dbeafe;
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+}
+
+.contacto-policies.clickable:hover::after {
+  content: '👆 Click para ver';
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: #2563eb;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
 .policies-header {
@@ -171,7 +194,7 @@
 .policies-tables {
   font-size: 11px;
   font-weight: 600;
-  color: #667eea;
+  color: #2563eb;
   background: white;
   padding: 2px 6px;
   border-radius: 4px;
@@ -190,13 +213,20 @@
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.btn-edit,
-.btn-delete {
-  flex: 1;
-  padding: 8px 12px;
+.contacto-card:hover .contacto-actions {
+  opacity: 1;
+}
+
+.btn-policies {
+  background: #2563eb;
+  color: white;
   border: none;
+  padding: 8px 12px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
@@ -206,6 +236,30 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex: 1;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+}
+
+.btn-policies:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+}
+
+.btn-edit,
+.btn-delete {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 36px;
 }
 
 .btn-edit {
@@ -267,6 +321,7 @@
     gap: 8px;
   }
   
+  .btn-policies,
   .btn-edit,
   .btn-delete {
     padding: 10px;

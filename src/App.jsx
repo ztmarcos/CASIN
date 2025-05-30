@@ -21,6 +21,7 @@ import Sharepoint from './components/Sharepoint/Sharepoint'
 import { Toaster } from 'react-hot-toast'
 import FirebaseViewer from './components/FirebaseViewer/FirebaseViewer'
 import Directorio from './components/Directorio/Directorio'
+import DirectorioSimple from './components/Directorio/DirectorioSimple'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
@@ -134,6 +135,20 @@ function AppRoutes() {
           <Layout>
             <Directorio />
           </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/directorio-simple" element={
+        <ProtectedRoute>
+          <Layout>
+            <DirectorioSimple />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/directorio-standalone" element={
+        <ProtectedRoute>
+          <DirectorioSimple />
         </ProtectedRoute>
       } />
       

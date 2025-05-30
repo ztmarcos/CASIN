@@ -1,4 +1,5 @@
-const API_BASE_URL = 'http://localhost:3001/api';
+// Base URL for API requests
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 class DirectorioService {
   async getContactos(filters = {}) {
@@ -7,7 +8,7 @@ class DirectorioService {
       
       // Add filters to query params
       Object.keys(filters).forEach(key => {
-        if (filters[key]) {
+        if (filters[key] !== null && filters[key] !== undefined && filters[key] !== '') {
           queryParams.append(key, filters[key]);
         }
       });
@@ -21,7 +22,7 @@ class DirectorioService {
       
       return await response.json();
     } catch (error) {
-      console.error('Error fetching contactos:', error);
+      console.error('Error fetching contacts:', error);
       throw error;
     }
   }

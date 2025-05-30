@@ -1,0 +1,21 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+numReplicas = 1
+sleepApplication = false
+restartPolicyType = "ON_FAILURE"
+
+[[services]]
+name = "directorio-frontend"
+source = "."
+build.builder = "NIXPACKS"
+build.buildCommand = "npm run build"
+deploy.startCommand = "npm run start"
+
+[[services]]
+name = "directorio-backend"
+source = "./backend"
+build.builder = "NIXPACKS"
+build.buildCommand = "npm install"
+deploy.startCommand = "npm start" 
