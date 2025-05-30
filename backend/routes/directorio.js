@@ -1,6 +1,8 @@
-const express = require('express');
+import express from 'express';
+import mysql from 'mysql2/promise';
+// import mysqlDatabase from '../services/mysqlDatabase.js';
+
 const router = express.Router();
-const mysqlDatabase = require('../services/mysqlDatabase');
 
 console.log('🚀 BACKEND DIRECTORIO ROUTES FILE LOADED - VERSION 4.1 - TIMESTAMP:', new Date().toISOString());
 
@@ -57,13 +59,13 @@ router.get('/working-test', async (req, res) => {
   }
 });
 
-// Database configuration
+// Database configuration - Updated for Railway's new variable names
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'crud_db',
-  port: process.env.DB_PORT || '3306',
+  host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
+  user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
+  password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
+  database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'crud_db',
+  port: process.env.MYSQLPORT || process.env.DB_PORT || '3306',
   charset: 'utf8mb4',
   collation: 'utf8mb4_unicode_ci'
 };
@@ -179,7 +181,7 @@ router.get('/', async (req, res) => {
   console.log('🔍 GET /api/directorio');
   
   try {
-    const { status, origen, genero, search, page = 1, limit = 50 } = req.query;
+    const { status, origen, genero, search, letter, page = 1, limit = 50 } = req.query;
     const pageNum = parseInt(page) || 1;
     const limitNum = Math.min(parseInt(limit) || 50, 200);
     const offset = (pageNum - 1) * limitNum;
@@ -198,6 +200,11 @@ router.get('/', async (req, res) => {
     if (genero) {
       whereConditions.push(`genero = '${genero.replace(/'/g, "''")}'`);
     }
+
+    if (letter) {
+      const letterFilter = letter.toUpperCase().replace(/'/g, "''");
+      whereConditions.push(`UPPER(LEFT(nombre_completo, 1)) = '${letterFilter}'`);
+    }
     
     if (search) {
       const searchTerm = search.replace(/'/g, "''");
@@ -210,29 +217,43 @@ router.get('/', async (req, res) => {
     
     const whereClause = whereConditions.join(' AND ');
     
-    // Get total count
-    const countQuery = `SELECT COUNT(*) as total FROM directorio_contactos WHERE ${whereClause}`;
-    const countResult = await mysqlDatabase.executeQuery(countQuery);
-    const totalCount = countResult[0].total;
-    
-    // Get paginated data
-    const dataQuery = `
-      SELECT * FROM directorio_contactos 
-      WHERE ${whereClause} 
-      ORDER BY nombre_completo ASC 
-      LIMIT ${limitNum} OFFSET ${offset}
-    `;
-    const rows = await mysqlDatabase.executeQuery(dataQuery);
-    
-    res.json({
-      success: true,
-      data: rows,
-      total: totalCount,
-      page: pageNum,
-      limit: limitNum,
-      totalPages: Math.ceil(totalCount / limitNum)
-    });
-    
+    // Get total count and data
+    let connection;
+    try {
+      connection = await getConnection();
+      
+      // Get total count
+      const countQuery = `SELECT COUNT(*) as total FROM directorio_contactos WHERE ${whereClause}`;
+      const [countResult] = await connection.execute(countQuery);
+      const totalCount = countResult[0].total;
+      
+      // Get data with pagination
+      const dataQuery = `
+        SELECT *
+        FROM directorio_contactos 
+        WHERE ${whereClause}
+        ORDER BY nombre_completo ASC
+        LIMIT ${limitNum} OFFSET ${offset}
+      `;
+      const [rows] = await connection.execute(dataQuery);
+      
+      res.json({
+        success: true,
+        data: rows,
+        total: totalCount,
+        page: pageNum,
+        limit: limitNum,
+        totalPages: Math.ceil(totalCount / limitNum)
+      });
+      
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      res.status(500).json({ 
+        error: error.message
+      });
+    } finally {
+      if (connection) await connection.end();
+    }
   } catch (error) {
     console.error('Error fetching contacts:', error);
     res.status(500).json({ 
@@ -283,12 +304,13 @@ router.get('/search', async (req, res) => {
 
 // GET /api/directorio/stats - Get contact statistics
 router.get('/stats', async (req, res) => {
+  let connection;
   try {
-    const totalResult = await mysqlDatabase.executeQuery(
-      'SELECT COUNT(*) as total FROM directorio_contactos'
-    );
+    connection = await getConnection();
     
-    const statusResult = await mysqlDatabase.executeQuery(`
+    const [totalResult] = await connection.execute('SELECT COUNT(*) as total FROM directorio_contactos');
+    
+    const [statusResult] = await connection.execute(`
       SELECT 
         status,
         COUNT(*) as count
@@ -296,24 +318,42 @@ router.get('/stats', async (req, res) => {
       GROUP BY status
     `);
     
+    const [origenResult] = await connection.execute(`
+      SELECT 
+        origen,
+        COUNT(*) as count
+      FROM directorio_contactos 
+      WHERE origen IS NOT NULL AND origen != ''
+      GROUP BY origen
+      ORDER BY count DESC
+    `);
+    
     const stats = {
       total: totalResult[0].total,
-      clientes: 0,
-      prospectos: 0,
-      inactivos: 0
+      by_status: {},
+      by_origen: {}
     };
     
     statusResult.forEach(row => {
-      if (row.status === 'cliente') stats.clientes = row.count;
-      if (row.status === 'prospecto') stats.prospectos = row.count;
-      if (row.status === 'inactivo') stats.inactivos = row.count;
+      stats.by_status[row.status || 'sin_estado'] = row.count;
     });
     
-    res.json(stats);
+    origenResult.forEach(row => {
+      stats.by_origen[row.origen] = row.count;
+    });
+    
+    res.json({
+      success: true,
+      stats
+    });
     
   } catch (error) {
     console.error('Error fetching stats:', error);
-    res.status(500).json({ error: 'Error al obtener estadísticas' });
+    res.status(500).json({ 
+      error: error.message
+    });
+  } finally {
+    if (connection) await connection.end();
   }
 });
 
@@ -531,7 +571,7 @@ router.post('/', async (req, res) => {
       origen, comentario, nombre_completo, nombre_completo_oficial,
       nickname, apellido, display_name, empresa, telefono_oficina,
       telefono_casa, telefono_asistente, telefono_movil, telefonos_corregidos,
-      email, entidad, genero, status_social, ocupacion, pais || 'MÉXICO', status || 'prospecto'
+      email, entidad, (genero && genero.trim()) ? genero : null, status_social, ocupacion, pais || 'MÉXICO', (status && status.trim()) ? status : 'prospecto'
     ]);
     
     res.status(201).json({
@@ -551,7 +591,12 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   let connection;
   try {
+    console.log('🔄 PUT /api/directorio/:id - Update contact');
+    console.log('📋 Request params:', req.params);
+    console.log('📋 Request body:', JSON.stringify(req.body, null, 2));
+    
     connection = await getConnection();
+    console.log('✅ Database connection established');
     
     const { id } = req.params;
     const {
@@ -561,20 +606,39 @@ router.put('/:id', async (req, res) => {
       email, entidad, genero, status_social, ocupacion, pais, status
     } = req.body;
     
+    console.log('📋 Extracted fields:', {
+      id,
+      nombre_completo,
+      email,
+      status,
+      genero,
+      genero_processed: genero || null,
+      genero_length: genero ? genero.length : 'undefined/null'
+    });
+    
     // Validate required fields
     if (!nombre_completo || !nombre_completo.trim()) {
+      console.log('❌ Validation failed: nombre_completo is required');
       return res.status(400).json({ error: 'El nombre completo es requerido' });
     }
     
+    console.log('✅ Validation passed');
+    
     // Check if contact exists
+    console.log('🔍 Checking if contact exists with ID:', id);
     const [existingContact] = await connection.execute(
       'SELECT id FROM directorio_contactos WHERE id = ?',
       [id]
     );
     
+    console.log('📊 Existing contact result:', existingContact);
+    
     if (existingContact.length === 0) {
+      console.log('❌ Contact not found');
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
+    
+    console.log('✅ Contact exists, proceeding with update');
     
     const query = `
       UPDATE directorio_contactos SET
@@ -586,21 +650,33 @@ router.put('/:id', async (req, res) => {
       WHERE id = ?
     `;
     
-    await connection.execute(query, [
+    const updateParams = [
       origen, comentario, nombre_completo, nombre_completo_oficial,
       nickname, apellido, display_name, empresa, telefono_oficina,
       telefono_casa, telefono_asistente, telefono_movil, telefonos_corregidos,
-      email, entidad, genero, status_social, ocupacion, pais || 'MÉXICO', status || 'prospecto',
+      email, entidad, (genero && genero.trim()) ? genero : null, status_social, ocupacion, pais || 'MÉXICO', (status && status.trim()) ? status : 'prospecto',
       id
-    ]);
+    ];
     
+    console.log('📋 Update parameters:', updateParams);
+    console.log('🔄 Executing update query...');
+    
+    await connection.execute(query, updateParams);
+    
+    console.log('✅ Update successful');
     res.json({ message: 'Contacto actualizado exitosamente' });
     
   } catch (error) {
-    console.error('Error updating contact:', error);
-    res.status(500).json({ error: 'Error al actualizar el contacto' });
+    console.error('❌ Error updating contact:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error code:', error.code);
+    res.status(500).json({ error: 'Error al actualizar el contacto', details: error.message });
   } finally {
-    if (connection) await connection.end();
+    if (connection) {
+      console.log('🔌 Closing database connection');
+      await connection.end();
+    }
   }
 });
 
@@ -724,14 +800,12 @@ function calculateNameSimilarity(name1, name2) {
 
 // GET /api/directorio/:id/policies - Get policies for a specific contact
 router.get('/:id/policies', async (req, res) => {
-  let connection;
   try {
-    connection = await getConnection();
-    
     const { id } = req.params;
+    console.log(`🔍 Getting policies for contact ID: ${id}`);
     
-    // Get contact info
-    const [contactResult] = await connection.execute(
+    // Get contact info using the consistent database service
+    const contactResult = await getConnection().execute(
       'SELECT * FROM directorio_contactos WHERE id = ?',
       [id]
     );
@@ -741,18 +815,27 @@ router.get('/:id/policies', async (req, res) => {
     }
     
     const contact = contactResult[0];
+    console.log(`📋 Found contact: ${contact.nombre_completo}`);
+    
     const policyTables = ['autos', 'diversos', 'gmm', 'hogar', 'mascotas', 'negocio', 'rc', 'transporte', 'vida'];
     const policies = [];
     
     // Search for policies in each table
     for (const tableName of policyTables) {
       try {
+        console.log(`🔍 Searching in table: ${tableName}`);
+        
         // Search by name similarity and email
-        const [tableResults] = await connection.execute(`
-          SELECT *, '${tableName}' as tabla_origen
-          FROM ${tableName} 
-          WHERE contratante LIKE ? OR email = ?
-        `, [`%${contact.nombre_completo}%`, contact.email]);
+        const tableResults = await getConnection().execute(
+          `
+            SELECT *, '${tableName}' as tabla_origen
+            FROM ${tableName} 
+            WHERE contratante LIKE ? OR (email IS NOT NULL AND email = ?)
+          `,
+          [`%${contact.nombre_completo}%`, contact.email || '']
+        );
+        
+        console.log(`📊 Found ${tableResults.length} potential matches in ${tableName}`);
         
         tableResults.forEach(policy => {
           const similarity = calculateNameSimilarity(contact.nombre_completo, policy.contratante);
@@ -766,12 +849,15 @@ router.get('/:id/policies', async (req, res) => {
         });
         
       } catch (tableError) {
-        console.error(`Error searching in table ${tableName}:`, tableError.message);
+        console.error(`❌ Error searching in table ${tableName}:`, tableError.message);
+        // Continue with other tables
       }
     }
     
     // Sort by similarity score
     policies.sort((a, b) => b.similarity_score - a.similarity_score);
+    
+    console.log(`✅ Found ${policies.length} total policies for contact ${contact.nombre_completo}`);
     
     res.json({
       contact,
@@ -780,10 +866,8 @@ router.get('/:id/policies', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching contact policies:', error);
+    console.error('❌ Error fetching contact policies:', error);
     res.status(500).json({ error: 'Error al obtener las pólizas del contacto' });
-  } finally {
-    if (connection) await connection.end();
   }
 });
 
@@ -864,6 +948,6 @@ router.post('/update-client-status', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
 
  

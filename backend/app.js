@@ -1,28 +1,37 @@
-require('dotenv').config();
-console.log('Loading environment from:', require('path').resolve('.env'));
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import multer from 'multer';
+import path from 'path';
+import cron from 'node-cron';
+import { fileURLToPath } from 'url';
+
+// ES modules fix for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables
+dotenv.config();
+console.log('Loading environment from:', path.resolve('.env'));
 console.log('Environment variables loaded:', Object.keys(process.env));
 
-const express = require('express');
-const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const cron = require('node-cron');
-const mysqlDatabase = require('./services/mysqlDatabase');
-const birthdayService = require('./services/birthdayService');
+// Import services (you may need to update these to ES modules too)
+// const mysqlDatabase = require('./services/mysqlDatabase');
+// const birthdayService = require('./services/birthdayService');
 
-// Import routes
-const prospeccionRoutes = require('./routes/prospeccionRoutes');
-const fileRoutes = require('./routes/fileRoutes');
-const dataRoutes = require('./routes/dataRoutes');
-const policyStatusRoutes = require('./routes/policyStatusRoutes');
-const driveRoutes = require('./routes/driveRoutes'); // Re-enabled
-const emailRoutes = require('./routes/emailRoutes');
-// const sharepointRoutes = require('./routes/sharepointRoutes'); // Temporarily disabled
-const gptRoutes = require('./routes/gptRoutes');
-const birthdayRoutes = require('./routes/birthdayRoutes');
-const authRoutes = require('./routes/authRoutes');
-const notionRoutes = require('./routes/notionRoutes'); // Added Notion routes
-const directorioRoutes = require('./routes/directorio'); // Added Directorio routes
+// Import routes (you may need to update these to ES modules too)
+// const prospeccionRoutes = require('./routes/prospeccionRoutes');
+// const fileRoutes = require('./routes/fileRoutes');
+// const dataRoutes = require('./routes/dataRoutes');
+// const policyStatusRoutes = require('./routes/policyStatusRoutes');
+// const driveRoutes = require('./routes/driveRoutes');
+// const emailRoutes = require('./routes/emailRoutes');
+// const gptRoutes = require('./routes/gptRoutes');
+// const birthdayRoutes = require('./routes/birthdayRoutes');
+// const authRoutes = require('./routes/authRoutes');
+// const notionRoutes = require('./routes/notionRoutes');
+import directorioRoutes from './routes/directorio.js';
+// const supportChatRoutes = require('./routes/supportChat');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -34,7 +43,16 @@ app.use((req, res, next) => {
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://*.railway.app',
+    process.env.FRONTEND_URL
+  ].filter(Boolean),
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -42,43 +60,27 @@ app.use(express.urlencoded({ extended: true }));
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Routes
-app.use('/api/prospeccion', prospeccionRoutes);
-app.use('/api/files', fileRoutes);
-app.use('/api/data', dataRoutes);
-app.use('/api/policy-status', policyStatusRoutes);
-app.use('/api/drive', driveRoutes); // Re-enabled
-app.use('/api/email', emailRoutes);
-// app.use('/api/sharepoint', sharepointRoutes); // Temporarily disabled
-app.use('/api/gpt', gptRoutes);
-app.use('/api/birthday', birthdayRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/notion', notionRoutes); // Added Notion routes
-app.use('/api/directorio', directorioRoutes); // Added Directorio routes
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'OK', timestamp: new Date().toISOString() });
+});
 
-// Schedule birthday check every day at 9:00 AM
-cron.schedule('0 9 * * *', async () => {
-    console.log('Running scheduled birthday check...');
-    try {
-        await birthdayService.checkAndSendBirthdayEmails();
-    } catch (error) {
-        console.error('Error in scheduled birthday check:', error);
-    }
+// Routes
+app.use('/api/directorio', directorioRoutes);
+
+// Temporary basic routes for other services
+app.get('/api/*', (req, res) => {
+  res.json({ 
+    message: 'API endpoint not implemented yet in production',
+    path: req.path,
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Print available routes
 console.log('Available routes:');
-console.log('- /api/prospeccion');
-console.log('- /api/files');
-console.log('- /api/data');
-console.log('- /api/policy-status');
-console.log('- /api/drive');
-console.log('- /api/email');
-console.log('- /api/gpt');
-console.log('- /api/birthday');
-console.log('- /api/auth');
-console.log('- /api/notion');
-console.log('- /api/directorio');
+console.log('- /api/directorio (active)');
+console.log('- /health');
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -88,6 +90,7 @@ app.use((err, req, res, next) => {
 
 const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Handle graceful shutdown
@@ -110,4 +113,4 @@ async function gracefulShutdown() {
   }, 10000);
 }
 
-module.exports = app; 
+export default app; 
