@@ -28,29 +28,37 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Helper function to clean data and handle #ERROR! values
+  const cleanValue = (value) => {
+    if (!value || value === '#ERROR!' || value === 'null' || value === 'undefined') {
+      return '';
+    }
+    return String(value).trim();
+  };
+
   useEffect(() => {
     if (contacto) {
       setFormData({
-        nombre_completo: contacto.nombre_completo || '',
-        nombre_completo_oficial: contacto.nombre_completo_oficial || '',
-        nickname: contacto.nickname || '',
-        apellido: contacto.apellido || '',
-        display_name: contacto.display_name || '',
-        empresa: contacto.empresa || '',
-        telefono_oficina: contacto.telefono_oficina || '',
-        telefono_casa: contacto.telefono_casa || '',
-        telefono_asistente: contacto.telefono_asistente || '',
-        telefono_movil: contacto.telefono_movil || '',
-        telefonos_corregidos: contacto.telefonos_corregidos || '',
-        email: contacto.email || '',
-        entidad: contacto.entidad || '',
-        genero: contacto.genero || '',
-        status_social: contacto.status_social || '',
-        ocupacion: contacto.ocupacion || '',
-        pais: contacto.pais || 'MÉXICO',
-        status: contacto.status || 'prospecto',
-        origen: contacto.origen || '',
-        comentario: contacto.comentario || ''
+        nombre_completo: cleanValue(contacto.nombre_completo),
+        nombre_completo_oficial: cleanValue(contacto.nombre_completo_oficial),
+        nickname: cleanValue(contacto.nickname),
+        apellido: cleanValue(contacto.apellido),
+        display_name: cleanValue(contacto.display_name),
+        empresa: cleanValue(contacto.empresa),
+        telefono_oficina: cleanValue(contacto.telefono_oficina),
+        telefono_casa: cleanValue(contacto.telefono_casa),
+        telefono_asistente: cleanValue(contacto.telefono_asistente),
+        telefono_movil: cleanValue(contacto.telefono_movil),
+        telefonos_corregidos: cleanValue(contacto.telefonos_corregidos),
+        email: cleanValue(contacto.email),
+        entidad: cleanValue(contacto.entidad),
+        genero: cleanValue(contacto.genero),
+        status_social: cleanValue(contacto.status_social),
+        ocupacion: cleanValue(contacto.ocupacion),
+        pais: cleanValue(contacto.pais) || 'MÉXICO',
+        status: cleanValue(contacto.status) || 'prospecto',
+        origen: cleanValue(contacto.origen),
+        comentario: cleanValue(contacto.comentario)
       });
     }
   }, [contacto]);
@@ -95,7 +103,13 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
 
     setLoading(true);
     try {
-      await onSave(formData);
+      // Clean the form data before saving to prevent #ERROR! values
+      const cleanedData = {};
+      Object.keys(formData).forEach(key => {
+        cleanedData[key] = cleanValue(formData[key]);
+      });
+      
+      await onSave(cleanedData);
     } catch (error) {
       console.error('Error saving contacto:', error);
       alert('Error al guardar el contacto');
