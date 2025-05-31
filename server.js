@@ -17,12 +17,12 @@ exec('npm run build', (error, stdout, stderr) => {
   console.log('Build completed successfully');
   console.log(stdout);
   
-  // Serve static files from dist directory
-  app.use(express.static(path.join(__dirname, 'dist')));
+  // Serve static files from root directory (where dist files are copied)
+  app.use(express.static(__dirname));
   
   // Handle React Router (return index.html for all routes)
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html'));
   });
   
   // Start the server
