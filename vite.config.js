@@ -11,6 +11,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [react()],
+    build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom'],
+            router: ['react-router-dom']
+          }
+        }
+      }
+    },
     server: {
       port: 5174,
       strictPort: true,
