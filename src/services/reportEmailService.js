@@ -1,8 +1,10 @@
-const API_URL = 'http://localhost:3001';
+import { API_URL } from '../config/api.js';
+
+const API_BASE_URL = API_URL;
 
 const sendReportEmail = async (policies, reportType) => {
     try {
-        const response = await fetch(`${API_URL}/api/email/report`, {
+        const response = await fetch(`${API_BASE_URL}/api/email/report`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

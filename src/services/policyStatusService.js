@@ -1,11 +1,12 @@
 import axios from 'axios';
+import { API_URL } from '../config/api.js';
 
-const API_URL = 'http://localhost:3001/api/policy-status';
+const API_BASE_URL = API_URL;
 
 class PolicyStatusService {
   async getStatuses() {
     try {
-      const response = await axios.get(API_URL);
+      const response = await axios.get(API_BASE_URL);
       return response.data;
     } catch (error) {
       console.error('Error fetching policy statuses:', error);
@@ -15,7 +16,7 @@ class PolicyStatusService {
 
   async updateStatus(policyKey, status) {
     try {
-      const response = await axios.post(API_URL, {
+      const response = await axios.post(API_BASE_URL, {
         policyKey,
         status
       });

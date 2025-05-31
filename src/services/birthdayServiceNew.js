@@ -1,6 +1,7 @@
 import { extractBirthdayFromRFC, formatBirthday, calculateAge } from '../utils/rfcUtils';
+import { API_URL } from '../config/api.js';
 
-const API_URL = 'http://localhost:3001/api';
+const API_BASE_URL = API_URL;
 
 /**
  * Fetches birthday data from the server
@@ -8,14 +9,15 @@ const API_URL = 'http://localhost:3001/api';
  */
 export const fetchBirthdays = async () => {
   try {
-    console.log('Fetching birthdays from:', `${API_URL}/birthday`);
-    const response = await fetch(`${API_URL}/birthday`);
-    if (!response.ok) throw new Error('Failed to fetch birthdays');
-    
-    return await response.json();
+    const response = await fetch(`${API_BASE_URL}/birthday`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch birthdays');
+    }
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error fetching birthdays:', error);
-    throw error;
+    return [];
   }
 };
 
@@ -26,7 +28,7 @@ export const fetchBirthdays = async () => {
 export const triggerBirthdayEmails = async () => {
   try {
     console.log('Triggering birthday emails check...');
-    const response = await fetch(`${API_URL}/birthday/check-and-send`, {
+    const response = await fetch(`${API_BASE_URL}/birthday/check-and-send`, {
       method: 'POST'
     });
     

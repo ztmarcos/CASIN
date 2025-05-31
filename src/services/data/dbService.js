@@ -1,3 +1,7 @@
+import { API_URL } from '../../config/api.js';
+
+const API_BASE_URL = API_URL;
+
 const mysql = require('mysql2/promise');
 
 class DatabaseService {

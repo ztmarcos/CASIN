@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { API_URL, BASE_URL } from '../../config/api.js';
 
 class TableService {
   constructor() {
-    this.apiUrl = 'http://localhost:3001/api';
+    this.apiUrl = API_URL;
     this.currentTableName = null;
     this.currentTableTitle = null;
   }
@@ -257,7 +258,7 @@ class TableService {
       }
 
       // Send the data to the API
-      const apiUrl = `http://localhost:3001/api/data/${tableName}`;
+      const apiUrl = `${this.apiUrl}/data/${tableName}`;
       console.log('Request payload:', payload);
       
       const response = await fetch(apiUrl, {

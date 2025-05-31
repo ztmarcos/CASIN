@@ -1,9 +1,9 @@
 import * as pdfjs from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.mjs';
 
 class PDFService {
   constructor() {
-    pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+    // Use CDN worker for better compatibility
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   }
 
   /**

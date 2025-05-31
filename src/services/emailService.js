@@ -1,6 +1,8 @@
+import { API_URL } from '../config/api.js';
+
 const sendWelcomeEmail = async (gptResponse, data) => {
   try {
-    const response = await fetch('http://localhost:3001/api/email/send-welcome', {
+    const response = await fetch(`${API_URL}/email/send-welcome`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

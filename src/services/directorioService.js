@@ -1,5 +1,6 @@
-// Base URL for API requests
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_URL } from '../config/api.js';
+
+const API_BASE_URL = API_URL;
 
 class DirectorioService {
   async getContactos(filters = {}) {
