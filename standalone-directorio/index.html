@@ -1,1 +1,307 @@
- 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directorio de Contactos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .abc-navigation {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .alphabet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(40px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+        }
+        
+        .letter-btn {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .letter-btn:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+            color: #475569;
+        }
+        
+        .letter-btn.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+        
+        .contacts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .contact-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease;
+        }
+        
+        .contact-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .contact-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        
+        .contact-info {
+            color: #6b7280;
+            margin-bottom: 4px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .clear-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-left: 16px;
+        }
+        
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-top: 20px;
+            padding: 20px;
+        }
+        
+        .pagination button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+        
+        .pagination button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Directorio de Contactos</h1>
+            <input type="text" id="searchInput" class="search-box" placeholder="Buscar por nombre, email o teléfono...">
+        </div>
+        
+        <div class="abc-navigation">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span style="font-weight: 600; color: #374151;">📚 Navegar por letra:</span>
+                <button id="clearFilter" class="clear-btn" style="display: none;">✕ Limpiar</button>
+            </div>
+            <div class="alphabet-grid" id="alphabetGrid"></div>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="loading" class="loading">Cargando contactos...</div>
+        <div id="results" style="display: none;">
+            <p id="resultsInfo" style="margin-bottom: 16px; color: #6b7280;"></p>
+            <div id="contactsGrid" class="contacts-grid"></div>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://directorio-contactos-production.up.railway.app/api';
+        let currentPage = 1, currentLetter = '', currentSearch = '', totalPages = 1;
+        
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        const alphabetGrid = document.getElementById('alphabetGrid');
+        
+        alphabet.forEach(letter => {
+            const btn = document.createElement('button');
+            btn.className = 'letter-btn';
+            btn.textContent = letter;
+            btn.onclick = () => filterByLetter(letter);
+            alphabetGrid.appendChild(btn);
+        });
+        
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentSearch = e.target.value;
+                currentPage = 1;
+                loadContacts();
+            }, 500);
+        });
+        
+        document.getElementById('clearFilter').onclick = () => {
+            currentLetter = '';
+            currentPage = 1;
+            document.querySelectorAll('.letter-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('clearFilter').style.display = 'none';
+            loadContacts();
+        };
+        
+        function filterByLetter(letter) {
+            if (currentLetter === letter) {
+                currentLetter = '';
+                document.getElementById('clearFilter').style.display = 'none';
+            } else {
+                currentLetter = letter;
+                document.getElementById('clearFilter').style.display = 'block';
+            }
+            currentPage = 1;
+            document.querySelectorAll('.letter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === currentLetter);
+            });
+            loadContacts();
+        }
+        
+        async function loadContacts() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+            
+            loading.style.display = 'block';
+            error.style.display = 'none';
+            results.style.display = 'none';
+            
+            try {
+                const params = new URLSearchParams({ page: currentPage, limit: 25 });
+                if (currentLetter) params.append('letter', currentLetter);
+                if (currentSearch) params.append('search', currentSearch);
+                
+                const response = await fetch(`${API_BASE_URL}/directorio?${params}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                displayContacts(data);
+                
+            } catch (err) {
+                console.error('Error loading contacts:', err);
+                error.textContent = `Error al cargar contactos: ${err.message}`;
+                error.style.display = 'block';
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+        
+        function displayContacts(data) {
+            const results = document.getElementById('results');
+            const resultsInfo = document.getElementById('resultsInfo');
+            const contactsGrid = document.getElementById('contactsGrid');
+            const pagination = document.getElementById('pagination');
+            
+            let infoText = `Mostrando ${data.data.length} de ${data.total} contactos`;
+            if (currentLetter) infoText += ` - Letra: ${currentLetter}`;
+            if (currentSearch) infoText += ` - Búsqueda: "${currentSearch}"`;
+            resultsInfo.textContent = infoText;
+            
+            contactsGrid.innerHTML = '';
+            data.data.forEach(contact => {
+                const card = document.createElement('div');
+                card.className = 'contact-card';
+                card.innerHTML = `
+                    <div class="contact-name">${contact.nombre_completo || 'Sin nombre'}</div>
+                    ${contact.empresa ? `<div class="contact-info">🏢 ${contact.empresa}</div>` : ''}
+                    ${contact.email ? `<div class="contact-info">📧 ${contact.email}</div>` : ''}
+                    ${contact.telefono_movil ? `<div class="contact-info">📱 ${contact.telefono_movil}</div>` : ''}
+                    ${contact.ocupacion ? `<div class="contact-info">💼 ${contact.ocupacion}</div>` : ''}
+                    ${contact.origen ? `<div class="contact-info">👤 ${contact.origen}</div>` : ''}
+                `;
+                contactsGrid.appendChild(card);
+            });
+            
+            totalPages = data.totalPages || 1;
+            pagination.innerHTML = `
+                <button onclick="changePage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>← Anterior</button>
+                <span>Página ${currentPage} de ${totalPages}</span>
+                <button onclick="changePage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Siguiente →</button>
+            `;
+            results.style.display = 'block';
+        }
+        
+        function changePage(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                loadContacts();
+            }
+        }
+        
+        loadContacts();
+    </script>
+</body>
+</html> 

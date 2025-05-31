@@ -10,6 +10,7 @@ RUN npm install --only=production
 
 # Copy ONLY the files we need
 COPY simple-app.js ./
+COPY simple-app.cjs ./
 
 # Expose port
 EXPOSE $PORT

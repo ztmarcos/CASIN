@@ -24,7 +24,7 @@ const dbConfig = {
 const pool = mysql.createPool(dbConfig);
 
 // Import ONLY directorio routes
-import directorioRoutes from './routes/directorio-simple.js';
+import directorioRoutes from './routes/directorio.js';
 
 const app = express();
 const port = process.env.PORT || 3001;
