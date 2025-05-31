@@ -1,5 +1,8 @@
 [build]
-builder = "dockerfile"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "nginx -g 'daemon off;'" 
+startCommand = "nginx -g 'daemon off;'"
+numReplicas = 1
+restartPolicyType = "ON_FAILURE" 
