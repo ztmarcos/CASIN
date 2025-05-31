@@ -1,9 +1,15 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd backend && npm install"
- 
+buildCommand = "cd backend && npm ci"
+
 [deploy]
 startCommand = "cd backend && node app.js"
 numReplicas = 1
 sleepApplication = false
-restartPolicyType = "ON_FAILURE" 
+restartPolicyType = "ON_FAILURE"
+
+[environments.production.build]
+buildCommand = "cd backend && npm ci"
+
+[environments.production.deploy]
+startCommand = "cd backend && node app.js" 
