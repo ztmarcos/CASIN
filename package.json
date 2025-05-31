@@ -23,13 +23,13 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.5.2",
     "react-router-dom": "^6.26.2",
+    "serve": "^14.2.4",
     "vite": "^5.0.10",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
-    "eslint": "^8.57.0",
-    "serve": "^14.2.4"
+    "eslint": "^8.57.0"
   },
   "engines": {
     "node": ">=18.0.0"
