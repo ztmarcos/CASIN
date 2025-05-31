@@ -1,13 +1,14 @@
-providers = ["node"]
-
 [phases.setup]
-nixPkgs = ["nodejs_18"]
+nixPkgs = ["nodejs-18_x", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm run install:all"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "node server.js" 
+cmd = "npm start"
+
+[variables]
+NODE_ENV = "production" 
