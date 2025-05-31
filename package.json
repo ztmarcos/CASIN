@@ -3,13 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "commonjs",
-  "main": "app.js",
+  "main": "server.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node app.js",
+    "start": "node server.js",
     "railway:build": "./build.sh",
     "railway:start": "serve dist -s -p $PORT"
   },
@@ -19,6 +19,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "axios": "^1.7.9",
     "dotenv": "^16.5.0",
+    "express": "^4.18.2",
     "firebase": "^11.1.0",
     "pdfjs-dist": "^3.11.174",
     "prop-types": "^15.8.1",
