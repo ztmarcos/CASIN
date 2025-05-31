@@ -1,4 +1,10 @@
 # Ignore files for deployment
 Dockerfile*
 *.dockerfile
-.dockerignore 
+.dockerignore
+index.html.dev
+dist/
+node_modules/
+.git/
+*.log
+.env* 
