@@ -3,12 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "type": "commonjs",
-  "main": "frontend-app/server.js",
+  "main": "server.js",
   "scripts": {
-    "start": "cd frontend-app && node server.js",
-    "build": "cd frontend-app && npm run build",
-    "dev": "cd frontend-app && npm run dev",
-    "install-deps": "cd frontend-app && npm install"
+    "start": "node server.js",
+    "build": "vite build",
+    "dev": "vite"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

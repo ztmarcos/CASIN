@@ -1,0 +1,303 @@
+.table-card-view {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 0.75rem;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+}
+
+.data-card {
+  background: var(--background-primary, white);
+  border: 1px solid var(--border-color, #eaeaea);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: all 0.2s ease;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.data-card:hover {
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+  border-color: var(--primary-color, #3b82f6);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: var(--background-secondary, #f8f9fa);
+  border-bottom: 1px solid var(--border-color, #eaeaea);
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-source-table {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--background-quaternary, #e9ecef);
+  border-radius: 12px;
+  color: var(--text-secondary, #495057);
+  font-weight: 500;
+}
+
+.card-id {
+  font-size: 0.75rem;
+  color: var(--text-tertiary, #6c757d);
+}
+
+.card-content {
+  padding: 0.75rem;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #212529);
+  line-height: 1.4;
+}
+
+.card-subtitle {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary-color, #3b82f6);
+  line-height: 1.4;
+}
+
+.card-details {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #495057);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.card-details:not(.expanded) > *:nth-child(n+3) {
+  display: none;
+}
+
+.card-details.expanded {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-color, #eaeaea);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.card-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  line-height: 1.4;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color, #eaeaea);
+}
+
+.card-detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: var(--text-tertiary, #6c757d);
+  font-weight: 500;
+  min-width: 130px;
+  max-width: 180px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: var(--text-primary, #212529);
+  text-align: right;
+  word-break: break-word;
+  white-space: pre-line;
+  flex: 1;
+  line-height: 1.5;
+}
+
+.expand-button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-color, #eaeaea);
+  background: var(--background-secondary, #f8f9fa);
+  cursor: pointer;
+  color: var(--text-secondary, #6c757d);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.expand-button:hover {
+  background-color: var(--primary-color, #3b82f6);
+  color: white;
+  border-color: var(--primary-color, #3b82f6);
+}
+
+.expand-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card-status {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-right: 8px;
+}
+
+.status-active {
+  background-color: var(--success, #d4edda);
+  color: var(--success-text, #155724);
+}
+
+.status-senior {
+  background-color: var(--warning-bg, #cce5ff);
+  color: var(--warning-text, #004085);
+}
+
+.birthday-card {
+  border-left: 4px solid #007bff;
+}
+
+/* Expanded state styles */
+.card-content.expanded .card-details {
+  max-height: none;
+  opacity: 1;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table-card-view {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-details.expanded {
+    grid-template-columns: 1fr;
+  }
+  
+  .detail-label {
+    min-width: 120px;
+    max-width: 140px;
+  }
+
+  .card-detail-item {
+    padding: 0.375rem 0;
+  }
+}
+
+.data-card.birthday-card {
+  border-left: 4px solid var(--accent-color);
+}
+
+.data-card.birthday-card .card-source-table {
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+.data-card .card-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.status-senior {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+[data-theme='dark'] .data-card {
+  background: var(--background-secondary-dark, #1f2937);
+  border-color: var(--border-color-dark, #374151);
+}
+
+[data-theme='dark'] .data-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  border-color: var(--primary-color, #3b82f6);
+}
+
+[data-theme='dark'] .card-header {
+  background: var(--background-tertiary-dark, #111827);
+  border-color: var(--border-color-dark, #374151);
+}
+
+[data-theme='dark'] .card-title {
+  color: var(--text-primary-dark, #f3f4f6);
+}
+
+[data-theme='dark'] .card-subtitle {
+  color: var(--primary-color, #60a5fa);
+}
+
+[data-theme='dark'] .card-source-table {
+  background: var(--background-quaternary-dark, #374151);
+  color: var(--text-secondary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .card-id {
+  color: var(--text-tertiary-dark, #6b7280);
+}
+
+[data-theme='dark'] .card-details {
+  color: var(--text-secondary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .detail-label {
+  color: var(--text-tertiary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .detail-value {
+  color: var(--text-primary-dark, #f3f4f6);
+}
+
+[data-theme='dark'] .expand-button {
+  background: var(--background-tertiary-dark, #111827);
+  border-color: var(--border-color-dark, #374151);
+  color: var(--text-secondary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .expand-button:hover {
+  background-color: var(--primary-color, #3b82f6);
+  color: white;
+  border-color: var(--primary-color, #3b82f6);
+}
+
+[data-theme='dark'] .status-active {
+  background: var(--success-dark, #065f46);
+  color: var(--success-text-dark, #d1fae5);
+}
+
+[data-theme='dark'] .status-senior {
+  background: var(--warning-dark, #92400e);
+  color: var(--warning-text-dark, #fef3c7);
+}
+
+[data-theme='dark'] .card-detail-item {
+  border-color: var(--border-color-dark, #374151);
+}
+
+[data-theme='dark'] .card-details.expanded {
+  border-color: var(--border-color-dark, #374151);
+} 
