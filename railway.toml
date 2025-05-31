@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "cd backend && npm install"
  
 [deploy]
-startCommand = "cd backend && npm start"
+startCommand = "cd backend && node app.js"
 numReplicas = 1
 sleepApplication = false
 restartPolicyType = "ON_FAILURE" 
