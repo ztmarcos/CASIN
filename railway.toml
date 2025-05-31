@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "node app.js"
+startCommand = "node server.js"
 restartPolicyType = "ON_FAILURE"
 
 [[services]]
