@@ -5,13 +5,44 @@ require('dotenv').config({ path: '../../.env' });
 
 console.log('GPT Routes - Environment variables:', Object.keys(process.env));
 console.log('GPT Routes - VITE_OPENAI_API_KEY exists:', !!process.env.VITE_OPENAI_API_KEY);
+console.log('GPT Routes - OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 
-const openai = new OpenAI({
-    apiKey: process.env.VITE_OPENAI_API_KEY,
-});
+// Initialize OpenAI only if API key is available
+let openai = null;
+let isOpenAIEnabled = false;
+
+const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+
+if (!apiKey || apiKey === 'placeholder') {
+    console.warn('❌ No valid OpenAI API key found in environment variables. GPT features will be disabled.');
+    isOpenAIEnabled = false;
+} else {
+    try {
+        openai = new OpenAI({
+            apiKey: apiKey,
+        });
+        isOpenAIEnabled = true;
+        console.log('✅ OpenAI client initialized successfully');
+    } catch (error) {
+        console.error('❌ Failed to initialize OpenAI client:', error);
+        isOpenAIEnabled = false;
+    }
+}
 
 router.post('/analyze', async (req, res) => {
     try {
+        // Check if OpenAI is enabled
+        if (!isOpenAIEnabled) {
+            return res.status(503).json({ 
+                error: 'OpenAI service is disabled',
+                details: 'OpenAI API key is not configured or invalid',
+                documentType: "Analysis unavailable",
+                keyInfo: [],
+                suggestions: [],
+                mappedData: {}
+            });
+        }
+
         const { type, text, metadata, targetColumns, tableName, data } = req.body;
 
         // Handle email generation
