@@ -1,8 +1,11 @@
+[phases.setup]
+nixPkgs = ['nodejs_18', 'npm']
+
 [phases.install]
-cmds = ["npm ci --only=production"]
+cmds = ['npm ci --only=production']
 
 [phases.build]
-cmds = ["echo 'No build step needed for backend'"]
- 
+cmds = ['echo "Build complete"']
+
 [start]
-cmd = "node simple-app.js" 
+cmd = 'node app.js' 
