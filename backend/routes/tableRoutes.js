@@ -1,3 +1,7 @@
+const express = require('express');
+const router = express.Router();
+const databaseService = require('../services/mysqlDatabase');
+
 // Crear grupo de tablas relacionadas
 router.post('/group', async (req, res) => {
   try {
@@ -180,4 +184,6 @@ router.get('/:tableName/data', async (req, res) => {
       message: error.message || 'Error al obtener los datos de la tabla'
     });
   }
-}); 
+});
+
+module.exports = router; 

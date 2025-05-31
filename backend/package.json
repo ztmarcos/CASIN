@@ -1,11 +1,10 @@
 {
   "name": "directorio-backend",
   "version": "1.0.0",
-  "type": "module",
-  "main": "simple-app.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node simple-app.js",
-    "dev": "node simple-app.js"
+    "start": "node app.js",
+    "dev": "node app.js"
   },
   "dependencies": {
     "express": "^4.18.2",

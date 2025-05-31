@@ -8,7 +8,7 @@ import RelationshipsView from './RelationshipsView';
 import './Directorio.css';
 
 const Directorio = () => {
-  const [viewMode, setViewMode] = useState('table');
+  const [viewMode, setViewMode] = useState('cards');
   const [contactos, setContactos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -41,9 +41,15 @@ const Directorio = () => {
         directorioService.getStats()
       ]);
       
+      console.log('🔍 Raw statsData received:', statsData);
+      console.log('🔍 statsData.stats:', statsData.stats);
+      console.log('🔍 statsData.stats?.total:', statsData.stats?.total);
+      console.log('🔍 statsData.stats?.clientes:', statsData.stats?.clientes);
+      console.log('🔍 statsData.stats?.prospectos:', statsData.stats?.prospectos);
+      
       const contacts = contactosData.data || contactosData;
       setContactos(contacts);
-      setStats(statsData);
+      setStats(statsData.stats || statsData); // Handle both response formats
       
       // Load policy tables for clients (more efficient)
       const policyTablesMap = {};
@@ -75,7 +81,7 @@ const Directorio = () => {
       setContactPolicyTables(policyTablesMap);
       setError(null);
     } catch (err) {
-      setError('Error al cargar los contactos');
+      console.error('Error al cargar los contactos');
     } finally {
       setLoading(false);
     }

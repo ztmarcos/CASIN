@@ -40,14 +40,14 @@ const ContactoCard = ({ contacto, onClick, onDelete, onViewPolicies, policyTable
         <div className="contacto-avatar">
           {contacto.nombre_completo ? contacto.nombre_completo.charAt(0).toUpperCase() : '?'}
         </div>
-        <div className="contacto-status">
+        {/* <div className="contacto-status">
           <span 
             className="status-badge"
             style={{ backgroundColor: getStatusColor(contacto.status) }}
           >
             {getStatusIcon(contacto.status)} {contacto.status}
           </span>
-        </div>
+        </div> */}
       </div>
 
       <div className="contacto-info">
