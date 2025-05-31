@@ -1,7 +1,0 @@
-providers = ["node"]
-
-[phases.setup]
-nixPkgs = ["nodejs_18"]
-
-[start]
-cmd = "node server.js" 
