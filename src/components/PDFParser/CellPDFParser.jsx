@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import pdfService from '../../services/pdfService';
+import { API_URL } from '../../config/api.js';
 import './CellPDFParser.css';
 
 const CellPDFParser = ({ columnName, onValueExtracted }) => {
@@ -46,7 +47,7 @@ const CellPDFParser = ({ columnName, onValueExtracted }) => {
       };
 
       // Call GPT analysis endpoint
-      const response = await fetch('http://localhost:3001/api/gpt/analyze', {
+      const response = await fetch(`${API_URL}/gpt/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_URL } from '../../config/api.js';
 import './DriveSelector.css';
 
 const ROOT_FOLDER_ID = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID || '1rDGEXJg-8fssJ_atzDNHeJr6BouwGCCo';
@@ -23,7 +24,7 @@ const DriveSelector = ({ isOpen, onClose, onFolderSelect, selectedFolderId }) =>
       setError(null);
       const targetFolderId = folderId || ROOT_FOLDER_ID;
       
-      const response = await axios.get(`http://localhost:3001/api/drive/files`, {
+      const response = await axios.get(`${API_URL}/drive/files`, {
         params: {
           folderId: targetFolderId,
           fields: 'files(id, name, mimeType)'

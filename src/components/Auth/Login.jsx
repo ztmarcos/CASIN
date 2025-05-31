@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
+import { API_URL } from '../../config/api.js';
 
 const Login = ({ onLogin }) => {
   const [email, setEmail] = useState('');
@@ -14,7 +15,7 @@ const Login = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/login', { email });
+      const response = await axios.post(`${API_URL}/api/auth/login`, { email });
       const { token } = response.data;
       
       // Guardar token en localStorage

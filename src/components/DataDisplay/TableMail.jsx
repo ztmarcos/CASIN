@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { API_URL } from '../../config/api.js';
 import DriveSelector from '../Drive/DriveSelector';
 import './TableMail.css';
 
@@ -60,7 +61,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
 
       console.log('Generando correo para:', { ...rowData, email: emailAddress }); // Debug
 
-      const response = await fetch('http://localhost:3001/api/gpt/analyze', {
+      const response = await fetch(`${API_URL}/gpt/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         formData.append('file', attachment.file);
         formData.append('folderId', selectedFolder.id);
 
-        const response = await fetch('http://localhost:3001/api/drive/upload', {
+        const response = await fetch(`${API_URL}/drive/upload`, {
           method: 'POST',
           body: formData,
         });
@@ -221,7 +222,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
           formData.append(`attachment`, attachment.file);
         });
 
-        const response = await fetch('http://localhost:3001/api/email/send-welcome', {
+        const response = await fetch(`${API_URL}/email/send-welcome`, {
           method: 'POST',
           body: formData
         });
@@ -246,7 +247,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
           ...rowData
         };
 
-        const response = await fetch('http://localhost:3001/api/email/send-welcome', {
+        const response = await fetch(`${API_URL}/email/send-welcome`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

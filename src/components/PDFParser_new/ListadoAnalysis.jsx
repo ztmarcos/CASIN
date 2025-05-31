@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import tableService from '../../services/data/tableService';
+import { API_URL } from '../../config/api.js';
 import './ListadoAnalysis.css';
 
 const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false }) => {
@@ -80,7 +81,7 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                 `
             };
 
-            const response = await fetch('http://localhost:3001/api/gpt/analyze-list', {
+            const response = await fetch(`${API_URL}/gpt/analyze-list`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

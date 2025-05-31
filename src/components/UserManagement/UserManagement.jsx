@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../config/api.js';
 import './UserManagement.css';
 
 const UserManagement = () => {
@@ -15,7 +16,7 @@ const UserManagement = () => {
 
   const loadUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/api/auth/users');
+      const response = await axios.get(`${API_URL}/auth/users`);
       setUsers(response.data);
       setLoading(false);
     } catch (err) {
@@ -26,7 +27,7 @@ const UserManagement = () => {
 
   const handleAddUser = async (email) => {
     try {
-      await axios.post('http://localhost:3001/api/auth/register', { email });
+      await axios.post(`${API_URL}/auth/register`, { email });
       loadUsers();
     } catch (err) {
       setError('Error al agregar usuario');
@@ -35,7 +36,7 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (userId) => {
     try {
-      await axios.delete(`http://localhost:3001/api/auth/users/${userId}`);
+      await axios.delete(`${API_URL}/auth/users/${userId}`);
       loadUsers();
     } catch (err) {
       setError('Error al eliminar usuario');

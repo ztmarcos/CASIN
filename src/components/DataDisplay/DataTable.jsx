@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import pdfService from '../../services/pdfService';
 import tableService from '../../services/data/tableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
@@ -7,6 +7,7 @@ import PDFParser from '../PDFParser_new/PDFParser';
 import Modal from '../Modal/Modal';
 import './DataTable.css';
 import { toast } from 'react-hot-toast';
+import { API_URL } from '../../config/api.js';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
   // Add console logs for debugging
@@ -398,7 +399,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       };
 
       // Call GPT analysis endpoint
-      const response = await fetch('http://localhost:3001/api/gpt/analyze', {
+      const response = await fetch(`${API_URL}/gpt/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

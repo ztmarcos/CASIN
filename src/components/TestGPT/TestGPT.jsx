@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import OpenAI from 'openai';
+// import OpenAI from 'openai';
 import tableService from '../../services/data/tableService';
 import './TestGPT.css';
 import { sendWelcomeEmail } from '../../services/emailService';
-
-const API_URL = 'http://localhost:3001/api';
+import { API_URL } from '../../config/api.js';
 
 const TestGPT = () => {
   const [input, setInput] = useState('');
@@ -24,10 +23,11 @@ const TestGPT = () => {
   const [searchFilter, setSearchFilter] = useState('');
   const [filteredData, setFilteredData] = useState(null);
 
-  const openai = new OpenAI({
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true
-  });
+  // Comment out OpenAI client - this should be handled by backend
+  // const openai = new OpenAI({
+  //   apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  //   dangerouslyAllowBrowser: true
+  // });
 
   useEffect(() => {
     loadTables();
@@ -143,18 +143,32 @@ const TestGPT = () => {
         }
       }
 
-      const completion = await openai.chat.completions.create({
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        model: "gpt-4o-mini",
+      // Use backend API instead of direct OpenAI client
+      const response = await fetch(`${API_URL}/gpt/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: userPrompt,
+          context: {
+            systemPrompt,
+            selectedTable,
+            selectedCard
+          },
+          model: 'gpt-4o-mini'
+        }),
       });
 
-      const gptResponse = completion.choices[0].message.content;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate GPT response');
+      }
+
+      const result = await response.json();
+      const gptResponse = result.response || result.content || 'No response generated';
       setResponse(gptResponse);
 
-      // Remove automatic email sending
       // Only update prospeccion card if selected
       if (selectedCard) {
         await fetch(`${API_URL}/prospeccion/${userId}/${selectedCard}/analyze`, {
@@ -169,10 +183,6 @@ const TestGPT = () => {
     } catch (error) {
       console.error('Error:', error);
       setResponse(`Error: ${error.message || 'No se pudo obtener respuesta de GPT'}`);
-      if (error.response) {
-        console.error('Error response:', error.response.data);
-        setResponse(`Error: ${error.response.data.error || error.message}`);
-      }
     } finally {
       setLoading(false);
     }

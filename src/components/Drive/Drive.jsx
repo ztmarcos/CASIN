@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
+import { API_URL } from '../../config/api.js';
 import './Drive.css';
 
 // Get folder ID from environment variable with fallback
@@ -84,7 +85,7 @@ const Drive = () => {
       const targetFolderId = folderId || ROOT_FOLDER_ID;
       console.log('Obteniendo archivos de:', targetFolderId);
       
-      const response = await axios.get(`http://localhost:3001/api/drive/files`, {
+      const response = await axios.get(`${API_URL}/drive/files`, {
         params: {
           folderId: targetFolderId,
           fields: 'files(id, name, mimeType, webViewLink)'
@@ -136,7 +137,7 @@ const Drive = () => {
       setError(null);
       console.log('Probando conexión con Google Drive...');
       
-      const response = await axios.get('http://localhost:3001/api/drive/test');
+      const response = await axios.get(`${API_URL}/drive/test`);
       console.log('Respuesta completa del test:', response.data);
       
       setConnectionStatus(response.data.status);
@@ -199,7 +200,7 @@ const Drive = () => {
       // Normalize folder name
       const normalizedName = newFolderName.trim();
       
-      await axios.post('http://localhost:3001/api/drive/folders', {
+      await axios.post(`${API_URL}/drive/folders`, {
         name: normalizedName,
         parentId: currentFolder || ROOT_FOLDER_ID
       });
@@ -223,7 +224,7 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.delete(`http://localhost:3001/api/drive/files/${selectedFile.id}`);
+      await axios.delete(`${API_URL}/drive/files/${selectedFile.id}`);
       setShowDeleteModal(false);
       setSelectedFile(null);
       fetchFiles(currentFolder);
@@ -241,7 +242,7 @@ const Drive = () => {
     try {
       setLoading(true);
       setError(null);
-      await axios.patch(`http://localhost:3001/api/drive/files/${selectedFile.id}`, {
+      await axios.patch(`${API_URL}/drive/files/${selectedFile.id}`, {
         name: newFileName
       });
       setShowRenameModal(false);
@@ -271,7 +272,7 @@ const Drive = () => {
       formData.append('file', file);
       formData.append('folderId', currentFolder || ROOT_FOLDER_ID);
 
-      const response = await fetch('http://localhost:3001/api/drive/upload', {
+      const response = await fetch(`${API_URL}/drive/upload`, {
         method: 'POST',
         body: formData,
       });

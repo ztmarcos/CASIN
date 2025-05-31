@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { API_URL } from '../../config/api.js';
 import './Prospeccion.css';
-
-const API_URL = 'http://localhost:3001/api';
 
 const Prospeccion = () => {
   const [cards, setCards] = useState([]);
