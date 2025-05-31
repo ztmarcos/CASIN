@@ -34,20 +34,20 @@ app.get('/health', (req, res) => {
 });
 
 // Import working routes
-const dataRoutes = require('./routes/dataRoutes');
-const birthdayRoutes = require('./routes/birthdayRoutes');
-const notionRoutes = require('./routes/notionRoutes');
-const tableRoutes = require('./routes/tableRoutes'); // Fixed router definition issues
-const driveRoutes = require('./routes/driveRoutes');
-const fileRoutes = require('./routes/fileRoutes');
-const gptRoutes = require('./routes/gptRoutes');
-const authRoutes = require('./routes/authRoutes');
-const emailRoutes = require('./routes/emailRoutes');
-const policyStatusRoutes = require('./routes/policyStatusRoutes');
-const prospeccionRoutes = require('./routes/prospeccionRoutes');
-const sharepointRoutes = require('./routes/sharepointRoutes');
-const supportChatRoutes = require('./routes/supportChat');
-const directorioRoutes = require('./routes/directorioRoutes'); // New directorio routes
+const dataRoutes = require('./backend/routes/dataRoutes');
+const birthdayRoutes = require('./backend/routes/birthdayRoutes');
+const notionRoutes = require('./backend/routes/notionRoutes');
+const tableRoutes = require('./backend/routes/tableRoutes'); // Fixed router definition issues
+const driveRoutes = require('./backend/routes/driveRoutes');
+const fileRoutes = require('./backend/routes/fileRoutes');
+const gptRoutes = require('./backend/routes/gptRoutes');
+const authRoutes = require('./backend/routes/authRoutes');
+const emailRoutes = require('./backend/routes/emailRoutes');
+const policyStatusRoutes = require('./backend/routes/policyStatusRoutes');
+const prospeccionRoutes = require('./backend/routes/prospeccionRoutes');
+const sharepointRoutes = require('./backend/routes/sharepointRoutes');
+const supportChatRoutes = require('./backend/routes/supportChat');
+const directorioRoutes = require('./backend/routes/directorioRoutes'); // New directorio routes
 
 // Use working routes
 app.use('/api/data', dataRoutes);
