@@ -1,0 +1,10 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "node app.js"
+restartPolicyType = "ON_FAILURE"
+
+[[services]]
+name = "frontend-v2"
+source = "." 
