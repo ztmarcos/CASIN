@@ -11,14 +11,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
     plugins: [react()],
-    root: '.',
-    publicDir: 'public',
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
       rollupOptions: {
-        input: 'public/index.html',
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],

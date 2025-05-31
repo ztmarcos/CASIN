@@ -22,7 +22,7 @@ exec('npm run build', (error, stdout, stderr) => {
   
   // Handle React Router (return index.html for all routes)
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist', 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
   
   // Start the server
