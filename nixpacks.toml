@@ -3,12 +3,11 @@ node = "18"
 
 [phases.build]
 cmds = [
-  "npm ci",
-  "npm run build"
+  "npm ci"
 ]
 
 [phases.start]
-cmd = "npm start"
+cmd = "./start.sh"
 
 [variables]
 NODE_ENV = "production" 
