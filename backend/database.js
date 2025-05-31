@@ -6,13 +6,13 @@ dotenv.config();
 
 console.log('🔧 Loading database configuration...');
 
-// Railway MySQL configuration
+// Railway MySQL configuration - using Railway's actual variable names
 const dbConfig = {
-  host: process.env.MYSQLHOST || 'localhost',
-  port: process.env.MYSQLPORT || 3306,
-  user: process.env.MYSQLUSER || 'root',
-  password: process.env.MYSQLPASSWORD || '',
-  database: process.env.MYSQLDATABASE || 'railway',
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'railway',
   charset: 'utf8mb4',
   timezone: '+00:00',
   ssl: false
@@ -31,7 +31,8 @@ console.log('🔧 Database config:', {
   host: dbConfig.host,
   port: dbConfig.port,
   user: dbConfig.user,
-  database: dbConfig.database
+  database: dbConfig.database,
+  usingRailwayVars: !!(process.env.DB_HOST)
 });
 
 // Create connection pool
