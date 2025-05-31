@@ -1,0 +1,5 @@
+# Ignore backend files for frontend deployment
+backend/
+Dockerfile*
+*.dockerfile
+.dockerignore 
