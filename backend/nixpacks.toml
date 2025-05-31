@@ -1,8 +1,8 @@
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm ci --only=production"]
 
 [phases.build]
 cmds = ["echo 'No build step needed for backend'"]
-
+ 
 [start]
-cmd = "npm start" 
+cmd = "node simple-app.js" 
