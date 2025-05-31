@@ -1,26 +1,48 @@
 // Simple Node.js app to force Railway to recognize this as a Node.js project
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const path = require('path');
 
 console.log('Starting React build and serve process...');
 
 // Build the React app
-exec('npm run build', (error, stdout, stderr) => {
-  if (error) {
-    console.error(`Build error: ${error}`);
+console.log('Building React app...');
+const buildProcess = spawn('npm', ['run', 'build'], { stdio: 'inherit' });
+
+buildProcess.on('close', (code) => {
+  if (code !== 0) {
+    console.error(`Build process exited with code ${code}`);
     process.exit(1);
   }
   
   console.log('Build completed successfully');
-  console.log(stdout);
   
   // Start serving the built files
   const port = process.env.PORT || 3000;
-  exec(`npx serve dist -s -p ${port}`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Serve error: ${error}`);
-      process.exit(1);
-    }
-    console.log(`Server started on port ${port}`);
+  console.log(`Starting server on port ${port}...`);
+  
+  const serveProcess = spawn('npx', ['serve', 'dist', '-s', '-p', port], { 
+    stdio: 'inherit',
+    detached: false
+  });
+  
+  serveProcess.on('error', (error) => {
+    console.error(`Serve error: ${error}`);
+    process.exit(1);
+  });
+  
+  serveProcess.on('close', (code) => {
+    console.log(`Server process exited with code ${code}`);
+    process.exit(code);
+  });
+  
+  // Handle graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('Received SIGTERM, shutting down gracefully');
+    serveProcess.kill('SIGTERM');
+  });
+  
+  process.on('SIGINT', () => {
+    console.log('Received SIGINT, shutting down gracefully');
+    serveProcess.kill('SIGINT');
   });
 }); 
