@@ -1,19 +1,19 @@
 {
-  "name": "x3",
+  "name": "casin-fullstack",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "",
-  "main": "index.js",
+  "description": "CASIN CRM Full Stack Application",
+  "main": "backend/app.js",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cd backend && npm install",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "server": "node backend/app.js",
-    "start": "serve dist -s -p $PORT",
+    "start": "node backend/app.js",
     "setup-railway-db": "node setup-railway-db.js"
   },
   "keywords": [],
@@ -58,5 +58,8 @@
     "jsdom": "^23.0.1",
     "serve": "^14.2.4",
     "vitest": "^1.0.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
