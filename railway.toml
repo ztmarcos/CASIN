@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "cd frontend-app && npm install && node server.js"
+startCommand = "npm run install-deps && npm start"
 restartPolicyType = "ON_FAILURE"
 
 [[services]]
