@@ -12,21 +12,31 @@ console.log('🔑 Notion Environment Variables:', {
 
 // Initialize the Notion client
 const apiKey = process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY;
-if (!apiKey) {
-  console.error('❌ No Notion API key found in environment variables');
-  throw new Error('Notion API key is required');
+let notion = null;
+let isNotionEnabled = false;
+
+if (!apiKey || apiKey === 'placeholder') {
+  console.warn('❌ No valid Notion API key found in environment variables. Notion features will be disabled.');
+  isNotionEnabled = false;
+} else {
+  try {
+    notion = new Client({
+      auth: apiKey
+    });
+    isNotionEnabled = true;
+    
+    // Test Notion client initialization
+    notion.users.me().then(response => {
+      console.log('✅ Notion client initialized successfully:', response.name);
+    }).catch(error => {
+      console.error('❌ Failed to initialize Notion client:', error.message);
+      isNotionEnabled = false;
+    });
+  } catch (error) {
+    console.error('❌ Failed to create Notion client:', error.message);
+    isNotionEnabled = false;
+  }
 }
-
-const notion = new Client({
-  auth: apiKey
-});
-
-// Test Notion client initialization
-notion.users.me().then(response => {
-  console.log('✅ Notion client initialized successfully:', response.name);
-}).catch(error => {
-  console.error('❌ Failed to initialize Notion client:', error.message);
-});
 
 // Enable CORS middleware for Notion routes
 router.use((req, res, next) => {
@@ -93,6 +103,15 @@ const extractPropertyValue = (property) => {
 // Get tasks from Notion database
 router.get('/tasks', async (req, res) => {
   try {
+    // Check if Notion is enabled
+    if (!isNotionEnabled) {
+      return res.status(503).json({ 
+        error: 'Notion service is disabled',
+        details: 'Notion API key is not configured or invalid',
+        tasks: []
+      });
+    }
+
     // Validate environment variables
     const apiKey = process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY;
     const databaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
