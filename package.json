@@ -2,13 +2,14 @@
   "name": "casin-frontend",
   "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
+  "main": "app.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "npm run build && serve dist -s -p $PORT",
+    "start": "node app.js",
     "railway:build": "./build.sh",
     "railway:start": "serve dist -s -p $PORT"
   },
