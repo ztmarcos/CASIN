@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "serve dist -s -p $PORT"
+    "start": "npm run build && serve dist -s -p $PORT",
+    "railway:build": "./build.sh",
+    "railway:start": "serve dist -s -p $PORT"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
