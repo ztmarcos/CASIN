@@ -36,4 +36,7 @@ yarn-error.log*
 
 # JSON
 *.json
+.env*firebase*adminsdk*.json
 .env
+backend/.env
+backend-simple-OLD/.env

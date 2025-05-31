@@ -5,28 +5,52 @@ const path = require('path');
 // Initialize Firebase Admin
 if (!admin.apps.length) {
   try {
-    const serviceAccount = require('../../casinbbdd-firebase-adminsdk-hnwk0-856db1f02b.json');
+    // Check if Firebase environment variables are available
+    const firebaseConfig = {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'), // Handle escaped newlines
+    };
 
     console.log('Firebase Admin Initialization:', {
-      projectId: serviceAccount.project_id,
-      hasClientEmail: !!serviceAccount.client_email,
-      hasPrivateKey: !!serviceAccount.private_key,
-      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
+      projectId: firebaseConfig.projectId,
+      hasClientEmail: !!firebaseConfig.clientEmail,
+      hasPrivateKey: !!firebaseConfig.privateKey,
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET
     });
 
+    // Check if all required Firebase credentials are available
+    if (!firebaseConfig.projectId || !firebaseConfig.clientEmail || !firebaseConfig.privateKey) {
+      console.warn('Firebase credentials not found in environment variables. Firebase features will be disabled.');
+      module.exports = {
+        testConnection: async () => ({ success: false, message: 'Firebase not configured' }),
+        uploadFile: async () => { throw new Error('Firebase not configured'); },
+        deleteFile: async () => { throw new Error('Firebase not configured'); }
+      };
+      return;
+    }
+
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET
+      credential: admin.credential.cert(firebaseConfig),
+      storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET
     });
 
     console.log('Firebase Admin initialized successfully');
   } catch (error) {
     console.error('Firebase Admin initialization error:', error);
-    throw error;
+    console.warn('Firebase features will be disabled.');
+    
+    // Export disabled service
+    module.exports = {
+      testConnection: async () => ({ success: false, message: 'Firebase initialization failed' }),
+      uploadFile: async () => { throw new Error('Firebase not available'); },
+      deleteFile: async () => { throw new Error('Firebase not available'); }
+    };
+    return;
   }
 }
 
-const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET);
+const bucket = admin.storage().bucket(process.env.VITE_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET);
 
 const fileService = {
   // Test Firebase connection
