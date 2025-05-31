@@ -9,9 +9,19 @@ class EmailService {
         
         // Check if we have the required environment variables
         if (!process.env.SMTP_USER || !process.env.SMTP_PASS || !process.env.SMTP_HOST || !process.env.SMTP_PORT) {
-            console.error('SMTP configuration is missing!');
-            throw new Error('Email configuration is not complete');
+            console.warn('SMTP configuration is missing! Email service will be disabled.');
+            this.isEnabled = false;
+            return;
         }
+
+        // Check for placeholder values
+        if (process.env.SMTP_USER === 'placeholder@gmail.com' || process.env.SMTP_PASS === 'placeholder') {
+            console.warn('SMTP configuration uses placeholder values! Email service will be disabled.');
+            this.isEnabled = false;
+            return;
+        }
+
+        this.isEnabled = true;
 
         // Remove any spaces from the password
         const password = process.env.SMTP_PASS.replace(/\s+/g, '');
@@ -94,6 +104,11 @@ class EmailService {
     }
 
     async sendWelcomeEmail(to, data) {
+        if (!this.isEnabled) {
+            console.log('Email service is disabled, skipping welcome email');
+            return { success: false, message: 'Email service is disabled' };
+        }
+        
         try {
             console.log('\n=== Email Service: Starting Send Process ===');
             console.log('1. Received data:', {
@@ -190,6 +205,11 @@ ${data.companyAddress}`;
     }
 
     async sendBirthdayEmail(to, data) {
+        if (!this.isEnabled) {
+            console.log('Email service is disabled, skipping birthday email');
+            return { success: false, message: 'Email service is disabled' };
+        }
+        
         try {
             console.log('\n=== Email Service: Sending Birthday Email ===');
             console.log('Recipient:', to);
