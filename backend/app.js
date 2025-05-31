@@ -1,10 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory FIRST
+require('./load-env');
 
 const app = express();
 const PORT = process.env.PORT || 3001;

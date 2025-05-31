@@ -1,8 +1,5 @@
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.PROD 
-    ? 'https://backend-production-d401.up.railway.app' 
-    : 'http://localhost:3001');
+// API Configuration - USING INTEGRATED SERVER
+const API_BASE_URL = 'http://localhost:3000'; // INTEGRATED SERVER
 
 export const API_URL = `${API_BASE_URL}/api`;
 export const BASE_URL = API_BASE_URL;

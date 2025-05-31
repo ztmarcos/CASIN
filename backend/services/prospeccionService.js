@@ -1,13 +1,30 @@
 const mysqlDatabase = require('./mysqlDatabase');
-const OpenAI = require('openai');
-require('dotenv').config({ path: '../../.env' });
 
-console.log('Prospeccion Service - Environment variables:', Object.keys(process.env));
+console.log('Prospeccion Service - Environment variables check...');
 console.log('Prospeccion Service - VITE_OPENAI_API_KEY exists:', !!process.env.VITE_OPENAI_API_KEY);
+console.log('Prospeccion Service - OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 
-const openai = new OpenAI({
-  apiKey: process.env.VITE_OPENAI_API_KEY
-});
+let openai = null;
+let gptAvailable = false;
+
+// Try to initialize OpenAI (optional)
+try {
+    const OpenAI = require('openai');
+    const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    
+    if (apiKey && apiKey !== 'your_openai_api_key_here' && !apiKey.startsWith('sk-proj-')) {
+        openai = new OpenAI({
+            apiKey: apiKey,
+        });
+        gptAvailable = true;
+        console.log('✅ OpenAI initialized successfully in ProspeccionService');
+    } else {
+        console.log('⚠️  No valid OpenAI API key found. GPT features will be disabled in ProspeccionService.');
+    }
+} catch (error) {
+    console.error('⚠️  OpenAI initialization error in ProspeccionService:', error.message);
+    console.log('🔄 ProspeccionService will continue without GPT features.');
+}
 
 class ProspeccionService {
   async getCards(userId) {
@@ -86,6 +103,10 @@ class ProspeccionService {
   }
 
   async analyzeWithGPT(cardId, userId) {
+    if (!gptAvailable || !openai) {
+      throw new Error('GPT service not available. OpenAI API key not configured.');
+    }
+
     const connection = await mysqlDatabase.getConnection();
     try {
       // First get the card content

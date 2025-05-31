@@ -210,6 +210,69 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// GET /api/directorio/:id/policies - Get policies for a specific contact
+router.get('/:id/policies', async (req, res) => {
+  console.log('📋 GET /api/directorio/:id/policies');
+  let connection;
+  
+  try {
+    const { id } = req.params;
+    connection = await getConnection();
+    
+    // First check if contact exists
+    const [contactRows] = await connection.execute(
+      'SELECT nombre_completo FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    if (contactRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contact not found'
+      });
+    }
+    
+    // Get policies from autos table (assuming there's a relationship)
+    // You might need to adjust this query based on your actual database schema
+    const [policyRows] = await connection.execute(`
+      SELECT 
+        id,
+        poliza,
+        asegurado,
+        vehiculo,
+        modelo,
+        tipo_de_vehiculo,
+        prima_neta,
+        prima_total,
+        vigencia_de,
+        vigencia_hasta,
+        status,
+        created_at
+      FROM autos 
+      WHERE asegurado LIKE ? OR poliza LIKE ?
+      ORDER BY created_at DESC
+    `, [`%${contactRows[0].nombre_completo}%`, `%${id}%`]);
+    
+    res.json({
+      success: true,
+      data: {
+        contact: contactRows[0],
+        policies: policyRows
+      },
+      total: policyRows.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching contact policies:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message 
+    });
+  } finally {
+    if (connection) await connection.end();
+  }
+});
+
 // POST /api/directorio - Create new contact
 router.post('/', async (req, res) => {
   console.log('➕ POST /api/directorio');

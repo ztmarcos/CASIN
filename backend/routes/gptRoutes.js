@@ -1,16 +1,41 @@
 const express = require('express');
 const router = express.Router();
-const OpenAI = require('openai');
-require('dotenv').config({ path: '../../.env' });
 
-console.log('GPT Routes - Environment variables:', Object.keys(process.env));
+console.log('GPT Routes - Environment variables check...');
 console.log('GPT Routes - VITE_OPENAI_API_KEY exists:', !!process.env.VITE_OPENAI_API_KEY);
+console.log('GPT Routes - OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 
-const openai = new OpenAI({
-    apiKey: process.env.VITE_OPENAI_API_KEY,
-});
+let openai = null;
+let gptAvailable = false;
+
+// Try to initialize OpenAI (optional)
+try {
+    const OpenAI = require('openai');
+    const apiKey = process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY;
+    
+    if (apiKey && apiKey !== 'your_openai_api_key_here' && !apiKey.startsWith('sk-proj-')) {
+        openai = new OpenAI({
+            apiKey: apiKey,
+        });
+        gptAvailable = true;
+        console.log('✅ OpenAI initialized successfully');
+    } else {
+        console.log('⚠️  No valid OpenAI API key found. GPT features will be disabled.');
+    }
+} catch (error) {
+    console.error('⚠️  OpenAI initialization error:', error.message);
+    console.log('🔄 Backend will continue without GPT features.');
+}
 
 router.post('/analyze', async (req, res) => {
+    if (!gptAvailable || !openai) {
+        return res.status(503).json({ 
+            error: 'GPT service not available',
+            message: 'OpenAI API key not configured. GPT features are disabled.',
+            available: false
+        });
+    }
+
     try {
         const { type, text, metadata, targetColumns, tableName, data } = req.body;
 
@@ -161,6 +186,15 @@ router.post('/analyze', async (req, res) => {
         console.error('Error in GPT analysis:', error);
         res.status(500).json({ error: error.message });
     }
+});
+
+// Status endpoint
+router.get('/status', (req, res) => {
+    res.json({
+        available: gptAvailable,
+        message: gptAvailable ? 'GPT service is available' : 'GPT service is disabled (no API key)',
+        model: gptAvailable ? 'gpt-4o-mini' : null
+    });
 });
 
 module.exports = router; 
