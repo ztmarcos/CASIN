@@ -1,10 +1,11 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "npm install"
 
 [deploy]
-startCommand = "npm run install-deps && npm start"
+startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
 
 [[services]]
-name = "frontend-v2"
+name = "frontend"
 source = "." 
