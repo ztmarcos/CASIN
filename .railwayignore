@@ -1,5 +1,4 @@
-# Ignore backend files for frontend deployment
-backend/
+# Ignore files for deployment
 Dockerfile*
 *.dockerfile
 .dockerignore 
