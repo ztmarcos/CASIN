@@ -1,5 +1,14 @@
+[providers]
+node = "18"
+
 [phases.build]
-cmds = ["echo 'Using Dockerfile instead of Nixpacks'"]
+cmds = [
+  "npm ci",
+  "npm run build"
+]
 
 [phases.start]
-cmd = "echo 'This should not run - using Docker'" 
+cmd = "npx serve -s dist -l 80"
+
+[variables]
+NODE_ENV = "production" 
