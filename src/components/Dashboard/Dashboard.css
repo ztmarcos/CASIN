@@ -1,0 +1,446 @@
+.dashboard {
+  padding: 2rem;
+}
+
+.dashboard-title {
+  margin-bottom: 2rem;
+  color: var(--text-primary);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin: 3rem; /* Added margin for spacing */
+}
+
+.dashboard-card {
+  background-color: var(--bg-surface);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.card-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.card-content {
+  padding: 1rem;
+  min-height: 200px;
+}
+
+/* Birthday List Styles */
+.birthday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.birthday-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.birthday-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.birthday-name {
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+}
+
+.birthday-date {
+  font-size: var(--font-size-sm);
+  color: var(--accent-color);
+  font-weight: var(--font-weight-medium);
+}
+
+.birthday-age {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.birthday-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.email-icon {
+  font-size: 1rem;
+}
+
+.no-birthdays {
+  text-align: center;
+  color: var(--text-secondary);
+  margin: 2rem 0;
+}
+
+.error-message {
+  color: var(--text-error);
+  text-align: center;
+  margin: 2rem 0;
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* Activity List */
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.activity-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.activity-text {
+  color: var(--text-primary);
+}
+
+/* Status Items */
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.status-badge.success {
+  background-color: var(--success-color, #10B981);
+  color: white;
+}
+
+.status-badge.warning {
+  background-color: var(--warning-color, #F59E0B);
+  color: white;
+}
+
+/* Actions Grid */
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.action-button {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button:hover {
+  background-color: var(--bg-surface-hover);
+}
+
+/* Notifications */
+.notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.notification-dot.success { background-color: var(--success-color, #10B981); }
+.notification-dot.warning { background-color: var(--warning-color, #F59E0B); }
+.notification-dot.error { background-color: var(--error-color, #EF4444); }
+
+/* Resource List */
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.resource-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: var(--bg-secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background-color: var(--accent-color);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 2rem auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 1rem;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.expiration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.expiration-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--background-secondary);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.expiration-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.expiration-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.expiration-type {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: var(--primary-color);
+  color: white;
+}
+
+.expiration-policy {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: 'Roboto Mono', monospace;
+}
+
+.expiration-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.expiration-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.expiration-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.no-expirations {
+  text-align: center;
+  color: #6c757d;
+  padding: 1rem;
+}
+
+.view-all {
+  color: #0d6efd;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.view-all:hover {
+  text-decoration: underline;
+}
+
+.view-more-link {
+  display: block;
+  text-align: center;
+  padding: 0.5rem;
+  color: var(--accent-color);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.5rem;
+}
+
+.view-more-link:hover {
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .birthday-item {
+  background-color: var(--background-secondary-dark);
+  border-color: var(--border-color-dark);
+}
+
+[data-theme='dark'] .birthday-email {
+  border-color: var(--border-color-dark);
+}
+
+[data-theme='dark'] .view-more-link {
+  border-color: var(--border-color-dark);
+}
+
+.toggle-view-btn {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.toggle-view-btn:hover {
+  opacity: 0.8;
+}
+
+/* Dark mode styles */
+[data-theme='dark'] .expiration-item {
+  background: var(--background-secondary-dark, #1f2937);
+  border-color: var(--border-color-dark, #374151);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .expiration-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .expiration-type {
+  background: var(--primary-color-dark, #3b82f6);
+}
+
+[data-theme='dark'] .expiration-policy {
+  color: var(--text-primary-dark, #f3f4f6);
+}
+
+[data-theme='dark'] .expiration-name {
+  color: var(--text-primary-dark, #f3f4f6);
+}
+
+[data-theme='dark'] .expiration-date {
+  color: var(--text-secondary-dark, #9ca3af);
+}
+
+[data-theme='dark'] .toggle-view-btn {
+  color: var(--primary-color-light, #60a5fa);
+}
+
+[data-theme='dark'] .no-expirations {
+  color: var(--text-secondary-dark, #9ca3af);
+} 

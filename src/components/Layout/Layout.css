@@ -1,0 +1,278 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid var(--border-color);
+  height: 60px;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.logo {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+  padding: .25rem;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.logo-image {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.logo-content {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.logo-text {
+  font-size: 1rem;
+  font-weight: 700;
+  color: rgba(15, 75, 186, 0.94);
+  letter-spacing: .025em;
+  line-height: 1;
+  text-transform: uppercase;
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+}
+
+.logo-version {
+  font-size: .7rem;
+  font-weight: 500;
+  color: rgba(220, 119, 18, 0.94);
+  letter-spacing: .025em;
+  line-height: 1;
+  font-family: 'Arial', sans-serif;
+  white-space: nowrap;
+  margin: -.7rem;
+}
+
+[data-theme='dark'] .top-bar {
+  background-color: #121212;
+  border-color: #2d3748;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.top-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.top-nav a:hover {
+  color: var(--text-primary);
+  background-color: var(--background-hover);
+}
+
+.top-nav a.active {
+  color: var(--text-primary);
+  background-color: var(--background-active);
+}
+
+.nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.right-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-right: 1rem;
+  flex-wrap: nowrap;
+}
+
+.search-bar {
+  position: relative;
+}
+
+.search-bar input {
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  width: 200px;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
+}
+
+.user-email {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.logout-button,
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.logout-button:hover,
+.theme-toggle:hover {
+  color: var(--text-primary);
+  background-color: var(--background-hover);
+}
+
+.main-content {
+  margin-top: 60px;
+  padding: 0;
+  flex: 1;
+  width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1024px) {
+  .search-bar {
+    display: none;
+  }
+  
+  .user-email {
+    display: none;
+  }
+  
+  .top-nav {
+    gap: 0.5rem;
+  }
+  
+  .top-nav a {
+    padding: 0.5rem;
+  }
+  
+  .top-nav a span {
+    display: none;
+  }
+  
+  .right-section {
+    gap: 0.375rem;
+  }
+  
+  .user-section {
+    gap: 0.375rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .right-section {
+    gap: 0.25rem;
+    padding-right: 0.5rem;
+  }
+  
+  .user-section {
+    gap: 0.25rem;
+  }
+  
+  .top-bar {
+    padding: 0.5rem;
+  }
+  
+  .left-section {
+    gap: 0.5rem;
+  }
+}
+
+.notion-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.notion-button:hover {
+  color: var(--text-primary);
+  background-color: var(--background-hover);
+}
+
+.notion-popup {
+  position: fixed;
+  top: 60px;
+  right: 1rem;
+  background: var(--background-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-width: 600px;
+  width: 90%;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.notion-popup-content {
+  position: relative;
+  padding: 1rem;
+}
+
+.close-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: var(--text-primary);
+  background-color: var(--background-hover);
+} 
