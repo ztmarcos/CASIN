@@ -46,6 +46,19 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check environment variables
+app.get('/debug/env', (req, res) => {
+  res.json({
+    DB_HOST: process.env.DB_HOST || 'NOT_SET',
+    DB_PORT: process.env.DB_PORT || 'NOT_SET',
+    DB_USER: process.env.DB_USER || 'NOT_SET',
+    DB_NAME: process.env.DB_NAME || 'NOT_SET',
+    DB_PASSWORD: process.env.DB_PASSWORD ? 'SET' : 'NOT_SET',
+    NODE_ENV: process.env.NODE_ENV || 'NOT_SET',
+    PORT: process.env.PORT || 'NOT_SET'
+  });
+});
+
 // Get all contacts
 app.get('/api/directorio', async (req, res) => {
   try {
