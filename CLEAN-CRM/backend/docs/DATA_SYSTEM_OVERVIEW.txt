@@ -1,0 +1,126 @@
+# Data System Architecture Overview
+
+## Component Structure
+```
+Data/
+└── DataSection/
+    ├── TableManager (Table creation/selection)
+    ├── ColumnManager (Column management)
+    ├── DataTable (Table view)
+    ├── TableCardView (Card view)
+    ├── TableImport (Data import)
+    └── AddEntryModal (New entries)
+```
+
+## Core Components
+
+### 1. Data.jsx
+- Root wrapper component
+- Provides the main container for the data management system
+- Renders DataSection as its main child
+
+### 2. DataSection.jsx
+Main container component that handles:
+- Table selection and data loading
+- View mode switching (table/card)
+- Import and add entry modal management
+- Data filtering
+- CSV export functionality
+- Action buttons (Add Entry, Import, View Toggle, Export)
+
+### 3. TableManager.jsx
+Manages table operations:
+- Lists all available tables
+- Handles table selection
+- Provides table creation interface
+- Shows table structure
+- Features:
+  - Dynamic column management
+  - Table creation with validation
+  - Visual feedback for selected tables
+  - Integration with database services
+
+### 4. ColumnManager.jsx
+Handles column configuration:
+- Displays current table columns
+- Supports column addition with properties:
+  - Name
+  - Data type (INTEGER, VARCHAR, TEXT, TIMESTAMP, BOOLEAN, DECIMAL)
+  - Length (for VARCHAR)
+  - Primary key setting
+- Visual representation of column structure
+
+### 5. DataTable.jsx
+Displays data in table format:
+- Sortable columns
+- Global search functionality
+- Row count information
+- Row click handling
+- Features:
+  - Column sorting (asc/desc)
+  - Search across all fields
+  - Responsive layout
+  - Empty state handling
+
+## Key Features
+
+### Data Management
+- Create and manage tables
+- Add/modify columns
+- Import data from XLS/CSV
+- Export data to CSV
+- Add individual entries
+- Filter and sort data
+
+### View Options
+- Table view for structured data display
+- Card view for visual representation
+- Toggle between views
+
+### Data Operations
+- Search functionality
+- Sorting capabilities
+- Filtering options
+- Row selection
+- Bulk operations
+
+### User Interface
+- Modern, responsive design
+- Intuitive navigation
+- Visual feedback
+- Loading states
+- Error handling
+
+## Technical Implementation
+
+### State Management
+- React hooks for local state
+- Props for component communication
+- Context for global state (if needed)
+
+### Data Flow
+1. TableManager selects active table
+2. ColumnManager shows/edits table structure
+3. DataSection loads and displays data
+4. DataTable/TableCardView renders the data
+5. Import/Export handle data transfer
+
+### Error Handling
+- SQL error catching and display
+- Loading states
+- User feedback
+- Validation checks
+
+### Responsive Design
+- Mobile-friendly layouts
+- Adaptive views
+- Flexible components
+- Touch-friendly interactions
+
+## Best Practices
+- Component separation of concerns
+- Consistent error handling
+- Loading state management
+- Proper data validation
+- Responsive design principles
+- Modern UI/UX patterns 

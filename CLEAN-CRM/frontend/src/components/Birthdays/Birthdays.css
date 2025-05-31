@@ -1,0 +1,531 @@
+.birthdays-container {
+  padding: 1rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.birthdays-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+  width: 300px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.625rem 1rem 0.625rem 2.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  transition: all 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color-10);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background-color: var(--accent-color);
+  border: none;
+  border-radius: 4px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--accent-color-dark);
+}
+
+.btn-primary svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+  background-color: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.error-state {
+  color: var(--error-text);
+  background-color: var(--error-bg);
+}
+
+.birthdays-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+/* Highlight sections for today and current month */
+.highlight-section {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid transparent;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.today-section {
+  background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+  border-color: #ffc107;
+  animation: pulse-glow 2s infinite;
+}
+
+.current-month-section {
+  background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+  border-color: #17a2b8;
+}
+
+.highlight-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.today-section .highlight-title {
+  color: #856404;
+}
+
+.current-month-section .highlight-title {
+  color: #0c5460;
+}
+
+/* Special styling for today's birthday cards */
+.today-birthday {
+  background: linear-gradient(135deg, #fff, #fffbf0);
+  border: 2px solid #ffc107;
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.today-birthday:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(255, 193, 7, 0.4);
+}
+
+.today-badge {
+  background: linear-gradient(135deg, #ffc107, #ffb300);
+  color: #212529;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+/* Special styling for current month birthday cards */
+.current-month-birthday {
+  background: linear-gradient(135deg, #fff, #f0f9ff);
+  border: 1px solid #17a2b8;
+  box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+}
+
+.current-month-birthday:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(23, 162, 184, 0.3);
+}
+
+.current-month-badge {
+  background: linear-gradient(135deg, #17a2b8, #138496);
+  color: white;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 15px;
+  text-align: center;
+  font-size: 0.875rem;
+  box-shadow: 0 1px 3px rgba(23, 162, 184, 0.3);
+}
+
+/* Section titles */
+.section-title {
+  font-size: 1.375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.all-birthdays-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 2px dashed var(--border-color);
+}
+
+/* Pulse animation for today's section */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 0 0 0 rgba(255, 193, 7, 0.4);
+  }
+  50% {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 0 0 8px rgba(255, 193, 7, 0.1);
+  }
+}
+
+.month-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.month-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--accent-color);
+}
+
+.birthdays-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.birthday-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s;
+}
+
+.birthday-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.birthday-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.birthday-date {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.birthday-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.birthday-details {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.birthday-rfc {
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background-color: var(--bg-surface-hover);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  align-self: flex-start;
+}
+
+.view-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.view-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.view-toggle:hover {
+  background-color: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.view-toggle.active {
+  background-color: var(--accent-color-10);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.birthdays-table-view {
+  margin-top: 1rem;
+  overflow-x: auto;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.birthdays-table-view table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.birthdays-table-view th,
+.birthdays-table-view td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.birthdays-table-view th {
+  background-color: var(--bg-surface-hover);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.birthdays-table-view td {
+  color: var(--text-secondary);
+}
+
+.birthdays-table-view tr:last-child td {
+  border-bottom: none;
+}
+
+.birthdays-table-view tr:hover td {
+  background-color: var(--bg-surface-hover);
+}
+
+.birthday-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.birthday-email {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #0066cc;
+}
+
+.email-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.birthday-source {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.birthday-metadata {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.birthday-source,
+.birthday-source-type {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.birthday-source {
+  background-color: var(--accent-color-10);
+  color: var(--accent-color);
+}
+
+.birthday-source-type {
+  background-color: #f0f0f0;
+  color: #666;
+  cursor: help;
+}
+
+.email-status {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.email-status.success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border: 1px solid #34d399;
+}
+
+.email-status.error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #f87171;
+}
+
+.btn-primary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .birthdays-container {
+    padding: 0.5rem;
+  }
+
+  .birthdays-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .search-container {
+    width: 100%;
+  }
+
+  .birthdays-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-primary span {
+    display: none;
+  }
+
+  .header-actions {
+    flex-direction: column;
+  }
+
+  .view-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .view-toggle {
+    flex: 1;
+    max-width: 150px;
+  }
+
+  .birthdays-table-view {
+    margin: 0.5rem -0.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .birthdays-table-view th,
+  .birthdays-table-view td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  /* Mobile responsive for highlight sections */
+  .highlight-section {
+    padding: 1rem;
+    margin: 0 -0.5rem;
+  }
+
+  .highlight-title {
+    font-size: 1.25rem;
+  }
+
+  .today-badge,
+  .current-month-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1.125rem;
+    margin: 1.5rem 0 0.75rem 0;
+  }
+
+  .all-birthdays-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+  }
+} 

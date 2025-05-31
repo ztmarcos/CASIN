@@ -1,0 +1,6 @@
+La base de datos se llama crud_db. Esta configuración está en el archivo backend/config/database.js y usa las siguientes tablas que podemos ver en las peticiones del servidor:
+gmm
+perros
+prospeccion_cards
+sharepoint_tasks
+users
