@@ -165,20 +165,24 @@ class DirectorioService {
   }
 
   // Método para obtener relaciones entre directorio y tablas de pólizas
+  // COMMENTED OUT - Relationships functionality disabled
+  /*
   async getRelationships() {
     try {
-      const response = await fetch(`${API_BASE_URL}/directorio/relationships`);
+      const response = await fetch(`${API_BASE_URL}/directorio-relationships`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      return await response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('Error fetching relationships:', error);
       throw error;
     }
   }
+  */
 
   // Método para obtener las pólizas de un contacto específico
   async getContactoPolicies(contactoId) {
