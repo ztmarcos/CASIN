@@ -4,7 +4,7 @@ import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
 import PolicyModal from './PolicyModal';
 import SearchFilters from './SearchFilters';
-import RelationshipsView from './RelationshipsView';
+// import RelationshipsView from './RelationshipsView'; // COMMENTED OUT - Relationships functionality disabled
 import './Directorio.css';
 
 const Directorio = () => {
@@ -384,13 +384,13 @@ const Directorio = () => {
         return renderCardsView();
       case 'table':
         return renderTableView();
-      case 'relationships':
-        return (
-          <>
-            {renderHeader()}
-            <RelationshipsView />
-          </>
-        );
+      // case 'relationships': // COMMENTED OUT - Relationships functionality disabled
+      //   return (
+      //     <>
+      //       {renderHeader()}
+      //       {/* Relationships functionality disabled */}
+      //     </>
+      //   );
       default:
         return renderTableView();
     }
@@ -405,7 +405,7 @@ const Directorio = () => {
             {[
               { mode: 'cards', icon: '📋', label: 'Cards' },
               { mode: 'table', icon: '📊', label: 'Tabla' },
-              { mode: 'relationships', icon: '🔗', label: 'Relaciones' }
+              // { mode: 'relationships', icon: '🔗', label: 'Relaciones' } // COMMENTED OUT - Relationships functionality disabled
             ].map(({ mode, icon, label }) => (
               <button 
                 key={mode}
@@ -417,7 +417,8 @@ const Directorio = () => {
               </button>
             ))}
           </div>
-          {viewMode !== 'relationships' && (
+          {/* {viewMode !== 'relationships' && ( */}
+          {/* Always show "Nuevo Contacto" button since relationships are disabled */}
             <button 
               className="btn-primary" 
               onClick={() => {
@@ -428,7 +429,7 @@ const Directorio = () => {
             >
               + Nuevo Contacto
             </button>
-          )}
+          {/* )} */}
         </div>
       </div>
 

@@ -650,17 +650,84 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
 // Directorio endpoints (using real data)
 app.get('/api/directorio', async (req, res) => {
   try {
-    const { page = 1, limit = 50 } = req.query;
+    const { 
+      page = 1, 
+      limit = 50, 
+      search, 
+      status, 
+      origen, 
+      genero 
+    } = req.query;
+    
     const offset = (page - 1) * parseInt(limit);
+    const limitInt = parseInt(limit);
     
-    const data = await executeQuery(`
+    // Build WHERE conditions
+    const whereConditions = [];
+    const queryParams = [];
+    
+    // Search functionality
+    if (search && search.trim()) {
+      whereConditions.push(`(
+        nombre_completo LIKE ? OR 
+        email LIKE ? OR 
+        telefono_movil LIKE ? OR 
+        telefono_oficina LIKE ? OR 
+        telefono_casa LIKE ? OR
+        empresa LIKE ? OR
+        nickname LIKE ? OR
+        apellido LIKE ?
+      )`);
+      const searchPattern = `%${search.trim()}%`;
+      // Add 8 parameters for the 8 LIKE conditions
+      for (let i = 0; i < 8; i++) {
+        queryParams.push(searchPattern);
+      }
+    }
+    
+    // Status filter
+    if (status && status.trim()) {
+      whereConditions.push('status = ?');
+      queryParams.push(status.trim());
+    }
+    
+    // Origen filter
+    if (origen && origen.trim()) {
+      whereConditions.push('origen = ?');
+      queryParams.push(origen.trim());
+    }
+    
+    // Genero filter
+    if (genero && genero.trim()) {
+      whereConditions.push('genero = ?');
+      queryParams.push(genero.trim());
+    }
+    
+    // Build the WHERE clause
+    const whereClause = whereConditions.length > 0 
+      ? `WHERE ${whereConditions.join(' AND ')}` 
+      : '';
+    
+    // Main query with filters (using string interpolation for LIMIT/OFFSET)
+    const query = `
       SELECT * FROM directorio_contactos 
+      ${whereClause}
       ORDER BY id DESC 
-      LIMIT ${parseInt(limit)} OFFSET ${offset}
-    `);
+      LIMIT ${limitInt} OFFSET ${offset}
+    `;
     
-    const totalResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos');
+    const data = await executeQuery(query, queryParams);
+    
+    // Count query with same filters
+    const countQuery = `
+      SELECT COUNT(*) as total FROM directorio_contactos 
+      ${whereClause}
+    `;
+    
+    const totalResult = await executeQuery(countQuery, queryParams);
     const total = totalResult[0].total;
+    
+    console.log(`📋 Directorio query executed - Total: ${total}, Search: "${search || 'none'}", Status: "${status || 'none'}", Origen: "${origen || 'none'}", Genero: "${genero || 'none'}"`);
     
     res.json({
       data: data,
@@ -671,7 +738,10 @@ app.get('/api/directorio', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching directorio:', error);
-    res.json({
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching contacts',
+      error: error.message,
       data: [],
       total: 0,
       page: 1,
@@ -777,7 +847,16 @@ app.post('/api/directorio', async (req, res) => {
     const columns = structure.map(col => col.name).filter(col => col !== 'id');
     
     // Build values array and placeholders
-    const values = columns.map(col => contactData[col] || null);
+    const values = columns.map(col => {
+      let value = contactData[col] || null;
+      
+      // Handle ENUM fields - convert empty strings to NULL
+      if (col === 'genero' && (value === '' || value === null || value === undefined)) {
+        value = null;
+      }
+      
+      return value;
+    });
     const placeholders = columns.map(() => '?').join(', ');
     const columnsList = columns.map(col => `\`${col}\``).join(', ');
     
@@ -837,7 +916,14 @@ app.put('/api/directorio/:id', async (req, res) => {
     columns.forEach(col => {
       if (contactData.hasOwnProperty(col)) {
         setClauses.push(`\`${col}\` = ?`);
-        values.push(contactData[col]);
+        
+        // Handle ENUM fields - convert empty strings to NULL
+        let value = contactData[col];
+        if (col === 'genero' && (value === '' || value === null || value === undefined)) {
+          value = null;
+        }
+        
+        values.push(value);
       }
     });
     
@@ -989,64 +1075,6 @@ app.post('/api/directorio/:id/link-cliente', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error linking contact to client',
-      error: error.message
-    });
-  }
-});
-
-// GET - Get relationships between directorio and policy tables
-app.get('/api/directorio/relationships', async (req, res) => {
-  try {
-    // Get all tables to show potential relationships
-    const tables = await executeQuery("SHOW TABLES");
-    const tableNames = tables.map(t => Object.values(t)[0]).filter(name => name !== 'directorio_contactos');
-    
-    // Check for potential matches between directorio contacts and policy records
-    const relationships = [];
-    
-    for (const tableName of tableNames) {
-      try {
-        // Get a sample of records to analyze potential relationships
-        const sampleQuery = `SELECT * FROM \`${tableName}\` LIMIT 5`;
-        const sampleData = await executeQuery(sampleQuery);
-        
-        if (sampleData.length > 0) {
-          const columns = Object.keys(sampleData[0]);
-          
-          // Look for name-like columns that might match directorio names
-          const nameColumns = columns.filter(col => 
-            col.toLowerCase().includes('nombre') || 
-            col.toLowerCase().includes('contratante') ||
-            col.toLowerCase().includes('asegurado') ||
-            col.toLowerCase().includes('cliente')
-          );
-          
-          if (nameColumns.length > 0) {
-            relationships.push({
-              table: tableName,
-              nameColumns: nameColumns,
-              totalRecords: await executeQuery(`SELECT COUNT(*) as count FROM \`${tableName}\``).then(r => r[0].count),
-              sampleData: sampleData[0] // Just first record for reference
-            });
-          }
-        }
-      } catch (err) {
-        // Skip tables that can't be accessed
-        console.warn(`Skipping table ${tableName}:`, err.message);
-      }
-    }
-    
-    res.json({
-      success: true,
-      data: relationships,
-      total: relationships.length
-    });
-    
-  } catch (error) {
-    console.error('Error fetching relationships:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching relationships',
       error: error.message
     });
   }
@@ -2224,4 +2252,4 @@ app.listen(PORT, () => {
   console.log(`🗄️  Database: MySQL (crud_db)`);
   console.log(`📊 Data: Real data from MySQL tables`);
   console.log(`🎯 Mode: Production with real database`);
-}); 
+});
