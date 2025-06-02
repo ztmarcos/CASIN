@@ -27,121 +27,172 @@
 
 /* Table Headers */
 .notion-th {
-  background: transparent;
-  padding: 6px 8px;
-  text-align: left;
-  font-weight: 500;
-  color: #6B6F76;
-  font-size: 12px;
-  border-bottom: 1px solid #E9ECEF;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  white-space: nowrap;
+  background: transparent !important;
+  padding: 12px 16px !important;
+  text-align: left !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1 !important;
+  white-space: nowrap !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
 }
 
 .notion-td {
-  padding: 6px 8px;
-  border-bottom: 1px solid #E9ECEF;
-  color: #37352F;
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-height: 32px;
-  height: auto;
-  vertical-align: middle;
+  padding: 12px 16px !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-height: 50px !important;
+  height: auto !important;
+  vertical-align: middle !important;
 }
 
 /* Status cell specific styling */
 .notion-td:has(.notion-status) {
-  min-height: 36px;
-  height: auto;
-  padding: 8px;
-  text-align: center;
-  vertical-align: middle;
+  min-height: 32px !important;
+  height: auto !important;
+  padding: 6px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
 }
 
 .notion-td .notion-status {
-  width: 100%;
-  justify-content: center;
+  width: auto !important;
+  justify-content: center !important;
+  margin: 2px 0 !important;
 }
 
 .notion-tr:hover {
   background-color: rgba(55, 53, 47, 0.03);
 }
 
-/* Status Badges */
+/* Status Badges - DISEÑO MÁS FINO Y ELEGANTE */
 .notion-status {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 3px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 16px;
-  min-height: 24px;
-  height: auto;
-  white-space: nowrap;
-  text-align: center;
-  vertical-align: middle;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  line-height: 16px !important;
+  min-height: 24px !important;
+  height: auto !important;
+  min-width: 80px !important;
+  white-space: nowrap !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+  text-transform: capitalize !important;
+  letter-spacing: 0.3px !important;
+  border: 1px solid transparent !important;
 }
 
-/* Light theme status colors - Enhanced for visibility */
+/* Light theme status colors - MÁS REFINADOS */
 .status-listo {
-  background-color: #32ca67 !important;  /* Green */
+  background: linear-gradient(135deg, #10b981, #059669) !important;
   color: white !important;
-  min-height: 24px !important;
-  padding: 6px 12px !important;
-  border: 1px solid #28a745 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2) !important;
 }
 
 .status-en-progreso {
-  background-color: #ffac1b !important;  /* Yellow */
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important;
   color: white !important;
-  min-height: 24px !important;
-  padding: 6px 12px !important;
-  border: 1px solid #ffc107 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2) !important;
 }
 
 .status-sin-iniciar {
-  background-color: #6B7280 !important;  /* Gray */
+  background: linear-gradient(135deg, #6b7280, #4b5563) !important;
   color: white !important;
-  min-height: 24px !important;
-  padding: 6px 12px !important;
-  border: 1px solid #9CA3AF !important;
+  border-color: rgba(107, 114, 128, 0.3) !important;
+  box-shadow: 0 2px 4px rgba(107, 114, 128, 0.2) !important;
 }
 
-/* Dark theme status colors */
+/* Hover effects más sutiles */
+.notion-status:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Dark theme status colors - MÁS SUTILES */
 .dark .status-listo {
-  background-color: #15803D;  /* Darker Green */
-  color: white;
+  background: linear-gradient(135deg, #047857, #065f46) !important;
+  color: #d1fae5 !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
 }
 
 .dark .status-en-progreso {
-  background-color: #B45309;  /* Darker Yellow */
-  color: white;
+  background: linear-gradient(135deg, #92400e, #78350f) !important;
+  color: #fef3c7 !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
 }
 
 .dark .status-sin-iniciar {
-  background-color: #4B5563;  /* Darker Gray */
-  color: white;
+  background: linear-gradient(135deg, #374151, #1f2937) !important;
+  color: #f3f4f6 !important;
+  border-color: rgba(107, 114, 128, 0.4) !important;
 }
 
-/* Status Select Styles */
+/* Status Select Styles - MÁS COMPACTO Y ELEGANTE */
+.notion-select {
+  width: 100% !important;
+  padding: 6px 12px !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  background-color: white !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  min-height: 28px !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 8px center !important;
+  background-size: 14px !important;
+  padding-right: 28px !important;
+  transition: all 0.2s ease !important;
+}
+
+.notion-select:hover {
+  border-color: #9ca3af !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+.notion-select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
+}
+
 .notion-select option[value="Listo"] {
-  background-color: #22C55E;
-  color: white;
+  background-color: #22c55e !important;
+  color: white !important;
+  font-weight: 600 !important;
 }
 
 .notion-select option[value="En progreso"] {
-  background-color: #F59E0B;
-  color: white;
+  background-color: #f59e0b !important;
+  color: white !important;
+  font-weight: 600 !important;
 }
 
 .notion-select option[value="Sin iniciar"] {
-  background-color: #6B7280;
-  color: white;
+  background-color: #6b7280 !important;
+  color: white !important;
+  font-weight: 600 !important;
 }
 
 /* Dark theme status select */
