@@ -85,6 +85,19 @@
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+/* Selector de tipo de email */
+.mail-input select {
+  cursor: pointer;
+}
+
+.email-type-help {
+  display: block;
+  color: #64748b;
+  font-size: 0.85rem;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .mail-textarea {
   resize: vertical;
   min-height: 200px;

@@ -189,16 +189,39 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 throw new Error(`Selected table "${tableName}" not found`);
             }
 
-            // Get columns based on table type
+            // Get columns from the actual table structure
             let columns;
-            if (tableInfo.type === 'simple') {
+            
+            console.log('Table info:', tableInfo);
+            console.log('Target table:', targetTable);
+            
+            // Extract columns from the table structure
+            if (targetTable.columns && Array.isArray(targetTable.columns)) {
+                // Backend returns columns array with {name, type, nullable, key, default} structure
+                columns = targetTable.columns
+                    .filter(col => col.name !== 'id') // Filter out id column
+                    .map(col => col.name); // Get just the column names
+            } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
+                // Fallback to tableInfo.fields if available
                 columns = tableInfo.fields;
-            } else if (tableInfo.type === 'group') {
+            } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields)) {
+                // For group tables, use childFields
                 columns = tableInfo.childFields;
             } else {
-                columns = targetTable.columns
-                    .filter(col => col.name !== 'id')
-                    .map(col => col.name);
+                // Last resort: try to get from table types endpoint
+                const tableTypes = await tableService.getTableTypes();
+                const tableType = tableTypes[tableName];
+                if (tableType && tableType.fields) {
+                    columns = tableType.fields;
+                } else {
+                    throw new Error(`Could not determine columns for table ${tableName}`);
+                }
+            }
+
+            console.log('Extracted columns for analysis:', columns);
+            
+            if (!columns || columns.length === 0) {
+                throw new Error(`No columns found for table ${tableName}`);
             }
 
             const prompt = {
@@ -237,46 +260,43 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 `
             };
 
-            const response = await fetch(`${API_URL}/gpt/analyze`, {
+            const response = await fetch('/api/gpt/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(prompt),
+                body: JSON.stringify(prompt)
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to analyze content');
+                throw new Error(errorData.error || `HTTP ${response.status}`);
             }
 
             const result = await response.json();
-            
-            if (result.mappedData) {
+            console.log('✅ GPT Analysis Response:', result);
+
+            if (result.success && result.columnAnalysis) {
+                // Convert backend analysis to frontend format
                 const cleanData = {};
-                columns.forEach(column => {
-                    let value = result.mappedData[column] || null;
-                    
-                    // Apply normalization based on field type
-                    if (value && typeof value === 'string') {
-                        if (column.toLowerCase().includes('rfc')) {
-                            value = normalizeText(value, 'rfc');
-                        } else if (column.toLowerCase().includes('nombre') || column.toLowerCase().includes('contratante')) {
-                            value = normalizeText(value, 'name');
-                        } else if (column.toLowerCase().includes('direccion') || column.toLowerCase().includes('address')) {
-                            value = normalizeText(value, 'address');
-                        } else {
-                            value = normalizeText(value, 'general');
-                        }
+                
+                // Extract sample values from each column analysis
+                Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
+                    // Use the first non-empty sample value as default
+                    if (analysis.sampleValues && analysis.sampleValues.length > 0) {
+                        cleanData[column] = analysis.sampleValues[0];
+                    } else {
+                        cleanData[column] = null;
                     }
-                    
-                    cleanData[column] = value;
                 });
+
+                console.log('📊 Processed analysis data:', cleanData);
+                console.log('📈 Analysis summary:', result.summary);
 
                 setAnalysis(result);
                 setMappedData(cleanData);
             } else {
-                throw new Error('No mapped data received from analysis');
+                throw new Error('Invalid response structure from analysis');
             }
         } catch (err) {
             console.error('Error analyzing content:', err);
@@ -296,18 +316,48 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('Table name:', tableName);
             console.log('Table info:', tableInfo);
 
-            // Get the correct columns based on table type
+            // Get the columns the same way as in analyzeContent function
             let targetColumns;
-            if (tableInfo.type === 'simple') {
-                targetColumns = tableInfo.fields;
-            } else if (tableInfo.type === 'group') {
-                targetColumns = tableInfo.childFields;
+            
+            try {
+                const tables = await tableService.getTables();
+                const targetTable = tables.find(t => t.name === tableName);
+                
+                if (!targetTable) {
+                    throw new Error(`Table "${tableName}" not found`);
+                }
+
+                // Extract columns from the actual table structure
+                if (targetTable.columns && Array.isArray(targetTable.columns)) {
+                    // Backend returns columns array with {name, type, nullable, key, default} structure
+                    targetColumns = targetTable.columns
+                        .filter(col => col.name !== 'id') // Filter out id column
+                        .map(col => col.name); // Get just the column names
+                } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
+                    // Fallback to tableInfo.fields if available
+                    targetColumns = tableInfo.fields;
+                } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields)) {
+                    // For group tables, use childFields
+                    targetColumns = tableInfo.childFields;
+                } else {
+                    // Last resort: try to get from table types endpoint
+                    const tableTypes = await tableService.getTableTypes();
+                    const tableType = tableTypes[tableName];
+                    if (tableType && tableType.fields) {
+                        targetColumns = tableType.fields;
+                    } else {
+                        throw new Error(`Could not determine columns for table ${tableName}`);
+                    }
+                }
+            } catch (tableError) {
+                console.error('Error getting table columns:', tableError);
+                throw new Error('Failed to get table column information');
             }
 
-            console.log('Target columns:', targetColumns);
+            console.log('Target columns for insertion:', targetColumns);
 
-            if (!targetColumns) {
-                throw new Error('No columns defined for table');
+            if (!targetColumns || targetColumns.length === 0) {
+                throw new Error(`No columns found for table ${tableName}`);
             }
 
             // Filter data to only include valid columns

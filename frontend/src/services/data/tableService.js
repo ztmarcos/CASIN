@@ -388,14 +388,19 @@ class TableService {
         value
       });
 
-      // Make the API call
+      // Create the update data object that matches server expectations
+      const updateData = {
+        [column]: value
+      };
+
+      // Make the API call using PUT to match server endpoint
       const response = await fetch(`${this.apiUrl}/data/${cleanTableName}/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ column, value })
+        body: JSON.stringify(updateData)
       });
 
       // Always try to parse response as JSON first
@@ -416,7 +421,7 @@ class TableService {
       return {
         success: true,
         message: data.message,
-        updatedData: data.updatedData
+        updatedData: data.data
       };
     } catch (error) {
       console.error('Error updating data:', error);

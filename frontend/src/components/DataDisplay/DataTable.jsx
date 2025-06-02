@@ -144,19 +144,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
               <div className="child-table-selector">
                 <select
                   value={tableName.includes('→') ? 'child' : 'parent'}
-                                      onChange={(e) => {
-                      console.log('🔄 Empty state dropdown onChange triggered:', e.target.value);
-                      const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
-                      
-                      if (e.target.value === 'parent') {
-                        console.log('🔄 Switching to parent table:', baseParentTable);
-                        handleChildTableSelect(baseParentTable);
-                      } else if (e.target.value === 'child') {
-                        const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
-                        console.log('🔄 Switching to child table:', childTableName);
-                        handleChildTableSelect(childTableName);
-                      }
-                    }}
+                  onChange={(e) => {
+                    console.log('🔄 Empty state dropdown onChange triggered:', e.target.value);
+                    const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
+                    
+                    if (e.target.value === 'parent') {
+                      console.log('🔄 Switching to parent table:', baseParentTable);
+                      handleChildTableSelect(baseParentTable);
+                    } else if (e.target.value === 'child') {
+                      const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
+                      console.log('🔄 Switching to child table:', childTableName);
+                      handleChildTableSelect(childTableName);
+                    }
+                  }}
                   className="child-table-dropdown"
                 >
                   {tableName.includes('→') ? (
@@ -636,20 +636,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
     
     const cellValue = row[column] !== null ? String(row[column]) : '-';
-    return (
-      <div className="cell-content">
-        {cellValue}
-        <span 
-          className="edit-pencil" 
-          onClick={(e) => {
-            e.stopPropagation();
-            handleCellDoubleClick(rowIndex, column, row[column]);
-          }}
-        >
-          ✎
-        </span>
-      </div>
-    );
+    return <span>{cellValue}</span>;
   };
 
   // Reorder columns to put status after ID only for related tables
@@ -746,7 +733,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       {tableTitle && (
         <div className="table-title">
           <h2>{tableTitle}</h2>
-                    {(availableChildTables.length > 0 || tableName.includes('→')) && (
+          {(availableChildTables.length > 0 || tableName.includes('→')) && (
             <div className="child-table-selector">
               <select
                 value={tableName.includes('→') ? 'child' : 'parent'}
@@ -851,10 +838,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         <table className="data-table">
           <thead>
             <tr>
-              <th className="email-column">
-                <div className="header-content">
-                  <span>Actions</span>
-                </div>
+              {/* COLUMNA ENVIAR MAIL */}
+              <th className="action-header email-header" style={{
+                width: '100px !important',
+                minWidth: '100px !important',
+                maxWidth: '100px !important'
+              }}>
+                ENVIAR MAIL
+              </th>
+              {/* COLUMNA BORRAR */}
+              <th className="action-header delete-header" style={{
+                width: '80px !important',
+                minWidth: '80px !important',
+                maxWidth: '80px !important'
+              }}>
+                BORRAR
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -873,34 +871,41 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
           <tbody>
             {filteredData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
-                <td className="actions-cell">
-                  <div className="row-actions">
-                    <button 
-                      className="email-icon-btn" 
-                      title="Send Email"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEmailClick(row);
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="email-icon">
-                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-                        <path d="M22 6l-10 7L2 6" />
-                      </svg>
-                    </button>
-                    <button 
-                      className="delete-btn" 
-                      title="Delete Row"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(row);
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="delete-icon">
-                        <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
+                {/* COLUMNA ENVIAR MAIL */}
+                <td className="action-cell email-cell" style={{
+                  width: '100px !important',
+                  minWidth: '100px !important', 
+                  maxWidth: '100px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('EMAIL clicked for row:', row);
+                      handleEmailClick(row);
+                    }}
+                    className="action-btn email-btn"
+                    title="Enviar email"
+                  >
+                    ✉ MAIL
+                  </button>
+                </td>
+                {/* COLUMNA BORRAR */}
+                <td className="action-cell delete-cell" style={{
+                  width: '80px !important',
+                  minWidth: '80px !important', 
+                  maxWidth: '80px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DELETE clicked for row:', row);
+                      handleDeleteClick(row);
+                    }}
+                    className="action-btn delete-btn"
+                    title="Borrar registro"
+                  >
+                    ×
+                  </button>
                 </td>
                 {reorderedColumns.map(column => (
                   <td
@@ -1027,4 +1032,4 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   );
 };
 
-export default DataTable; 
+export default DataTable;

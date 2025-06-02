@@ -295,6 +295,91 @@ app.post('/api/data/:tableName', async (req, res) => {
   }
 });
 
+// Delete record from table
+app.delete('/api/data/:tableName/:id', async (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'Valid record ID is required' });
+    }
+    
+    console.log(`🗑️ Deleting record ${id} from table ${tableName}`);
+    
+    // First check if record exists
+    const checkQuery = `SELECT id FROM \`${tableName}\` WHERE id = ?`;
+    const existing = await executeQuery(checkQuery, [parseInt(id)]);
+    
+    if (existing.length === 0) {
+      return res.status(404).json({ error: `Record with ID ${id} not found in ${tableName}` });
+    }
+    
+    // Delete the record
+    const deleteQuery = `DELETE FROM \`${tableName}\` WHERE id = ?`;
+    const result = await executeQuery(deleteQuery, [parseInt(id)]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: `No record deleted from ${tableName}` });
+    }
+    
+    console.log(`✅ Successfully deleted record ${id} from ${tableName}`);
+    
+    res.json({
+      success: true,
+      message: `Record ${id} deleted from ${tableName}`,
+      deletedId: parseInt(id),
+      affectedRows: result.affectedRows
+    });
+  } catch (error) {
+    console.error(`Error deleting record from ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update record in table
+app.put('/api/data/:tableName/:id', async (req, res) => {
+  try {
+    const { tableName, id } = req.params;
+    const data = req.body;
+    
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: 'Valid record ID is required' });
+    }
+    
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: 'Valid data object is required' });
+    }
+    
+    console.log(`📝 Updating record ${id} in table ${tableName}`);
+    
+    // Prepare update query
+    const columns = Object.keys(data).filter(key => key !== 'id');
+    const setClause = columns.map(col => `\`${col}\` = ?`).join(', ');
+    const values = columns.map(col => data[col]);
+    values.push(parseInt(id)); // Add ID for WHERE clause
+    
+    const updateQuery = `UPDATE \`${tableName}\` SET ${setClause} WHERE id = ?`;
+    const result = await executeQuery(updateQuery, values);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: `Record with ID ${id} not found in ${tableName}` });
+    }
+    
+    console.log(`✅ Successfully updated record ${id} in ${tableName}`);
+    
+    res.json({
+      success: true,
+      message: `Record ${id} updated in ${tableName}`,
+      updatedId: parseInt(id),
+      affectedRows: result.affectedRows,
+      data: data
+    });
+  } catch (error) {
+    console.error(`Error updating record in ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get table structure
 app.get('/api/data/tables/:tableName/structure', async (req, res) => {
   try {
@@ -1230,6 +1315,543 @@ app.post('/api/prospeccion', (req, res) => {
       success: false, 
       message: 'OpenAI API key not configured' 
     });
+  }
+});
+
+// GPT Analysis endpoints
+app.post('/api/gpt/analyze', async (req, res) => {
+  try {
+    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    
+    const { text, tables, metadata, targetColumns, tableName, tableType, instructions } = req.body;
+
+    console.log('🔍 Detailed request analysis:');
+    console.log('- tableName:', tableName);
+    console.log('- targetColumns type:', typeof targetColumns);
+    console.log('- targetColumns length:', targetColumns?.length);
+    console.log('- targetColumns sample:', targetColumns?.slice(0, 3));
+
+    if (!targetColumns || !tableName) {
+      console.log('❌ Missing required fields validation failed');
+      console.log('- targetColumns present:', !!targetColumns);
+      console.log('- tableName present:', !!tableName);
+      return res.status(400).json({
+        error: 'Missing required fields',
+        details: 'targetColumns and tableName are required'
+      });
+    }
+
+    console.log('🤖 GPT Analysis request for table:', tableName);
+    console.log('📋 Target columns:', targetColumns);
+
+    // Get real data from the table to analyze
+    let tableData = [];
+    let columnAnalysis = {};
+    
+    try {
+      // First get table structure to validate columns
+      console.log('🔍 Getting table structure for:', tableName);
+      const structure = await getTableStructure(tableName);
+      console.log('📊 Database structure columns:', structure.map(col => col.Field || col.name));
+      
+      const availableColumns = structure.map(col => col.Field || col.name);
+      console.log('📝 Available columns in DB:', availableColumns);
+      
+      // Filter target columns to only include existing ones
+      const validColumns = targetColumns.filter(col => availableColumns.includes(col));
+      console.log('✅ Valid columns after filtering:', validColumns);
+      console.log('❌ Invalid columns filtered out:', targetColumns.filter(col => !availableColumns.includes(col)));
+      
+      if (validColumns.length === 0) {
+        console.log('❌ NO VALID COLUMNS FOUND!');
+        console.log('- Target columns requested:', targetColumns);
+        console.log('- Available columns in DB:', availableColumns);
+        console.log('- Table structure:', structure);
+        
+        return res.status(400).json({
+          error: 'No valid columns found',
+          details: `None of the target columns [${targetColumns.join(', ')}] exist in table ${tableName}`,
+          availableColumns: availableColumns,
+          requestedColumns: targetColumns,
+          tableStructure: structure
+        });
+      }
+
+      // Get sample data from the table (limit to 100 records for analysis)
+      const query = `SELECT ${validColumns.map(col => `\`${col}\``).join(', ')} FROM \`${tableName}\` LIMIT 100`;
+      console.log('🔍 Executing query:', query);
+      tableData = await executeQuery(query);
+      
+      console.log(`📊 Retrieved ${tableData.length} records from ${tableName} for analysis`);
+
+      // Analyze each column
+      validColumns.forEach(column => {
+        const columnData = tableData.map(row => row[column]).filter(val => val !== null && val !== undefined && val !== '');
+        
+        columnAnalysis[column] = {
+          totalRecords: tableData.length,
+          nonNullRecords: columnData.length,
+          nullRecords: tableData.length - columnData.length,
+          fillRate: columnData.length / tableData.length,
+          dataType: structure.find(col => (col.Field || col.name) === column)?.Type || structure.find(col => (col.Field || col.name) === column)?.type || 'unknown',
+          sampleValues: columnData.slice(0, 5), // First 5 non-empty values
+          uniqueValues: [...new Set(columnData)].length,
+          patterns: analyzeColumnPatterns(columnData, column)
+        };
+      });
+
+    } catch (dbError) {
+      console.error('❌ Database analysis error:', dbError);
+      return res.status(500).json({
+        error: 'Failed to analyze table data',
+        details: dbError.message,
+        tableName: tableName
+      });
+    }
+
+    // Create comprehensive analysis response
+    const analysis = {
+      success: true,
+      tableName: tableName,
+      totalRecords: tableData.length,
+      analyzedColumns: Object.keys(columnAnalysis).length,
+      columnAnalysis: columnAnalysis,
+      summary: {
+        mostPopulatedColumns: Object.entries(columnAnalysis)
+          .sort(([,a], [,b]) => b.fillRate - a.fillRate)
+          .slice(0, 5)
+          .map(([col, data]) => ({ column: col, fillRate: data.fillRate })),
+        dataQuality: {
+          averageFillRate: Object.values(columnAnalysis).reduce((sum, col) => sum + col.fillRate, 0) / Object.keys(columnAnalysis).length,
+          totalNullValues: Object.values(columnAnalysis).reduce((sum, col) => sum + col.nullRecords, 0),
+          columnsWithData: Object.values(columnAnalysis).filter(col => col.nonNullRecords > 0).length
+        }
+      },
+      recommendations: generateDataRecommendations(columnAnalysis, tableName),
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('✅ Real data analysis completed:', Object.keys(columnAnalysis).length, 'columns analyzed');
+    res.json(analysis);
+
+  } catch (error) {
+    console.error('❌ GPT Analysis Error:', error);
+    res.status(500).json({
+      error: 'Failed to analyze content',
+      details: error.message
+    });
+  }
+});
+
+// Helper function to analyze column patterns
+function analyzeColumnPatterns(columnData, columnName) {
+  const patterns = {
+    emails: 0,
+    phones: 0,
+    dates: 0,
+    rfcs: 0,
+    numbers: 0,
+    currencies: 0,
+    empty: 0
+  };
+
+  columnData.forEach(value => {
+    const str = String(value).toLowerCase();
+    
+    if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(str)) {
+      patterns.emails++;
+    } else if (/^[\d\s\-\(\)]+$/.test(str) && str.replace(/\D/g, '').length >= 10) {
+      patterns.phones++;
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str) || /^\d{4}-\d{2}-\d{2}/.test(str)) {
+      patterns.dates++;
+    } else if (/^[A-Z]{4}\d{6}[A-Z0-9]{3}$/.test(str.toUpperCase())) {
+      patterns.rfcs++;
+    } else if (/^\$?\s*[\d,]+\.?\d*$/.test(str)) {
+      patterns.currencies++;
+    } else if (/^\d+\.?\d*$/.test(str)) {
+      patterns.numbers++;
+    } else if (str.trim() === '') {
+      patterns.empty++;
+    }
+  });
+
+  return patterns;
+}
+
+// Helper function to generate recommendations
+function generateDataRecommendations(columnAnalysis, tableName) {
+  const recommendations = [];
+  
+  Object.entries(columnAnalysis).forEach(([column, analysis]) => {
+    if (analysis.fillRate < 0.5) {
+      recommendations.push(`Column "${column}" has low data completeness (${Math.round(analysis.fillRate * 100)}% filled)`);
+    }
+    
+    if (analysis.patterns.emails > 0) {
+      recommendations.push(`Column "${column}" contains ${analysis.patterns.emails} email addresses`);
+    }
+    
+    if (analysis.patterns.rfcs > 0) {
+      recommendations.push(`Column "${column}" contains ${analysis.patterns.rfcs} RFC codes`);
+    }
+    
+    if (analysis.patterns.phones > 0) {
+      recommendations.push(`Column "${column}" contains ${analysis.patterns.phones} phone numbers`);
+    }
+    
+    if (analysis.uniqueValues === 1 && analysis.nonNullRecords > 1) {
+      recommendations.push(`Column "${column}" has all identical values - may not be useful for analysis`);
+    }
+  });
+  
+  return recommendations;
+}
+
+// Additional GPT endpoints
+app.post('/api/gpt/analyze-list', async (req, res) => {
+  try {
+    console.log('🤖 GPT List Analysis request');
+    res.json({
+      success: true,
+      message: 'List analysis endpoint (mock response)',
+      data: []
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to analyze list', details: error.message });
+  }
+});
+
+app.post('/api/gpt/generate', async (req, res) => {
+  try {
+    console.log('🤖 GPT Generate request');
+    const { type, data } = req.body;
+    
+    if (!type || !data) {
+      return res.status(400).json({ 
+        error: 'Missing required fields', 
+        required: ['type', 'data'] 
+      });
+    }
+    
+    console.log('📧 Generating email content for type:', type);
+    console.log('📋 Data received:', Object.keys(data));
+    
+    // Generate email content based on type
+    let emailContent = {};
+    
+    if (type === 'welcome_email') {
+      // Email de bienvenida con información completa
+      const name = data.nombre_contratante || data.name || 'Cliente';
+      const policyNumber = data.numero_poliza || data.policy_number || 'Sin especificar';
+      const insurer = data.aseguradora || data.insurer || 'Su aseguradora';
+      const startDate = data.vigencia_inicio || data.start_date || 'Por confirmar';
+      const endDate = data.vigencia_fin || data.end_date || 'Por confirmar';
+      const paymentMethod = data.forma_de_pago || data.payment_method || 'Por confirmar';
+      const totalAmount = data.pago_total_o_prima_total || data.total_amount || 'Por confirmar';
+      const netPremium = data.prima_neta || data.net_premium || 'Por confirmar';
+      const policyFee = data.derecho_de_poliza || data.policy_fee || 'Por confirmar';
+      const iva = data.i_v_a || data.iva || 'Por confirmar';
+      const vehicleType = data.tipo_de_vehiculo || data.vehicle_type || 'Por confirmar';
+      const vehicleDescription = data.descripcion_del_vehiculo || data.vehicle_description || 'Por confirmar';
+      const plates = data.placas || data.plates || 'Por confirmar';
+      const model = data.modelo || data.model || 'Por confirmar';
+      const serial = data.serie || data.serial || 'Por confirmar';
+      const engine = data.motor || data.engine || 'Por confirmar';
+      const usage = data.uso || data.usage || 'Por confirmar';
+      const address = data.domicilio_o_direccion || data.address || 'Por confirmar';
+      const rfc = data.rfc || 'Por confirmar';
+      const branch = data.ramo || data.branch || 'Por confirmar';
+
+      emailContent = {
+        subject: `Confirmación de Póliza - ${policyNumber}`,
+        message: `Estimado/a ${name},
+
+Por medio de la presente, confirmamos el procesamiento exitoso de su póliza de seguro.
+
+INFORMACIÓN DE LA PÓLIZA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Número de póliza: ${policyNumber}
+• Aseguradora: ${insurer}
+• RFC: ${rfc}
+• Ramo: ${branch}
+
+VIGENCIA Y PAGO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Vigencia: ${startDate} al ${endDate}
+• Forma de pago: ${paymentMethod}
+• Prima total: $${totalAmount}
+• Prima neta: $${netPremium}
+• Derecho de póliza: $${policyFee}
+• I.V.A.: $${iva}
+
+INFORMACIÓN DEL VEHÍCULO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Tipo: ${vehicleType}
+• Descripción: ${vehicleDescription}
+• Placas: ${plates}
+• Modelo: ${model}
+• Serie: ${serial}
+• Motor: ${engine}
+• Uso: ${usage}
+
+DATOS DEL CONTRATANTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Nombre: ${name}
+• RFC: ${rfc}
+• Domicilio: ${address}
+
+IMPORTANTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Conserve este documento como comprobante
+• Mantenga actualizada su información de contacto
+• Revise periódicamente el estado de su póliza
+• Contacte a su agente para cualquier aclaración
+
+La presente comunicación tiene carácter informativo y no constituye un endoso ni modificación a los términos y condiciones establecidos en su póliza.
+
+Atentamente,
+Departamento de Administración de Pólizas`
+      };
+    } else if (type === 'reminder_email') {
+      // Email de recordatorio
+      const name = data.nombre_contratante || data.name || 'Cliente';
+      const policyNumber = data.numero_poliza || data.policy_number || 'Sin especificar';
+      const insurer = data.aseguradora || data.insurer || 'Su aseguradora';
+      const endDate = data.vigencia_fin || data.end_date || 'Por confirmar';
+
+      emailContent = {
+        subject: `Recordatorio de Vencimiento - Póliza ${policyNumber}`,
+        message: `Estimado/a ${name},
+
+Por medio de la presente, le informamos sobre el próximo vencimiento de su póliza de seguro.
+
+INFORMACIÓN DE LA PÓLIZA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Número de póliza: ${policyNumber}
+• Aseguradora: ${insurer}
+${endDate !== 'Por confirmar' ? `• Fecha de vencimiento: ${endDate}` : ''}
+
+ACCIONES REQUERIDAS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Revise el estado actual de su póliza
+• Verifique que sus datos de contacto estén actualizados
+• Contacte a su agente para proceso de renovación
+• Mantenga vigente su protección
+
+IMPORTANTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• La continuidad de su cobertura depende de la renovación oportuna
+• Evite periodos sin protección manteniendo su póliza al día
+• Cualquier siniestro sin cobertura vigente no será procedente
+
+Para mayor información o aclaraciones, póngase en contacto con su agente de seguros.
+
+Atentamente,
+Departamento de Administración de Pólizas`
+      };
+    } else if (type === 'info_email') {
+      // Email informativo general
+      const name = data.nombre_contratante || data.name || 'Cliente';
+      const policyNumber = data.numero_poliza || data.policy_number || 'Sin especificar';
+      const insurer = data.aseguradora || data.insurer || 'Su aseguradora';
+      const rfc = data.rfc || 'Por confirmar';
+      const startDate = data.vigencia_inicio || data.start_date || 'Por confirmar';
+      const endDate = data.vigencia_fin || data.end_date || 'Por confirmar';
+      const paymentMethod = data.forma_de_pago || data.payment_method || 'Por confirmar';
+      const totalAmount = data.pago_total_o_prima_total || data.total_amount || 'Por confirmar';
+      const netPremium = data.prima_neta || data.net_premium || 'Por confirmar';
+      const branch = data.ramo || data.branch || 'Por confirmar';
+
+      emailContent = {
+        subject: `Estado de Cuenta - Póliza ${policyNumber}`,
+        message: `Estimado/a ${name},
+
+Le proporcionamos la información actualizada de su póliza de seguro.
+
+INFORMACIÓN GENERAL:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Contratante: ${name}
+• Número de póliza: ${policyNumber}
+• Aseguradora: ${insurer}
+• RFC: ${rfc}
+• Ramo: ${branch}
+
+VIGENCIA Y CONDICIONES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Inicio de vigencia: ${startDate}
+• Fin de vigencia: ${endDate}
+• Forma de pago: ${paymentMethod}
+• Prima total: $${totalAmount}
+• Prima neta: $${netPremium}
+
+ESTADO ACTUAL:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Su póliza se encuentra activa y vigente
+• Sus coberturas están en pleno funcionamiento
+• Mantenga actualizada su información de contacto
+
+Para consultas adicionales o modificaciones a su póliza, contacte a su agente de seguros.
+
+Atentamente,
+Departamento de Administración de Pólizas`
+      };
+    } else {
+      // Default generic email with available data
+      const name = data.nombre_contratante || data.name || 'Cliente';
+      const insurer = data.aseguradora || data.insurer || 'Nuestro equipo';
+      
+      emailContent = {
+        subject: '📋 Información importante sobre su póliza',
+        message: `Estimado/a ${name},
+
+Esperamos que se encuentre bien. Le escribimos para proporcionarle información importante relacionada con sus servicios.
+
+${Object.keys(data).length > 0 ? `
+📋 **DATOS REGISTRADOS:**
+${Object.entries(data)
+  .filter(([key, value]) => value && value !== 'N/A' && key !== 'id')
+  .slice(0, 8) // Límite para no hacer el email demasiado largo
+  .map(([key, value]) => `• ${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${value}`)
+  .join('\n')}` : ''}
+
+Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.
+
+Atentamente,
+**${insurer}**`
+      };
+    }
+    
+    console.log('✅ Email content generated successfully');
+    res.json({
+      success: true,
+      emailContent: emailContent
+    });
+  } catch (error) {
+    console.error('❌ Error generating email content:', error);
+    res.status(500).json({ error: 'Failed to generate content', details: error.message });
+  }
+});
+
+// Support Chat endpoint
+app.post('/api/support-chat', async (req, res) => {
+  try {
+    console.log('💬 Support chat request');
+    res.json({
+      success: true,
+      message: 'Support chat endpoint (mock response)',
+      response: 'Hello! This is a mock support response. The chat system is not fully implemented yet.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Support chat error', details: error.message });
+  }
+});
+
+// Notion Debug endpoint
+app.get('/api/notion/debug', async (req, res) => {
+  try {
+    console.log('🔍 Notion debug request');
+    res.json({
+      success: true,
+      message: 'Notion debug endpoint',
+      config: {
+        api_key_configured: !!(process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY),
+        database_id_configured: !!(process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID),
+        status: isNotionEnabled ? 'enabled' : 'disabled'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Notion debug error', details: error.message });
+  }
+});
+
+// Drive Upload endpoint
+app.post('/api/drive/upload', async (req, res) => {
+  try {
+    console.log('📁 Drive upload request');
+    res.json({
+      success: false,
+      message: 'Drive upload endpoint (not implemented)',
+      details: 'Google Drive upload functionality needs to be implemented'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Drive upload error', details: error.message });
+  }
+});
+
+// Email endpoints
+app.post('/api/email/send-welcome', async (req, res) => {
+  try {
+    console.log('📧 Email send-welcome request');
+    res.json({
+      success: false,
+      message: 'Email sending endpoint (not implemented)',
+      details: 'Email sending functionality needs to be implemented'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Email sending error', details: error.message });
+  }
+});
+
+// Prospeccion endpoints
+app.get('/api/prospeccion/:userId', async (req, res) => {
+  try {
+    console.log('👤 Prospeccion get request for user:', req.params.userId);
+    res.json({
+      success: true,
+      message: 'Prospeccion endpoint (mock response)',
+      data: []
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Prospeccion error', details: error.message });
+  }
+});
+
+app.post('/api/prospeccion/:userId', async (req, res) => {
+  try {
+    console.log('👤 Prospeccion post request for user:', req.params.userId);
+    res.json({
+      success: true,
+      message: 'Prospeccion created (mock response)',
+      id: Math.floor(Math.random() * 1000)
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Prospeccion creation error', details: error.message });
+  }
+});
+
+app.post('/api/prospeccion/:userId/:cardId/analyze', async (req, res) => {
+  try {
+    console.log('🔍 Prospeccion analyze request for user:', req.params.userId, 'card:', req.params.cardId);
+    res.json({
+      success: true,
+      message: 'Prospeccion analysis (mock response)',
+      analysis: 'Mock analysis result'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Prospeccion analysis error', details: error.message });
+  }
+});
+
+app.delete('/api/prospeccion/:userId/:cardId', async (req, res) => {
+  try {
+    console.log('🗑️ Prospeccion delete request for user:', req.params.userId, 'card:', req.params.cardId);
+    res.json({
+      success: true,
+      message: 'Prospeccion deleted (mock response)'
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Prospeccion deletion error', details: error.message });
   }
 });
 

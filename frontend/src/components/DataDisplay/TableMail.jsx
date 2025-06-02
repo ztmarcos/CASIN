@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_URL } from '../../config/api.js';
-import DriveSelector from '../Drive/DriveSelector';
+import DriveSelector from '../Drive/DriveSelector.jsx';
 import './TableMail.css';
 
 const TableMail = ({ isOpen, onClose, rowData }) => {
-  const [emailContent, setEmailContent] = useState({
-    subject: '',
-    message: ''
-  });
+  const [emailContent, setEmailContent] = useState({ subject: '', message: '' });
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -15,28 +12,28 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [showDriveSelector, setShowDriveSelector] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [emailType, setEmailType] = useState('welcome_email');
   const fileInputRef = useRef(null);
 
-  // Función para extraer el email de diferentes campos posibles
-  const extractEmail = (data) => {
-    const possibleFields = ['email', 'e-mail', 'e_mail', 'mail', 'correo', 'correo_electronico', 'email_address'];
-    
-    for (const field of possibleFields) {
-      if (data[field] && typeof data[field] === 'string' && data[field].includes('@')) {
-        return data[field];
-      }
+  // Reset states when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setEmailContent({ subject: '', message: '' });
+      setError(null);
+      setSuccess(null);
+      setAttachments([]);
+      setSelectedFolder(null);
+      setEmailType('welcome_email');
     }
-    
-    // Buscar en cualquier campo que contenga la palabra email o correo
-    for (const [key, value] of Object.entries(data)) {
-      if (
-        typeof value === 'string' && 
-        value.includes('@') && 
-        (key.toLowerCase().includes('email') || 
-         key.toLowerCase().includes('mail') || 
-         key.toLowerCase().includes('correo'))
-      ) {
-        return value;
+  }, [isOpen]);
+
+  const extractEmail = (data) => {
+    if (data && typeof data === 'object') {
+      const emailFields = ['e_mail', 'email', 'correo', 'mail'];
+      for (const field of emailFields) {
+        if (data[field] && typeof data[field] === 'string' && data[field].includes('@')) {
+          return data[field];
+        }
       }
     }
 
@@ -47,7 +44,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
     if (isOpen && rowData) {
       generateEmailContent();
     }
-  }, [isOpen, rowData]);
+  }, [isOpen, rowData, emailType]);
 
   const generateEmailContent = async () => {
     setIsGenerating(true);
@@ -59,15 +56,15 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         throw new Error('No se encontró una dirección de correo válida');
       }
 
-      console.log('Generando correo para:', { ...rowData, email: emailAddress }); // Debug
+      console.log('Generando correo tipo:', emailType, 'para:', { ...rowData, email: emailAddress });
 
-      const response = await fetch(`${API_URL}/gpt/analyze`, {
+      const response = await fetch(`${API_URL}/gpt/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: 'welcome_email',
+          type: emailType,
           data: { ...rowData, email: emailAddress }
         }),
       });
@@ -79,7 +76,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
       const result = await response.json();
       
       if (result.emailContent) {
-        console.log('Contenido generado:', result.emailContent); // Debug
+        console.log('Contenido generado:', result.emailContent);
         setEmailContent(result.emailContent);
       } else {
         throw new Error('No se pudo generar el contenido del correo');
@@ -280,7 +277,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
     <div className="mail-modal-overlay" onClick={onClose}>
       <div className="mail-modal-content" onClick={e => e.stopPropagation()}>
         <div className="mail-modal-header">
-          <h3>Enviar Correo de Bienvenida</h3>
+          <h3>📧 Enviar Correo Electrónico</h3>
           <button 
             className="close-modal-btn"
             onClick={onClose}
@@ -308,6 +305,25 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
               className="mail-input"
             />
           </div>
+          
+          {/* Selector de tipo de email */}
+          <div className="mail-field">
+            <label>Tipo de Correo:</label>
+            <select 
+              className="mail-input"
+              value={emailType}
+              onChange={(e) => setEmailType(e.target.value)}
+              disabled={isGenerating}
+            >
+              <option value="welcome_email">🎉 Bienvenida / Confirmación de Póliza</option>
+              <option value="reminder_email">⚠️ Recordatorio / Renovación</option>
+              <option value="info_email">📋 Información General</option>
+            </select>
+            <small className="email-type-help">
+              Seleccione el tipo de correo para generar el contenido apropiado
+            </small>
+          </div>
+          
           <div className="mail-field">
             <label>Asunto:</label>
             <input 
