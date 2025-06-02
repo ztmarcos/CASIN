@@ -151,43 +151,59 @@ app.get('/api/test', (req, res) => {
 app.get('/api/data/tables', async (req, res) => {
   try {
     const tables = await executeQuery('SHOW TABLES');
+    const relationships = await executeQuery('SELECT * FROM table_relationships');
+    
     const tableList = [];
     
     for (const tableRow of tables) {
       const tableName = Object.values(tableRow)[0];
       const structure = await getTableStructure(tableName);
       
-      // Determine table type based on name
-      let type = 'UNKNOWN';
-      let isMainTable = false;
-      let isSecondaryTable = false;
+      // Check if this table is in any relationship
+      const asMainTable = relationships.find(rel => rel.main_table_name === tableName);
+      const asSecondaryTable = relationships.find(rel => rel.secondary_table_name === tableName);
       
-      if (tableName.includes('autos')) {
-        type = 'AUTOS';
-        isMainTable = true;
-      } else if (tableName.includes('vida')) {
-        type = 'VIDA';
-        isMainTable = true;
-      } else if (tableName.includes('gmm')) {
-        type = 'GMM';
-        isMainTable = true;
-      } else if (tableName.includes('hogar')) {
-        type = 'HOGAR';
-        isMainTable = true;
-      } else if (tableName.includes('directorio')) {
-        type = 'DIRECTORIO';
-        isMainTable = false;
-      } else if (tableName.includes('listado')) {
-        type = 'LISTADO';
-        isSecondaryTable = true;
+      // Determine table type and relationship status
+      let type = 'UNKNOWN';
+      let isMainTable = !!asMainTable;
+      let isSecondaryTable = !!asSecondaryTable;
+      let relatedTableName = null;
+      let relationshipType = null;
+      
+      if (asMainTable) {
+        relatedTableName = asMainTable.secondary_table_name;
+        relationshipType = asMainTable.relationship_type;
+      } else if (asSecondaryTable) {
+        relatedTableName = asSecondaryTable.main_table_name;
+        relationshipType = asSecondaryTable.relationship_type;
       }
       
+      // Set type based on table name or relationship
+      if (tableName.includes('autos')) {
+        type = 'AUTOS';
+      } else if (tableName.includes('vida')) {
+        type = 'VIDA';
+      } else if (tableName.includes('gmm')) {
+        type = 'GMM';
+      } else if (tableName.includes('hogar')) {
+        type = 'HOGAR';
+      } else if (tableName.includes('directorio')) {
+        type = 'DIRECTORIO';
+      } else if (tableName.includes('listado')) {
+        type = 'LISTADO';
+      } else if (tableName.includes('caratula')) {
+        type = 'CARATULA';
+      }
+      
+      // Add table to list
       tableList.push({
         name: tableName,
         title: tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/_/g, ' '),
         type: type,
         isMainTable: isMainTable,
         isSecondaryTable: isSecondaryTable,
+        relatedTableName: relatedTableName,
+        relationshipType: relationshipType,
         columns: structure
       });
     }
@@ -291,6 +307,38 @@ app.get('/api/data/tables/:tableName/structure', async (req, res) => {
     });
   } catch (error) {
     console.error(`Error getting structure for ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get child tables for a parent table
+app.get('/api/data/tables/:tableName/children', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    
+    // Query the table_relationships table to find child tables
+    const relationships = await executeQuery(
+      'SELECT secondary_table_name FROM table_relationships WHERE main_table_name = ?',
+      [tableName]
+    );
+    
+    console.log(`Found ${relationships.length} child tables for ${tableName}:`, relationships);
+    
+    // Get the full table information for each child table
+    const childTables = [];
+    for (const rel of relationships) {
+      const structure = await getTableStructure(rel.secondary_table_name);
+      childTables.push({
+        name: rel.secondary_table_name,
+        isSecondaryTable: true,
+        relatedTableName: tableName,
+        columns: structure
+      });
+    }
+
+    res.json(childTables);
+  } catch (error) {
+    console.error('Error getting child tables:', error);
     res.status(500).json({ error: error.message });
   }
 });

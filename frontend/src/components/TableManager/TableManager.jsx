@@ -59,7 +59,22 @@ const SortableTableItem = ({
   };
 
   const getDisplayName = () => {
-    return table.name;
+    // Special handling for coupled tables with friendly names
+    if (table.name === 'emant_caratula' && table.secondaryTable) {
+      return 'Emant - Póliza Grupal';
+    }
+    
+    // Handle other potential coupled table names
+    if (table.name.includes('_caratula') && table.secondaryTable) {
+      const baseName = table.name.replace('_caratula', '');
+      return `${baseName.charAt(0).toUpperCase() + baseName.slice(1)} - Póliza Grupal`;
+    }
+    
+    // For individual tables, clean up underscores and capitalize
+    return table.name
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
