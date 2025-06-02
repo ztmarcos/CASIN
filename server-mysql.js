@@ -868,6 +868,8 @@ function extractPropertyValue(property) {
       return property.number;
     case 'select':
       return property.select?.name || null;
+    case 'status':
+      return property.status?.name || null;
     case 'multi_select':
       return property.multi_select?.map(item => item.name) || [];
     case 'date':
@@ -1119,6 +1121,9 @@ app.post('/api/notion/update-cell', async (req, res) => {
         break;
       case 'select':
         formattedProperty[column] = value ? { select: { name: value } } : { select: null };
+        break;
+      case 'status':
+        formattedProperty[column] = value ? { status: { name: value } } : { status: null };
         break;
       case 'multi_select':
         formattedProperty[column] = {
