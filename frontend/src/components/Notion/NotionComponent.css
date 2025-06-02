@@ -48,6 +48,23 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-height: 32px;
+  height: auto;
+  vertical-align: middle;
+}
+
+/* Status cell specific styling */
+.notion-td:has(.notion-status) {
+  min-height: 36px;
+  height: auto;
+  padding: 8px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.notion-td .notion-status {
+  width: 100%;
+  justify-content: center;
 }
 
 .notion-tr:hover {
@@ -58,27 +75,41 @@
 .notion-status {
   display: inline-flex;
   align-items: center;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 3px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 16px;
+  min-height: 24px;
+  height: auto;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
 }
 
-/* Light theme status colors */
+/* Light theme status colors - Enhanced for visibility */
 .status-listo {
-  background-color: #32ca67;  /* Green */
-  color: white;
+  background-color: #32ca67 !important;  /* Green */
+  color: white !important;
+  min-height: 24px !important;
+  padding: 6px 12px !important;
+  border: 1px solid #28a745 !important;
 }
 
 .status-en-progreso {
-  background-color: #ffac1b;  /* Yellow */
-  color: white;
+  background-color: #ffac1b !important;  /* Yellow */
+  color: white !important;
+  min-height: 24px !important;
+  padding: 6px 12px !important;
+  border: 1px solid #ffc107 !important;
 }
 
 .status-sin-iniciar {
-  background-color: #6B7280;  /* Gray */
-  color: white;
+  background-color: #6B7280 !important;  /* Gray */
+  color: white !important;
+  min-height: 24px !important;
+  padding: 6px 12px !important;
+  border: 1px solid #9CA3AF !important;
 }
 
 /* Dark theme status colors */
