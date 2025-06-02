@@ -767,6 +767,349 @@ app.get('/api/directorio/:id/policies', async (req, res) => {
   }
 });
 
+// POST - Create new contact
+app.post('/api/directorio', async (req, res) => {
+  try {
+    const contactData = req.body;
+    
+    // Get table structure to build dynamic query
+    const structure = await getTableStructure('directorio_contactos');
+    const columns = structure.map(col => col.name).filter(col => col !== 'id');
+    
+    // Build values array and placeholders
+    const values = columns.map(col => contactData[col] || null);
+    const placeholders = columns.map(() => '?').join(', ');
+    const columnsList = columns.map(col => `\`${col}\``).join(', ');
+    
+    const query = `INSERT INTO directorio_contactos (${columnsList}) VALUES (${placeholders})`;
+    
+    const result = await executeQuery(query, values);
+    
+    // Get the created contact
+    const newContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [result.insertId]
+    );
+    
+    res.status(201).json({
+      success: true,
+      message: 'Contact created successfully',
+      data: newContact[0]
+    });
+    
+  } catch (error) {
+    console.error('Error creating contact:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating contact',
+      error: error.message
+    });
+  }
+});
+
+// PUT - Update existing contact
+app.put('/api/directorio/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const contactData = req.body;
+    
+    // Check if contact exists
+    const existingContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    if (existingContact.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contact not found'
+      });
+    }
+    
+    // Get table structure for dynamic update
+    const structure = await getTableStructure('directorio_contactos');
+    const columns = structure.map(col => col.name).filter(col => col !== 'id');
+    
+    // Build SET clause and values
+    const setClauses = [];
+    const values = [];
+    
+    columns.forEach(col => {
+      if (contactData.hasOwnProperty(col)) {
+        setClauses.push(`\`${col}\` = ?`);
+        values.push(contactData[col]);
+      }
+    });
+    
+    values.push(id); // Add ID for WHERE clause
+    
+    const query = `UPDATE directorio_contactos SET ${setClauses.join(', ')} WHERE id = ?`;
+    
+    await executeQuery(query, values);
+    
+    // Get the updated contact
+    const updatedContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Contact updated successfully',
+      data: updatedContact[0]
+    });
+    
+  } catch (error) {
+    console.error('Error updating contact:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating contact',
+      error: error.message
+    });
+  }
+});
+
+// DELETE - Delete contact
+app.delete('/api/directorio/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if contact exists
+    const existingContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    if (existingContact.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contact not found'
+      });
+    }
+    
+    // Delete the contact
+    await executeQuery('DELETE FROM directorio_contactos WHERE id = ?', [id]);
+    
+    res.json({
+      success: true,
+      message: 'Contact deleted successfully',
+      data: existingContact[0]
+    });
+    
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting contact',
+      error: error.message
+    });
+  }
+});
+
+// GET - Get specific contact by ID
+app.get('/api/directorio/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const contact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    if (contact.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contact not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: contact[0]
+    });
+    
+  } catch (error) {
+    console.error('Error fetching contact:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching contact',
+      error: error.message
+    });
+  }
+});
+
+// POST - Link contact to existing client
+app.post('/api/directorio/:id/link-cliente', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const clienteData = req.body;
+    
+    // Check if contact exists
+    const existingContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    if (existingContact.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Contact not found'
+      });
+    }
+    
+    // Update contact to mark as client and link relevant data
+    const updateFields = {};
+    if (clienteData.table) updateFields.tabla_relacionada = clienteData.table;
+    if (clienteData.clientId) updateFields.cliente_id_relacionado = clienteData.clientId;
+    updateFields.status = 'cliente';
+    updateFields.fecha_conversion = new Date().toISOString().split('T')[0];
+    
+    const setClauses = Object.keys(updateFields).map(key => `\`${key}\` = ?`);
+    const values = Object.values(updateFields);
+    values.push(id);
+    
+    const query = `UPDATE directorio_contactos SET ${setClauses.join(', ')} WHERE id = ?`;
+    
+    await executeQuery(query, values);
+    
+    // Get updated contact
+    const updatedContact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [id]
+    );
+    
+    res.json({
+      success: true,
+      message: 'Contact linked to client successfully',
+      data: updatedContact[0]
+    });
+    
+  } catch (error) {
+    console.error('Error linking contact to client:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error linking contact to client',
+      error: error.message
+    });
+  }
+});
+
+// GET - Get relationships between directorio and policy tables
+app.get('/api/directorio/relationships', async (req, res) => {
+  try {
+    // Get all tables to show potential relationships
+    const tables = await executeQuery("SHOW TABLES");
+    const tableNames = tables.map(t => Object.values(t)[0]).filter(name => name !== 'directorio_contactos');
+    
+    // Check for potential matches between directorio contacts and policy records
+    const relationships = [];
+    
+    for (const tableName of tableNames) {
+      try {
+        // Get a sample of records to analyze potential relationships
+        const sampleQuery = `SELECT * FROM \`${tableName}\` LIMIT 5`;
+        const sampleData = await executeQuery(sampleQuery);
+        
+        if (sampleData.length > 0) {
+          const columns = Object.keys(sampleData[0]);
+          
+          // Look for name-like columns that might match directorio names
+          const nameColumns = columns.filter(col => 
+            col.toLowerCase().includes('nombre') || 
+            col.toLowerCase().includes('contratante') ||
+            col.toLowerCase().includes('asegurado') ||
+            col.toLowerCase().includes('cliente')
+          );
+          
+          if (nameColumns.length > 0) {
+            relationships.push({
+              table: tableName,
+              nameColumns: nameColumns,
+              totalRecords: await executeQuery(`SELECT COUNT(*) as count FROM \`${tableName}\``).then(r => r[0].count),
+              sampleData: sampleData[0] // Just first record for reference
+            });
+          }
+        }
+      } catch (err) {
+        // Skip tables that can't be accessed
+        console.warn(`Skipping table ${tableName}:`, err.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: relationships,
+      total: relationships.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching relationships:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching relationships',
+      error: error.message
+    });
+  }
+});
+
+// PUT - Update client status automatically
+app.put('/api/directorio/update-client-status', async (req, res) => {
+  try {
+    let updatedCount = 0;
+    
+    // Get all contacts that are not already marked as clients
+    const contacts = await executeQuery(
+      "SELECT id, nombre_completo FROM directorio_contactos WHERE status != 'cliente' OR status IS NULL"
+    );
+    
+    // Check each contact against policy tables
+    for (const contact of contacts) {
+      const tables = ['autos', 'hogar', 'vida', 'gmm', 'negocio', 'mascotas', 'diversos'];
+      let foundPolicy = false;
+      
+      for (const tableName of tables) {
+        try {
+          const policyCheck = await executeQuery(
+            `SELECT id FROM \`${tableName}\` WHERE nombre_contratante LIKE ? LIMIT 1`,
+            [`%${contact.nombre_completo}%`]
+          );
+          
+          if (policyCheck.length > 0) {
+            foundPolicy = true;
+            break;
+          }
+        } catch (err) {
+          // Skip if table doesn't exist or has issues
+          continue;
+        }
+      }
+      
+      // Update status if policy found
+      if (foundPolicy) {
+        await executeQuery(
+          "UPDATE directorio_contactos SET status = 'cliente', fecha_conversion = ? WHERE id = ?",
+          [new Date().toISOString().split('T')[0], contact.id]
+        );
+        updatedCount++;
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: `Updated ${updatedCount} contacts to client status`,
+      updatedCount: updatedCount
+    });
+    
+  } catch (error) {
+    console.error('Error updating client status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating client status',
+      error: error.message
+    });
+  }
+});
+
 // Mock endpoints for services not yet implemented
 app.get('/api/policy-status', (req, res) => {
   res.json([]);
