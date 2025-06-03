@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import directorioService from '../../services/directorioService';
+import firebaseDirectorioService from '../../services/firebaseDirectorioService';
 import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
 import PolicyModal from './PolicyModal';
@@ -34,11 +34,13 @@ const Directorio = () => {
       setLoading(true);
       const params = { ...filters, page: currentPage, limit: itemsPerPage };
       
+      console.log('🔄 Loading directorio data from Firebase...', { searchTerm, params });
+      
       const [contactosData, statsData] = await Promise.all([
         searchTerm.trim() 
-          ? directorioService.searchContactos(searchTerm, params)
-          : directorioService.getContactos(params),
-        directorioService.getStats()
+          ? firebaseDirectorioService.searchContactos(searchTerm, params)
+          : firebaseDirectorioService.getContactos(params),
+        firebaseDirectorioService.getStats()
       ]);
       
       console.log('🔍 Raw statsData received:', statsData);
@@ -51,20 +53,24 @@ const Directorio = () => {
       setContactos(contacts);
       setStats(statsData.stats || statsData); // Handle both response formats
       
+      console.log(`✅ Loaded ${contacts.length} contactos from Firebase`);
+      
       // Load policy tables for clients (more efficient)
       const policyTablesMap = {};
       const clienteContactos = contacts.filter(c => c.status === 'cliente');
       
-      // Load in batches to avoid overwhelming the server
+      console.log(`🔍 Loading policies for ${clienteContactos.length} clientes...`);
+      
+      // Load in batches to avoid overwhelming Firebase
       const batchSize = 5;
       for (let i = 0; i < clienteContactos.length; i += batchSize) {
         const batch = clienteContactos.slice(i, i + batchSize);
         
         await Promise.allSettled(batch.map(async (contacto) => {
           try {
-            const data = await directorioService.getContactoPolicies(contacto.id);
-            if (data?.policies && Array.isArray(data.policies)) {
-              const tables = [...new Set(data.policies.map(p => p.tabla_origen).filter(Boolean))];
+            const data = await firebaseDirectorioService.getContactoPolicies(contacto.id);
+            if (data?.data?.policies && Array.isArray(data.data.policies)) {
+              const tables = [...new Set(data.data.policies.map(p => p.tabla_origen).filter(Boolean))];
               policyTablesMap[contacto.id] = tables.length > 0 
                 ? tables.map(table => table.toUpperCase()).join(', ')
                 : 'Sin pólizas';
@@ -81,7 +87,8 @@ const Directorio = () => {
       setContactPolicyTables(policyTablesMap);
       setError(null);
     } catch (err) {
-      console.error('Error al cargar los contactos');
+      console.error('Error al cargar los contactos desde Firebase:', err);
+      setError('Error loading contacts from Firebase');
     } finally {
       setLoading(false);
     }
@@ -100,9 +107,9 @@ const Directorio = () => {
   const handleContactoSave = async (contactoData) => {
     try {
       if (selectedContacto) {
-        await directorioService.updateContacto(selectedContacto.id, contactoData);
+        await firebaseDirectorioService.updateContacto(selectedContacto.id, contactoData);
       } else {
-        await directorioService.createContacto(contactoData);
+        await firebaseDirectorioService.createContacto(contactoData);
       }
       
       await loadData();
@@ -117,7 +124,7 @@ const Directorio = () => {
   const handleContactoDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este contacto?')) {
       try {
-        await directorioService.deleteContacto(id);
+        await firebaseDirectorioService.deleteContacto(id);
         await loadData();
       } catch (err) {
         alert('Error al eliminar el contacto');

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import './Reports.css';
-import tableService from '../../services/data/tableService';
+import firebaseReportsService from '../../services/firebaseReportsService';
 import policyStatusService from '../../services/policyStatusService';
 import { sendReportEmail } from '../../services/reportEmailService';
 import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUtils';
@@ -42,8 +42,8 @@ export default function Reports() {
 
   // New state for collapsible layout and graphics
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
-  const [graphicsTimeView, setGraphicsTimeView] = useState('4months'); // '4months', '6months', 'year'
-  const [showGraphicsPanel, setShowGraphicsPanel] = useState(true);
+  const [graphicsTimeView, setGraphicsTimeView] = useState('year');
+  const [showGraphicsPanel, setShowGraphicsPanel] = useState(false);
   const [showMatrixGraphics, setShowMatrixGraphics] = useState(false);
 
   const calculateNextPaymentDate = (startDate, paymentForm) => {
@@ -73,130 +73,82 @@ export default function Reports() {
   // Function to get policy status key
   const getPolicyKey = (policy) => `${policy.ramo.toLowerCase()}_${policy.id}`;
 
-  // Load policy statuses from database
+  // Load all policies and related data from Firebase
+  const loadPolicies = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('📊 Loading policies from Firebase...');
+      
+      // Get all policies from Firebase
+      const allPolicies = await firebaseReportsService.getAllPolicies();
+      console.log(`✅ Loaded ${allPolicies.length} policies from Firebase`);
+      
+      // Get matrix data for analysis
+      const matrixData = await firebaseReportsService.getMatrixData();
+      
+      // Set state
+      setPolicies(allPolicies);
+      setUniqueClients(matrixData.uniqueClients);
+      setUniqueCompanies(matrixData.uniqueCompanies);
+      setUniqueRamos(matrixData.uniqueRamos);
+      setClientMatrix(matrixData.clientMatrix);
+      
+      // Load policy statuses
+      await loadPolicyStatuses();
+      
+      console.log('✅ Reports data loaded successfully from Firebase');
+      
+    } catch (err) {
+      console.error('❌ Error loading policies from Firebase:', err);
+      setError('Error al cargar las pólizas: ' + err.message);
+      toast.error('Error al cargar las pólizas');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load policy statuses from Firebase
   const loadPolicyStatuses = async () => {
     try {
       setIsStatusLoading(true);
-      const statuses = await policyStatusService.getStatuses();
+      console.log('📊 Loading policy statuses from Firebase...');
+      
+      const statuses = await firebaseReportsService.getPolicyStatuses();
       setPolicyStatuses(statuses);
-    } catch (error) {
-      console.error('Error loading policy statuses:', error);
-      toast.error('Error al cargar los estados de las pólizas');
+      
+      console.log('✅ Policy statuses loaded from Firebase');
+    } catch (err) {
+      console.error('❌ Error loading policy statuses:', err);
+      toast.error('Error al cargar estados de pólizas');
     } finally {
       setIsStatusLoading(false);
     }
   };
 
-  // Load statuses on component mount
-  useEffect(() => {
-    loadPolicyStatuses();
-  }, []);
-
-  const normalizePolicy = (policy, source) => {
-    // Log the incoming policy data
-    console.log('Normalizing policy:', {
-      source,
-      raw: policy,
-      identifiers: {
-        numero_poliza: policy.numero_poliza || policy.n__mero_de_p__liza || policy.numero_de_poliza,
-        contratante: policy.contratante || policy.nombre_contratante,
-        asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante,
-        aseguradora: policy.aseguradora || policy.compania || policy.compañia || 'No especificada'
-      }
-    });
-
-    // Common fields for all policy types
-    const commonFields = {
-      id: policy.id,
-      numero_poliza: policy.numero_poliza || policy.n__mero_de_p__liza || policy.numero_de_poliza,
-      contratante: policy.contratante || policy.nombre_contratante,
-      asegurado: policy.nombre_del_asegurado || policy.asegurado || policy.contratante || policy.nombre_contratante,
-      rfc: policy.rfc,
-      email: policy.e_mail || policy.email,
-      fecha_inicio: policy.fecha_inicio || policy.vigencia__inicio_ || policy.vigencia_inicio || policy.desde_vigencia || policy.vigencia_inicio,
-      fecha_fin: policy.fecha_fin || policy.vigencia__fin_ || policy.vigencia_fin || policy.hasta_vigencia || policy.vigencia_de_la_poliza_hasta || policy.vigencia_fin,
-      aseguradora: policy.aseguradora || 'No especificada',
-      forma_pago: policy.forma_de_pago || policy.forma_pago || 'No especificado',
-      sourceTable: source
-    };
-
-    // Calculate prima total - handle comma-separated numbers
-    const cleanNumericValue = (value) => {
-      if (!value) return 0;
-      return parseFloat(value.toString().replace(/,/g, '')) || 0;
-    };
-    
-    const primaTotal = cleanNumericValue(policy.prima_total || policy.pago_total || policy.importe_total_a_pagar || policy.pago_total_o_prima_total);
-
-    // Common financial fields
-    const financialFields = {
-      prima_neta: cleanNumericValue(policy.prima_neta) || primaTotal,
-      prima_total: primaTotal,
-      derecho_poliza: cleanNumericValue(policy.derecho_de_p__liza || policy.derecho_de_poliza || policy.derecho_poliza),
-      recargo_pago_fraccionado: cleanNumericValue(policy.recargo_por_pago_fraccionado),
-      iva: cleanNumericValue(policy.i_v_a__16_ || policy.i_v_a || policy.iva_16),
-      pago_total: primaTotal,
-      pagos_fraccionados: policy.pagos_fraccionados,
-      pago_parcial: policy.monto_parcial,
-      fecha_proximo_pago: calculateNextPaymentDate(
-        commonFields.fecha_inicio,
-        commonFields.forma_pago
-      )
-    };
-
-    // Combine common fields with financial fields
-    const basePolicy = {
-      ...commonFields,
-      ...financialFields
-    };
-
-    // Determine ramo - first check if policy already has a ramo field, otherwise use source mapping
-    let ramo = policy.ramo;
-    if (!ramo) {
-      switch (source) {
-        case 'gmm':
-        case 'gruposgmm':
-          ramo = 'GMM';
-          break;
-        case 'autos':
-          ramo = 'Autos';
-          break;
-        case 'mascotas':
-          ramo = 'Mascotas';
-          break;
-        case 'vida':
-          ramo = 'Vida';
-          break;
-        case 'negocio':
-          ramo = 'Negocio';
-          break;
-        case 'diversos':
-          ramo = 'Diversos';
-          break;
-        case 'rc':
-          ramo = 'Responsabilidad Civil';
-          break;
-        case 'transporte':
-          ramo = 'Transporte';
-          break;
-        case 'hogar':
-          ramo = 'Hogar';
-          break;
-        case 'empresarial':
-          ramo = 'Empresarial';
-          break;
-        case 'responsabilidad':
-          ramo = 'Responsabilidad Civil';
-          break;
-        case 'accidentes':
-          ramo = 'Accidentes Personales';
-          break;
-        default:
-          ramo = 'Otros';
-      }
+  // Handle status toggle for policies
+  const handleToggleStatus = async (policy) => {
+    try {
+      const currentStatus = getPolicyStatus(policy);
+      const newStatus = currentStatus === 'Vigente' ? 'Cancelada' : 'Vigente';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} status from ${currentStatus} to ${newStatus}`);
+      
+      await firebaseReportsService.updatePolicyStatus(policy.id, newStatus);
+      
+      // Update local state
+      setPolicyStatuses(prev => ({
+        ...prev,
+        [policy.id]: newStatus
+      }));
+      
+      toast.success(`Póliza ${policy.numero_poliza} actualizada a: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating policy status:', err);
+      toast.error('Error al actualizar el estado de la póliza');
     }
-
-    return { ...basePolicy, ramo };
   };
 
   const matchesSearch = (value, term) => {
@@ -237,193 +189,16 @@ export default function Reports() {
     return searchTerms.some(term => normalizedValue.includes(term));
   };
 
-  const fetchPolicies = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Get all available tables
-      const tables = await tableService.getTables();
-      console.log('All available tables:', tables);
-
-      // Define paired tables (only for tables that actually have listado tables)
-      const pairedTables = {
-        // Removed non-existent paired tables that were causing 500 errors
-        // 'autos': 'AutosListado', // - AutosListado doesn't exist
-        // 'vida': 'VidaListado',   // - VidaListado doesn't exist
-        'GruposAutos': 'AutosListado',
-        'GruposVida': 'VidaListado'
-      };
-
-      // Get data from all tables
-      const allResponses = await Promise.all(
-        tables.map(async (table) => {
-          try {
-            console.log(`Fetching data from table: ${table.name}`);
-            const response = await tableService.getData(table.name);
-            console.log(`Table ${table.name} returned ${response.data?.length || 0} records`);
-            
-            // If this is a main table with a paired listado
-            if (pairedTables[table.name]) {
-              const listadoResponse = await tableService.getData(pairedTables[table.name]);
-              console.log(`Processing paired tables ${table.name} and ${pairedTables[table.name]}:`, {
-                mainTable: response.data?.length,
-                listadoTable: listadoResponse.data?.length
-              });
-              
-              return {
-                tableName: table.name,
-                data: response.data || [],
-                listadoData: listadoResponse.data || []
-              };
-            }
-            
-            // For non-paired tables
-            return { 
-              tableName: table.name, 
-              data: response.data || [],
-              listadoData: []
-            };
-          } catch (error) {
-            console.error(`Error fetching from ${table.name}:`, error);
-            return { tableName: table.name, data: [], listadoData: [] };
-          }
-        })
-      );
-
-      // Process all responses
-      const allPolicies = allResponses.flatMap(({ tableName, data, listadoData }) => {
-        console.log(`Processing table: ${tableName} with ${data.length} records`);
-        
-        // Skip listado tables as they're handled with their main tables
-        if (tableName.toLowerCase().includes('listado')) {
-          console.log(`Skipping listado table: ${tableName}`);
-          return [];
-        }
-
-        // Determine the type based on exact table name matching
-        let policyType = 'other';
-        const lowerTableName = tableName.toLowerCase();
-        
-        if (lowerTableName === 'gmm' || lowerTableName === 'gruposgmm') policyType = 'gmm';
-        else if (lowerTableName === 'autos') policyType = 'autos';
-        else if (lowerTableName === 'mascotas') policyType = 'mascotas';
-        else if (lowerTableName === 'vida') policyType = 'vida';
-        else if (lowerTableName === 'negocio') policyType = 'negocio';
-        else if (lowerTableName === 'diversos') policyType = 'diversos';
-        else if (lowerTableName === 'rc') policyType = 'rc';
-        else if (lowerTableName === 'transporte') policyType = 'transporte';
-        else if (lowerTableName.includes('hogar')) policyType = 'hogar';
-        else if (lowerTableName.includes('empresarial')) policyType = 'empresarial';
-        else if (lowerTableName.includes('responsabilidad')) policyType = 'responsabilidad';
-        else if (lowerTableName.includes('accidentes')) policyType = 'accidentes';
-        
-        return data.map(policy => {
-          try {
-            // If this is a paired table, find corresponding listado entries
-            if (pairedTables[tableName] && listadoData.length > 0) {
-              // Log the matching process
-              console.log(`Matching policy ${policy.numero_de_poliza} with listado entries:`, {
-                policyId: policy.id,
-                listadoEntries: listadoData.filter(l => l.numero_de_certificado === policy.numero_de_poliza).length
-              });
-            }
-            
-            return normalizePolicy(policy, policyType);
-          } catch (error) {
-            console.error(`Error normalizing policy from ${tableName}:`, policy, error);
-            return null;
-          }
-        }).filter(Boolean);
-      });
-
-      // Improved duplicate detection
-      const uniquePolicies = allPolicies.reduce((acc, policy) => {
-        // Create a unique key that includes more identifying information
-        const key = `${policy.numero_poliza}_${policy.ramo}_${policy.contratante}`;
-        
-        // Log the policy being processed
-        console.log('Processing policy for deduplication:', {
-          key,
-          policy: {
-            numero_poliza: policy.numero_poliza,
-            ramo: policy.ramo,
-            contratante: policy.contratante,
-            fecha_inicio: policy.fecha_inicio
-          }
-        });
-
-        // If we don't have this policy yet, or if this one is more recent
-        if (!acc[key] || new Date(policy.fecha_inicio) > new Date(acc[key].fecha_inicio)) {
-          // Log when we're updating a policy
-          if (acc[key]) {
-            console.log('Updating existing policy:', {
-              old: {
-                numero_poliza: acc[key].numero_poliza,
-                fecha_inicio: acc[key].fecha_inicio
-              },
-              new: {
-                numero_poliza: policy.numero_poliza,
-                fecha_inicio: policy.fecha_inicio
-              }
-            });
-          }
-          acc[key] = policy;
-        }
-        return acc;
-      }, {});
-
-      const finalPolicies = Object.values(uniquePolicies);
-
-      // Log final policy matching results
-      console.log('Policy matching results:', {
-        total: allPolicies.length,
-        unique: finalPolicies.length,
-        pairs: finalPolicies.reduce((acc, p) => {
-          const key = `${p.contratante}_${p.ramo}`;
-          if (!acc[key]) acc[key] = [];
-          acc[key].push({
-            numero_poliza: p.numero_poliza,
-            fecha_inicio: p.fecha_inicio,
-            fecha_fin: p.fecha_fin
-          });
-          return acc;
-        }, {})
-      });
-
-      setPolicies(finalPolicies);
-    } catch (err) {
-      console.error('Error fetching policies:', err);
-      setError('Failed to load policies data');
-      toast.error('Error al cargar los datos de pólizas');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Normalize company names
-  const normalizeCompanyName = (name) => {
-    if (!name) return '';
-    const normalized = name.toString().trim().toLowerCase();
-    // Fix common duplicates
-    if (normalized.includes('plan seguro')) return 'Plan Seguro';
-    if (normalized.includes('gnp')) return 'GNP';
-    if (normalized.includes('axa')) return 'AXA';
-    if (normalized.includes('seguros monterrey')) return 'Seguros Monterrey';
-    // Return original with proper capitalization
-    return name.toString().trim();
-  };
-
-  // Add back the initial data fetch
   useEffect(() => {
     console.log('Initial data fetch starting...');
-    fetchPolicies();
+    loadPolicies();
   }, []);
 
   // Add the policy update listener
   useEffect(() => {
     const handlePolicyUpdate = () => {
       console.log('Policy update detected, refreshing data...');
-      fetchPolicies();
+      loadPolicies();
     };
 
     window.addEventListener('policyDataUpdated', handlePolicyUpdate);
@@ -650,33 +425,23 @@ export default function Reports() {
     }));
   };
 
-  // Add toggle status function
-  const handleToggleStatus = async (policy) => {
-    const policyKey = getPolicyKey(policy);
-    const currentStatus = policyStatuses[policyKey] || 'No Pagado';
-    const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
-    
-    try {
-      // Update in database
-      await policyStatusService.updateStatus(policyKey, newStatus);
-      
-      // Update local state
-      setPolicyStatuses(prev => ({
-        ...prev,
-        [policyKey]: newStatus
-      }));
-
-      toast.success(`Estado actualizado: ${newStatus}`);
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Error al actualizar el estado');
-    }
-  };
-
   // Get status for a policy
   const getPolicyStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
     return policyStatuses[policyKey] || 'No Pagado';
+  };
+
+  // Normalize company names
+  const normalizeCompanyName = (name) => {
+    if (!name) return '';
+    const normalized = name.toString().trim().toLowerCase();
+    // Fix common duplicates
+    if (normalized.includes('plan seguro')) return 'Plan Seguro';
+    if (normalized.includes('gnp')) return 'GNP';
+    if (normalized.includes('axa')) return 'AXA';
+    if (normalized.includes('seguros monterrey')) return 'Seguros Monterrey';
+    // Return original with proper capitalization
+    return name.toString().trim();
   };
 
   return (

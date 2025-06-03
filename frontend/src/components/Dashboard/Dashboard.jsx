@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
-import { fetchBirthdays } from '../../services/birthdayServiceNew';
-import tableService from '../../services/data/tableService';
+import firebaseDashboardService from '../../services/firebaseDashboardService';
 import { formatDate } from '../../utils/dateUtils';
 import './Dashboard.css';
 
@@ -27,37 +26,21 @@ const Dashboard = () => {
   const loadBirthdays = async () => {
     try {
       setLoading(prev => ({ ...prev, birthdays: true }));
-      // Get current date
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentDay = currentDate.getDate();
       
-      // Fetch birthdays
-      const birthdayData = await fetchBirthdays();
+      // Use Firebase service to get today's birthdays
+      const todaysBirthdays = await firebaseDashboardService.getBirthdaysForPeriod('today');
       
-      if (!Array.isArray(birthdayData)) {
-        throw new Error('Invalid birthday data received');
-      }
-
-      // Filter birthdays for today
-      const todaysBirthdays = birthdayData
-        .filter(birthday => {
-          if (!birthday?.date) return false;
-          const birthdayDate = new Date(birthday.date);
-          if (!birthdayDate.getTime()) return false;
-          
-          // Check if the birthday is today (same month and day)
-          return birthdayDate.getMonth() === currentMonth && 
-                 birthdayDate.getDate() === currentDay;
-        })
-        .sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          return dateA.getDate() - dateB.getDate();
-        });
+      // Sort by date
+      const sortedBirthdays = todaysBirthdays.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateA.getDate() - dateB.getDate();
+      });
       
-      setBirthdays(todaysBirthdays);
+      setBirthdays(sortedBirthdays);
       setError(prev => ({ ...prev, birthdays: null }));
+      
+      console.log(`🎂 Dashboard: Loaded ${sortedBirthdays.length} birthdays for today`);
     } catch (err) {
       console.error('Error loading birthdays:', err);
       setError(prev => ({ ...prev, birthdays: 'Error al cargar los cumpleaños' }));
@@ -71,59 +54,22 @@ const Dashboard = () => {
     try {
       setLoading(prev => ({ ...prev, expirations: true }));
       
-      // Fetch policies data
-      const [gmmResponse, autosResponse] = await Promise.all([
-        tableService.getData('gmm').catch(err => ({ data: [] })),
-        tableService.getData('autos').catch(err => ({ data: [] }))
-      ]);
+      // Use Firebase service to get this month's expirations
+      const monthlyExpirations = await firebaseDashboardService.getExpirationForPeriod('month');
+      
+      // Sort by expiration date
+      const sortedExpirations = monthlyExpirations.sort((a, b) => {
+        return new Date(a.fecha_fin) - new Date(b.fecha_fin);
+      });
 
-      // Normalize and combine the data
-      const gmmPolicies = (gmmResponse.data || []).map(policy => ({
-        numero_poliza: policy.n__mero_de_p__liza,
-        contratante: policy.contratante,
-        fecha_fin: policy.vigencia__fin_,
-        aseguradora: policy.aseguradora,
-        tipo: 'GMM'
-      }));
-
-      const autosPolicies = (autosResponse.data || []).map(policy => ({
-        numero_poliza: policy.numero_de_poliza,
-        contratante: policy.nombre_contratante,
-        fecha_fin: policy.vigencia_fin,
-        aseguradora: policy.aseguradora,
-        tipo: 'Auto'
-      }));
-
-      // Get current date info
-      const currentDate = new Date();
-      const currentMonth = currentDate.getMonth();
-      const currentYear = currentDate.getFullYear();
-
-      // Combine and filter policies expiring this month
-      const allPolicies = [...gmmPolicies, ...autosPolicies];
-      const monthlyExpirations = allPolicies
-        .filter(policy => {
-          if (!policy?.fecha_fin) return false;
-          const expiryDate = new Date(policy.fecha_fin);
-          if (!expiryDate.getTime()) return false;
-          
-          // Check if expiration is in the current month
-          return expiryDate.getMonth() === currentMonth && 
-                 expiryDate.getFullYear() === currentYear;
-        })
-        .sort((a, b) => {
-          const dateA = new Date(a.fecha_fin);
-          const dateB = new Date(b.fecha_fin);
-          return dateA - dateB;
-        });
-
-      console.log('Vencimientos encontrados:', monthlyExpirations.map(p => ({
+      console.log('🔄 Firebase Dashboard: Vencimientos encontrados:', sortedExpirations.map(p => ({
         poliza: p.numero_poliza,
         fecha: p.fecha_fin,
-        contratante: p.contratante
+        contratante: p.contratante,
+        tipo: p.tipo
       })));
 
-      setExpirations(monthlyExpirations);
+      setExpirations(sortedExpirations);
       setError(prev => ({ ...prev, expirations: null }));
     } catch (err) {
       console.error('Error loading expirations:', err);
@@ -152,7 +98,7 @@ const Dashboard = () => {
         {/* Sección 2 - Cumpleaños de la Semana */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h3>Cumpleaños de la Semana</h3>
+            <h3>Cumpleaños de Hoy</h3>
           </div>
           <div className="card-content">
             {loading.birthdays ? (
@@ -160,7 +106,7 @@ const Dashboard = () => {
             ) : error.birthdays ? (
               <div className="error-message">{error.birthdays}</div>
             ) : birthdays.length === 0 ? (
-              <p className="no-birthdays">No hay cumpleaños esta semana</p>
+              <p className="no-birthdays">No hay cumpleaños hoy</p>
             ) : (
               <div className="birthday-list">
                 {birthdays.slice(0, 3).map((birthday) => {
@@ -252,15 +198,15 @@ const Dashboard = () => {
             <div className="activity-list">
               <div className="activity-item">
                 <span className="activity-time">2m atrás</span>
-                <span className="activity-text">Nuevo registro añadido</span>
+                <span className="activity-text">Nuevo registro añadido a Firebase</span>
               </div>
               <div className="activity-item">
                 <span className="activity-time">1h atrás</span>
-                <span className="activity-text">Datos actualizados</span>
+                <span className="activity-text">Datos migrados a Firebase</span>
               </div>
               <div className="activity-item">
                 <span className="activity-time">3h atrás</span>
-                <span className="activity-text">Respaldo del sistema</span>
+                <span className="activity-text">Sistema conectado a Firebase</span>
               </div>
             </div>
           </div>

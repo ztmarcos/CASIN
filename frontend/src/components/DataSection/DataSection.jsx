@@ -5,7 +5,7 @@ import DataTable from '../DataDisplay/DataTable';
 import TableCardView from '../TableCardView/TableCardView';
 import TableImport from '../TableImport/TableImport';
 import AddEntryModal from './AddEntryModal';
-import tableService from '../../services/data/tableService';
+import firebaseTableService from '../../services/firebaseTableService';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
 
@@ -35,20 +35,20 @@ const DataSection = () => {
     
     setIsLoading(true);
     try {
-      console.log('Loading data for table:', targetTableName);
-      const result = await tableService.getData(targetTableName, filters);
-      console.log('Received data from API:', result);
+      console.log('🔥 Loading data for Firebase collection:', targetTableName);
+      const result = await firebaseTableService.getData(targetTableName, filters);
+      console.log('🔥 Received data from Firebase:', result);
       
       if (!result) {
-        console.error('No response from API');
+        console.error('❌ No response from Firebase');
         setTableData([]);
         return;
       }
       
-      // The API returns { table, data, timestamp }
+      // Firebase service returns { table, data, timestamp }
       // We need to use result.data for the table data
       const tableData = result.data || [];
-      console.log('Setting table data with', tableData.length, 'rows');
+      console.log(`✅ Setting table data with ${tableData.length} rows from Firebase`);
       setTableData(tableData);
       
       // Update the selected table name when tableName is provided
@@ -60,8 +60,9 @@ const DataSection = () => {
         }));
       }
     } catch (error) {
-      console.error('Error loading table data:', error);
+      console.error('❌ Error loading Firebase table data:', error);
       setTableData([]);
+      toast.error(`Error loading data: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +76,7 @@ const DataSection = () => {
   }, [filters, loadTableData]);
 
   const handleTableSelect = async (table) => {
-    console.log('Selected table:', table);
+    console.log('🔥 Selected Firebase table:', table);
     setSelectedTable(table);
     setFilters({}); // Reset filters on table change
     
@@ -86,30 +87,31 @@ const DataSection = () => {
     // Load data immediately after selecting the table
     try {
       setIsLoading(true);
-      const result = await tableService.getData(table.name);
-      console.log('Received data from API:', result);
+      const result = await firebaseTableService.getData(table.name);
+      console.log('🔥 Received data from Firebase API:', result);
       
       if (!result) {
-        console.error('No response from API');
+        console.error('❌ No response from Firebase API');
         setTableData([]);
         return;
       }
       
-      // The API returns { table, data, timestamp }
+      // Firebase service returns { table, data, timestamp }
       // We need to use result.data for the table data
       const tableData = result.data || [];
-      console.log('Setting table data with', tableData.length, 'rows');
+      console.log(`✅ Setting table data with ${tableData.length} rows`);
       setTableData(tableData);
     } catch (error) {
-      console.error('Error loading table data:', error);
+      console.error('❌ Error loading Firebase table data:', error);
       setTableData([]);
+      toast.error(`Error loading table: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRowClick = (row) => {
-    console.log('Selected row:', row);
+    console.log('🔥 Selected row:', row);
   };
 
   const toggleViewMode = () => {
@@ -145,21 +147,23 @@ const DataSection = () => {
     
     setIsLoading(true);
     try {
+      console.log('🔥 Importing data to Firebase collection:', selectedTable.name);
+      
       // Ensure data is an array
       const dataArray = Array.isArray(data) ? data : [data];
       
-      // Insert data in chunks to avoid overwhelming the server
-      const chunkSize = 100;
-      for (let i = 0; i < dataArray.length; i += chunkSize) {
-        const chunk = dataArray.slice(i, i + chunkSize);
-        await tableService.insertData(selectedTable.name, chunk);
-      }
+      // Firebase can handle batch inserts efficiently
+      await firebaseTableService.insertData(selectedTable.name, dataArray);
+      
+      console.log(`✅ Successfully imported ${dataArray.length} records to Firebase`);
+      toast.success(`Imported ${dataArray.length} records successfully`);
       
       loadTableData(); // Reload the table data after import
       setShowImportModal(false);
     } catch (error) {
-      console.error('Error importing data:', error);
+      console.error('❌ Error importing data to Firebase:', error);
       setError(error.message || 'Error importing data');
+      toast.error(`Import failed: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -167,115 +171,29 @@ const DataSection = () => {
 
   const handleCreateTableFromData = async (data, tableName) => {
     if (!data || !data.length || !tableName) {
-      console.error('Data and table name are required');
+      console.error('❌ Data and table name are required');
       return;
     }
 
     setIsLoading(true);
     try {
-      // Infer column types from the first few rows of data
-      const sampleSize = Math.min(10, data.length);
-      const sampleData = data.slice(0, sampleSize);
+      console.log('🔥 Creating new Firebase collection:', tableName);
       
-      // Create column definitions, excluding 'id' column if it exists in the data
-      const columnDefs = Object.keys(data[0])
-        .filter(columnName => columnName.toLowerCase() !== 'id') // Exclude id column from data
-        .map(columnName => {
-          // Initialize type checking arrays
-          const values = sampleData
-            .map(row => row[columnName])
-            .filter(val => val !== null && val !== undefined && val !== '');
-
-          // Infer type based on values
-          let type = 'varchar(255)'; // default type
-          
-          if (values.length > 0) {
-            const allNumbers = values.every(val => !isNaN(val) && !isNaN(parseFloat(val)));
-            const allIntegers = allNumbers && values.every(val => Number.isInteger(parseFloat(val)));
-            const allDates = values.every(val => !isNaN(Date.parse(val)));
-            const maxLength = Math.max(...values.map(val => String(val).length));
-
-            if (allIntegers) {
-              type = 'int';
-            } else if (allNumbers) {
-              type = 'decimal(10,2)';
-            } else if (allDates) {
-              type = 'date';
-            } else if (maxLength > 255) {
-              type = 'text';
-            } else {
-              type = `varchar(${Math.min(maxLength * 2, 255)})`;
-            }
-          }
-
-          return {
-            name: columnName.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-            type,
-            nullable: true
-          };
-        });
-
-      // Create table with inferred schema, adding id as the first column
-      const tableDefinition = {
-        name: tableName.toLowerCase().replace(/[^a-z0-9_]/g, '_'),
-        columns: [
-          {
-            name: 'id',
-            type: 'INT',
-            isPrimary: true,
-            autoIncrement: true,
-            nullable: false
-          },
-          ...columnDefs
-        ]
-      };
-
-      await tableService.createTable(tableDefinition);
+      // Firebase doesn't need explicit column definitions like MySQL
+      // Just create the collection and insert the data
+      const result = await firebaseTableService.createTable(tableName, data);
       
-      // Insert data in chunks
-      const chunkSize = 50;
-      for (let i = 0; i < data.length; i += chunkSize) {
-        const chunk = data.slice(i, i + chunkSize);
-        // Clean the data according to inferred types, excluding id
-        const cleanedChunk = chunk.map(row => {
-          const cleanedRow = {};
-          columnDefs.forEach(({ name, type }) => {
-            let value = row[Object.keys(row).find(key => 
-              key.toLowerCase().replace(/[^a-z0-9_]/g, '_') === name
-            )];
-
-            // Convert values according to type
-            if (value !== null && value !== undefined && value !== '') {
-              if (type === 'int') {
-                value = parseInt(value);
-              } else if (type === 'decimal(10,2)') {
-                value = parseFloat(value);
-              } else if (type === 'date') {
-                const date = new Date(value);
-                if (!isNaN(date)) {
-                  value = date.toISOString().split('T')[0];
-                }
-              }
-            } else {
-              value = null;
-            }
-            
-            cleanedRow[name] = value;
-          });
-          return cleanedRow;
-        });
-        
-        await tableService.insertData(tableName, cleanedChunk);
-      }
+      console.log('✅ Firebase collection created successfully:', result);
+      toast.success(`Collection '${tableName}' created successfully`);
       
+      // Select the new table
+      setSelectedTable({ name: tableName, title: firebaseTableService.formatSingleTableName(tableName) });
+      loadTableData(tableName);
       setShowCreateTableModal(false);
-      // Optionally select the newly created table
-      const newTable = { name: tableName, columns: tableDefinition.columns };
-      setSelectedTable(newTable);
-      
     } catch (error) {
-      console.error('Error creating table:', error);
+      console.error('❌ Error creating Firebase collection:', error);
       setError(error.message || 'Error creating table');
+      toast.error(`Failed to create collection: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -285,7 +203,7 @@ const DataSection = () => {
     if (!selectedTable) return;
     
     try {
-      await tableService.insertData(selectedTable.name, formData);
+      await firebaseTableService.insertData(selectedTable.name, formData);
       loadTableData(); // Reload the table data after adding new entry
       setShowAddEntryModal(false);
     } catch (error) {
@@ -298,7 +216,7 @@ const DataSection = () => {
     // Force a refresh of the table data
     setIsLoading(true);
     try {
-      const result = await tableService.getData(selectedTable.name, filters);
+      const result = await firebaseTableService.getData(selectedTable.name, filters);
       setTableData(result.data || []);
     } catch (error) {
       console.error('Error refreshing table data:', error);
@@ -315,7 +233,7 @@ const DataSection = () => {
       const currentTableName = selectedTable.name;
       console.log('Updating cell:', { id, column, value, table: currentTableName });
       
-      const result = await tableService.updateData(currentTableName, id, column, value);
+      const result = await firebaseTableService.updateData(currentTableName, id, column, value);
       
       // Update the local data to reflect the change
       setTableData(prevData => 
@@ -339,7 +257,7 @@ const DataSection = () => {
       const currentTableName = selectedTable?.name;
       
       // Reload tables list first
-      const tablesData = await tableService.getTables();
+      const tablesData = await firebaseTableService.getTables();
       
       // If we had a selected table, find it in the new list
       if (currentTableName) {

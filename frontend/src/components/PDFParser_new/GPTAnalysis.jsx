@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import tableService from '../../services/data/tableService';
+import firebaseTableService from '../../services/firebaseTableService';
 import { API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 
@@ -180,7 +180,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         
         try {
             console.log('Fetching tables for:', tableName);
-            const tables = await tableService.getTables();
+            const tables = await firebaseTableService.getTables();
             console.log('Available tables:', tables.map(t => t.name));
             
             const targetTable = tables.find(t => t.name === tableName);
@@ -197,10 +197,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             
             // Extract columns from the table structure
             if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                // Backend returns columns array with {name, type, nullable, key, default} structure
+                // Firebase returns columns array with {Field, Type, Null, Key, Default} structure
                 columns = targetTable.columns
-                    .filter(col => col.name !== 'id') // Filter out id column
-                    .map(col => col.name); // Get just the column names
+                    .filter(col => col.Field !== 'id') // Filter out id column
+                    .map(col => col.Field); // Get just the column names
             } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
                 // Fallback to tableInfo.fields if available
                 columns = tableInfo.fields;
@@ -209,7 +209,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 columns = tableInfo.childFields;
             } else {
                 // Last resort: try to get from table types endpoint
-                const tableTypes = await tableService.getTableTypes();
+                const tableTypes = await firebaseTableService.getTableTypes();
                 const tableType = tableTypes[tableName];
                 if (tableType && tableType.fields) {
                     columns = tableType.fields;
@@ -320,7 +320,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             let targetColumns;
             
             try {
-                const tables = await tableService.getTables();
+                const tables = await firebaseTableService.getTables();
                 const targetTable = tables.find(t => t.name === tableName);
                 
                 if (!targetTable) {
@@ -329,10 +329,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
                 // Extract columns from the actual table structure
                 if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                    // Backend returns columns array with {name, type, nullable, key, default} structure
+                    // Firebase returns columns array with {Field, Type, Null, Key, Default} structure
                     targetColumns = targetTable.columns
-                        .filter(col => col.name !== 'id') // Filter out id column
-                        .map(col => col.name); // Get just the column names
+                        .filter(col => col.Field !== 'id') // Filter out id column
+                        .map(col => col.Field); // Get just the column names
                 } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
                     // Fallback to tableInfo.fields if available
                     targetColumns = tableInfo.fields;
@@ -341,7 +341,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     targetColumns = tableInfo.childFields;
                 } else {
                     // Last resort: try to get from table types endpoint
-                    const tableTypes = await tableService.getTableTypes();
+                    const tableTypes = await firebaseTableService.getTableTypes();
                     const tableType = tableTypes[tableName];
                     if (tableType && tableType.fields) {
                         targetColumns = tableType.fields;
@@ -424,7 +424,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('Clean data structure:', Object.keys(cleanData));
             
             try {
-                const result = await tableService.insertData(tableName, cleanData);
+                const result = await firebaseTableService.insertData(tableName, cleanData);
                 console.log('Data insertion result:', result);
                 
                 setMessage('Datos insertados exitosamente');
