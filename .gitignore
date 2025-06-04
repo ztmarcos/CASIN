@@ -40,3 +40,4 @@ yarn-error.log*
 .env
 backend/.env
 backend-simple-OLD/.env
+.vercel

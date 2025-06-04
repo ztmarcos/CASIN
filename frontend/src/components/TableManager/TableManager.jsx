@@ -17,7 +17,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import tableService from '../../services/data/tableService';
+import firebaseTableService from '../../services/firebaseTableService';
 import './TableManager.css';
 import { toast } from 'react-hot-toast';
 import Modal from '../Modal/Modal';
@@ -59,22 +59,8 @@ const SortableTableItem = ({
   };
 
   const getDisplayName = () => {
-    // Special handling for coupled tables with friendly names
-    if (table.name === 'emant_caratula' && table.secondaryTable) {
-      return 'Emant - Póliza Grupal';
-    }
-    
-    // Handle other potential coupled table names
-    if (table.name.includes('_caratula') && table.secondaryTable) {
-      const baseName = table.name.replace('_caratula', '');
-      return `${baseName.charAt(0).toUpperCase() + baseName.slice(1)} - Póliza Grupal`;
-    }
-    
-    // For individual tables, clean up underscores and capitalize
-    return table.name
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    // Use Firebase service for consistent formatting
+    return firebaseTableService.formatSingleTableName(table.name);
   };
 
   return (
@@ -106,12 +92,18 @@ const SortableTableItem = ({
             />
           ) : (
             <div className="table-name-container">
+              {table.icon && <span className="table-icon">{table.icon}</span>}
               {table.secondaryTable && !isSecondary && (
                 <span className="relationship-icon" title="Has Secondary Table">🔗</span>
               )}
               <span className="table-name" title={getDisplayName()}>
                 {getDisplayName()}
               </span>
+              {table.count !== undefined && (
+                <span className="table-count" title={`${table.count} records`}>
+                  ({table.count})
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -165,10 +157,10 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     })
   );
 
-  // Replace TABLE_TYPES with simpler options
+  // Firebase collections are simpler - no complex grouping needed
   const TABLE_TYPES = {
-    'INDIVIDUAL': 'Individual',
-    'GRUPAL': 'Grupal'
+    'primary': 'Primary Collection',
+    'custom': 'Custom Collection'
   };
 
   useEffect(() => {
@@ -178,48 +170,19 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const loadTables = async () => {
     try {
       setIsLoading(true);
-      const tables = await tableService.getTables();
+      console.log('🔥 Loading Firebase collections...');
       
-      // Group tables by relationships
-      const groupedTables = tables.reduce((acc, table) => {
-        // Skip tables that are already processed as secondary tables
-        if (table.isSecondaryTable && tables.some(t => 
-          t.isMainTable && t.relatedTableName?.toLowerCase() === table.name.toLowerCase()
-        )) {
-          return acc;
-        }
-
-        // If it's a main table, add it with its secondary table
-        if (table.isMainTable) {
-          const secondaryTable = tables.find(t => 
-            t.name.toLowerCase() === table.relatedTableName?.toLowerCase() && t.isSecondaryTable
-          );
-          
-          if (secondaryTable) {
-            acc.push({
-              ...table,
-              secondaryTable: secondaryTable,
-              relationshipType: table.relationshipType || 'grupal_policy',
-              isGrouped: true
-            });
-          } else {
-            acc.push(table);
-          }
-        } else if (!table.isSecondaryTable) {
-          // If it's not a main or secondary table, add it as is
-          acc.push({
-            ...table,
-            isGrouped: false
-          });
-        }
-        return acc;
-      }, []);
-
-      console.log('Grouped tables:', groupedTables); // Add this for debugging
-      setTables(groupedTables);
-    } catch (err) {
-      console.error('Error loading tables:', err);
-      setError('Failed to load tables');
+      const tables = await firebaseTableService.getTables();
+      console.log('🔥 Received Firebase collections:', tables);
+      
+      // Firebase collections don't need complex grouping like MySQL tables
+      // Just display them as they are
+      setTables(tables);
+      setError(null);
+    } catch (error) {
+      console.error('❌ Error loading Firebase collections:', error);
+      setError('Failed to load collections');
+      toast.error('Failed to load collections');
     } finally {
       setIsLoading(false);
     }
@@ -227,7 +190,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
   const handleCreateGroup = async () => {
     try {
-      const result = await tableService.createTableGroup(
+      const result = await firebaseTableService.createTableGroup(
         groupData.mainTableName,
         groupData.secondaryTableName,
         groupData.groupType
@@ -292,7 +255,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
       try {
         setIsLoading(true);
-        await tableService.renameTable(editingTable.name, editingName.trim());
+        await firebaseTableService.renameTable(editingTable.name, editingName.trim());
         toast.success('Table renamed successfully');
         await loadTables(); // Reload tables to get updated data
       } catch (error) {
@@ -327,12 +290,12 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         
         // If it's a parent table with a child, delete the child first
         if (table.secondaryTable) {
-          await tableService.deleteTable(table.secondaryTable.name);
+          await firebaseTableService.deleteTable(table.secondaryTable.name);
           // Small delay to ensure child table is deleted
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         
-        await tableService.deleteTable(table.name);
+        await firebaseTableService.deleteTable(table.name);
         toast.success(`Table ${table.name} deleted successfully`);
         await loadTables(); // Reload tables after deletion
         
@@ -369,7 +332,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         newOrder.splice(newIndex, 0, newOrder.splice(oldIndex, 1)[0]);
 
         // Persist the order in the backend
-        await tableService.updateTableOrder(newOrder);
+        await firebaseTableService.updateTableOrder(newOrder);
         toast.success('Table order updated successfully');
       } catch (error) {
         console.error('Error updating table order:', error);

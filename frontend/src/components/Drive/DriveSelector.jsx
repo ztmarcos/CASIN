@@ -24,7 +24,7 @@ const DriveSelector = ({ isOpen, onClose, onFolderSelect, selectedFolderId }) =>
       setError(null);
       const targetFolderId = folderId || ROOT_FOLDER_ID;
       
-      const response = await axios.get(`${API_URL}/drive/files`, {
+      const response = await axios.get(`${API_URL}/api/drive/files`, {
         params: {
           folderId: targetFolderId,
           fields: 'files(id, name, mimeType)'

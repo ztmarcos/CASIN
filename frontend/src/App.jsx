@@ -6,7 +6,6 @@ import DataSection from './components/DataSection/DataSection'
 import TestGPT from './components/TestGPT/TestGPT'
 import Drive from './components/Drive/Drive'
 import PDFParser from './components/PDFParser_new/PDFParser'
-import Prospeccion from './components/Prospeccion/Prospeccion'
 import Datapool from './components/Datapool/Datapool'
 import Birthdays from './components/Birthdays/Birthdays'
 import Reports from './components/Reports/Reports'
@@ -22,6 +21,7 @@ import { Toaster } from 'react-hot-toast'
 import FirebaseViewer from './components/FirebaseViewer/FirebaseViewer'
 import Directorio from './components/Directorio/Directorio'
 import DirectorioSimple from './components/Directorio/DirectorioSimple'
+import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
@@ -106,14 +106,6 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/prospeccion" element={
-        <ProtectedRoute>
-          <Layout>
-            <Prospeccion />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      
       <Route path="/test-gpt" element={
         <ProtectedRoute>
           <Layout>
@@ -126,6 +118,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <FirebaseViewer />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/firebase-test" element={
+        <ProtectedRoute>
+          <Layout>
+            <FirebaseTest />
           </Layout>
         </ProtectedRoute>
       } />

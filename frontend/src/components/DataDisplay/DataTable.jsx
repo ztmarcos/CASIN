@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import pdfService from '../../services/pdfService';
-import tableService from '../../services/data/tableService';
+import firebaseTableService from '../../services/firebaseTableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
 import TableMail from './TableMail';
 import PDFParser from '../PDFParser_new/PDFParser';
@@ -11,8 +11,8 @@ import { API_URL } from '../../config/api.js';
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
   // Add console logs for debugging
-  console.log('DataTable received data:', data);
-  console.log('DataTable received tableName:', tableName);
+  console.log('🔥 DataTable received data:', data);
+  console.log('🔥 DataTable received tableName:', tableName);
 
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -37,9 +37,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [parentTableName, setParentTableName] = useState(null);
 
   useEffect(() => {
-    console.log('Setting sorted data:', data);
+    console.log('🔥 Setting sorted data:', data);
     if (!Array.isArray(data)) {
-      console.error('Data is not an array:', data);
+      console.error('❌ Data is not an array:', data);
       setSortedData([]);
       setFilteredData([]);
       return;
@@ -50,17 +50,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
   useEffect(() => {
     if (tableName) {
-      // Get formatted title from tableService
-      const title = tableService.formatTableTitle(tableName);
+      // Get formatted title from firebaseTableService
+      const title = firebaseTableService.formatTableTitle(tableName);
       setTableTitle(title);
       
       // Log for debugging
-      console.log('Table name:', tableName);
-      console.log('Formatted title:', title);
+      console.log('🔥 Table name:', tableName);
+      console.log('🔥 Formatted title:', title);
     }
   }, [tableName]);
 
-  // Add effect to fetch available child tables
+  // Add effect to fetch available child tables (Firebase version)
   useEffect(() => {
     const fetchChildTables = async () => {
       // Get the base parent table name
@@ -73,22 +73,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       }
       
       try {
-        console.log('Fetching child tables for:', baseParentTable);
-        const childTables = await tableService.getChildTables(baseParentTable);
-        console.log('Available child tables:', childTables);
+        console.log('🔥 Fetching child tables for:', baseParentTable);
+        const childTables = await firebaseTableService.getChildTables(baseParentTable);
+        console.log('🔥 Available child tables:', childTables);
         setAvailableChildTables(childTables);
         
         // Set selected child table if we're in a combined table
         if (tableName?.includes('→')) {
           const currentChildTable = tableName.split('→')[1].trim();
-          console.log('Setting selected child table to:', currentChildTable);
+          console.log('🔥 Setting selected child table to:', currentChildTable);
           setSelectedChildTable(currentChildTable);
         } else {
-          console.log('Resetting selected child table (parent table)');
+          console.log('🔥 Resetting selected child table (parent table)');
           setSelectedChildTable(''); // Reset selection when table changes
         }
       } catch (error) {
-        console.error('Error fetching child tables:', error);
+        console.error('❌ Error fetching child tables:', error);
         setAvailableChildTables([]);
       }
     };
@@ -96,7 +96,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     fetchChildTables();
   }, [tableName]);
 
-  // Add effect to handle parent table data
+  // Add effect to handle parent table data (Firebase version)
   useEffect(() => {
     const loadParentData = async () => {
       if (!tableName || tableName.includes('→')) return;
@@ -104,12 +104,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       try {
         // Store the parent table name
         setParentTableName(tableName);
-        // Load parent table data
-        const parentResult = await tableService.getData(tableName);
-        // Ensure parentResult is an array
-        setParentData(Array.isArray(parentResult) ? parentResult : []);
+        // Load parent table data from Firebase
+        const parentResult = await firebaseTableService.getData(tableName);
+        // Ensure parentResult.data is an array
+        setParentData(Array.isArray(parentResult.data) ? parentResult.data : []);
       } catch (error) {
-        console.error('Error loading parent data:', error);
+        console.error('❌ Error loading parent data from Firebase:', error);
         setParentData([]);
       }
     };
@@ -162,20 +162,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   {tableName.includes('→') ? (
                     <>
                       <option value="parent">
-                        {tableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
+                        {firebaseTableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
                       </option>
                       <option value="child">
-                        {tableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
+                        {firebaseTableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
                       </option>
                     </>
                   ) : (
                     <>
                       <option value="parent">
-                        {tableService.formatSingleTableName(tableName)} (Principal)
+                        {firebaseTableService.formatSingleTableName(tableName)} (Principal)
                       </option>
                       {availableChildTables.map(childTable => (
                         <option key={childTable} value="child">
-                          {tableService.formatSingleTableName(childTable)} (Secundaria)
+                          {firebaseTableService.formatSingleTableName(childTable)} (Secundaria)
                         </option>
                       ))}
                     </>
@@ -191,11 +191,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     <>
                       <div className="parent-table">
                         <span className="table-label">Tabla Principal:</span>
-                        {tableService.formatSingleTableName(parentTable)}
+                        {firebaseTableService.formatSingleTableName(parentTable)}
                       </div>
                       <div className="child-table">
                         <span className="table-label">Tabla Secundaria:</span>
-                        {tableService.formatSingleTableName(childTable)}
+                        {firebaseTableService.formatSingleTableName(childTable)}
                       </div>
                     </>
                   );
@@ -226,7 +226,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         {/* Show parent table if available */}
         {parentData && parentData.length > 0 && (
           <div className="parent-table-section">
-            <h3>{tableService.formatSingleTableName(parentTableName)}</h3>
+            <h3>{firebaseTableService.formatSingleTableName(parentTableName)}</h3>
             <table className="data-table">
               <thead>
                 <tr>
@@ -525,7 +525,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     if (!deleteConfirm || !deleteConfirm.id) return;
 
     try {
-      await tableService.deleteRow(tableName, deleteConfirm.id);
+      await firebaseTableService.deleteRow(tableName, deleteConfirm.id);
       setDeleteConfirm(null);
       
       // Remove the deleted row from the current data
@@ -755,20 +755,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                 {tableName.includes('→') ? (
                   <>
                     <option value="parent">
-                      {tableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
+                      {firebaseTableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
                     </option>
                     <option value="child">
-                      {tableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
+                      {firebaseTableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
                     </option>
                   </>
                 ) : (
                   <>
                     <option value="parent">
-                      {tableService.formatSingleTableName(tableName)} (Principal)
+                      {firebaseTableService.formatSingleTableName(tableName)} (Principal)
                     </option>
                     {availableChildTables.map(childTable => (
                       <option key={childTable} value="child">
-                        {tableService.formatSingleTableName(childTable)} (Secundaria)
+                        {firebaseTableService.formatSingleTableName(childTable)} (Secundaria)
                       </option>
                     ))}
                   </>
@@ -784,11 +784,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   <>
                     <div className="parent-table">
                       <span className="table-label">Tabla Principal:</span>
-                      {tableService.formatSingleTableName(parentTable)}
+                      {firebaseTableService.formatSingleTableName(parentTable)}
                     </div>
                     <div className="child-table">
                       <span className="table-label">Tabla Secundaria:</span>
-                      {tableService.formatSingleTableName(childTable)}
+                      {firebaseTableService.formatSingleTableName(childTable)}
                     </div>
                   </>
                 );

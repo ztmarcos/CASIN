@@ -275,8 +275,6 @@ class FirebaseBirthdayService {
 
   /**
    * Triggers the birthday email check and send process
-   * Note: This would need to be implemented with Firebase Functions
-   * For now, we'll return a mock response
    */
   async triggerBirthdayEmails() {
     try {
@@ -285,8 +283,6 @@ class FirebaseBirthdayService {
       // Get today's birthdays
       const todaysBirthdays = await this.getTodaysBirthdays();
       
-      // In a real implementation, this would trigger Firebase Functions
-      // to send emails. For now, we'll simulate the response
       console.log(`📧 Would send emails to ${todaysBirthdays.length} birthday contacts`);
       
       // Simulate success response

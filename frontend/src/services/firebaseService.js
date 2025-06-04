@@ -14,14 +14,69 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config.js';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
+import { getAuth, connectAuthEmulator } from 'firebase/auth';
+
+// TEMPORARY: Disable Firebase to fix immediate connectivity issues
+const FIREBASE_ENABLED = true; // Set to true once Firebase is properly configured
 
 class FirebaseService {
   constructor() {
-    this.db = db;
+    this.app = null;
+    this.db = null;
+    this.auth = null;
+    this.isInitialized = false;
+    this.isConnected = false;
+    
+    if (FIREBASE_ENABLED) {
+      this.initializeFirebase();
+    } else {
+      console.log('🔥 Firebase disabled temporarily - using backend fallback');
+    }
+  }
+
+  initializeFirebase() {
+    try {
+      // Firebase config
+      const firebaseConfig = {
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+        appId: import.meta.env.VITE_FIREBASE_APP_ID
+      };
+
+      console.log('🔥 Firebase Config for Web App "casin":', firebaseConfig);
+
+      // Initialize Firebase
+      this.app = initializeApp(firebaseConfig);
+      this.db = getFirestore(this.app);
+      this.auth = getAuth(this.app);
+
+      this.isInitialized = true;
+      this.isConnected = true;
+      
+      console.log('✅ Firebase initialized successfully');
+    } catch (error) {
+      console.error('❌ Firebase initialization failed:', error);
+      this.isInitialized = false;
+      this.isConnected = false;
+    }
   }
 
   // Generic CRUD Operations
   async getAllDocuments(collectionName, limitCount = 1000) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collectionRef = collection(this.db, collectionName);
       const q = query(collectionRef, limit(limitCount));
@@ -37,6 +92,15 @@ class FirebaseService {
   }
 
   async getDocumentById(collectionName, id) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning null for ${collectionName}/${id}`);
+      return null;
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, collectionName, id);
       const docSnap = await getDoc(docRef);
@@ -56,6 +120,15 @@ class FirebaseService {
   }
 
   async addDocument(collectionName, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot add document to ${collectionName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collectionRef = collection(this.db, collectionName);
       const docRef = await addDoc(collectionRef, {
@@ -71,6 +144,15 @@ class FirebaseService {
   }
 
   async updateDocument(collectionName, id, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot update document in ${collectionName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, collectionName, id);
       await updateDoc(docRef, {
@@ -85,6 +167,15 @@ class FirebaseService {
   }
 
   async deleteDocument(collectionName, id) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot delete document from ${collectionName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, collectionName, id);
       await deleteDoc(docRef);
@@ -97,6 +188,15 @@ class FirebaseService {
 
   // Search and Filter Operations
   async searchDocuments(collectionName, searchTerm, searchFields = ['nombre_contratante', 'email'], limitCount = 100) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collectionRef = collection(this.db, collectionName);
       const searchResults = [];
@@ -129,6 +229,15 @@ class FirebaseService {
   }
 
   async getDocumentsByField(collectionName, field, value, limitCount = 100) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collectionRef = collection(this.db, collectionName);
       const q = query(
@@ -149,6 +258,15 @@ class FirebaseService {
 
   // Pagination
   async getDocumentsPaginated(collectionName, pageSize = 50, lastDoc = null) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
+      return { documents: [], lastDoc: null, hasMore: false };
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collectionRef = collection(this.db, collectionName);
       let q = query(
@@ -186,6 +304,15 @@ class FirebaseService {
 
   // Batch Operations
   async batchWrite(operations) {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - cannot perform batch write');
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const batch = writeBatch(this.db);
       
@@ -240,6 +367,15 @@ class FirebaseService {
   }
 
   async getTableStructure(tableName) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${tableName}`);
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       // Get a sample document to understand structure
       const collectionRef = collection(this.db, tableName);
@@ -263,6 +399,15 @@ class FirebaseService {
   }
 
   async getBirthdays() {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - returning empty data for birthdays');
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
       const allBirthdays = [];
@@ -293,6 +438,15 @@ class FirebaseService {
 
   // Migration helper - to move data from MySQL to Firebase
   async migrateDataFromMySQL(mysqlData, collectionName) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot migrate data to ${collectionName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const batch = writeBatch(this.db);
       const collectionRef = collection(this.db, collectionName);
@@ -320,6 +474,15 @@ class FirebaseService {
 
   // Analytics and Reports
   async getCollectionStats(collectionName) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty stats for ${collectionName}`);
+      return { total: 0, collection: collectionName, error: 'Firebase disabled' };
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docs = await this.getAllDocuments(collectionName);
       return {
@@ -335,6 +498,15 @@ class FirebaseService {
 
   // Get all records from a table
   async getAll(tableName, limitCount = 50) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${tableName}`);
+      return { success: true, data: [], count: 0, source: 'Backend' };
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const q = query(
         collection(this.db, tableName),
@@ -366,6 +538,15 @@ class FirebaseService {
 
   // Search records by text
   async search(tableName, searchTerm, limitCount = 50) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning empty data for ${tableName}`);
+      return { success: true, data: [], count: 0, source: 'Backend', searchTerm };
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       // Firebase doesn't support full-text search, so we'll get all and filter
       const allRecords = await this.getAll(tableName, 1000);
@@ -393,6 +574,15 @@ class FirebaseService {
 
   // Get record by ID
   async getById(tableName, id) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - returning null for ${tableName}/${id}`);
+      return null;
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, tableName, id);
       const docSnap = await getDoc(docRef);
@@ -417,6 +607,15 @@ class FirebaseService {
 
   // Create new record
   async create(tableName, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot create record in ${tableName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = await addDoc(collection(this.db, tableName), {
         ...data,
@@ -439,6 +638,15 @@ class FirebaseService {
 
   // Update record
   async update(tableName, firebaseId, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot update record in ${tableName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, tableName, firebaseId);
       await updateDoc(docRef, {
@@ -461,6 +669,15 @@ class FirebaseService {
 
   // Delete record
   async delete(tableName, firebaseId) {
+    if (!FIREBASE_ENABLED) {
+      console.log(`🔥 Firebase disabled - cannot delete record from ${tableName}`);
+      throw new Error('Firebase disabled - use backend API instead');
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+    
     try {
       const docRef = doc(this.db, tableName, firebaseId);
       await deleteDoc(docRef);
@@ -495,6 +712,10 @@ class FirebaseService {
   // Search policies
   async searchPolicies(searchTerm) {
     return this.search('autos', searchTerm);
+  }
+
+  isFirebaseEnabled() {
+    return FIREBASE_ENABLED && this.isConnected;
   }
 }
 

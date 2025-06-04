@@ -22,8 +22,6 @@ if (result.error) {
     'OPENAI_API_KEY',
     'VITE_OPENAI_API_KEY',
     'VITE_FIREBASE_API_KEY',
-    'FIREBASE_PRIVATE_KEY',
-    'VITE_FIREBASE_PROJECT_ID',
     'GOOGLE_DRIVE_CLIENT_EMAIL',
     'GOOGLE_DRIVE_PROJECT_ID',
     'GOOGLE_DRIVE_PRIVATE_KEY',
@@ -50,107 +48,16 @@ if (result.error) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Firebase Admin if credentials are available
-let admin = null;
-let db = null;
-let isFirebaseEnabled = false;
-
-try {
-  console.log('🔥 Attempting to initialize Firebase Admin...');
-  console.log('- VITE_FIREBASE_PROJECT_ID:', !!process.env.VITE_FIREBASE_PROJECT_ID);
-  console.log('- FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
-  
-  if (process.env.VITE_FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
-    console.log('🔥 Firebase credentials found, initializing...');
-    admin = require('firebase-admin');
-    
-    // Try to create a proper service account object
-    let serviceAccount;
-    
-    try {
-      // First, try to use the private key as-is (assuming it's properly formatted)
-      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
-      
-      // Validate that the private key looks like a proper PEM key
-      if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
-        throw new Error('Private key is not in proper PEM format');
-      }
-      
-      serviceAccount = {
-        type: "service_account",
-        project_id: process.env.VITE_FIREBASE_PROJECT_ID,
-        private_key: privateKey,
-        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
-      };
-      
-      console.log('🔥 Service account created with PEM key, project_id:', serviceAccount.project_id);
-      console.log('🔥 Client email:', serviceAccount.client_email);
-      console.log('🔥 Private key format looks correct');
-      
-    } catch (keyError) {
-      console.warn('⚠️  Private key format issue:', keyError.message);
-      
-      // Fallback: Try using environment variables without private key (this will fail but show better error)
-      serviceAccount = {
-        type: "service_account",
-        project_id: process.env.VITE_FIREBASE_PROJECT_ID,
-        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
-      };
-      
-      console.log('🔥 Attempting fallback without private key for debugging...');
-    }
-
-    if (!admin.apps.length) {
-      console.log('🔥 No existing Firebase apps, creating new one...');
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        databaseURL: `https://${process.env.VITE_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
-      });
-      console.log('🔥 Firebase app initialized successfully');
-    } else {
-      console.log('🔥 Firebase app already exists');
-    }
-    
-    console.log('🔥 Getting Firestore instance...');
-    db = admin.firestore();
-    console.log('🔥 Firestore instance created');
-    
-    isFirebaseEnabled = true;
-    console.log('✅ Firebase Admin initialized successfully');
-  } else {
-    console.log('⚠️  Firebase credentials not found - Firebase features disabled');
-    console.log('- Missing VITE_FIREBASE_PROJECT_ID:', !process.env.VITE_FIREBASE_PROJECT_ID);
-    console.log('- Missing FIREBASE_PRIVATE_KEY:', !process.env.FIREBASE_PRIVATE_KEY);
-  }
-} catch (error) {
-  console.error('❌ Could not initialize Firebase Admin:', error.message);
-  console.error('❌ Error code:', error.code || 'unknown');
-  console.error('❌ Error info:', error.errorInfo || 'none');
-  
-  // If it's a private key issue, provide specific guidance
-  if (error.message.includes('private key') || error.message.includes('PEM')) {
-    console.error('💡 SOLUTION: The FIREBASE_PRIVATE_KEY must be a complete PEM format key');
-    console.error('💡 It should start with "-----BEGIN PRIVATE KEY-----" and end with "-----END PRIVATE KEY-----"');
-    console.error('💡 All newlines should be escaped as \\n when setting in Vercel environment variables');
-  }
-  
-  isFirebaseEnabled = false;
-  db = null;
-}
-
-// MySQL connection configuration (fallback)
+// MySQL connection configuration
 const dbConfig = {
-  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
-  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
-  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
-  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'crud_db',
-  port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
-  connectTimeout: 60000,
-  acquireTimeout: 60000,
-  timeout: 60000
+  host: 'localhost',
+  user: 'root',
+  password: '', // Add your MySQL password here if needed
+  database: 'crud_db',
+  port: 3306
 };
 
-// Create MySQL connection pool (fallback)
+// Create MySQL connection pool
 let pool;
 try {
   pool = mysql.createPool({
@@ -159,12 +66,10 @@ try {
     connectionLimit: 10,
     queueLimit: 0
   });
-  console.log('✅ MySQL connection pool created (fallback)');
+  console.log('✅ MySQL connection pool created');
 } catch (error) {
   console.error('❌ MySQL connection failed:', error);
-  if (!isFirebaseEnabled) {
-    console.error('❌ No database available - both Firebase and MySQL failed');
-  }
+  process.exit(1);
 }
 
 // Middleware
@@ -224,83 +129,14 @@ async function getTableStructure(tableName) {
 }
 
 // API Routes
-app.get('/api/health', async (req, res) => {
-  try {
-    let databaseStatus = 'connected';
-    let databaseType = 'Firebase (Frontend)';
-    let error = null;
-
-    // Check if Firebase credentials are available for frontend
-    const hasFirebaseConfig = !!(
-      process.env.VITE_FIREBASE_API_KEY && 
-      process.env.VITE_FIREBASE_PROJECT_ID &&
-      process.env.VITE_FIREBASE_AUTH_DOMAIN
-    );
-
-    if (hasFirebaseConfig) {
-      databaseStatus = 'connected';
-      databaseType = 'Firebase (Frontend)';
-    } else {
-      // Fallback to MySQL if Firebase config not available
-      if (pool) {
-        try {
-          await pool.execute('SELECT 1');
-          databaseStatus = 'connected';
-          databaseType = 'MySQL';
-        } catch (mysqlError) {
-          console.warn('MySQL health check failed:', mysqlError.message);
-          databaseStatus = 'disconnected';
-          error = mysqlError.message;
-        }
-      } else {
-        databaseStatus = 'disconnected';
-        error = 'No database configuration available';
-      }
-    }
-
-    if (databaseStatus === 'connected') {
-      res.json({ 
-        status: 'healthy', 
-        timestamp: new Date().toISOString(),
-        environment: process.env.NODE_ENV || 'development',
-        message: `CASIN CRM API with ${databaseType} is running!`,
-        database: databaseStatus,
-        databaseType: databaseType,
-        firebaseConfigured: hasFirebaseConfig,
-        debug: {
-          isVercel: !!process.env.VERCEL,
-          isFirebaseEnabled: isFirebaseEnabled,
-          hasDb: !!db,
-          hasAdmin: !!admin,
-          firebaseProjectId: process.env.VITE_FIREBASE_PROJECT_ID ? 'configured' : 'missing',
-          firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? 'configured' : 'missing'
-        },
-        services: {
-          notion: !!(process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY),
-          openai: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY),
-          googleDrive: !!(process.env.GOOGLE_DRIVE_CLIENT_EMAIL),
-          email: !!(process.env.SMTP_HOST)
-        }
-      });
-    } else {
-      res.status(500).json({
-        status: 'unhealthy',
-        database: databaseStatus,
-        databaseType: databaseType,
-        error: error || 'No database connection available',
-        timestamp: new Date().toISOString(),
-        firebaseConfigured: hasFirebaseConfig
-      });
-    }
-  } catch (error) {
-    console.error('Health check failed:', error);
-    res.status(500).json({
-      status: 'unhealthy',
-      database: 'disconnected',
-      error: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    message: 'CASIN CRM API with MySQL is running!',
+    database: 'MySQL connected'
+  });
 });
 
 app.get('/api/test', (req, res) => {
@@ -624,7 +460,7 @@ app.get('/api/birthday', async (req, res) => {
         if (parseInt(day) < 1 || parseInt(day) > 31) return null;
         
         return birthDate;
-  } catch (error) {
+      } catch (error) {
         console.error('Error parsing RFC:', rfc, error);
         return null;
       }
@@ -811,99 +647,9 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
   }
 });
 
-// Directorio endpoints (Firebase in production, MySQL fallback)
+// Directorio endpoints (using real data)
 app.get('/api/directorio', async (req, res) => {
   try {
-    console.log('🔍 Directorio endpoint called');
-    console.log('- process.env.VERCEL:', !!process.env.VERCEL);
-    console.log('- isFirebaseEnabled:', isFirebaseEnabled);
-    console.log('- db available:', !!db);
-    console.log('- admin available:', !!admin);
-    
-    // Check if we're in Vercel (production) and Firebase is available
-    if (process.env.VERCEL && isFirebaseEnabled && db) {
-      console.log('📋 Using Firebase for directorio in production');
-      
-      const { 
-        page = 1, 
-        limit = 50, 
-        search, 
-        status, 
-        origen, 
-        genero 
-      } = req.query;
-      
-      // Get all documents from Firebase
-      const snapshot = await db.collection('directorio_contactos').get();
-      let allContactos = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      
-      // Apply search filter
-      if (search && search.trim()) {
-        const searchTerm = search.trim().toLowerCase();
-        allContactos = allContactos.filter(contacto => {
-          const searchableFields = [
-            contacto.nombre_completo,
-            contacto.email,
-            contacto.telefono_movil,
-            contacto.telefono_oficina,
-            contacto.telefono_casa,
-            contacto.empresa,
-            contacto.nickname,
-            contacto.apellido
-          ];
-          
-          return searchableFields.some(field => 
-            field && field.toString().toLowerCase().includes(searchTerm)
-          );
-        });
-      }
-      
-      // Apply status filter
-      if (status && status.trim()) {
-        allContactos = allContactos.filter(c => c.status === status.trim());
-      }
-      
-      // Apply origen filter
-      if (origen && origen.trim()) {
-        allContactos = allContactos.filter(c => c.origen === origen.trim());
-      }
-      
-      // Apply genero filter
-      if (genero && genero.trim()) {
-        allContactos = allContactos.filter(c => c.genero === genero.trim());
-      }
-      
-      // Sort by creation date (newest first)
-      allContactos.sort((a, b) => {
-        const dateA = new Date(a.created_at || a.createdAt || 0);
-        const dateB = new Date(b.created_at || b.createdAt || 0);
-        return dateB - dateA;
-      });
-      
-      // Apply pagination
-      const startIndex = (parseInt(page) - 1) * parseInt(limit);
-      const endIndex = startIndex + parseInt(limit);
-      const paginatedData = allContactos.slice(startIndex, endIndex);
-      
-      console.log(`✅ Firebase: Found ${allContactos.length} total contactos, showing ${paginatedData.length}`);
-      
-      return res.json({
-        data: paginatedData,
-        total: allContactos.length,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(allContactos.length / parseInt(limit)),
-        source: 'Firebase'
-      });
-    }
-    
-    // Fallback to MySQL for local development
-    console.log('📋 Using MySQL for directorio (local development)');
-    console.log('- Reason: VERCEL=' + !!process.env.VERCEL + ', Firebase=' + isFirebaseEnabled + ', DB=' + !!db);
-    
     const { 
       page = 1, 
       limit = 50, 
@@ -981,15 +727,14 @@ app.get('/api/directorio', async (req, res) => {
     const totalResult = await executeQuery(countQuery, queryParams);
     const total = totalResult[0].total;
     
-    console.log(`📋 MySQL: Directorio query executed - Total: ${total}, Search: "${search || 'none'}", Status: "${status || 'none'}", Origen: "${origen || 'none'}", Genero: "${genero || 'none'}"`);
+    console.log(`📋 Directorio query executed - Total: ${total}, Search: "${search || 'none'}", Status: "${status || 'none'}", Origen: "${origen || 'none'}", Genero: "${genero || 'none'}"`);
     
     res.json({
       data: data,
       total: total,
       page: parseInt(page),
       limit: parseInt(limit),
-      totalPages: Math.ceil(total / limit),
-      source: 'MySQL'
+      totalPages: Math.ceil(total / limit)
     });
   } catch (error) {
     console.error('Error fetching directorio:', error);
@@ -1008,36 +753,6 @@ app.get('/api/directorio', async (req, res) => {
 
 app.get('/api/directorio/stats', async (req, res) => {
   try {
-    // Check if we're in Vercel (production) and Firebase is available
-    if (process.env.VERCEL && isFirebaseEnabled && db) {
-      console.log('📊 Using Firebase for directorio stats in production');
-      
-      // Get all documents from Firebase
-      const snapshot = await db.collection('directorio_contactos').get();
-      const allContactos = snapshot.docs.map(doc => doc.data());
-      
-      const total = allContactos.length;
-      const withPhone = allContactos.filter(c => c.telefono_movil && c.telefono_movil.trim() !== '').length;
-      const withEmail = allContactos.filter(c => c.email && c.email.trim() !== '').length;
-      const clientes = allContactos.filter(c => c.status === 'cliente').length;
-      const prospectos = allContactos.filter(c => c.status === 'prospecto').length;
-      
-      console.log(`✅ Firebase stats: Total: ${total}, Phone: ${withPhone}, Email: ${withEmail}, Clientes: ${clientes}, Prospectos: ${prospectos}`);
-      
-      return res.json({
-        total,
-        withPhone,
-        withEmail,
-        withBirthday: 0, // Firebase doesn't have birthday data yet
-        clientes,
-        prospectos,
-        source: 'Firebase'
-      });
-    }
-    
-    // Fallback to MySQL for local development
-    console.log('📊 Using MySQL for directorio stats (local development)');
-    
     const totalResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos');
     const withPhoneResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos WHERE telefono_movil IS NOT NULL AND telefono_movil != ""');
     const withEmailResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos WHERE email IS NOT NULL AND email != ""');
@@ -1050,8 +765,7 @@ app.get('/api/directorio/stats', async (req, res) => {
       withEmail: withEmailResult[0].total,
       withBirthday: 0, // No birthday column available
       clientes: clientesResult[0].total,
-      prospectos: prospectosResult[0].total,
-      source: 'MySQL'
+      prospectos: prospectosResult[0].total
     });
   } catch (error) {
     console.error('Error fetching directorio stats:', error);
@@ -1061,8 +775,7 @@ app.get('/api/directorio/stats', async (req, res) => {
       withEmail: 0,
       withBirthday: 0,
       clientes: 0,
-      prospectos: 0,
-      error: error.message
+      prospectos: 0
     });
   }
 });
@@ -1621,7 +1334,7 @@ app.put('/api/directorio/update-client-status', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating client status',
-      error: error.message 
+      error: error.message
     });
   }
 });
@@ -1642,24 +1355,24 @@ app.get('/api/notion/databases', async (req, res) => {
       return res.json({
         success: false,
         message: 'Notion API key not configured',
-      databases: []
-    });
+        databases: []
+      });
     }
 
     const notionDatabaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
     
     if (!notionDatabaseId) {
       return res.json({
-      success: false,
+        success: false,
         message: 'Notion Database ID not configured',
-      databases: []
-    });
-  }
+        databases: []
+      });
+    }
 
     // Get database info
     const database = await notion.databases.retrieve({
       database_id: notionDatabaseId
-});
+    });
 
     res.json({
       success: true,
@@ -1685,9 +1398,9 @@ app.get('/api/notion/users', async (req, res) => {
   try {
     if (!isNotionEnabled) {
       return res.status(500).json({
-      success: false,
-      message: 'Notion API key not configured',
-      error: 'Missing API credentials'
+        success: false,
+        message: 'Notion API key not configured',
+        error: 'Missing API credentials'
       });
     }
 
@@ -2095,30 +1808,16 @@ app.get('/api/drive/files', async (req, res) => {
   try {
     const { google } = require('googleapis');
     
-    // Debug credentials
-    console.log('🔍 Google Drive Debug Info:');
-    console.log('- Client Email:', process.env.GOOGLE_DRIVE_CLIENT_EMAIL);
-    console.log('- Project ID:', process.env.GOOGLE_DRIVE_PROJECT_ID);
-    console.log('- Private Key Length:', process.env.GOOGLE_DRIVE_PRIVATE_KEY?.length);
-    console.log('- Private Key Starts:', process.env.GOOGLE_DRIVE_PRIVATE_KEY?.substring(0, 50));
-    console.log('- Private Key Ends:', process.env.GOOGLE_DRIVE_PRIVATE_KEY?.substring(-50));
-    
     // Configurar autenticación
-    const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, '\n');
-    console.log('- Processed Private Key Length:', privateKey.length);
-    console.log('- Processed Private Key Starts:', privateKey.substring(0, 50));
-    
     const auth = new google.auth.GoogleAuth({
       credentials: {
         client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
-        private_key: privateKey,
+        private_key: process.env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, '\n'),
         project_id: process.env.GOOGLE_DRIVE_PROJECT_ID,
       },
       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
 
-    console.log('🔑 Attempting to get access token...');
-    
     const drive = google.drive({ version: 'v3', auth });
     
     // Construir query para la carpeta específica
@@ -2126,11 +1825,9 @@ app.get('/api/drive/files', async (req, res) => {
     if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
       query = `'${process.env.GOOGLE_DRIVE_FOLDER_ID}' in parents`;
       console.log(`Listing files from specific folder: ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
-  } else {
+    } else {
       console.log('No specific folder ID found, listing all files');
     }
-    
-    console.log('📂 Making Drive API request...');
     
     // Listar archivos
     const response = await drive.files.list({
@@ -2141,8 +1838,6 @@ app.get('/api/drive/files', async (req, res) => {
     });
 
     const files = response.data.files || [];
-    
-    console.log(`✅ Successfully retrieved ${files.length} files`);
     
     res.json({
       success: true,
@@ -2159,26 +1854,11 @@ app.get('/api/drive/files', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Google Drive API error details:', {
-      message: error.message,
-      code: error.code,
-      status: error.status,
-      errors: error.errors,
-      stack: error.stack?.substring(0, 500)
-    });
-    
+    console.error('Google Drive API error:', error);
     res.json({
       success: false,
       message: `Google Drive error: ${error.message}`,
-      files: [],
-      debug: {
-        errorCode: error.code,
-        errorStatus: error.status,
-        hasClientEmail: !!process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
-        hasProjectId: !!process.env.GOOGLE_DRIVE_PROJECT_ID,
-        hasPrivateKey: !!process.env.GOOGLE_DRIVE_PRIVATE_KEY,
-        privateKeyLength: process.env.GOOGLE_DRIVE_PRIVATE_KEY?.length
-      }
+      files: []
     });
   }
 });
@@ -2947,291 +2627,3 @@ app.get('/api/directorio/:contactId/linked-policies', async (req, res) => {
     });
   }
 });
-
-// Firebase-based CRUD_DB endpoint (with MySQL fallback)
-app.get('/api/data/crud_db', async (req, res) => {
-  try {
-    const { table, action, id } = req.query;
-    
-    // Import Firebase service dynamically to avoid issues
-    let firebaseService;
-    let useFirebase = false;
-    
-    try {
-      // Try to import Firebase service from frontend
-      const path = require('path');
-      const frontendPath = path.join(__dirname, 'frontend', 'src', 'services', 'firebaseService.js');
-      
-      // Check if Firebase is available (this is a simplified check)
-      // In production, you'd want to check Firebase credentials
-      if (process.env.VITE_FIREBASE_API_KEY) {
-        console.log('Firebase credentials found, attempting to use Firebase...');
-        // For now, we'll use MySQL as fallback since Firebase service needs ES modules
-        useFirebase = false;
-      }
-    } catch (error) {
-      console.warn('Firebase not available, using MySQL fallback');
-      useFirebase = false;
-    }
-
-    if (!useFirebase) {
-      // MySQL fallback - use existing MySQL data
-      if (!table) {
-        // Return all tables info from MySQL
-        const tables = await executeQuery('SHOW TABLES');
-        const tablesWithStats = [];
-        
-        for (const tableRow of tables) {
-          const tableName = Object.values(tableRow)[0];
-          const countResult = await executeQuery(`SELECT COUNT(*) as count FROM \`${tableName}\``);
-          const rowCount = countResult[0].count;
-          
-          tablesWithStats.push({
-            name: tableName,
-            row_count: rowCount,
-            description: getTableDescription(tableName)
-          });
-        }
-
-        return res.status(200).json({
-          success: true,
-          tables: tablesWithStats,
-          total_tables: tablesWithStats.length,
-          total_records: tablesWithStats.reduce((sum, t) => sum + t.row_count, 0),
-          database: 'crud_db',
-          source: 'MySQL',
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Handle specific table operations with MySQL
-      switch (action) {
-        case 'structure':
-          const structure = await getTableStructure(table);
-          res.status(200).json({ success: true, structure });
-          break;
-        
-        case 'search':
-          const { q: searchTerm } = req.query;
-          if (!searchTerm) {
-            return res.status(400).json({ error: 'Search term required' });
-          }
-          
-          // Get table structure to find searchable columns
-          const columns = await executeQuery(`DESCRIBE \`${table}\``);
-          const textColumns = columns
-            .filter(col => col.Type.includes('varchar') || col.Type.includes('text'))
-            .map(col => col.Field);
-          
-          if (textColumns.length === 0) {
-            return res.status(400).json({ error: 'No searchable columns found' });
-          }
-          
-          // Build search query
-          const searchConditions = textColumns
-            .map(col => `\`${col}\` LIKE ?`)
-            .join(' OR ');
-          const searchValues = textColumns.map(() => `%${searchTerm}%`);
-          
-          const searchQuery = `SELECT * FROM \`${table}\` WHERE ${searchConditions} LIMIT 100`;
-          const searchResults = await executeQuery(searchQuery, searchValues);
-          
-          res.status(200).json({ success: true, data: searchResults });
-          break;
-        
-        default:
-          // Get all documents or specific document
-          if (id) {
-            const document = await executeQuery(`SELECT * FROM \`${table}\` WHERE id = ? LIMIT 1`, [id]);
-            if (document.length === 0) {
-              return res.status(404).json({ error: 'Document not found' });
-            }
-            res.status(200).json({ success: true, data: document[0] });
-          } else {
-            const { limit = 1000, page = 1 } = req.query;
-            const offset = (parseInt(page) - 1) * parseInt(limit);
-            const documents = await executeQuery(
-              `SELECT * FROM \`${table}\` LIMIT ? OFFSET ?`, 
-              [parseInt(limit), offset]
-            );
-            res.status(200).json({ 
-              success: true, 
-              data: documents,
-              total: documents.length,
-              page: parseInt(page),
-              table: table,
-              source: 'MySQL'
-            });
-          }
-      }
-    }
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: error.message 
-    });
-  }
-});
-
-app.post('/api/data/crud_db', async (req, res) => {
-  try {
-    const { table } = req.query;
-    const body = req.body;
-    
-    if (!table) {
-      return res.status(400).json({ error: 'Table name required' });
-    }
-    
-    // Build INSERT query
-    const columns = Object.keys(body);
-    const values = Object.values(body);
-    const placeholders = columns.map(() => '?').join(', ');
-    const columnNames = columns.map(col => `\`${col}\``).join(', ');
-    
-    const query = `INSERT INTO \`${table}\` (${columnNames}) VALUES (${placeholders})`;
-    const result = await executeQuery(query, values);
-    
-    res.status(201).json({ 
-      success: true, 
-      id: result.insertId,
-      message: 'Document created successfully'
-    });
-  } catch (error) {
-    console.error('POST Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.put('/api/data/crud_db', async (req, res) => {
-  try {
-    const { table, id } = req.query;
-    const body = req.body;
-    
-    if (!table || !id) {
-      return res.status(400).json({ error: 'Table name and document ID required' });
-    }
-    
-    // Build UPDATE query
-    const columns = Object.keys(body);
-    const values = Object.values(body);
-    const setClause = columns.map(col => `\`${col}\` = ?`).join(', ');
-    
-    const query = `UPDATE \`${table}\` SET ${setClause} WHERE id = ?`;
-    const result = await executeQuery(query, [...values, id]);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-    
-    res.status(200).json({ 
-      success: true,
-      message: 'Document updated successfully'
-    });
-  } catch (error) {
-    console.error('PUT Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.delete('/api/data/crud_db', async (req, res) => {
-  try {
-    const { table, id } = req.query;
-    
-    if (!table || !id) {
-      return res.status(400).json({ error: 'Table name and document ID required' });
-    }
-    
-    const query = `DELETE FROM \`${table}\` WHERE id = ?`;
-    const result = await executeQuery(query, [id]);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-    
-    res.status(200).json({ 
-      success: true,
-      message: 'Document deleted successfully'
-    });
-  } catch (error) {
-    console.error('DELETE Error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Helper function for table descriptions
-function getTableDescription(tableName) {
-  const descriptions = {
-    'directorio_contactos': 'Directorio de contactos/clientes',
-    'autos': 'Seguros de autos',
-    'vida': 'Seguros de vida', 
-    'rc': 'Responsabilidad civil',
-    'gmm': 'Gastos médicos mayores',
-    'transporte': 'Seguros de transporte',
-    'mascotas': 'Seguros de mascotas',
-    'diversos': 'Seguros diversos',
-    'negocio': 'Seguros de negocio',
-    'gruposgmm': 'Grupos GMM'
-  };
-  return descriptions[tableName] || tableName;
-}
-
-// Simple CRUD_DB test endpoint
-app.get('/api/data/crud_db', async (req, res) => {
-  try {
-    console.log('📋 CRUD_DB endpoint called');
-    const { table } = req.query;
-    
-    if (!table) {
-      // Return simple table list
-      console.log('📋 Getting table list...');
-      const tables = await executeQuery('SHOW TABLES');
-      const tableNames = tables.map(t => Object.values(t)[0]);
-      
-      res.json({
-        success: true,
-        message: 'CRUD DB endpoint working!',
-        database: 'crud_db',
-        tables: tableNames,
-        source: 'MySQL',
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      // Return data from specific table
-      console.log(`📋 Getting data from table: ${table}`);
-      const data = await executeQuery(`SELECT * FROM \`${table}\` LIMIT 10`);
-      
-      res.json({
-        success: true,
-        table: table,
-        data: data,
-        count: data.length,
-        source: 'MySQL'
-      });
-    }
-  } catch (error) {
-    console.error('❌ CRUD_DB Error:', error);
-    res.status(500).json({ 
-      error: 'Database error',
-      message: error.message,
-      success: false
-    });
-  }
-});
-
-// Debug endpoint for Firebase status
-app.get('/api/debug/firebase', (req, res) => {
-  res.json({
-    isVercel: !!process.env.VERCEL,
-    isFirebaseEnabled: isFirebaseEnabled,
-    hasDb: !!db,
-    hasAdmin: !!admin,
-    firebaseProjectId: process.env.VITE_FIREBASE_PROJECT_ID ? 'configured' : 'missing',
-    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? 'configured' : 'missing',
-    environment: process.env.NODE_ENV || 'development',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Export for Vercel serverless deployment
-module.exports = app;
