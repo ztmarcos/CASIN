@@ -64,15 +64,41 @@ try {
     console.log('🔥 Firebase credentials found, initializing...');
     admin = require('firebase-admin');
     
-    const serviceAccount = {
-      type: "service_account",
-      project_id: process.env.VITE_FIREBASE_PROJECT_ID,
-      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
-    };
-
-    console.log('🔥 Service account created, project_id:', serviceAccount.project_id);
-    console.log('🔥 Client email:', serviceAccount.client_email);
+    // Try to create a proper service account object
+    let serviceAccount;
+    
+    try {
+      // First, try to use the private key as-is (assuming it's properly formatted)
+      const privateKey = process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n');
+      
+      // Validate that the private key looks like a proper PEM key
+      if (!privateKey.includes('-----BEGIN PRIVATE KEY-----') || !privateKey.includes('-----END PRIVATE KEY-----')) {
+        throw new Error('Private key is not in proper PEM format');
+      }
+      
+      serviceAccount = {
+        type: "service_account",
+        project_id: process.env.VITE_FIREBASE_PROJECT_ID,
+        private_key: privateKey,
+        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
+      };
+      
+      console.log('🔥 Service account created with PEM key, project_id:', serviceAccount.project_id);
+      console.log('🔥 Client email:', serviceAccount.client_email);
+      console.log('🔥 Private key format looks correct');
+      
+    } catch (keyError) {
+      console.warn('⚠️  Private key format issue:', keyError.message);
+      
+      // Fallback: Try using environment variables without private key (this will fail but show better error)
+      serviceAccount = {
+        type: "service_account",
+        project_id: process.env.VITE_FIREBASE_PROJECT_ID,
+        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
+      };
+      
+      console.log('🔥 Attempting fallback without private key for debugging...');
+    }
 
     if (!admin.apps.length) {
       console.log('🔥 No existing Firebase apps, creating new one...');
@@ -98,7 +124,16 @@ try {
   }
 } catch (error) {
   console.error('❌ Could not initialize Firebase Admin:', error.message);
-  console.error('❌ Full error:', error);
+  console.error('❌ Error code:', error.code || 'unknown');
+  console.error('❌ Error info:', error.errorInfo || 'none');
+  
+  // If it's a private key issue, provide specific guidance
+  if (error.message.includes('private key') || error.message.includes('PEM')) {
+    console.error('💡 SOLUTION: The FIREBASE_PRIVATE_KEY must be a complete PEM format key');
+    console.error('💡 It should start with "-----BEGIN PRIVATE KEY-----" and end with "-----END PRIVATE KEY-----"');
+    console.error('💡 All newlines should be escaped as \\n when setting in Vercel environment variables');
+  }
+  
   isFirebaseEnabled = false;
   db = null;
 }
