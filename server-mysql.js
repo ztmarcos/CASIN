@@ -212,6 +212,14 @@ app.get('/api/health', async (req, res) => {
         database: databaseStatus,
         databaseType: databaseType,
         firebaseConfigured: hasFirebaseConfig,
+        debug: {
+          isVercel: !!process.env.VERCEL,
+          isFirebaseEnabled: isFirebaseEnabled,
+          hasDb: !!db,
+          hasAdmin: !!admin,
+          firebaseProjectId: process.env.VITE_FIREBASE_PROJECT_ID ? 'configured' : 'missing',
+          firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? 'configured' : 'missing'
+        },
         services: {
           notion: !!(process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY),
           openai: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY),
