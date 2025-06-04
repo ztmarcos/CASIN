@@ -748,9 +748,92 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
   }
 });
 
-// Directorio endpoints (using real data)
+// Directorio endpoints (Firebase in production, MySQL fallback)
 app.get('/api/directorio', async (req, res) => {
   try {
+    // Check if we're in Vercel (production) and Firebase is available
+    if (process.env.VERCEL && isFirebaseEnabled && db) {
+      console.log('📋 Using Firebase for directorio in production');
+      
+      const { 
+        page = 1, 
+        limit = 50, 
+        search, 
+        status, 
+        origen, 
+        genero 
+      } = req.query;
+      
+      // Get all documents from Firebase
+      const snapshot = await db.collection('directorio_contactos').get();
+      let allContactos = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Apply search filter
+      if (search && search.trim()) {
+        const searchTerm = search.trim().toLowerCase();
+        allContactos = allContactos.filter(contacto => {
+          const searchableFields = [
+            contacto.nombre_completo,
+            contacto.email,
+            contacto.telefono_movil,
+            contacto.telefono_oficina,
+            contacto.telefono_casa,
+            contacto.empresa,
+            contacto.nickname,
+            contacto.apellido
+          ];
+          
+          return searchableFields.some(field => 
+            field && field.toString().toLowerCase().includes(searchTerm)
+          );
+        });
+      }
+      
+      // Apply status filter
+      if (status && status.trim()) {
+        allContactos = allContactos.filter(c => c.status === status.trim());
+      }
+      
+      // Apply origen filter
+      if (origen && origen.trim()) {
+        allContactos = allContactos.filter(c => c.origen === origen.trim());
+      }
+      
+      // Apply genero filter
+      if (genero && genero.trim()) {
+        allContactos = allContactos.filter(c => c.genero === genero.trim());
+      }
+      
+      // Sort by creation date (newest first)
+      allContactos.sort((a, b) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB - dateA;
+      });
+      
+      // Apply pagination
+      const startIndex = (parseInt(page) - 1) * parseInt(limit);
+      const endIndex = startIndex + parseInt(limit);
+      const paginatedData = allContactos.slice(startIndex, endIndex);
+      
+      console.log(`✅ Firebase: Found ${allContactos.length} total contactos, showing ${paginatedData.length}`);
+      
+      return res.json({
+        data: paginatedData,
+        total: allContactos.length,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(allContactos.length / parseInt(limit)),
+        source: 'Firebase'
+      });
+    }
+    
+    // Fallback to MySQL for local development
+    console.log('📋 Using MySQL for directorio (local development)');
+    
     const { 
       page = 1, 
       limit = 50, 
@@ -828,14 +911,15 @@ app.get('/api/directorio', async (req, res) => {
     const totalResult = await executeQuery(countQuery, queryParams);
     const total = totalResult[0].total;
     
-    console.log(`📋 Directorio query executed - Total: ${total}, Search: "${search || 'none'}", Status: "${status || 'none'}", Origen: "${origen || 'none'}", Genero: "${genero || 'none'}"`);
+    console.log(`📋 MySQL: Directorio query executed - Total: ${total}, Search: "${search || 'none'}", Status: "${status || 'none'}", Origen: "${origen || 'none'}", Genero: "${genero || 'none'}"`);
     
     res.json({
       data: data,
       total: total,
       page: parseInt(page),
       limit: parseInt(limit),
-      totalPages: Math.ceil(total / limit)
+      totalPages: Math.ceil(total / limit),
+      source: 'MySQL'
     });
   } catch (error) {
     console.error('Error fetching directorio:', error);
@@ -854,6 +938,36 @@ app.get('/api/directorio', async (req, res) => {
 
 app.get('/api/directorio/stats', async (req, res) => {
   try {
+    // Check if we're in Vercel (production) and Firebase is available
+    if (process.env.VERCEL && isFirebaseEnabled && db) {
+      console.log('📊 Using Firebase for directorio stats in production');
+      
+      // Get all documents from Firebase
+      const snapshot = await db.collection('directorio_contactos').get();
+      const allContactos = snapshot.docs.map(doc => doc.data());
+      
+      const total = allContactos.length;
+      const withPhone = allContactos.filter(c => c.telefono_movil && c.telefono_movil.trim() !== '').length;
+      const withEmail = allContactos.filter(c => c.email && c.email.trim() !== '').length;
+      const clientes = allContactos.filter(c => c.status === 'cliente').length;
+      const prospectos = allContactos.filter(c => c.status === 'prospecto').length;
+      
+      console.log(`✅ Firebase stats: Total: ${total}, Phone: ${withPhone}, Email: ${withEmail}, Clientes: ${clientes}, Prospectos: ${prospectos}`);
+      
+      return res.json({
+        total,
+        withPhone,
+        withEmail,
+        withBirthday: 0, // Firebase doesn't have birthday data yet
+        clientes,
+        prospectos,
+        source: 'Firebase'
+      });
+    }
+    
+    // Fallback to MySQL for local development
+    console.log('📊 Using MySQL for directorio stats (local development)');
+    
     const totalResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos');
     const withPhoneResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos WHERE telefono_movil IS NOT NULL AND telefono_movil != ""');
     const withEmailResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos WHERE email IS NOT NULL AND email != ""');
@@ -866,7 +980,8 @@ app.get('/api/directorio/stats', async (req, res) => {
       withEmail: withEmailResult[0].total,
       withBirthday: 0, // No birthday column available
       clientes: clientesResult[0].total,
-      prospectos: prospectosResult[0].total
+      prospectos: prospectosResult[0].total,
+      source: 'MySQL'
     });
   } catch (error) {
     console.error('Error fetching directorio stats:', error);
@@ -876,7 +991,8 @@ app.get('/api/directorio/stats', async (req, res) => {
       withEmail: 0,
       withBirthday: 0,
       clientes: 0,
-      prospectos: 0
+      prospectos: 0,
+      error: error.message
     });
   }
 });
