@@ -22,6 +22,8 @@ if (result.error) {
     'OPENAI_API_KEY',
     'VITE_OPENAI_API_KEY',
     'VITE_FIREBASE_API_KEY',
+    'FIREBASE_PRIVATE_KEY',
+    'VITE_FIREBASE_PROJECT_ID',
     'GOOGLE_DRIVE_CLIENT_EMAIL',
     'GOOGLE_DRIVE_PROJECT_ID',
     'GOOGLE_DRIVE_PRIVATE_KEY',
@@ -48,16 +50,52 @@ if (result.error) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// MySQL connection configuration
+// Initialize Firebase Admin if credentials are available
+let admin = null;
+let db = null;
+let isFirebaseEnabled = false;
+
+try {
+  if (process.env.VITE_FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+    admin = require('firebase-admin');
+    
+    const serviceAccount = {
+      type: "service_account",
+      project_id: process.env.VITE_FIREBASE_PROJECT_ID,
+      private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
+    };
+
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+        databaseURL: `https://${process.env.VITE_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
+      });
+    }
+    
+    db = admin.firestore();
+    isFirebaseEnabled = true;
+    console.log('✅ Firebase Admin initialized');
+  } else {
+    console.log('⚠️  Firebase credentials not found - Firebase features disabled');
+  }
+} catch (error) {
+  console.warn('⚠️  Could not initialize Firebase Admin:', error.message);
+}
+
+// MySQL connection configuration (fallback)
 const dbConfig = {
-  host: 'localhost',
-  user: 'root',
-  password: '', // Add your MySQL password here if needed
-  database: 'crud_db',
-  port: 3306
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'crud_db',
+  port: process.env.DB_PORT || process.env.MYSQLPORT || 3306,
+  connectTimeout: 60000,
+  acquireTimeout: 60000,
+  timeout: 60000
 };
 
-// Create MySQL connection pool
+// Create MySQL connection pool (fallback)
 let pool;
 try {
   pool = mysql.createPool({
@@ -66,10 +104,12 @@ try {
     connectionLimit: 10,
     queueLimit: 0
   });
-  console.log('✅ MySQL connection pool created');
+  console.log('✅ MySQL connection pool created (fallback)');
 } catch (error) {
   console.error('❌ MySQL connection failed:', error);
-  process.exit(1);
+  if (!isFirebaseEnabled) {
+    console.error('❌ No database available - both Firebase and MySQL failed');
+  }
 }
 
 // Middleware
@@ -129,14 +169,75 @@ async function getTableStructure(tableName) {
 }
 
 // API Routes
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    message: 'CASIN CRM API with MySQL is running!',
-    database: 'MySQL connected'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    let databaseStatus = 'connected';
+    let databaseType = 'Firebase (Frontend)';
+    let error = null;
+
+    // Check if Firebase credentials are available for frontend
+    const hasFirebaseConfig = !!(
+      process.env.VITE_FIREBASE_API_KEY && 
+      process.env.VITE_FIREBASE_PROJECT_ID &&
+      process.env.VITE_FIREBASE_AUTH_DOMAIN
+    );
+
+    if (hasFirebaseConfig) {
+      databaseStatus = 'connected';
+      databaseType = 'Firebase (Frontend)';
+    } else {
+      // Fallback to MySQL if Firebase config not available
+      if (pool) {
+        try {
+          await pool.execute('SELECT 1');
+          databaseStatus = 'connected';
+          databaseType = 'MySQL';
+        } catch (mysqlError) {
+          console.warn('MySQL health check failed:', mysqlError.message);
+          databaseStatus = 'disconnected';
+          error = mysqlError.message;
+        }
+      } else {
+        databaseStatus = 'disconnected';
+        error = 'No database configuration available';
+      }
+    }
+
+    if (databaseStatus === 'connected') {
+      res.json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        message: `CASIN CRM API with ${databaseType} is running!`,
+        database: databaseStatus,
+        databaseType: databaseType,
+        firebaseConfigured: hasFirebaseConfig,
+        services: {
+          notion: !!(process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY),
+          openai: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY),
+          googleDrive: !!(process.env.GOOGLE_DRIVE_CLIENT_EMAIL),
+          email: !!(process.env.SMTP_HOST)
+        }
+      });
+    } else {
+      res.status(500).json({
+        status: 'unhealthy',
+        database: databaseStatus,
+        databaseType: databaseType,
+        error: error || 'No database connection available',
+        timestamp: new Date().toISOString(),
+        firebaseConfigured: hasFirebaseConfig
+      });
+    }
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 app.get('/api/test', (req, res) => {
@@ -460,7 +561,7 @@ app.get('/api/birthday', async (req, res) => {
         if (parseInt(day) < 1 || parseInt(day) > 31) return null;
         
         return birthDate;
-      } catch (error) {
+  } catch (error) {
         console.error('Error parsing RFC:', rfc, error);
         return null;
       }
@@ -1080,6 +1181,207 @@ app.post('/api/directorio/:id/link-cliente', async (req, res) => {
   }
 });
 
+// GET - Get relationships between directorio and policy tables with intelligent name matching
+app.get('/api/directorio-relationships', async (req, res) => {
+  try {
+    console.log('🔍 Starting intelligent relationship analysis...');
+    
+    // Get all tables to show potential relationships
+    const tables = await executeQuery("SHOW TABLES");
+    const tableNames = tables.map(t => Object.values(t)[0]).filter(name => name !== 'directorio_contactos');
+    
+    // Get all directorio contacts with their official names
+    const directorioContacts = await executeQuery(
+      "SELECT id, nombre_completo, nombre_completo_oficial, email, telefono_movil FROM directorio_contactos WHERE nombre_completo_oficial IS NOT NULL AND nombre_completo_oficial != ''"
+    );
+    
+    console.log(`📋 Found ${directorioContacts.length} directorio contacts with official names`);
+    
+    const relationships = [];
+    let totalMatches = 0;
+    
+    // Define name fields mapping for each table
+    const nameFieldsMapping = {
+      'autos': ['nombre_contratante'],
+      'gmm': ['contratante', 'nombre_del_asegurado'], 
+      'hogar': ['contratante'],
+      'negocio': ['contratante'],
+      'vida': ['contratante', 'nombre_del_asegurado'],
+      'diversos': ['contratante'],
+      'mascotas': ['contratante'],
+      'transporte': ['contratante']
+    };
+    
+    for (const tableName of tableNames) {
+      try {
+        const nameFields = nameFieldsMapping[tableName];
+        if (!nameFields) {
+          console.log(`⏭️  Skipping ${tableName} - no name fields mapped`);
+          continue;
+        }
+        
+        console.log(`🔍 Analyzing table: ${tableName} with fields: ${nameFields.join(', ')}`);
+        
+        // Get table structure to verify fields exist
+        const structure = await getTableStructure(tableName);
+        const availableFields = structure.map(col => col.name);
+        const validFields = nameFields.filter(field => availableFields.includes(field));
+        
+        if (validFields.length === 0) {
+          console.log(`⏭️  Skipping ${tableName} - no valid name fields found`);
+          continue;
+        }
+        
+        // Get all records from this table with name fields
+        const selectFields = ['id', ...validFields].join(', ');
+        const policyRecords = await executeQuery(`SELECT ${selectFields} FROM \`${tableName}\``);
+        
+        console.log(`📊 Found ${policyRecords.length} records in ${tableName}`);
+        
+        const tableMatches = [];
+        let tableMatchCount = 0;
+        
+        // Compare each directorio contact with each policy record
+        for (const contact of directorioContacts) {
+          const officialName = contact.nombre_completo_oficial.trim().toLowerCase();
+          
+          for (const record of policyRecords) {
+            for (const field of validFields) {
+              const policyName = record[field];
+              if (!policyName) continue;
+              
+              const cleanPolicyName = policyName.trim().toLowerCase();
+              
+              // Exact match
+              if (officialName === cleanPolicyName) {
+                tableMatches.push({
+                  directorio_id: contact.id,
+                  directorio_name: contact.nombre_completo_oficial,
+                  directorio_email: contact.email,
+                  directorio_phone: contact.telefono_movil,
+                  policy_table: tableName,
+                  policy_id: record.id,
+                  policy_name: policyName,
+                  policy_field: field,
+                  match_type: 'exact',
+                  confidence: 100
+                });
+                tableMatchCount++;
+                continue;
+              }
+              
+              // Fuzzy match - contains or similar
+              if (officialName.length > 10 && cleanPolicyName.includes(officialName)) {
+                tableMatches.push({
+                  directorio_id: contact.id,
+                  directorio_name: contact.nombre_completo_oficial,
+                  directorio_email: contact.email,
+                  directorio_phone: contact.telefono_movil,
+                  policy_table: tableName,
+                  policy_id: record.id,
+                  policy_name: policyName,
+                  policy_field: field,
+                  match_type: 'fuzzy_contains',
+                  confidence: 85
+                });
+                tableMatchCount++;
+                continue;
+              }
+              
+              // Reverse contains - policy name contains directorio name
+              if (cleanPolicyName.length > 10 && officialName.includes(cleanPolicyName)) {
+                tableMatches.push({
+                  directorio_id: contact.id,
+                  directorio_name: contact.nombre_completo_oficial,
+                  directorio_email: contact.email,
+                  directorio_phone: contact.telefono_movil,
+                  policy_table: tableName,
+                  policy_id: record.id,
+                  policy_name: policyName,
+                  policy_field: field,
+                  match_type: 'fuzzy_reverse',
+                  confidence: 80
+                });
+                tableMatchCount++;
+                continue;
+              }
+              
+              // Similar words match (at least 2 words in common)
+              const officialWords = officialName.split(' ').filter(w => w.length > 2);
+              const policyWords = cleanPolicyName.split(' ').filter(w => w.length > 2);
+              const commonWords = officialWords.filter(word => policyWords.includes(word));
+              
+              if (commonWords.length >= 2 && officialWords.length >= 2) {
+                tableMatches.push({
+                  directorio_id: contact.id,
+                  directorio_name: contact.nombre_completo_oficial,
+                  directorio_email: contact.email,
+                  directorio_phone: contact.telefono_movil,
+                  policy_table: tableName,
+                  policy_id: record.id,
+                  policy_name: policyName,
+                  policy_field: field,
+                  match_type: 'word_similarity',
+                  confidence: Math.round((commonWords.length / Math.max(officialWords.length, policyWords.length)) * 70),
+                  common_words: commonWords
+                });
+                tableMatchCount++;
+              }
+            }
+          }
+        }
+        
+        console.log(`✅ Found ${tableMatchCount} matches in ${tableName}`);
+        totalMatches += tableMatchCount;
+        
+        relationships.push({
+          table: tableName,
+          name_fields: validFields,
+          total_records: policyRecords.length,
+          matches_found: tableMatchCount,
+          matches: tableMatches.slice(0, 50) // Limit to first 50 matches per table
+        });
+        
+      } catch (error) {
+        console.error(`❌ Error analyzing table ${tableName}:`, error.message);
+        relationships.push({
+          table: tableName,
+          error: error.message,
+          matches_found: 0,
+          matches: []
+        });
+      }
+    }
+    
+    console.log(`🎯 Relationship analysis completed - Total matches: ${totalMatches}`);
+    
+    const summary = {
+      total_directorio_contacts: directorioContacts.length,
+      tables_analyzed: relationships.length,
+      total_matches_found: totalMatches,
+      match_distribution: relationships.map(r => ({
+        table: r.table,
+        matches: r.matches_found || 0
+      })).sort((a, b) => b.matches - a.matches)
+    };
+    
+    res.json({
+      success: true,
+      summary,
+      relationships,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting relationships:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting relationships',
+      error: error.message
+    });
+  }
+});
+
 // PUT - Update client status automatically
 app.put('/api/directorio/update-client-status', async (req, res) => {
   try {
@@ -1133,7 +1435,7 @@ app.put('/api/directorio/update-client-status', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating client status',
-      error: error.message
+      error: error.message 
     });
   }
 });
@@ -1154,24 +1456,24 @@ app.get('/api/notion/databases', async (req, res) => {
       return res.json({
         success: false,
         message: 'Notion API key not configured',
-        databases: []
-      });
+      databases: []
+    });
     }
 
     const notionDatabaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
     
     if (!notionDatabaseId) {
       return res.json({
-        success: false,
+      success: false,
         message: 'Notion Database ID not configured',
-        databases: []
-      });
-    }
+      databases: []
+    });
+  }
 
     // Get database info
     const database = await notion.databases.retrieve({
       database_id: notionDatabaseId
-    });
+});
 
     res.json({
       success: true,
@@ -1197,9 +1499,9 @@ app.get('/api/notion/users', async (req, res) => {
   try {
     if (!isNotionEnabled) {
       return res.status(500).json({
-        success: false,
-        message: 'Notion API key not configured',
-        error: 'Missing API credentials'
+      success: false,
+      message: 'Notion API key not configured',
+      error: 'Missing API credentials'
       });
     }
 
@@ -1624,7 +1926,7 @@ app.get('/api/drive/files', async (req, res) => {
     if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
       query = `'${process.env.GOOGLE_DRIVE_FOLDER_ID}' in parents`;
       console.log(`Listing files from specific folder: ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
-    } else {
+  } else {
       console.log('No specific folder ID found, listing all files');
     }
     
@@ -2252,4 +2554,451 @@ app.listen(PORT, () => {
   console.log(`🗄️  Database: MySQL (crud_db)`);
   console.log(`📊 Data: Real data from MySQL tables`);
   console.log(`🎯 Mode: Production with real database`);
+}); 
+
+// POST - Link directorio contact to specific policy
+app.post('/api/directorio/:contactId/link-policy', async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const { policyTable, policyId, matchType, confidence } = req.body;
+    
+    console.log(`🔗 Linking directorio contact ${contactId} to ${policyTable}:${policyId}`);
+    
+    // Verify contact exists
+    const contact = await executeQuery(
+      'SELECT * FROM directorio_contactos WHERE id = ?',
+      [contactId]
+    );
+    
+    if (contact.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Directorio contact not found'
+      });
+    }
+    
+    // Verify policy record exists
+    const policyRecord = await executeQuery(
+      `SELECT * FROM \`${policyTable}\` WHERE id = ?`,
+      [policyId]
+    );
+    
+    if (policyRecord.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Policy record not found'
+      });
+    }
+    
+    // Create or update the relationship in a relationships table
+    try {
+      await executeQuery(`
+        CREATE TABLE IF NOT EXISTS directorio_policy_links (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          directorio_id INT NOT NULL,
+          policy_table VARCHAR(100) NOT NULL,
+          policy_id INT NOT NULL,
+          match_type VARCHAR(50),
+          confidence INT,
+          linked_by VARCHAR(100),
+          linked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          verified BOOLEAN DEFAULT FALSE,
+          notes TEXT,
+          UNIQUE KEY unique_link (directorio_id, policy_table, policy_id),
+          INDEX idx_directorio (directorio_id),
+          INDEX idx_policy (policy_table, policy_id)
+        )
+      `);
+      
+      // Insert or update the link
+      await executeQuery(`
+        INSERT INTO directorio_policy_links 
+        (directorio_id, policy_table, policy_id, match_type, confidence, linked_by) 
+        VALUES (?, ?, ?, ?, ?, 'system')
+        ON DUPLICATE KEY UPDATE 
+        match_type = VALUES(match_type),
+        confidence = VALUES(confidence),
+        linked_at = CURRENT_TIMESTAMP
+      `, [contactId, policyTable, policyId, matchType || 'manual', confidence || 95]);
+      
+      res.json({
+        success: true,
+        message: 'Policy linked successfully',
+        data: {
+          directorio_id: contactId,
+          policy_table: policyTable,
+          policy_id: policyId,
+          match_type: matchType || 'manual'
+        }
+      });
+      
+    } catch (linkError) {
+      console.error('Error creating link:', linkError);
+      res.status(500).json({
+        success: false,
+        message: 'Error creating policy link',
+        error: linkError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error linking policy:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error linking policy',
+      error: error.message
+    });
+  }
 });
+
+// GET - Get all linked policies for a directorio contact
+app.get('/api/directorio/:contactId/linked-policies', async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    
+    console.log(`📋 Getting linked policies for contact ${contactId}`);
+    
+    // Get all links for this contact
+    const links = await executeQuery(`
+      SELECT l.*, d.nombre_completo, d.nombre_completo_oficial, d.email
+      FROM directorio_policy_links l
+      JOIN directorio_contactos d ON l.directorio_id = d.id
+      WHERE l.directorio_id = ?
+      ORDER BY l.linked_at DESC
+    `, [contactId]);
+    
+    if (links.length === 0) {
+      return res.json({
+        success: true,
+        message: 'No linked policies found',
+        data: {
+          contact_id: contactId,
+          total_links: 0,
+          linked_policies: []
+        }
+      });
+    }
+    
+    // Get detailed policy information for each link
+    const linkedPolicies = [];
+    
+    for (const link of links) {
+      try {
+        const policyData = await executeQuery(
+          `SELECT * FROM \`${link.policy_table}\` WHERE id = ?`,
+          [link.policy_id]
+        );
+        
+        if (policyData.length > 0) {
+          linkedPolicies.push({
+            link_id: link.id,
+            policy_table: link.policy_table,
+            policy_id: link.policy_id,
+            policy_data: policyData[0],
+            match_type: link.match_type,
+            confidence: link.confidence,
+            linked_at: link.linked_at,
+            verified: link.verified,
+            notes: link.notes
+          });
+        }
+      } catch (policyError) {
+        console.error(`Error getting policy data for ${link.policy_table}:${link.policy_id}`, policyError);
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        contact_id: contactId,
+        contact_name: links[0].nombre_completo,
+        official_name: links[0].nombre_completo_oficial,
+        email: links[0].email,
+        total_links: linkedPolicies.length,
+        linked_policies: linkedPolicies
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error getting linked policies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting linked policies',
+      error: error.message
+    });
+  }
+});
+
+// Firebase-based CRUD_DB endpoint (with MySQL fallback)
+app.get('/api/data/crud_db', async (req, res) => {
+  try {
+    const { table, action, id } = req.query;
+    
+    // Import Firebase service dynamically to avoid issues
+    let firebaseService;
+    let useFirebase = false;
+    
+    try {
+      // Try to import Firebase service from frontend
+      const path = require('path');
+      const frontendPath = path.join(__dirname, 'frontend', 'src', 'services', 'firebaseService.js');
+      
+      // Check if Firebase is available (this is a simplified check)
+      // In production, you'd want to check Firebase credentials
+      if (process.env.VITE_FIREBASE_API_KEY) {
+        console.log('Firebase credentials found, attempting to use Firebase...');
+        // For now, we'll use MySQL as fallback since Firebase service needs ES modules
+        useFirebase = false;
+      }
+    } catch (error) {
+      console.warn('Firebase not available, using MySQL fallback');
+      useFirebase = false;
+    }
+
+    if (!useFirebase) {
+      // MySQL fallback - use existing MySQL data
+      if (!table) {
+        // Return all tables info from MySQL
+        const tables = await executeQuery('SHOW TABLES');
+        const tablesWithStats = [];
+        
+        for (const tableRow of tables) {
+          const tableName = Object.values(tableRow)[0];
+          const countResult = await executeQuery(`SELECT COUNT(*) as count FROM \`${tableName}\``);
+          const rowCount = countResult[0].count;
+          
+          tablesWithStats.push({
+            name: tableName,
+            row_count: rowCount,
+            description: getTableDescription(tableName)
+          });
+        }
+
+        return res.status(200).json({
+          success: true,
+          tables: tablesWithStats,
+          total_tables: tablesWithStats.length,
+          total_records: tablesWithStats.reduce((sum, t) => sum + t.row_count, 0),
+          database: 'crud_db',
+          source: 'MySQL',
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Handle specific table operations with MySQL
+      switch (action) {
+        case 'structure':
+          const structure = await getTableStructure(table);
+          res.status(200).json({ success: true, structure });
+          break;
+        
+        case 'search':
+          const { q: searchTerm } = req.query;
+          if (!searchTerm) {
+            return res.status(400).json({ error: 'Search term required' });
+          }
+          
+          // Get table structure to find searchable columns
+          const columns = await executeQuery(`DESCRIBE \`${table}\``);
+          const textColumns = columns
+            .filter(col => col.Type.includes('varchar') || col.Type.includes('text'))
+            .map(col => col.Field);
+          
+          if (textColumns.length === 0) {
+            return res.status(400).json({ error: 'No searchable columns found' });
+          }
+          
+          // Build search query
+          const searchConditions = textColumns
+            .map(col => `\`${col}\` LIKE ?`)
+            .join(' OR ');
+          const searchValues = textColumns.map(() => `%${searchTerm}%`);
+          
+          const searchQuery = `SELECT * FROM \`${table}\` WHERE ${searchConditions} LIMIT 100`;
+          const searchResults = await executeQuery(searchQuery, searchValues);
+          
+          res.status(200).json({ success: true, data: searchResults });
+          break;
+        
+        default:
+          // Get all documents or specific document
+          if (id) {
+            const document = await executeQuery(`SELECT * FROM \`${table}\` WHERE id = ? LIMIT 1`, [id]);
+            if (document.length === 0) {
+              return res.status(404).json({ error: 'Document not found' });
+            }
+            res.status(200).json({ success: true, data: document[0] });
+          } else {
+            const { limit = 1000, page = 1 } = req.query;
+            const offset = (parseInt(page) - 1) * parseInt(limit);
+            const documents = await executeQuery(
+              `SELECT * FROM \`${table}\` LIMIT ? OFFSET ?`, 
+              [parseInt(limit), offset]
+            );
+            res.status(200).json({ 
+              success: true, 
+              data: documents,
+              total: documents.length,
+              page: parseInt(page),
+              table: table,
+              source: 'MySQL'
+            });
+          }
+      }
+    }
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
+app.post('/api/data/crud_db', async (req, res) => {
+  try {
+    const { table } = req.query;
+    const body = req.body;
+    
+    if (!table) {
+      return res.status(400).json({ error: 'Table name required' });
+    }
+    
+    // Build INSERT query
+    const columns = Object.keys(body);
+    const values = Object.values(body);
+    const placeholders = columns.map(() => '?').join(', ');
+    const columnNames = columns.map(col => `\`${col}\``).join(', ');
+    
+    const query = `INSERT INTO \`${table}\` (${columnNames}) VALUES (${placeholders})`;
+    const result = await executeQuery(query, values);
+    
+    res.status(201).json({ 
+      success: true, 
+      id: result.insertId,
+      message: 'Document created successfully'
+    });
+  } catch (error) {
+    console.error('POST Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/data/crud_db', async (req, res) => {
+  try {
+    const { table, id } = req.query;
+    const body = req.body;
+    
+    if (!table || !id) {
+      return res.status(400).json({ error: 'Table name and document ID required' });
+    }
+    
+    // Build UPDATE query
+    const columns = Object.keys(body);
+    const values = Object.values(body);
+    const setClause = columns.map(col => `\`${col}\` = ?`).join(', ');
+    
+    const query = `UPDATE \`${table}\` SET ${setClause} WHERE id = ?`;
+    const result = await executeQuery(query, [...values, id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    res.status(200).json({ 
+      success: true,
+      message: 'Document updated successfully'
+    });
+  } catch (error) {
+    console.error('PUT Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/data/crud_db', async (req, res) => {
+  try {
+    const { table, id } = req.query;
+    
+    if (!table || !id) {
+      return res.status(400).json({ error: 'Table name and document ID required' });
+    }
+    
+    const query = `DELETE FROM \`${table}\` WHERE id = ?`;
+    const result = await executeQuery(query, [id]);
+    
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    
+    res.status(200).json({ 
+      success: true,
+      message: 'Document deleted successfully'
+    });
+  } catch (error) {
+    console.error('DELETE Error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Helper function for table descriptions
+function getTableDescription(tableName) {
+  const descriptions = {
+    'directorio_contactos': 'Directorio de contactos/clientes',
+    'autos': 'Seguros de autos',
+    'vida': 'Seguros de vida', 
+    'rc': 'Responsabilidad civil',
+    'gmm': 'Gastos médicos mayores',
+    'transporte': 'Seguros de transporte',
+    'mascotas': 'Seguros de mascotas',
+    'diversos': 'Seguros diversos',
+    'negocio': 'Seguros de negocio',
+    'gruposgmm': 'Grupos GMM'
+  };
+  return descriptions[tableName] || tableName;
+}
+
+// Simple CRUD_DB test endpoint
+app.get('/api/data/crud_db', async (req, res) => {
+  try {
+    console.log('📋 CRUD_DB endpoint called');
+    const { table } = req.query;
+    
+    if (!table) {
+      // Return simple table list
+      console.log('📋 Getting table list...');
+      const tables = await executeQuery('SHOW TABLES');
+      const tableNames = tables.map(t => Object.values(t)[0]);
+      
+      res.json({
+        success: true,
+        message: 'CRUD DB endpoint working!',
+        database: 'crud_db',
+        tables: tableNames,
+        source: 'MySQL',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      // Return data from specific table
+      console.log(`📋 Getting data from table: ${table}`);
+      const data = await executeQuery(`SELECT * FROM \`${table}\` LIMIT 10`);
+      
+      res.json({
+        success: true,
+        table: table,
+        data: data,
+        count: data.length,
+        source: 'MySQL'
+      });
+    }
+  } catch (error) {
+    console.error('❌ CRUD_DB Error:', error);
+    res.status(500).json({ 
+      error: 'Database error',
+      message: error.message,
+      success: false
+    });
+  }
+});
+
+// Export for Vercel serverless deployment
+module.exports = app;
