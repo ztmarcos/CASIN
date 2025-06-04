@@ -1,15 +1,18 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
-  "framework": "vite",
-  "installCommand": "npm install",
-  "devCommand": "cd frontend && npm run dev",
-  "functions": {
-    "server-mysql.js": {
-      "runtime": "@vercel/node"
+  "builds": [
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "server-mysql.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
@@ -17,7 +20,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/frontend/dist/$1"
+      "destination": "/frontend/$1"
     }
   ],
   "headers": [
