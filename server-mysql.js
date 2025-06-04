@@ -56,7 +56,12 @@ let db = null;
 let isFirebaseEnabled = false;
 
 try {
+  console.log('🔥 Attempting to initialize Firebase Admin...');
+  console.log('- VITE_FIREBASE_PROJECT_ID:', !!process.env.VITE_FIREBASE_PROJECT_ID);
+  console.log('- FIREBASE_PRIVATE_KEY:', !!process.env.FIREBASE_PRIVATE_KEY);
+  
   if (process.env.VITE_FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY) {
+    console.log('🔥 Firebase credentials found, initializing...');
     admin = require('firebase-admin');
     
     const serviceAccount = {
@@ -66,21 +71,36 @@ try {
       client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
     };
 
+    console.log('🔥 Service account created, project_id:', serviceAccount.project_id);
+    console.log('🔥 Client email:', serviceAccount.client_email);
+
     if (!admin.apps.length) {
+      console.log('🔥 No existing Firebase apps, creating new one...');
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         databaseURL: `https://${process.env.VITE_FIREBASE_PROJECT_ID}-default-rtdb.firebaseio.com`
       });
+      console.log('🔥 Firebase app initialized successfully');
+    } else {
+      console.log('🔥 Firebase app already exists');
     }
     
+    console.log('🔥 Getting Firestore instance...');
     db = admin.firestore();
+    console.log('🔥 Firestore instance created');
+    
     isFirebaseEnabled = true;
-    console.log('✅ Firebase Admin initialized');
+    console.log('✅ Firebase Admin initialized successfully');
   } else {
     console.log('⚠️  Firebase credentials not found - Firebase features disabled');
+    console.log('- Missing VITE_FIREBASE_PROJECT_ID:', !process.env.VITE_FIREBASE_PROJECT_ID);
+    console.log('- Missing FIREBASE_PRIVATE_KEY:', !process.env.FIREBASE_PRIVATE_KEY);
   }
 } catch (error) {
-  console.warn('⚠️  Could not initialize Firebase Admin:', error.message);
+  console.error('❌ Could not initialize Firebase Admin:', error.message);
+  console.error('❌ Full error:', error);
+  isFirebaseEnabled = false;
+  db = null;
 }
 
 // MySQL connection configuration (fallback)
