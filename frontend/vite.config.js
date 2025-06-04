@@ -16,11 +16,14 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       sourcemap: false,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: {
             vendor: ['react', 'react-dom'],
-            router: ['react-router-dom']
+            router: ['react-router-dom'],
+            firebase: ['firebase/app', 'firebase/firestore', 'firebase/auth'],
+            utils: ['axios', 'xlsx', 'pdfjs-dist']
           }
         }
       }
@@ -31,7 +34,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: 'http://localhost:3001',
           changeOrigin: true,
           secure: false
         }
