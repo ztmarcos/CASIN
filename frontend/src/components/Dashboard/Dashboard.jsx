@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
 import firebaseDashboardService from '../../services/firebaseDashboardService';
 import { formatDate } from '../../utils/dateUtils';
+import { runFirebaseTests } from '../../utils/firebaseTest';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -17,6 +18,8 @@ const Dashboard = () => {
     expirations: null
   });
   const [showAllExpirations, setShowAllExpirations] = useState(false);
+  const [firebaseTestResult, setFirebaseTestResult] = useState(null);
+  const [testingFirebase, setTestingFirebase] = useState(false);
 
   useEffect(() => {
     loadBirthdays();
@@ -80,11 +83,72 @@ const Dashboard = () => {
     }
   };
 
+  const handleFirebaseTest = async () => {
+    setTestingFirebase(true);
+    setFirebaseTestResult(null);
+    
+    try {
+      const result = await runFirebaseTests();
+      setFirebaseTestResult(result);
+    } catch (error) {
+      setFirebaseTestResult({
+        configLoaded: false,
+        databaseConnected: false,
+        collections: [],
+        errors: [error.message]
+      });
+    } finally {
+      setTestingFirebase(false);
+    }
+  };
+
   return (
     <div className="dashboard">
       <h1 className="dashboard-title">Dashboard</h1>
       
       <div className="dashboard-grid">
+        {/* Firebase Test Section - Only show if there are errors */}
+        {(error.birthdays || error.expirations) && (
+          <div className="dashboard-card firebase-test-card">
+            <div className="card-header">
+              <h3>🔥 Firebase Connection Test</h3>
+            </div>
+            <div className="card-content">
+              <button 
+                onClick={handleFirebaseTest} 
+                disabled={testingFirebase}
+                className="firebase-test-btn"
+              >
+                {testingFirebase ? 'Testing...' : 'Test Firebase Connection'}
+              </button>
+              
+              {firebaseTestResult && (
+                <div className="firebase-test-results">
+                  <div className={`test-status ${firebaseTestResult.databaseConnected ? 'success' : 'error'}`}>
+                    {firebaseTestResult.databaseConnected ? '✅ Connected' : '❌ Connection Failed'}
+                  </div>
+                  
+                  <div className="test-details">
+                    <p><strong>Config Loaded:</strong> {firebaseTestResult.configLoaded ? 'Yes' : 'No'}</p>
+                    <p><strong>Collections Found:</strong> {firebaseTestResult.collections.length}</p>
+                    
+                    {firebaseTestResult.errors.length > 0 && (
+                      <div className="test-errors">
+                        <strong>Errors:</strong>
+                        <ul>
+                          {firebaseTestResult.errors.map((error, index) => (
+                            <li key={index}>{error}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Sección 1 - Clima */}
         <div className="dashboard-card">
           <div className="card-header">

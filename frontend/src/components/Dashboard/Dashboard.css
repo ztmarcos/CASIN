@@ -443,4 +443,79 @@
 
 [data-theme='dark'] .no-expirations {
   color: var(--text-secondary-dark, #9ca3af);
+}
+
+/* Firebase Test Styles */
+.firebase-test-card {
+  border: 2px solid #f59e0b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
+}
+
+.firebase-test-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease;
+  margin-bottom: 15px;
+}
+
+.firebase-test-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.firebase-test-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.firebase-test-results {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.test-status.success {
+  color: #059669;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.test-status.error {
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 1.1rem;
+  margin-bottom: 10px;
+}
+
+.test-details {
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.test-details p {
+  margin: 5px 0;
+}
+
+.test-errors {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+}
+
+.test-errors ul {
+  margin: 5px 0 0 20px;
+  color: #dc2626;
+}
+
+.test-errors li {
+  margin: 2px 0;
+  font-size: 0.85rem;
 } 

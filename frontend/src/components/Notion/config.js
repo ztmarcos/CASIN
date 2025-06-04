@@ -1,3 +1,11 @@
+export const TABLE_COLUMNS = [
+  { key: 'title', label: 'Title' },
+  { key: 'Encargado', label: 'Encargado' },
+  { key: 'Status', label: 'Status' },
+  { key: 'Fecha límite', label: 'Fecha límite' },
+  { key: 'Descripción', label: 'Descripción' }
+];
+
 export const TASK_STATUS_OPTIONS = [
   { value: 'Por iniciar', label: 'Por iniciar' },
   { value: 'En progreso', label: 'En progreso' },

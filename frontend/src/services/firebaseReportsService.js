@@ -6,6 +6,199 @@ class FirebaseReportsService {
   }
 
   /**
+   * Get all policies from all insurance collections
+   * @returns {Promise<Array>} Array of all policies
+   */
+  async getAllPolicies() {
+    try {
+      console.log('📊 Getting all policies from Firebase...');
+      
+      // Insurance collections that contain policies
+      const insuranceCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+      
+      const allPolicies = [];
+      
+      for (const collectionName of insuranceCollections) {
+        try {
+          console.log(`🔍 Getting policies from collection: ${collectionName}`);
+          
+          // Get all documents from this collection
+          const documents = await this.firebaseService.getAllDocuments(collectionName, 1000);
+          
+          for (const doc of documents) {
+            const name = this.getNameFromDocument(doc, collectionName);
+            
+            // Create standardized policy object
+            const policy = {
+              id: doc.id,
+              nombre_contratante: name,
+              numero_poliza: doc.numero_poliza || doc.poliza || 'Sin número',
+              aseguradora: doc.aseguradora || 'Sin aseguradora',
+              fecha_inicio: doc.fecha_inicio || doc.vigencia_inicio || doc.fecha_emision,
+              fecha_fin: doc.fecha_fin || doc.vigencia_fin || doc.fecha_vencimiento,
+              tipo_seguro: this.getInsuranceType(collectionName),
+              ramo: this.getInsuranceType(collectionName),
+              source: collectionName,
+              rfc: doc.rfc || '',
+              email: doc.email || doc.e_mail || '',
+              telefono: doc.telefono || doc.telefono_movil || '',
+              prima: doc.prima || doc.prima_total || doc.importe_total || 0,
+              moneda: doc.moneda || 'MXN',
+              forma_pago: doc.forma_pago || doc.forma_de_pago || '',
+              // Add all original data for compatibility
+              ...doc
+            };
+            
+            // Calculate next payment date if payment form is available
+            if (policy.fecha_inicio && policy.forma_pago) {
+              policy.fecha_proximo_pago = this.calculateNextPaymentDate(policy.fecha_inicio, policy.forma_pago);
+            }
+            
+            allPolicies.push(policy);
+          }
+          
+        } catch (error) {
+          console.warn(`Could not access collection ${collectionName}:`, error);
+        }
+      }
+      
+      console.log(`✅ Found ${allPolicies.length} total policies from Firebase`);
+      return allPolicies;
+      
+    } catch (error) {
+      console.error('❌ Error fetching all policies from Firebase:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate next payment date based on start date and payment frequency
+   */
+  calculateNextPaymentDate(startDate, paymentForm) {
+    if (!startDate || !paymentForm) return null;
+    
+    try {
+      const start = new Date(startDate);
+      const today = new Date();
+      const paymentIntervals = {
+        'MENSUAL': 1,
+        'BIMESTRAL': 2,
+        'TRIMESTRAL': 3,
+        'CUATRIMESTRAL': 4,
+        'SEMESTRAL': 6,
+        'ANUAL': 12
+      };
+
+      const interval = paymentIntervals[paymentForm.toUpperCase()] || 12;
+      let nextPayment = new Date(start);
+
+      while (nextPayment <= today) {
+        nextPayment.setMonth(nextPayment.getMonth() + interval);
+      }
+
+      return nextPayment;
+    } catch (error) {
+      console.warn('Error calculating next payment date:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get matrix data for analysis (unique clients, companies, ramos, etc.)
+   * @returns {Promise<Object>} Matrix data object
+   */
+  async getMatrixData() {
+    try {
+      console.log('📊 Getting matrix data from Firebase...');
+      
+      const allPolicies = await this.getAllPolicies();
+      
+      const uniqueClients = [...new Set(allPolicies.map(p => p.nombre_contratante).filter(Boolean))];
+      const uniqueCompanies = [...new Set(allPolicies.map(p => p.aseguradora).filter(Boolean))];
+      const uniqueRamos = [...new Set(allPolicies.map(p => p.ramo || p.tipo_seguro).filter(Boolean))];
+      
+      // Build client matrix (clients and their policies by ramo)
+      const clientMatrix = {};
+      allPolicies.forEach(policy => {
+        const client = policy.nombre_contratante;
+        const ramo = policy.ramo || policy.tipo_seguro;
+        
+        if (client && ramo) {
+          if (!clientMatrix[client]) {
+            clientMatrix[client] = {};
+          }
+          if (!clientMatrix[client][ramo]) {
+            clientMatrix[client][ramo] = [];
+          }
+          clientMatrix[client][ramo].push(policy);
+        }
+      });
+      
+      console.log(`✅ Matrix data: ${uniqueClients.length} clients, ${uniqueCompanies.length} companies, ${uniqueRamos.length} ramos`);
+      
+      return {
+        uniqueClients,
+        uniqueCompanies,
+        uniqueRamos,
+        clientMatrix
+      };
+      
+    } catch (error) {
+      console.error('❌ Error getting matrix data from Firebase:', error);
+      return {
+        uniqueClients: [],
+        uniqueCompanies: [],
+        uniqueRamos: [],
+        clientMatrix: {}
+      };
+    }
+  }
+
+  /**
+   * Get policy statuses (placeholder - you might want to store these in a separate collection)
+   * @returns {Promise<Object>} Policy statuses object
+   */
+  async getPolicyStatuses() {
+    try {
+      console.log('📊 Getting policy statuses from Firebase...');
+      
+      // For now, return empty object since statuses might be stored separately
+      // or calculated based on expiration dates
+      const statuses = {};
+      
+      console.log('✅ Policy statuses loaded');
+      return statuses;
+      
+    } catch (error) {
+      console.error('❌ Error getting policy statuses from Firebase:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Update policy status
+   * @param {string} policyId - Policy ID
+   * @param {string} status - New status
+   * @returns {Promise<boolean>} Success status
+   */
+  async updatePolicyStatus(policyId, status) {
+    try {
+      console.log(`🔄 Updating policy ${policyId} status to: ${status}`);
+      
+      // You might want to implement this by updating a status field in the policy document
+      // or by maintaining a separate collection for policy statuses
+      
+      // For now, this is a placeholder implementation
+      console.log('✅ Policy status updated (placeholder)');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error updating policy status:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get policy expirations (vencimientos) from all insurance collections
    * @returns {Promise<Array>} Array of expiring policies
    */

@@ -6,7 +6,8 @@
   "main": "server-mysql.js",
   "scripts": {
     "start": "node server-mysql.js",
-    "build": "echo 'Backend build completed'",
+    "build": "cd frontend && npm run build",
+    "heroku-postbuild": "cd frontend && npm install && npm run build",
     "dev": "node server-mysql.js",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "node server-mysql.js",

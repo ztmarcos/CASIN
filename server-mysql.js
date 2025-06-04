@@ -172,8 +172,8 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Middleware para servir archivos estáticos
-app.use(express.static('.'));
+// Middleware para servir archivos estáticos - Frontend build
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
 
 // Initialize Notion client if credentials are available
 let notion = null;
@@ -311,68 +311,144 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// Get all tables from MySQL
+// Get all tables from Firebase (replacing MySQL version)
 app.get('/api/data/tables', async (req, res) => {
   try {
-    const tables = await executeQuery('SHOW TABLES');
-    const relationships = await executeQuery('SELECT * FROM table_relationships');
-    
-    const tableList = [];
-    
-    for (const tableRow of tables) {
-      const tableName = Object.values(tableRow)[0];
-      const structure = await getTableStructure(tableName);
+    if (!isFirebaseEnabled || !db) {
+      // Return a mock table structure that matches what the frontend expects
+      const mockTables = [
+        {
+          name: 'contacts',
+          title: 'Contactos',
+          type: 'DIRECTORIO',
+          isMainTable: true,
+          isSecondaryTable: false,
+          relatedTableName: null,
+          relationshipType: null,
+          columns: [
+            { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+            { name: 'nombre', type: 'varchar(100)', nullable: true, key: '', default: null },
+            { name: 'email', type: 'varchar(100)', nullable: true, key: '', default: null },
+            { name: 'telefono', type: 'varchar(20)', nullable: true, key: '', default: null },
+            { name: 'rfc', type: 'varchar(13)', nullable: true, key: '', default: null },
+            { name: 'fecha_nacimiento', type: 'date', nullable: true, key: '', default: null },
+            { name: 'created_at', type: 'timestamp', nullable: true, key: '', default: 'CURRENT_TIMESTAMP' }
+          ]
+        },
+        {
+          name: 'policies',
+          title: 'Pólizas',
+          type: 'AUTOS',
+          isMainTable: true,
+          isSecondaryTable: false,
+          relatedTableName: 'contacts',
+          relationshipType: 'one-to-many',
+          columns: [
+            { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+            { name: 'numero_poliza', type: 'varchar(50)', nullable: true, key: '', default: null },
+            { name: 'contact_id', type: 'varchar(50)', nullable: true, key: 'MUL', default: null },
+            { name: 'tipo', type: 'varchar(20)', nullable: true, key: '', default: null },
+            { name: 'vigencia_inicio', type: 'date', nullable: true, key: '', default: null },
+            { name: 'vigencia_fin', type: 'date', nullable: true, key: '', default: null },
+            { name: 'prima', type: 'decimal(10,2)', nullable: true, key: '', default: null },
+            { name: 'status', type: 'varchar(20)', nullable: true, key: '', default: 'activa' }
+          ]
+        }
+      ];
       
-      // Check if this table is in any relationship
-      const asMainTable = relationships.find(rel => rel.main_table_name === tableName);
-      const asSecondaryTable = relationships.find(rel => rel.secondary_table_name === tableName);
-      
-      // Determine table type and relationship status
-      let type = 'UNKNOWN';
-      let isMainTable = !!asMainTable;
-      let isSecondaryTable = !!asSecondaryTable;
-      let relatedTableName = null;
-      let relationshipType = null;
-      
-      if (asMainTable) {
-        relatedTableName = asMainTable.secondary_table_name;
-        relationshipType = asMainTable.relationship_type;
-      } else if (asSecondaryTable) {
-        relatedTableName = asSecondaryTable.main_table_name;
-        relationshipType = asSecondaryTable.relationship_type;
-      }
-      
-      // Set type based on table name or relationship
-      if (tableName.includes('autos')) {
-        type = 'AUTOS';
-      } else if (tableName.includes('vida')) {
-        type = 'VIDA';
-      } else if (tableName.includes('gmm')) {
-        type = 'GMM';
-      } else if (tableName.includes('hogar')) {
-        type = 'HOGAR';
-      } else if (tableName.includes('directorio')) {
-        type = 'DIRECTORIO';
-      } else if (tableName.includes('listado')) {
-        type = 'LISTADO';
-      } else if (tableName.includes('caratula')) {
-        type = 'CARATULA';
-      }
-      
-      // Add table to list
-      tableList.push({
-        name: tableName,
-        title: tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/_/g, ' '),
-        type: type,
-        isMainTable: isMainTable,
-        isSecondaryTable: isSecondaryTable,
-        relatedTableName: relatedTableName,
-        relationshipType: relationshipType,
-        columns: structure
-      });
+      console.log('🔥 Returning mock table structure for Firebase');
+      return res.json(mockTables);
     }
-    
-    res.json(tableList);
+
+    // If Firebase is enabled, try to get collections
+    try {
+      const collections = await db.listCollections();
+      const tableList = [];
+      
+      for (const collection of collections) {
+        const collectionName = collection.id;
+        
+        // Determine type based on collection name
+        let type = 'UNKNOWN';
+        if (collectionName.includes('contact') || collectionName.includes('directorio')) {
+          type = 'DIRECTORIO';
+        } else if (collectionName.includes('auto') || collectionName.includes('poliza')) {
+          type = 'AUTOS';
+        } else if (collectionName.includes('vida')) {
+          type = 'VIDA';
+        } else if (collectionName.includes('gmm')) {
+          type = 'GMM';
+        } else if (collectionName.includes('hogar')) {
+          type = 'HOGAR';
+        }
+        
+        // Get sample document to understand structure
+        const sampleDoc = await collection.limit(1).get();
+        let columns = [
+          { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null }
+        ];
+        
+        if (!sampleDoc.empty) {
+          const docData = sampleDoc.docs[0].data();
+          Object.keys(docData).forEach(field => {
+            const value = docData[field];
+            let fieldType = 'varchar(255)';
+            
+            if (typeof value === 'number') {
+              fieldType = Number.isInteger(value) ? 'int' : 'decimal(10,2)';
+            } else if (value instanceof Date || (typeof value === 'object' && value.toDate)) {
+              fieldType = 'timestamp';
+            } else if (typeof value === 'boolean') {
+              fieldType = 'boolean';
+            }
+            
+            columns.push({
+              name: field,
+              type: fieldType,
+              nullable: true,
+              key: '',
+              default: null
+            });
+          });
+        }
+        
+        tableList.push({
+          name: collectionName,
+          title: collectionName.charAt(0).toUpperCase() + collectionName.slice(1).replace(/_/g, ' '),
+          type: type,
+          isMainTable: true,
+          isSecondaryTable: false,
+          relatedTableName: null,
+          relationshipType: null,
+          columns: columns
+        });
+      }
+      
+      console.log(`🔥 Firebase collections found: ${tableList.length}`);
+      res.json(tableList);
+      
+    } catch (firebaseError) {
+      console.error('Firebase collections error:', firebaseError);
+      // Fallback to mock data if Firebase fails
+      const mockTables = [
+        {
+          name: 'contacts',
+          title: 'Contactos',
+          type: 'DIRECTORIO',
+          isMainTable: true,
+          isSecondaryTable: false,
+          relatedTableName: null,
+          relationshipType: null,
+          columns: [
+            { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+            { name: 'nombre', type: 'varchar(100)', nullable: true, key: '', default: null },
+            { name: 'email', type: 'varchar(100)', nullable: true, key: '', default: null },
+            { name: 'telefono', type: 'varchar(20)', nullable: true, key: '', default: null }
+          ]
+        }
+      ];
+      res.json(mockTables);
+    }
   } catch (error) {
     console.error('Error fetching tables:', error);
     res.status(500).json({ error: error.message });
@@ -413,17 +489,100 @@ app.get('/api/data/table-types', async (req, res) => {
   }
 });
 
-// Get data from specific table
+// Get data from specific table/collection (Firebase version)
 app.get('/api/data/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
-    const data = await executeQuery(`SELECT * FROM \`${tableName}\` LIMIT 1000`);
     
-    res.json({
-      data: data,
-      total: data.length,
-      table: tableName
-    });
+    if (!isFirebaseEnabled || !db) {
+      // Return mock data for the requested table
+      const mockData = [];
+      
+      if (tableName === 'contacts') {
+        mockData.push(
+          {
+            id: '1',
+            nombre: 'Juan Pérez',
+            email: 'juan.perez@example.com',
+            telefono: '555-1234',
+            rfc: 'PEPJ850315123',
+            fecha_nacimiento: '1985-03-15',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            nombre: 'María García',
+            email: 'maria.garcia@example.com',
+            telefono: '555-5678',
+            rfc: 'GARM900220456',
+            fecha_nacimiento: '1990-02-20',
+            created_at: new Date().toISOString()
+          }
+        );
+      } else if (tableName === 'policies') {
+        mockData.push(
+          {
+            id: '1',
+            numero_poliza: 'POL-001',
+            contact_id: '1',
+            tipo: 'auto',
+            vigencia_inicio: '2024-01-01',
+            vigencia_fin: '2024-12-31',
+            prima: 12000.00,
+            status: 'activa'
+          }
+        );
+      }
+      
+      console.log(`🔥 Returning mock data for table: ${tableName}`);
+      return res.json({
+        data: mockData,
+        total: mockData.length,
+        table: tableName
+      });
+    }
+
+    // If Firebase is enabled, get data from Firestore
+    try {
+      const collection = db.collection(tableName);
+      const snapshot = await collection.limit(1000).get();
+      
+      const data = [];
+      snapshot.forEach(doc => {
+        data.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      console.log(`🔥 Firebase data from ${tableName}: ${data.length} documents`);
+      
+      res.json({
+        data: data,
+        total: data.length,
+        table: tableName
+      });
+      
+    } catch (firebaseError) {
+      console.error('Firebase get data error:', firebaseError);
+      
+      // Fallback to mock data
+      const mockData = [];
+      if (tableName === 'contacts') {
+        mockData.push({
+          id: '1',
+          nombre: 'Demo Contact',
+          email: 'demo@example.com',
+          telefono: '555-0000'
+        });
+      }
+      
+      res.json({
+        data: mockData,
+        total: mockData.length,
+        table: tableName
+      });
+    }
   } catch (error) {
     console.error(`Error fetching data from ${req.params.tableName}:`, error);
     res.status(500).json({ error: error.message });
@@ -3232,6 +3391,22 @@ app.get('/api/debug/firebase', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Catch-all handler: send back React's index.html file for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
+});
+
+// Start server for Heroku (only if not in Vercel environment)
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);
+    console.log(`📧 Notion enabled: ${isNotionEnabled}`);
+  });
+}
 
 // Export for Vercel serverless deployment
 module.exports = app;

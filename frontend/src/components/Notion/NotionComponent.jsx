@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import NotionErrorBoundary from './NotionErrorBoundary';
+import { TABLE_COLUMNS, PROPERTY_CONFIGS, TASK_STATUS_OPTIONS } from './config';
 import TaskModal from './TaskModal';
-import { PROPERTY_CONFIGS } from './config';
+import { NotionErrorBoundary } from './NotionErrorBoundary';
+import { API_URL } from '../../config/api';
 import './NotionComponent.css';
 
 const ITEMS_PER_PAGE = 10;
-const API_BASE_URL = '/api';
+const API_BASE_URL = API_URL;
 
 // Format date for display
 const formatDate = (dateString) => {
@@ -25,14 +26,6 @@ const formatDateForInput = (dateString) => {
   return date.toISOString().split('T')[0];
 };
 
-// Define columns configuration outside the component
-const TABLE_COLUMNS = [
-  { key: 'title', label: 'Title' },
-  { key: 'Encargado', label: 'Encargado' },
-  { key: 'Status', label: 'Status' },
-  { key: 'Fecha límite', label: 'Fecha límite' },
-  { key: 'Descripción', label: 'Descripción' }
-];
 
 const NotionComponent = () => {
   const [tasks, setTasks] = useState([]);

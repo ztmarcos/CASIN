@@ -34,10 +34,14 @@ yarn-error.log*
 # Vite
 .vite/ 
 
-# JSON
-*.json
-.env*firebase*adminsdk*.json
+# Environment files (but allow Firebase service account JSONs)
 .env
 backend/.env
 backend-simple-OLD/.env
 .vercel
+
+# Keep package.json and Firebase service account files tracked
+!package.json
+!package-lock.json
+!pdfcasin-d3d4d47384f0.json
+!casinbbdd-firebase-adminsdk-hnwk0-d3e04afbfd.json
