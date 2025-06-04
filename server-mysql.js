@@ -751,6 +751,12 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
 // Directorio endpoints (Firebase in production, MySQL fallback)
 app.get('/api/directorio', async (req, res) => {
   try {
+    console.log('🔍 Directorio endpoint called');
+    console.log('- process.env.VERCEL:', !!process.env.VERCEL);
+    console.log('- isFirebaseEnabled:', isFirebaseEnabled);
+    console.log('- db available:', !!db);
+    console.log('- admin available:', !!admin);
+    
     // Check if we're in Vercel (production) and Firebase is available
     if (process.env.VERCEL && isFirebaseEnabled && db) {
       console.log('📋 Using Firebase for directorio in production');
@@ -833,6 +839,7 @@ app.get('/api/directorio', async (req, res) => {
     
     // Fallback to MySQL for local development
     console.log('📋 Using MySQL for directorio (local development)');
+    console.log('- Reason: VERCEL=' + !!process.env.VERCEL + ', Firebase=' + isFirebaseEnabled + ', DB=' + !!db);
     
     const { 
       page = 1, 
@@ -3118,3 +3125,17 @@ app.get('/api/data/crud_db', async (req, res) => {
 
 // Export for Vercel serverless deployment
 module.exports = app;
+
+// Debug endpoint for Firebase status
+app.get('/api/debug/firebase', (req, res) => {
+  res.json({
+    isVercel: !!process.env.VERCEL,
+    isFirebaseEnabled: isFirebaseEnabled,
+    hasDb: !!db,
+    hasAdmin: !!admin,
+    firebaseProjectId: process.env.VITE_FIREBASE_PROJECT_ID ? 'configured' : 'missing',
+    firebasePrivateKey: process.env.FIREBASE_PRIVATE_KEY ? 'configured' : 'missing',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
