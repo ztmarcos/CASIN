@@ -3123,9 +3123,6 @@ app.get('/api/data/crud_db', async (req, res) => {
   }
 });
 
-// Export for Vercel serverless deployment
-module.exports = app;
-
 // Debug endpoint for Firebase status
 app.get('/api/debug/firebase', (req, res) => {
   res.json({
@@ -3139,3 +3136,6 @@ app.get('/api/debug/firebase', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Export for Vercel serverless deployment
+module.exports = app;
