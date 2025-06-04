@@ -18,8 +18,8 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 
-// TEMPORARY: Disable Firebase to fix immediate connectivity issues
-const FIREBASE_ENABLED = false; // Set to true once Firebase is properly configured
+// Enable Firebase as the primary and only database
+const FIREBASE_ENABLED = true; // Firebase is now the primary database
 
 class FirebaseService {
   constructor() {
