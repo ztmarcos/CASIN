@@ -34,14 +34,22 @@ yarn-error.log*
 # Vite
 .vite/ 
 
-# Environment files (but allow Firebase service account JSONs)
+# Environment files - ALL environment files should be ignored
 .env
+.env.*
 backend/.env
 backend-simple-OLD/.env
 .vercel
 
-# Keep package.json and Firebase service account files tracked
+# Firebase service account files - these contain sensitive credentials
+*.json
 !package.json
 !package-lock.json
-!pdfcasin-d3d4d47384f0.json
-!casinbbdd-firebase-adminsdk-hnwk0-d3e04afbfd.json
+!vercel.json
+!frontend/package.json
+!frontend/package-lock.json
+!frontend/vercel.json
+
+# Backup directories that might contain sensitive files
+cleanup-backup/
+backups/
