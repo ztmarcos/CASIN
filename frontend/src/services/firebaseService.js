@@ -79,7 +79,12 @@ class FirebaseService {
     
     try {
       const collectionRef = collection(this.db, collectionName);
-      const q = query(collectionRef, limit(limitCount));
+      // Order by createdAt descending so newest records appear first
+      const q = query(
+        collectionRef, 
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
       const snapshot = await getDocs(q);
       return snapshot.docs.map(doc => ({
         id: doc.id,
@@ -87,7 +92,19 @@ class FirebaseService {
       }));
     } catch (error) {
       console.error(`Error getting documents from ${collectionName}:`, error);
-      throw error;
+      // If ordering fails (e.g., no createdAt field), try without ordering
+      try {
+        const collectionRef = collection(this.db, collectionName);
+        const q = query(collectionRef, limit(limitCount));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+      } catch (fallbackError) {
+        console.error(`Fallback query also failed for ${collectionName}:`, fallbackError);
+        throw fallbackError;
+      }
     }
   }
 
@@ -102,7 +119,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, collectionName, id);
+      // Ensure ID is a string for Firebase
+      const stringId = String(id);
+      const docRef = doc(this.db, collectionName, stringId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -154,7 +173,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, collectionName, id);
+      // Ensure ID is a string for Firebase
+      const stringId = String(id);
+      const docRef = doc(this.db, collectionName, stringId);
       await updateDoc(docRef, {
         ...data,
         updatedAt: new Date()
@@ -177,7 +198,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, collectionName, id);
+      // Ensure ID is a string for Firebase
+      const stringId = String(id);
+      const docRef = doc(this.db, collectionName, stringId);
       await deleteDoc(docRef);
       return true;
     } catch (error) {
@@ -318,7 +341,9 @@ class FirebaseService {
       
       operations.forEach(operation => {
         const { type, collectionName, id, data } = operation;
-        const docRef = doc(this.db, collectionName, id || '');
+        // Ensure ID is a string for Firebase
+        const stringId = String(id || '');
+        const docRef = doc(this.db, collectionName, stringId);
         
         switch (type) {
           case 'add':
@@ -584,7 +609,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, tableName, id);
+      // Ensure ID is a string for Firebase
+      const stringId = String(id);
+      const docRef = doc(this.db, tableName, stringId);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -648,7 +675,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, tableName, firebaseId);
+      // Ensure ID is a string for Firebase
+      const stringId = String(firebaseId);
+      const docRef = doc(this.db, tableName, stringId);
       await updateDoc(docRef, {
         ...data,
         updated_at: new Date().toISOString()
@@ -679,7 +708,9 @@ class FirebaseService {
     }
     
     try {
-      const docRef = doc(this.db, tableName, firebaseId);
+      // Ensure ID is a string for Firebase
+      const stringId = String(firebaseId);
+      const docRef = doc(this.db, tableName, stringId);
       await deleteDoc(docRef);
       
       return {

@@ -197,10 +197,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             
             // Extract columns from the table structure
             if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                // Firebase returns columns array with {Field, Type, Null, Key, Default} structure
+                // Firebase returns columns array with {name, type, nullable} structure
                 columns = targetTable.columns
-                    .filter(col => col.Field !== 'id') // Filter out id column
-                    .map(col => col.Field); // Get just the column names
+                    .filter(col => col.name !== 'id') // Filter out id column
+                    .map(col => col.name); // Get just the column names
             } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
                 // Fallback to tableInfo.fields if available
                 columns = tableInfo.fields;
@@ -260,7 +260,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 `
             };
 
-            const response = await fetch('/api/gpt/analyze', {
+            const response = await fetch(`${API_URL}/gpt/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -280,15 +280,23 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 // Convert backend analysis to frontend format
                 const cleanData = {};
                 
-                // Extract sample values from each column analysis
-                Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
-                    // Use the first non-empty sample value as default
-                    if (analysis.sampleValues && analysis.sampleValues.length > 0) {
-                        cleanData[column] = analysis.sampleValues[0];
-                    } else {
-                        cleanData[column] = null;
-                    }
-                });
+                // For OpenAI analysis, use extractedData directly
+                if (result.extractedData) {
+                    console.log('📊 Using OpenAI extracted data:', result.extractedData);
+                    Object.assign(cleanData, result.extractedData);
+                } else {
+                    // Fallback: Extract sample values from each column analysis
+                    Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
+                        // Use the first non-empty sample value as default
+                        if (analysis.sampleValues && analysis.sampleValues.length > 0) {
+                            cleanData[column] = analysis.sampleValues[0];
+                        } else if (analysis.extractedValue !== undefined) {
+                            cleanData[column] = analysis.extractedValue;
+                        } else {
+                            cleanData[column] = null;
+                        }
+                    });
+                }
 
                 console.log('📊 Processed analysis data:', cleanData);
                 console.log('📈 Analysis summary:', result.summary);
@@ -329,10 +337,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
                 // Extract columns from the actual table structure
                 if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                    // Firebase returns columns array with {Field, Type, Null, Key, Default} structure
+                    // Firebase returns columns array with {name, type, nullable} structure
                     targetColumns = targetTable.columns
-                        .filter(col => col.Field !== 'id') // Filter out id column
-                        .map(col => col.Field); // Get just the column names
+                        .filter(col => col.name !== 'id') // Filter out id column
+                        .map(col => col.name); // Get just the column names
                 } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
                     // Fallback to tableInfo.fields if available
                     targetColumns = tableInfo.fields;

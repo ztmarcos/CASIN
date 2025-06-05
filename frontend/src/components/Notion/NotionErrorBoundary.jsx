@@ -36,4 +36,6 @@ class NotionErrorBoundary extends React.Component {
   }
 }
 
+// Export both default and named export for compatibility
+export { NotionErrorBoundary };
 export default NotionErrorBoundary; 

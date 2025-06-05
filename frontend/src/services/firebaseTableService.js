@@ -332,7 +332,7 @@ class FirebaseTableService {
     try {
       console.log(`➕ Inserting new document into ${tableName}`);
       
-      const docId = await this.firebaseService.createDocument(tableName, data);
+      const docId = await this.firebaseService.addDocument(tableName, data);
       
       console.log(`✅ Document created with ID: ${docId}`);
       return { success: true, id: docId };

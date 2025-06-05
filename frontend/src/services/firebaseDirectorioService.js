@@ -199,22 +199,41 @@ class FirebaseDirectorioService {
     try {
       console.log(`📝 Updating contacto ${id} in Firebase...`);
       
+      // Check if the document exists first
+      const existingContacto = await this.firebaseService.getDocumentById(this.collectionName, id);
+      
       // Add update timestamp
       const dataWithTimestamp = {
         ...contactoData,
         updated_at: new Date().toISOString()
       };
       
-      await this.firebaseService.updateDocument(
-        this.collectionName,
-        id,
-        dataWithTimestamp
-      );
+      if (existingContacto) {
+        // Document exists, update it
+        await this.firebaseService.updateDocument(
+          this.collectionName,
+          id,
+          dataWithTimestamp
+        );
+      } else {
+        // Document doesn't exist, create it with the specified ID
+        console.log(`📝 Document ${id} doesn't exist, creating it...`);
+        
+        // For Firebase, we need to use setDoc with a specific ID
+        const { doc, setDoc } = await import('firebase/firestore');
+        const docRef = doc(this.firebaseService.db, this.collectionName, String(id));
+        
+        await setDoc(docRef, {
+          ...dataWithTimestamp,
+          id: String(id),
+          created_at: new Date().toISOString()
+        });
+      }
       
-      // Get the updated document
+      // Get the updated/created document
       const updatedContacto = await this.firebaseService.getDocumentById(this.collectionName, id);
       
-      console.log('✅ Contacto updated successfully in Firebase');
+      console.log('✅ Contacto updated/created successfully in Firebase');
       
       return {
         success: true,

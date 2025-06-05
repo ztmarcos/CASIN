@@ -2379,6 +2379,13 @@ app.post('/api/gpt/analyze', async (req, res) => {
   try {
     const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
     
+    if (!openaiApiKey) {
+      return res.status(500).json({
+        error: 'OpenAI API key not configured',
+        details: 'Please set OPENAI_API_KEY in environment variables'
+      });
+    }
+
     const { text, tables, metadata, targetColumns, tableName, tableType, instructions } = req.body;
 
     console.log('🔍 Detailed request analysis:');
@@ -2386,26 +2393,26 @@ app.post('/api/gpt/analyze', async (req, res) => {
     console.log('- targetColumns type:', typeof targetColumns);
     console.log('- targetColumns length:', targetColumns?.length);
     console.log('- targetColumns sample:', targetColumns?.slice(0, 3));
+    console.log('- PDF text length:', text?.length);
+    console.log('- PDF text preview:', text?.substring(0, 200) + '...');
 
-    if (!targetColumns || !tableName) {
+    if (!targetColumns || !tableName || !text) {
       console.log('❌ Missing required fields validation failed');
       console.log('- targetColumns present:', !!targetColumns);
       console.log('- tableName present:', !!tableName);
+      console.log('- text present:', !!text);
       return res.status(400).json({
         error: 'Missing required fields',
-        details: 'targetColumns and tableName are required'
+        details: 'targetColumns, tableName, and text are required'
       });
     }
 
     console.log('🤖 GPT Analysis request for table:', tableName);
     console.log('📋 Target columns:', targetColumns);
 
-    // Get real data from the table to analyze
-    let tableData = [];
-    let columnAnalysis = {};
-    
+    // Get table structure to validate columns
+    let validColumns = [];
     try {
-      // First get table structure to validate columns
       console.log('🔍 Getting table structure for:', tableName);
       const structure = await getTableStructure(tableName);
       console.log('📊 Database structure columns:', structure.map(col => col.Field || col.name));
@@ -2414,81 +2421,155 @@ app.post('/api/gpt/analyze', async (req, res) => {
       console.log('📝 Available columns in DB:', availableColumns);
       
       // Filter target columns to only include existing ones
-      const validColumns = targetColumns.filter(col => availableColumns.includes(col));
+      validColumns = targetColumns.filter(col => availableColumns.includes(col));
       console.log('✅ Valid columns after filtering:', validColumns);
       console.log('❌ Invalid columns filtered out:', targetColumns.filter(col => !availableColumns.includes(col)));
       
       if (validColumns.length === 0) {
         console.log('❌ NO VALID COLUMNS FOUND!');
-        console.log('- Target columns requested:', targetColumns);
-        console.log('- Available columns in DB:', availableColumns);
-        console.log('- Table structure:', structure);
-        
         return res.status(400).json({
           error: 'No valid columns found',
           details: `None of the target columns [${targetColumns.join(', ')}] exist in table ${tableName}`,
           availableColumns: availableColumns,
-          requestedColumns: targetColumns,
-          tableStructure: structure
+          requestedColumns: targetColumns
         });
       }
-
-      // Get sample data from the table (limit to 100 records for analysis)
-      const query = `SELECT ${validColumns.map(col => `\`${col}\``).join(', ')} FROM \`${tableName}\` LIMIT 100`;
-      console.log('🔍 Executing query:', query);
-      tableData = await executeQuery(query);
-      
-      console.log(`📊 Retrieved ${tableData.length} records from ${tableName} for analysis`);
-
-      // Analyze each column
-      validColumns.forEach(column => {
-        const columnData = tableData.map(row => row[column]).filter(val => val !== null && val !== undefined && val !== '');
-        
-        columnAnalysis[column] = {
-          totalRecords: tableData.length,
-          nonNullRecords: columnData.length,
-          nullRecords: tableData.length - columnData.length,
-          fillRate: columnData.length / tableData.length,
-          dataType: structure.find(col => (col.Field || col.name) === column)?.Type || structure.find(col => (col.Field || col.name) === column)?.type || 'unknown',
-          sampleValues: columnData.slice(0, 5), // First 5 non-empty values
-          uniqueValues: [...new Set(columnData)].length,
-          patterns: analyzeColumnPatterns(columnData, column)
-        };
-      });
-
     } catch (dbError) {
-      console.error('❌ Database analysis error:', dbError);
+      console.error('❌ Database structure error:', dbError);
       return res.status(500).json({
-        error: 'Failed to analyze table data',
-        details: dbError.message,
-        tableName: tableName
+        error: 'Failed to get table structure',
+        details: dbError.message
       });
     }
 
-    // Create comprehensive analysis response
-    const analysis = {
-      success: true,
-      tableName: tableName,
-      totalRecords: tableData.length,
-      analyzedColumns: Object.keys(columnAnalysis).length,
-      columnAnalysis: columnAnalysis,
-      summary: {
-        mostPopulatedColumns: Object.entries(columnAnalysis)
-          .sort(([,a], [,b]) => b.fillRate - a.fillRate)
-          .slice(0, 5)
-          .map(([col, data]) => ({ column: col, fillRate: data.fillRate })),
-        dataQuality: {
-          averageFillRate: Object.values(columnAnalysis).reduce((sum, col) => sum + col.fillRate, 0) / Object.keys(columnAnalysis).length,
-          totalNullValues: Object.values(columnAnalysis).reduce((sum, col) => sum + col.nullRecords, 0),
-          columnsWithData: Object.values(columnAnalysis).filter(col => col.nonNullRecords > 0).length
-        }
-      },
-      recommendations: generateDataRecommendations(columnAnalysis, tableName),
-      timestamp: new Date().toISOString()
-    };
+    // Create OpenAI prompt for PDF analysis
+    const prompt = `
+Analiza el siguiente documento PDF y extrae la información específica para los campos solicitados.
 
-    console.log('✅ Real data analysis completed:', Object.keys(columnAnalysis).length, 'columns analyzed');
-    res.json(analysis);
+DOCUMENTO PDF:
+${text}
+
+CAMPOS A EXTRAER:
+${validColumns.map(col => `- ${col}: Encuentra el valor exacto en el documento`).join('\n')}
+
+INSTRUCCIONES:
+1. Extrae valores EXACTOS del documento PDF
+2. No inventes información que no esté en el documento
+3. Devuelve null si no puedes encontrar un valor específico
+4. Para fechas, mantén el formato como aparece en el documento
+5. Para valores monetarios, incluye la cantidad completa con decimales si están presentes
+6. Para campos de texto, extrae el texto completo como se muestra
+7. Para nombres de aseguradoras, normaliza variaciones de "Grupo Nacional Provincial" a "GNP"
+8. Para nombres de personas, usa formato de título apropiado
+9. Para direcciones, estandariza abreviaciones comunes
+
+FORMATO DE RESPUESTA:
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
+{
+  ${validColumns.map(col => `"${col}": "valor_extraído_o_null"`).join(',\n  ')}
+}
+
+No incluyas explicaciones adicionales, solo el objeto JSON.`;
+
+    console.log('🔍 Sending request to OpenAI...');
+    console.log('📝 Prompt length:', prompt.length);
+
+    try {
+      // Make request to OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'Eres un experto en análisis de documentos PDF de seguros. Extrae información específica de manera precisa y devuelve solo JSON válido.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 2000,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('❌ OpenAI API error:', response.status, errorData);
+        throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+      }
+
+      const openaiResult = await response.json();
+      console.log('✅ OpenAI response received');
+      console.log('📊 Usage:', openaiResult.usage);
+
+      if (!openaiResult.choices || !openaiResult.choices[0] || !openaiResult.choices[0].message) {
+        throw new Error('Invalid OpenAI response structure');
+      }
+
+      const extractedContent = openaiResult.choices[0].message.content.trim();
+      console.log('📝 Extracted content:', extractedContent);
+
+      // Parse the JSON response from OpenAI
+      let extractedData;
+      try {
+        // Clean the response to ensure it's valid JSON
+        const cleanContent = extractedContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        extractedData = JSON.parse(cleanContent);
+        console.log('✅ Successfully parsed extracted data:', Object.keys(extractedData));
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI JSON response:', parseError);
+        console.error('Raw content:', extractedContent);
+        throw new Error('Failed to parse OpenAI response as JSON');
+      }
+
+      // Create column analysis from extracted data
+      const columnAnalysis = {};
+      validColumns.forEach(column => {
+        const value = extractedData[column];
+        columnAnalysis[column] = {
+          extractedValue: value,
+          hasValue: value !== null && value !== undefined && value !== '',
+          dataType: typeof value,
+          sampleValues: value ? [value] : [],
+          confidence: value ? 'high' : 'not_found'
+        };
+      });
+
+      // Create comprehensive analysis response
+      const analysis = {
+        success: true,
+        tableName: tableName,
+        source: 'openai_pdf_analysis',
+        analyzedColumns: validColumns.length,
+        columnAnalysis: columnAnalysis,
+        extractedData: extractedData,
+        summary: {
+          fieldsFound: Object.values(extractedData).filter(v => v !== null && v !== undefined && v !== '').length,
+          fieldsTotal: validColumns.length,
+          extractionRate: Object.values(extractedData).filter(v => v !== null && v !== undefined && v !== '').length / validColumns.length
+        },
+        openaiUsage: openaiResult.usage,
+        timestamp: new Date().toISOString()
+      };
+
+      console.log('✅ PDF analysis completed successfully');
+      console.log('📊 Fields found:', analysis.summary.fieldsFound, 'of', analysis.summary.fieldsTotal);
+      res.json(analysis);
+
+    } catch (openaiError) {
+      console.error('❌ OpenAI processing error:', openaiError);
+      return res.status(500).json({
+        error: 'Failed to analyze PDF with OpenAI',
+        details: openaiError.message
+      });
+    }
 
   } catch (error) {
     console.error('❌ GPT Analysis Error:', error);
@@ -2922,17 +3003,18 @@ app.get('/api/*', (req, res) => {
 
 // Catch-all handler: enviar index.html para rutas SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 CASIN CRM with MySQL running on port ${PORT}`);
-  console.log(`📱 Frontend: http://localhost:${PORT}`);
-  console.log(`🔧 API: http://localhost:${PORT}/api`);
-  console.log(`🗄️  Database: MySQL (crud_db)`);
-  console.log(`📊 Data: Real data from MySQL tables`);
-  console.log(`🎯 Mode: Production with real database`);
-}); 
+// COMMENTED OUT - DUPLICATE app.listen() causing port conflicts
+// app.listen(PORT, () => {
+//   console.log(`🚀 CASIN CRM with MySQL running on port ${PORT}`);
+//   console.log(`📱 Frontend: http://localhost:${PORT}`);
+//   console.log(`🔧 API: http://localhost:${PORT}/api`);
+//   console.log(`🗄️  Database: MySQL (crud_db)`);
+//   console.log(`📊 Data: Real data from MySQL tables`);
+//   console.log(`🎯 Mode: Production with real database`);
+// }); 
 
 // POST - Link directorio contact to specific policy
 app.post('/api/directorio/:contactId/link-policy', async (req, res) => {

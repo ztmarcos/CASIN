@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import tableService from '../services/data/tableService';
+import firebaseTableService from '../services/firebaseTableService';
 
 export const usePolicyCount = () => {
   const [totalPolicies, setTotalPolicies] = useState(0);
@@ -11,21 +11,20 @@ export const usePolicyCount = () => {
     setError(null);
     
     try {
-      // Get all available tables
-      const tables = await tableService.getTables();
+      // Get all available Firebase collections
+      const tables = await firebaseTableService.getTables();
       
-      // Filter out child/secondary tables and directorio_contactos to avoid double counting
-      const mainTables = tables.filter(table => 
-        !table.isSecondaryTable && 
+      // Filter out directorio_contactos to avoid counting contacts as policies
+      const policyTables = tables.filter(table => 
         table.name !== 'directorio_contactos'
       );
-      console.log('Fetching policy count from main tables only:', mainTables.map(t => t.name));
+      console.log('Fetching policy count from Firebase collections:', policyTables.map(t => t.name));
 
-      // Get data from main tables only
+      // Get data from policy collections
       const allResponses = await Promise.all(
-        mainTables.map(async (table) => {
+        policyTables.map(async (table) => {
           try {
-            const response = await tableService.getData(table.name);
+            const response = await firebaseTableService.getData(table.name);
             const count = response.data?.length || 0;
             console.log(`Table ${table.name}: ${count} records`);
             return count;
@@ -38,11 +37,11 @@ export const usePolicyCount = () => {
 
       // Sum all counts
       const total = allResponses.reduce((sum, count) => sum + count, 0);
-      console.log('Total policy count (excluding child tables and directorio):', total);
+      console.log('Total policy count from Firebase (excluding directorio):', total);
       
       setTotalPolicies(total);
     } catch (err) {
-      console.error('Error fetching policy count:', err);
+      console.error('Error fetching policy count from Firebase:', err);
       setError('Error al cargar el conteo de pólizas');
     } finally {
       setIsLoading(false);
