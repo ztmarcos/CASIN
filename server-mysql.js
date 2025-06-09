@@ -545,7 +545,9 @@ app.get('/api/data/:tableName', async (req, res) => {
     // If Firebase is enabled, get data from Firestore
     try {
       const collection = db.collection(tableName);
-      const snapshot = await collection.limit(1000).get();
+      // Get query parameters for limit
+      const limit = parseInt(req.query.limit) || 5000; // Default to 5000, allow override
+      const snapshot = await collection.limit(limit).get();
       
       const data = [];
       snapshot.forEach(doc => {
