@@ -53,3 +53,4 @@ backend-simple-OLD/.env
 # Backup directories that might contain sensitive files
 cleanup-backup/
 backups/
+.cursorrules
