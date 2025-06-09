@@ -1,4 +1,5 @@
 import firebaseService from './firebaseService';
+import { API_URL } from '../config/api.js';
 import { extractBirthdayFromRFC, formatBirthday, calculateAge } from '../utils/rfcUtils';
 
 class FirebaseBirthdayService {
@@ -24,8 +25,7 @@ class FirebaseBirthdayService {
           console.log(`🔍 Checking collection: ${collectionName}`);
           
           // Get all documents from this collection via backend API
-          const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-          const response = await fetch(`${apiUrl}/api/data/${collectionName}`);
+          const response = await fetch(`${API_URL}/data/${collectionName}`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }

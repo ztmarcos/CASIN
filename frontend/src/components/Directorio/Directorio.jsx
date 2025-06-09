@@ -4,10 +4,42 @@ import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
 import PolicyModal from './PolicyModal';
 import SearchFilters from './SearchFilters';
+import { FEATURES } from '../../config/features';
 // import RelationshipsView from './RelationshipsView'; // COMMENTED OUT - Relationships functionality disabled
 import './Directorio.css';
 
 const Directorio = () => {
+  // Check if directorio is enabled
+  if (!FEATURES.DIRECTORIO_ENABLED) {
+    return (
+      <div className="directorio-container">
+        <div className="directorio-disabled">
+          <div className="alert alert-warning">
+            <h3>📊 Directorio Temporalmente Deshabilitado</h3>
+            <p>
+              El directorio está temporalmente deshabilitado para optimizar el rendimiento 
+              y evitar límites de Firebase. Con 2700+ contactos, se requiere una 
+              implementación más eficiente.
+            </p>
+            <p>
+              <strong>Soluciones implementadas:</strong>
+            </p>
+            <ul>
+              <li>✅ Paginación eficiente</li>
+              <li>✅ Estadísticas aproximadas</li>
+              <li>✅ Uso de API Heroku optimizada</li>
+              <li>🔄 En desarrollo: Índices y caché</li>
+            </ul>
+            <p>
+              Para habilitar: Cambia <code>DIRECTORIO_ENABLED: true</code> en 
+              <code>frontend/src/config/features.js</code>
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [viewMode, setViewMode] = useState('cards');
   const [contactos, setContactos] = useState([]);
   const [loading, setLoading] = useState(true);

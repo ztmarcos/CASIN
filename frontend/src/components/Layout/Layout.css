@@ -104,6 +104,17 @@
   background-color: var(--background-active);
 }
 
+.top-nav a.nav-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--text-muted);
+}
+
+.top-nav a.nav-disabled:hover {
+  background-color: transparent;
+  color: var(--text-muted);
+}
+
 .nav-icon {
   width: 1.25rem;
   height: 1.25rem;

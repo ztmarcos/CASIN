@@ -1,4 +1,5 @@
 import firebaseService from './firebaseService';
+import { API_URL } from '../config/api.js';
 
 class FirebaseTableService {
   constructor() {
@@ -129,20 +130,31 @@ class FirebaseTableService {
     try {
       console.log('📋 Getting Firebase collections as tables...');
       
-      // Get statistics for each collection
+      // Get statistics for each collection directly from API
       const tablesWithStats = await Promise.all(
         this.availableCollections.map(async (collection) => {
           try {
-            const stats = await this.firebaseService.getCollectionStats(collection.name);
+            // Get stats directly from API instead of firebaseService
+            const response = await fetch(`${API_URL}/data/${collection.name}`);
+            let count = 0;
+            let columns = [];
+            
+            if (response.ok) {
+              const result = await response.json();
+              const documents = result.data || [];
+              count = documents.length;
+              columns = await this.getTableStructure(collection.name, documents);
+            }
+            
             return {
               name: collection.name,
               title: this.formatTableTitle(collection.name),
               type: collection.type,
               icon: collection.icon,
-              count: stats.count || 0,
-              lastModified: stats.lastModified || new Date(),
+              count: count,
+              lastModified: new Date(),
               isMainTable: true,
-              columns: await this.getTableStructure(collection.name)
+              columns: columns
             };
           } catch (error) {
             console.warn(`Could not get stats for ${collection.name}:`, error);
@@ -180,8 +192,7 @@ class FirebaseTableService {
       this.setCurrentTable(tableName);
       
       // Use backend API instead of direct Firebase calls
-      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-      const response = await fetch(`${apiUrl}/api/data/${tableName}`);
+      const response = await fetch(`${API_URL}/data/${tableName}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -211,8 +222,7 @@ class FirebaseTableService {
       // Use provided documents or fetch from API
       let sampleDocs = documents;
              if (!sampleDocs || sampleDocs.length === 0) {
-         const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-         const response = await fetch(`${apiUrl}/api/data/${tableName}`);
+         const response = await fetch(`${API_URL}/data/${tableName}`);
          if (response.ok) {
            const result = await response.json();
            sampleDocs = (result.data || []).slice(0, 5); // Take first 5 for sampling
@@ -311,8 +321,7 @@ class FirebaseTableService {
       
       for (const collection of this.availableCollections) {
         try {
-          const searchApiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-          const searchResponse = await fetch(`${searchApiUrl}/api/data/${collection.name}`);
+          const searchResponse = await fetch(`${API_URL}/data/${collection.name}`);
           if (!searchResponse.ok) {
             throw new Error(`HTTP error! status: ${searchResponse.status}`);
           }
