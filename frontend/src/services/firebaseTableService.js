@@ -170,7 +170,7 @@ class FirebaseTableService {
   }
 
   /**
-   * Get data from a Firebase collection
+   * Get data from a Firebase collection via backend API
    */
   async getData(tableName, options = {}) {
     try {
@@ -179,12 +179,19 @@ class FirebaseTableService {
       // Set current table when getting data
       this.setCurrentTable(tableName);
       
-      const limit = options.limit || 100;
-      const documents = await this.firebaseService.getAllDocuments(tableName, limit);
+      // Use backend API instead of direct Firebase calls
+      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+      const response = await fetch(`${apiUrl}/api/data/${tableName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const documents = result.data || [];
       
       return {
         data: documents,
-        columns: await this.getTableStructure(tableName),
+        columns: await this.getTableStructure(tableName, documents),
         total: documents.length,
         tableName: tableName,
         title: this.formatTableTitle(tableName)
@@ -197,12 +204,22 @@ class FirebaseTableService {
   }
 
   /**
-   * Get table structure (columns) from a Firebase collection
+   * Get table structure (columns) from document data
    */
-  async getTableStructure(tableName) {
+  async getTableStructure(tableName, documents = null) {
     try {
-      // Get a few documents to infer structure
-      const sampleDocs = await this.firebaseService.getAllDocuments(tableName, 5);
+      // Use provided documents or fetch from API
+      let sampleDocs = documents;
+             if (!sampleDocs || sampleDocs.length === 0) {
+         const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+         const response = await fetch(`${apiUrl}/api/data/${tableName}`);
+         if (response.ok) {
+           const result = await response.json();
+           sampleDocs = (result.data || []).slice(0, 5); // Take first 5 for sampling
+         } else {
+           return [];
+         }
+       }
       
       if (sampleDocs.length === 0) {
         return [];
@@ -210,7 +227,7 @@ class FirebaseTableService {
       
       // Get all unique keys from sample documents
       const allKeys = new Set();
-      sampleDocs.forEach(doc => {
+      sampleDocs.slice(0, 5).forEach(doc => {
         Object.keys(doc).forEach(key => allKeys.add(key));
       });
       
@@ -294,7 +311,13 @@ class FirebaseTableService {
       
       for (const collection of this.availableCollections) {
         try {
-          const documents = await this.firebaseService.getAllDocuments(collection.name, 100);
+          const searchApiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+          const searchResponse = await fetch(`${searchApiUrl}/api/data/${collection.name}`);
+          if (!searchResponse.ok) {
+            throw new Error(`HTTP error! status: ${searchResponse.status}`);
+          }
+          const searchResult = await searchResponse.json();
+          const documents = (searchResult.data || []).slice(0, 100);
           
           const filteredDocs = documents.filter(doc => {
             return Object.values(doc).some(value => 
@@ -340,6 +363,23 @@ class FirebaseTableService {
     } catch (error) {
       console.error(`❌ Error inserting document:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * Get child tables for a parent table (Firebase compatibility)
+   */
+  async getChildTables(parentTableName) {
+    try {
+      console.log(`🔗 Getting child tables for: ${parentTableName}`);
+      
+      // For Firebase, we don't have traditional table relationships
+      // Return empty array as Firebase collections are independent
+      return [];
+      
+    } catch (error) {
+      console.error('Error getting child tables:', error);
+      return [];
     }
   }
 }

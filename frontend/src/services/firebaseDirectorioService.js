@@ -15,8 +15,14 @@ class FirebaseDirectorioService {
       
       console.log('📋 Getting directorio contactos from Firebase...', { filters });
       
-      // Get all documents (Firebase pagination is complex, so we'll get all and filter)
-      const allContactos = await this.firebaseService.getAllDocuments(this.collectionName, 5000);
+      // Get all documents via backend API
+      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      const allContactos = result.data || [];
       
       // Apply filters
       let filteredContactos = allContactos;
@@ -68,8 +74,14 @@ class FirebaseDirectorioService {
     try {
       console.log('🔍 Searching contactos in Firebase...', { searchTerm, params });
       
-      // Get all contactos and filter locally
-      const allContactos = await this.firebaseService.getAllDocuments(this.collectionName, 5000);
+      // Get all contactos via backend API and filter locally
+      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const apiResult = await response.json();
+      const allContactos = apiResult.data || [];
       
       const searchTermLower = searchTerm.toLowerCase().trim();
       
@@ -284,7 +296,13 @@ class FirebaseDirectorioService {
     try {
       console.log('📊 Getting directorio stats from Firebase...');
       
-      const allContactos = await this.firebaseService.getAllDocuments(this.collectionName, 5000);
+      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const statsResult = await response.json();
+      const allContactos = statsResult.data || [];
       
       const stats = {
         total: allContactos.length,
@@ -338,7 +356,13 @@ class FirebaseDirectorioService {
       
       for (const collectionName of policyCollections) {
         try {
-          const records = await this.firebaseService.getAllDocuments(collectionName, 1000);
+          const policiesApiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+          const policiesResponse = await fetch(`${policiesApiUrl}/api/data/${collectionName}`);
+          if (!policiesResponse.ok) {
+            throw new Error(`HTTP error! status: ${policiesResponse.status}`);
+          }
+          const policiesResult = await policiesResponse.json();
+          const records = policiesResult.data || [];
           
           // Search for matches by name
           const matches = records.filter(record => {

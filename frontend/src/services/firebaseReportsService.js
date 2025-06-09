@@ -22,8 +22,14 @@ class FirebaseReportsService {
         try {
           console.log(`🔍 Getting policies from collection: ${collectionName}`);
           
-          // Get all documents from this collection
-          const documents = await this.firebaseService.getAllDocuments(collectionName, 1000);
+          // Get all documents from this collection via backend API
+          const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+          const response = await fetch(`${apiUrl}/api/data/${collectionName}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const result = await response.json();
+          const documents = result.data || [];
           
           for (const doc of documents) {
             const name = this.getNameFromDocument(doc, collectionName);
@@ -215,8 +221,14 @@ class FirebaseReportsService {
         try {
           console.log(`🔍 Checking expirations in collection: ${collectionName}`);
           
-          // Get all documents from this collection
-          const documents = await this.firebaseService.getAllDocuments(collectionName, 1000);
+          // Get all documents from this collection via backend API
+          const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
+          const response = await fetch(`${apiUrl}/api/data/${collectionName}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const result = await response.json();
+          const documents = result.data || [];
           
           for (const doc of documents) {
             // Look for expiration date fields

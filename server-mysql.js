@@ -80,7 +80,7 @@ try {
         type: "service_account",
         project_id: process.env.VITE_FIREBASE_PROJECT_ID,
         private_key: privateKey,
-        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
+        client_email: `firebase-adminsdk-hnwk0@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
       };
       
       console.log('🔥 Service account created with PEM key, project_id:', serviceAccount.project_id);
@@ -94,7 +94,7 @@ try {
       serviceAccount = {
         type: "service_account",
         project_id: process.env.VITE_FIREBASE_PROJECT_ID,
-        client_email: `firebase-adminsdk@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
+        client_email: `firebase-adminsdk-hnwk0@${process.env.VITE_FIREBASE_PROJECT_ID}.iam.gserviceaccount.com`,
       };
       
       console.log('🔥 Attempting fallback without private key for debugging...');

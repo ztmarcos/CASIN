@@ -3,7 +3,7 @@ const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env.
 
 // Backend URLs
 const BACKEND_URL = 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-const LOCAL_BACKEND_URL = 'http://localhost:8001';
+const LOCAL_BACKEND_URL = 'http://localhost:3001';
 
 const API_BASE_URL = isDevelopment 
   ? LOCAL_BACKEND_URL // Use local backend in development (localhost:8001)
