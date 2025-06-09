@@ -121,33 +121,33 @@ class FirebaseDirectorioService {
    */
   async createContacto(contactoData) {
     try {
-      console.log('📝 Creating new contacto in Firebase...', contactoData);
+      console.log('📝 Creating new contacto via backend API...', contactoData);
       
-      // Add timestamps
-      const dataWithTimestamps = {
-        ...contactoData,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
+      // Use backend API endpoint for create
+      const response = await fetch(`${API_URL}/directorio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactoData),
+      });
       
-      const newContactoId = await this.firebaseService.addDocument(
-        this.collectionName,
-        dataWithTimestamps
-      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
-      // Get the created document
-      const newContacto = await this.firebaseService.getDocumentById(this.collectionName, newContactoId);
+      const result = await response.json();
       
-      console.log('✅ Contacto created successfully in Firebase');
+      console.log('✅ Contacto created successfully via backend API');
       
       return {
         success: true,
         message: 'Contact created successfully',
-        data: newContacto
+        data: result.data
       };
       
     } catch (error) {
-      console.error('Error creating contacto in Firebase:', error);
+      console.error('Error creating contacto via backend:', error);
       throw error;
     }
   }
@@ -157,52 +157,33 @@ class FirebaseDirectorioService {
    */
   async updateContacto(id, contactoData) {
     try {
-      console.log(`📝 Updating contacto ${id} in Firebase...`);
+      console.log(`📝 Updating contacto ${id} via backend API...`);
       
-      // Check if the document exists first
-      const existingContacto = await this.firebaseService.getDocumentById(this.collectionName, id);
+      // Use backend API endpoint for update
+      const response = await fetch(`${API_URL}/directorio/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactoData),
+      });
       
-      // Add update timestamp
-      const dataWithTimestamp = {
-        ...contactoData,
-        updated_at: new Date().toISOString()
-      };
-      
-      if (existingContacto) {
-        // Document exists, update it
-        await this.firebaseService.updateDocument(
-          this.collectionName,
-          id,
-          dataWithTimestamp
-        );
-      } else {
-        // Document doesn't exist, create it with the specified ID
-        console.log(`📝 Document ${id} doesn't exist, creating it...`);
-        
-        // For Firebase, we need to use setDoc with a specific ID
-        const { doc, setDoc } = await import('firebase/firestore');
-        const docRef = doc(this.firebaseService.db, this.collectionName, String(id));
-        
-        await setDoc(docRef, {
-          ...dataWithTimestamp,
-          id: String(id),
-          created_at: new Date().toISOString()
-        });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      // Get the updated/created document
-      const updatedContacto = await this.firebaseService.getDocumentById(this.collectionName, id);
+      const result = await response.json();
       
-      console.log('✅ Contacto updated/created successfully in Firebase');
+      console.log('✅ Contacto updated successfully via backend API');
       
       return {
         success: true,
         message: 'Contact updated successfully',
-        data: updatedContacto
+        data: result.data
       };
       
     } catch (error) {
-      console.error('Error updating contacto in Firebase:', error);
+      console.error('Error updating contacto via backend:', error);
       throw error;
     }
   }
@@ -212,27 +193,32 @@ class FirebaseDirectorioService {
    */
   async deleteContacto(id) {
     try {
-      console.log(`🗑️ Deleting contacto ${id} from Firebase...`);
+      console.log(`🗑️ Deleting contacto ${id} via backend API...`);
       
-      // Get contact before deleting for return data
-      const contacto = await this.firebaseService.getDocumentById(this.collectionName, id);
+      // Use backend API endpoint for delete
+      const response = await fetch(`${API_URL}/directorio/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (!contacto) {
-        throw new Error('Contact not found');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      await this.firebaseService.deleteDocument(this.collectionName, id);
+      const result = await response.json();
       
-      console.log('✅ Contacto deleted successfully from Firebase');
+      console.log('✅ Contacto deleted successfully via backend API');
       
       return {
         success: true,
         message: 'Contact deleted successfully',
-        data: contacto
+        data: result.data
       };
       
     } catch (error) {
-      console.error('Error deleting contacto from Firebase:', error);
+      console.error('Error deleting contacto via backend:', error);
       throw error;
     }
   }

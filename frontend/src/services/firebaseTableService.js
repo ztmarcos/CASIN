@@ -192,7 +192,7 @@ class FirebaseTableService {
       this.setCurrentTable(tableName);
       
       // Use backend API instead of direct Firebase calls
-      const response = await fetch(`${API_URL}/data/${tableName}`);
+      const response = await fetch(`${API_URL}/data/${tableName}?nocache=true`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -222,7 +222,7 @@ class FirebaseTableService {
       // Use provided documents or fetch from API
       let sampleDocs = documents;
              if (!sampleDocs || sampleDocs.length === 0) {
-         const response = await fetch(`${API_URL}/data/${tableName}`);
+         const response = await fetch(`${API_URL}/data/${tableName}?nocache=true`);
          if (response.ok) {
            const result = await response.json();
            sampleDocs = (result.data || []).slice(0, 5); // Take first 5 for sampling
@@ -274,17 +274,31 @@ class FirebaseTableService {
   }
 
   /**
-   * Update data in Firebase collection
+   * Update data in Firebase collection via backend API
    */
   async updateData(tableName, id, column, value) {
     try {
-      console.log(`✏️ Updating ${tableName} document ${id}, column ${column}`);
+      console.log(`✏️ Updating ${tableName} document ${id}, column ${column} via backend API`);
       
       const updateData = { [column]: value };
-      await this.firebaseService.updateDocument(tableName, id, updateData);
       
-      console.log('✅ Document updated successfully');
-      return { success: true };
+      // Use backend API instead of direct Firebase call to ensure cache invalidation
+      const response = await fetch(`${API_URL}/data/${tableName}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update document');
+      }
+      
+      const result = await response.json();
+      console.log('✅ Document updated successfully via backend API');
+      return { success: true, result };
       
     } catch (error) {
       console.error(`❌ Error updating document:`, error);
@@ -293,16 +307,28 @@ class FirebaseTableService {
   }
 
   /**
-   * Delete row from Firebase collection
+   * Delete row from Firebase collection via backend API
    */
   async deleteRow(tableName, id) {
     try {
-      console.log(`🗑️ Deleting document ${id} from ${tableName}`);
+      console.log(`🗑️ Deleting document ${id} from ${tableName} via backend API`);
       
-      await this.firebaseService.deleteDocument(tableName, id);
+      // Use backend API instead of direct Firebase call to ensure cache invalidation
+      const response = await fetch(`${API_URL}/data/${tableName}/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
-      console.log('✅ Document deleted successfully');
-      return { success: true };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete document');
+      }
+      
+      const result = await response.json();
+      console.log('✅ Document deleted successfully via backend API');
+      return { success: true, result };
       
     } catch (error) {
       console.error(`❌ Error deleting document:`, error);
@@ -358,16 +384,29 @@ class FirebaseTableService {
   }
 
   /**
-   * Insert new data into Firebase collection
+   * Insert new data into Firebase collection via backend API
    */
   async insertData(tableName, data) {
     try {
-      console.log(`➕ Inserting new document into ${tableName}`);
+      console.log(`➕ Inserting new document into ${tableName} via backend API`);
       
-      const docId = await this.firebaseService.addDocument(tableName, data);
+      // Use backend API instead of direct Firebase call to ensure cache invalidation
+      const response = await fetch(`${API_URL}/data/${tableName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
       
-      console.log(`✅ Document created with ID: ${docId}`);
-      return { success: true, id: docId };
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to insert document');
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Document created successfully via backend API with ID: ${result.id}`);
+      return { success: true, id: result.id };
       
     } catch (error) {
       console.error(`❌ Error inserting document:`, error);

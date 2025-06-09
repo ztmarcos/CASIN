@@ -501,12 +501,18 @@ app.get('/api/data/:tableName', async (req, res) => {
     const { tableName } = req.params;
     const limit = parseInt(req.query.limit) || 1000; // Default limit
     
-    // Check cache first
+    // Check cache first (unless nocache parameter is set)
     const cacheKey = `${tableName}_${limit}`;
     const cached = dataCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    const skipCache = req.query.nocache === 'true';
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION && !skipCache) {
       console.log(`📋 Returning cached data for ${tableName}`);
       return res.json(cached.data);
+    }
+    
+    if (skipCache) {
+      console.log(`🚫 Skipping cache for ${tableName} (nocache=true)`);
     }
 
     console.log(`🔍 Fetching ${tableName} data from Firebase (limit: ${limit})`);
@@ -523,9 +529,15 @@ app.get('/api/data/:tableName', async (req, res) => {
     const data = [];
     
     snapshot.forEach((doc) => {
+      const docData = doc.data();
+      console.log(`🔍 Firebase doc ID: ${doc.id}, contains id field: ${docData.id || 'none'}`);
+      
       data.push({
-        id: doc.id,
-        ...doc.data()
+        id: doc.id,  // Always use Firebase document ID
+        firebase_doc_id: doc.id,  // Backup reference
+        ...docData,
+        // Remove any numeric id field from the document data to avoid conflicts
+        id: doc.id  // Ensure Firebase doc ID is not overwritten
       });
     });
 
@@ -644,7 +656,7 @@ app.get('/api/policies/count', async (req, res) => {
   }
 });
 
-// Insert data into table
+// Insert data into Firebase collection
 app.post('/api/data/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
@@ -654,18 +666,35 @@ app.post('/api/data/:tableName', async (req, res) => {
       return res.status(400).json({ error: 'Valid data object is required' });
     }
     
-    const columns = Object.keys(data).filter(key => key !== 'id');
-    const values = columns.map(col => data[col]);
-    const placeholders = columns.map(() => '?').join(', ');
+    console.log(`➕ Adding new Firebase document to collection ${tableName}`);
     
-    const query = `INSERT INTO \`${tableName}\` (${columns.map(col => `\`${col}\``).join(', ')}) VALUES (${placeholders})`;
-    const result = await executeQuery(query, values);
+    // Add timestamp to data
+    const documentData = {
+      ...data,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    // Add document to Firebase collection
+    const docRef = await admin.firestore().collection(tableName).add(documentData);
+    
+    console.log(`✅ Successfully created Firebase document with ID: ${docRef.id}`);
+    
+    // Invalidate cache for this table
+    const cacheKeysToDelete = [];
+    for (const key of dataCache.keys()) {
+      if (key.startsWith(`${tableName}_`)) {
+        cacheKeysToDelete.push(key);
+      }
+    }
+    cacheKeysToDelete.forEach(key => dataCache.delete(key));
+    console.log(`🗑️ Invalidated ${cacheKeysToDelete.length} cache entries for ${tableName} after INSERT`);
     
     res.json({
       success: true,
-      message: `Data inserted into ${tableName}`,
-      id: result.insertId,
-      data: data
+      message: `Firebase document inserted into ${tableName}`,
+      id: docRef.id,
+      data: documentData
     });
   } catch (error) {
     console.error(`Error inserting data into ${req.params.tableName}:`, error);
@@ -673,54 +702,54 @@ app.post('/api/data/:tableName', async (req, res) => {
   }
 });
 
-// Delete record from table
+// Delete record from Firebase collection
 app.delete('/api/data/:tableName/:id', async (req, res) => {
   try {
     const { tableName, id } = req.params;
     
-    if (!id || isNaN(parseInt(id))) {
+    if (!id) {
       return res.status(400).json({ error: 'Valid record ID is required' });
     }
     
-    console.log(`🗑️ Deleting record ${id} from table ${tableName}`);
+    console.log(`🗑️ Deleting Firebase document ${id} from collection ${tableName}`);
     
-    // First check if record exists
-    const checkQuery = `SELECT id FROM \`${tableName}\` WHERE id = ?`;
-    const existing = await executeQuery(checkQuery, [parseInt(id)]);
-    
-    if (existing.length === 0) {
-      return res.status(404).json({ error: `Record with ID ${id} not found in ${tableName}` });
+    if (!admin.firestore) {
+      throw new Error('Firebase not initialized');
     }
+
+    // Delete from Firebase
+    await admin.firestore().collection(tableName).doc(id).delete();
     
-    // Delete the record
-    const deleteQuery = `DELETE FROM \`${tableName}\` WHERE id = ?`;
-    const result = await executeQuery(deleteQuery, [parseInt(id)]);
+    console.log(`✅ Successfully deleted Firebase document ${id} from ${tableName}`);
     
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: `No record deleted from ${tableName}` });
+    // Invalidate cache for this table
+    const cacheKeysToDelete = [];
+    for (const key of dataCache.keys()) {
+      if (key.startsWith(`${tableName}_`)) {
+        cacheKeysToDelete.push(key);
+      }
     }
-    
-    console.log(`✅ Successfully deleted record ${id} from ${tableName}`);
+    cacheKeysToDelete.forEach(key => dataCache.delete(key));
+    console.log(`🗑️ Invalidated ${cacheKeysToDelete.length} cache entries for ${tableName}`);
     
     res.json({
       success: true,
-      message: `Record ${id} deleted from ${tableName}`,
-      deletedId: parseInt(id),
-      affectedRows: result.affectedRows
+      message: `Firebase document ${id} deleted from ${tableName}`,
+      deletedId: id
     });
   } catch (error) {
-    console.error(`Error deleting record from ${req.params.tableName}:`, error);
+    console.error(`Error deleting Firebase document from ${req.params.tableName}:`, error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Update record in table
+// Update record in table or Firebase collection
 app.put('/api/data/:tableName/:id', async (req, res) => {
   try {
     const { tableName, id } = req.params;
     const data = req.body;
     
-    if (!id || isNaN(parseInt(id))) {
+    if (!id) {
       return res.status(400).json({ error: 'Valid record ID is required' });
     }
     
@@ -728,29 +757,42 @@ app.put('/api/data/:tableName/:id', async (req, res) => {
       return res.status(400).json({ error: 'Valid data object is required' });
     }
     
-    console.log(`📝 Updating record ${id} in table ${tableName}`);
+    console.log(`📝 Updating Firebase document ${id} in collection ${tableName}`);
     
-    // Prepare update query
-    const columns = Object.keys(data).filter(key => key !== 'id');
-    const setClause = columns.map(col => `\`${col}\` = ?`).join(', ');
-    const values = columns.map(col => data[col]);
-    values.push(parseInt(id)); // Add ID for WHERE clause
+    // Use Firebase Admin SDK for updates
+    const docRef = admin.firestore().collection(tableName).doc(id);
     
-    const updateQuery = `UPDATE \`${tableName}\` SET ${setClause} WHERE id = ?`;
-    const result = await executeQuery(updateQuery, values);
-    
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: `Record with ID ${id} not found in ${tableName}` });
+    // Check if document exists
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return res.status(404).json({ error: `Document with ID ${id} not found in ${tableName}` });
     }
     
-    console.log(`✅ Successfully updated record ${id} in ${tableName}`);
+    // Update the document with timestamp
+    const updateData = {
+      ...data,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    };
+    
+    await docRef.update(updateData);
+    
+    console.log(`✅ Successfully updated Firebase document ${id} in ${tableName}`);
+    
+    // Invalidate cache for this table
+    const cacheKeysToDelete = [];
+    for (const key of dataCache.keys()) {
+      if (key.startsWith(`${tableName}_`)) {
+        cacheKeysToDelete.push(key);
+      }
+    }
+    cacheKeysToDelete.forEach(key => dataCache.delete(key));
+    console.log(`🗑️ Invalidated ${cacheKeysToDelete.length} cache entries for ${tableName} after UPDATE`);
     
     res.json({
       success: true,
-      message: `Record ${id} updated in ${tableName}`,
-      updatedId: parseInt(id),
-      affectedRows: result.affectedRows,
-      data: data
+      message: `Firebase document ${id} updated in ${tableName}`,
+      updatedId: id,
+      data: updateData
     });
   } catch (error) {
     console.error(`Error updating record in ${req.params.tableName}:`, error);
