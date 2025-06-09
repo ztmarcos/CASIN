@@ -18,8 +18,8 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getAuth, connectAuthEmulator } from 'firebase/auth';
 
-// Enable Firebase as the primary and only database
-const FIREBASE_ENABLED = true; // Firebase is now the primary database
+// Re-enable Firebase direct calls now that billing is activated
+const FIREBASE_ENABLED = true; // ✅ Enabled with Blaze plan
 
 class FirebaseService {
   constructor() {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import firebaseTableService from '../services/firebaseTableService';
+import { API_URL } from '../config/api.js';
 
 export const usePolicyCount = () => {
   const [totalPolicies, setTotalPolicies] = useState(0);
@@ -11,55 +11,79 @@ export const usePolicyCount = () => {
     setError(null);
     
     try {
-      // Get all available Firebase collections
-      const tables = await firebaseTableService.getTables();
+      console.log('📊 Fetching policy count from backend API...');
+      console.log('🔗 Using API_URL:', API_URL);
       
-      // Filter out directorio_contactos to avoid counting contacts as policies
-      const policyTables = tables.filter(table => 
-        table.name !== 'directorio_contactos'
-      );
-      console.log('Fetching policy count from Firebase collections:', policyTables.map(t => t.name));
-
-      // Get data from policy collections
-      const allResponses = await Promise.all(
-        policyTables.map(async (table) => {
-          try {
-            const response = await firebaseTableService.getData(table.name);
-            const count = response.data?.length || 0;
-            console.log(`Table ${table.name}: ${count} records`);
-            return count;
-          } catch (error) {
-            console.error(`Error fetching from ${table.name}:`, error);
-            return 0;
-          }
-        })
-      );
-
-      // Sum all counts
-      const total = allResponses.reduce((sum, count) => sum + count, 0);
-      console.log('Total policy count from Firebase (excluding directorio):', total);
+      // Use the consolidated endpoint for better performance
+      const url = `${API_URL}/policies/count`;
+      console.log(`🔍 Fetching consolidated count from: ${url}`);
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log('📊 Consolidated count result:', result);
+      
+      const total = result.total || 0;
+      console.log('✅ Total policy count:', total);
       
       setTotalPolicies(total);
     } catch (err) {
-      console.error('Error fetching policy count from Firebase:', err);
-      setError('Error al cargar el conteo de pólizas');
+      console.error('❌ Error fetching policy count from backend:', err);
+      console.log('🔄 Falling back to individual collection counts...');
+      
+      // Fallback to individual collection requests
+      try {
+        const policyCollections = [
+          'autos', 'rc', 'vida', 'gmm', 'transporte', 
+          'mascotas', 'diversos', 'negocio', 'gruposgmm'
+        ];
+
+        const countPromises = policyCollections.map(async (collection) => {
+          try {
+            const url = `${API_URL}/data/${collection}?limit=1`;
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const result = await response.json();
+            return result.total || 0;
+          } catch (error) {
+            console.error(`❌ Error fetching count from ${collection}:`, error);
+            return 0;
+          }
+        });
+
+        const counts = await Promise.all(countPromises);
+        const total = counts.reduce((sum, count) => sum + count, 0);
+        console.log('✅ Fallback total policy count:', total);
+        setTotalPolicies(total);
+      } catch (fallbackError) {
+        console.error('❌ Fallback also failed:', fallbackError);
+        setError('Error al cargar el conteo de pólizas');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log('🔄 PolicyCounter hook initializing...');
     fetchPolicyCount();
 
     // Listen for policy updates to refresh count
     const handlePolicyUpdate = () => {
-      console.log('Policy update detected, refreshing count...');
+      console.log('🔄 Policy update detected, refreshing count...');
       fetchPolicyCount();
     };
 
     window.addEventListener('policyDataUpdated', handlePolicyUpdate);
     return () => window.removeEventListener('policyDataUpdated', handlePolicyUpdate);
   }, []);
+
+  console.log('📈 PolicyCounter hook state:', { totalPolicies, isLoading, error });
 
   return { totalPolicies, isLoading, error, refetch: fetchPolicyCount };
 }; 

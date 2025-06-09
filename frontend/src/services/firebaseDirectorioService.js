@@ -1,4 +1,5 @@
 import firebaseService from './firebaseService.js';
+import { API_URL } from '../config/api.js';
 
 class FirebaseDirectorioService {
   constructor() {
@@ -13,56 +14,35 @@ class FirebaseDirectorioService {
     try {
       const { page = 1, limit = 50, status, origen, genero } = filters;
       
-      console.log('📋 Getting directorio contactos from Firebase...', { filters });
+      console.log('📋 Getting directorio contactos from backend API...', { filters });
       
-      // Get all documents via backend API
-      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      // Use backend directorio endpoint
+      const queryParams = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        ...(status && { status }),
+        ...(origen && { origen }),
+        ...(genero && { genero })
+      });
+      
+      const response = await fetch(`${API_URL}/directorio?${queryParams}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const result = await response.json();
-      const allContactos = result.data || [];
       
-      // Apply filters
-      let filteredContactos = allContactos;
-      
-      if (status && status.trim()) {
-        filteredContactos = filteredContactos.filter(c => c.status === status.trim());
-      }
-      
-      if (origen && origen.trim()) {
-        filteredContactos = filteredContactos.filter(c => c.origen === origen.trim());
-      }
-      
-      if (genero && genero.trim()) {
-        filteredContactos = filteredContactos.filter(c => c.genero === genero.trim());
-      }
-      
-      // Sort by creation date (newest first)
-      filteredContactos.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB - dateA;
-      });
-      
-      // Apply pagination
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedData = filteredContactos.slice(startIndex, endIndex);
-      
-      console.log(`✅ Found ${filteredContactos.length} total contactos, showing ${paginatedData.length}`);
+      console.log(`✅ Found ${result.total} total contactos, showing ${result.data.length}`);
       
       return {
-        data: paginatedData,
-        total: filteredContactos.length,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(filteredContactos.length / parseInt(limit))
+        data: result.data || [],
+        total: result.total || 0,
+        page: result.page || parseInt(page),
+        limit: result.limit || parseInt(limit),
+        totalPages: result.totalPages || Math.ceil((result.total || 0) / parseInt(limit))
       };
       
     } catch (error) {
-      console.error('Error fetching contacts from Firebase:', error);
+      console.error('Error fetching contacts from backend:', error);
       throw error;
     }
   }
@@ -72,75 +52,35 @@ class FirebaseDirectorioService {
    */
   async searchContactos(searchTerm, params = {}) {
     try {
-      console.log('🔍 Searching contactos in Firebase...', { searchTerm, params });
+      console.log('🔍 Searching contactos via backend API...', { searchTerm, params });
       
-      // Get all contactos via backend API and filter locally
-      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      const queryParams = new URLSearchParams({
+        search: searchTerm,
+        page: (params.page || 1).toString(),
+        limit: (params.limit || 50).toString(),
+        ...(params.status && { status: params.status }),
+        ...(params.origen && { origen: params.origen }),
+        ...(params.genero && { genero: params.genero })
+      });
+      
+      const response = await fetch(`${API_URL}/directorio?${queryParams}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const apiResult = await response.json();
-      const allContactos = apiResult.data || [];
+      const result = await response.json();
       
-      const searchTermLower = searchTerm.toLowerCase().trim();
-      
-      const filtered = allContactos.filter(contacto => {
-        const searchableFields = [
-          contacto.nombre_completo,
-          contacto.email,
-          contacto.telefono_movil,
-          contacto.telefono_oficina,
-          contacto.telefono_casa,
-          contacto.empresa,
-          contacto.nickname,
-          contacto.apellido
-        ];
-        
-        return searchableFields.some(field => 
-          field && field.toString().toLowerCase().includes(searchTermLower)
-        );
-      });
-      
-      // Apply additional filters
-      let result = filtered;
-      if (params.status && params.status.trim()) {
-        result = result.filter(c => c.status === params.status.trim());
-      }
-      if (params.origen && params.origen.trim()) {
-        result = result.filter(c => c.origen === params.origen.trim());
-      }
-      if (params.genero && params.genero.trim()) {
-        result = result.filter(c => c.genero === params.genero.trim());
-      }
-      
-      // Sort by creation date (newest first)
-      result.sort((a, b) => {
-        const dateA = new Date(a.created_at || 0);
-        const dateB = new Date(b.created_at || 0);
-        return dateB - dateA;
-      });
-      
-      // Apply pagination
-      const page = parseInt(params.page || 1);
-      const limit = parseInt(params.limit || 50);
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      
-      const paginatedData = result.slice(startIndex, endIndex);
-      
-      console.log(`✅ Found ${result.length} matching contactos, showing ${paginatedData.length}`);
+      console.log(`✅ Found ${result.total} matching contactos, showing ${result.data.length}`);
       
       return {
-        data: paginatedData,
-        total: result.length,
-        page,
-        limit,
-        totalPages: Math.ceil(result.length / limit)
+        data: result.data || [],
+        total: result.total || 0,
+        page: result.page || parseInt(params.page || 1),
+        limit: result.limit || parseInt(params.limit || 50),
+        totalPages: result.totalPages || Math.ceil((result.total || 0) / parseInt(params.limit || 50))
       };
       
     } catch (error) {
-      console.error('Error searching contacts in Firebase:', error);
+      console.error('Error searching contacts via backend:', error);
       throw error;
     }
   }
@@ -150,20 +90,28 @@ class FirebaseDirectorioService {
    */
   async getContactoById(id) {
     try {
-      console.log(`📋 Getting contacto ${id} from Firebase...`);
-      const contacto = await this.firebaseService.getDocumentById(this.collectionName, id);
+      console.log(`📋 Getting contacto ${id} from backend API...`);
       
-      if (!contacto) {
+      const response = await fetch(`${API_URL}/directorio/${id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Contact not found');
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const result = await response.json();
+      
+      if (!result.data) {
         throw new Error('Contact not found');
       }
       
       return {
         success: true,
-        data: contacto
+        data: result.data
       };
       
     } catch (error) {
-      console.error('Error fetching contacto from Firebase:', error);
+      console.error('Error fetching contacto from backend:', error);
       throw error;
     }
   }
@@ -294,33 +242,35 @@ class FirebaseDirectorioService {
    */
   async getStats() {
     try {
-      console.log('📊 Getting directorio stats from Firebase...');
+      console.log('📊 Getting directorio stats from backend API...');
       
-      const apiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-      const response = await fetch(`${apiUrl}/api/data/${this.collectionName}`);
+      // Use the dedicated stats endpoint
+      const response = await fetch(`${API_URL}/directorio/stats`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const statsResult = await response.json();
-      const allContactos = statsResult.data || [];
+      const result = await response.json();
       
+      console.log('✅ Raw directorio stats from backend:', result);
+      
+      // Backend returns stats directly, not wrapped in a stats object
       const stats = {
-        total: allContactos.length,
-        withPhone: allContactos.filter(c => c.telefono_movil && c.telefono_movil.trim()).length,
-        withEmail: allContactos.filter(c => c.email && c.email.trim()).length,
-        withBirthday: 0, // No birthday field in directorio_contactos
-        clientes: allContactos.filter(c => c.status === 'cliente').length,
-        prospectos: allContactos.filter(c => c.status === 'prospecto').length
+        total: result.total || 0,
+        withPhone: result.withPhone || 0,
+        withEmail: result.withEmail || 0,
+        withBirthday: result.withBirthday || 0,
+        clientes: result.clientes || 0,
+        prospectos: result.prospectos || 0
       };
       
-      console.log('✅ Directorio stats calculated:', stats);
+      console.log('✅ Formatted directorio stats:', stats);
       
       return {
         stats: stats
       };
       
     } catch (error) {
-      console.error('Error getting directorio stats from Firebase:', error);
+      console.error('Error getting directorio stats from backend:', error);
       // Return empty stats on error
       return {
         stats: {
@@ -337,85 +287,36 @@ class FirebaseDirectorioService {
 
   /**
    * Get policies for a specific contact
-   * Searches across all policy collections for matches by name
+   * Uses backend API endpoint for efficient policy matching
    */
   async getContactoPolicies(contactoId) {
     try {
-      console.log(`📋 Getting policies for contacto ${contactoId} from Firebase...`);
+      console.log(`📋 Getting policies for contacto ${contactoId} from backend API...`);
       
-      // Get the contact first
-      const contacto = await this.firebaseService.getDocumentById(this.collectionName, contactoId);
-      
-      if (!contacto) {
-        throw new Error('Contact not found');
-      }
-      
-      // Search for policies in all collections that might contain this contact's name
-      const policyCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
-      const policies = [];
-      
-      for (const collectionName of policyCollections) {
-        try {
-          const policiesApiUrl = import.meta.env.DEV ? 'http://localhost:3001' : 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-          const policiesResponse = await fetch(`${policiesApiUrl}/api/data/${collectionName}`);
-          if (!policiesResponse.ok) {
-            throw new Error(`HTTP error! status: ${policiesResponse.status}`);
-          }
-          const policiesResult = await policiesResponse.json();
-          const records = policiesResult.data || [];
-          
-          // Search for matches by name
-          const matches = records.filter(record => {
-            const nameFields = [
-              record.nombre_contratante,
-              record.asegurado,
-              record.contratante,
-              record.nombre
-            ];
-            
-            return nameFields.some(nameField => {
-              if (!nameField || !contacto.nombre_completo) return false;
-              
-              const nameFieldLower = nameField.toString().toLowerCase().trim();
-              const contactNameLower = contacto.nombre_completo.toLowerCase().trim();
-              
-              // Check for exact match or partial match
-              return nameFieldLower === contactNameLower || 
-                     nameFieldLower.includes(contactNameLower) ||
-                     contactNameLower.includes(nameFieldLower);
-            });
-          });
-          
-          // Add collection info to matches
-          matches.forEach(match => {
-            policies.push({
-              ...match,
-              tabla_origen: collectionName,
-              poliza: match.numero_poliza || match.poliza || 'N/A',
-              asegurado: match.nombre_contratante || match.asegurado || match.contratante || match.nombre,
-              vigencia_de: match.vigencia_inicio || match.fecha_inicio,
-              vigencia_hasta: match.vigencia_fin || match.fecha_fin
-            });
-          });
-          
-        } catch (err) {
-          console.log(`Could not search in collection ${collectionName}:`, err.message);
+      // Use the dedicated backend endpoint for contact policies
+      const response = await fetch(`${API_URL}/directorio/${contactoId}/policies`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Contact not found');
         }
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      console.log(`✅ Found ${policies.length} policies for contacto ${contactoId}`);
+      const result = await response.json();
+      
+      console.log(`✅ Found ${result.policies?.length || 0} policies for contacto ${contactoId}`);
       
       return {
         success: true,
         data: {
-          contact: contacto,
-          policies: policies
+          contact: result.contact,
+          policies: result.policies || []
         },
-        total: policies.length
+        total: result.policies?.length || 0
       };
       
     } catch (error) {
-      console.error('Error getting contacto policies from Firebase:', error);
+      console.error('Error getting contacto policies from backend:', error);
       throw error;
     }
   }
