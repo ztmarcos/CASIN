@@ -522,7 +522,8 @@
 }
 
 .no-policies {
-  color: #ccc;
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .actions-cell {
@@ -579,9 +580,54 @@
   transform: scale(1.1);
 }
 
+/* Payment Status Toggle Buttons - Coordinated with Reports */
+.status-toggle {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 80px;
+  white-space: nowrap;
+}
 
+.status-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
+.status-toggle.pagado {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
 
+.status-toggle.pagado:hover:not(:disabled) {
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(16, 185, 129, 0.4);
+}
+
+.status-toggle.no-pagado {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.status-toggle.no-pagado:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
+}
+
+.status-toggle:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
 
 /* Responsive design */
 @media (max-width: 768px) {

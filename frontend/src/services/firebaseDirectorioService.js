@@ -308,37 +308,110 @@ class FirebaseDirectorioService {
   }
 
   /**
-   * Link contact to client (placeholder for compatibility)
+   * Link contact to client data for relationships
    */
   async linkContactoToCliente(contactoId, clienteData) {
     try {
-      console.log(`🔗 Linking contacto ${contactoId} to cliente in Firebase...`);
+      console.log(`🔗 Linking contacto ${contactoId} to cliente data...`);
       
+      // Update the contact with client relationship data
       const updateData = {
-        status: 'cliente',
-        tabla_relacionada: clienteData.table,
-        cliente_id_relacionado: clienteData.clientId,
-        fecha_conversion: new Date().toISOString().split('T')[0],
-        updated_at: new Date().toISOString()
+        cliente_vinculado: true,
+        cliente_data: clienteData,
+        fecha_vinculacion: new Date().toISOString()
       };
       
-      await this.firebaseService.updateDocument(
-        this.collectionName,
-        contactoId,
-        updateData
-      );
+      const response = await fetch(`${API_URL}/directorio/${contactoId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
       
-      // Get the updated document
-      const updatedContacto = await this.firebaseService.getDocumentById(this.collectionName, contactoId);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      console.log('✅ Contacto linked to cliente successfully');
       
       return {
         success: true,
         message: 'Contact linked to client successfully',
-        data: updatedContacto
+        data: result.data
       };
       
     } catch (error) {
-      console.error('Error linking contacto to cliente in Firebase:', error);
+      console.error('Error linking contacto to cliente:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get contact payment statuses from Firebase
+   * @returns {Promise<Object>} Contact payment statuses object
+   */
+  async getContactPaymentStatuses() {
+    try {
+      console.log('📊 Getting contact payment statuses from Firebase...');
+      
+      // Get all contacts via backend API
+      const response = await fetch(`${API_URL}/directorio?limit=5000`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const contacts = result.data || [];
+      const statuses = {};
+      
+      for (const contact of contacts) {
+        // Get payment status from contact document, default to 'No Pagado' if not set
+        statuses[contact.id] = contact.estado_pago || 'No Pagado';
+      }
+      
+      console.log(`✅ Contact payment statuses loaded: ${Object.keys(statuses).length} contacts`);
+      return statuses;
+      
+    } catch (error) {
+      console.error('❌ Error getting contact payment statuses:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Update contact payment status in Firebase
+   * @param {string} contactId - Contact ID to update
+   * @param {string} paymentStatus - New payment status ('Pagado' or 'No Pagado')
+   * @returns {Promise<boolean>} Success status
+   */
+  async updateContactoPaymentStatus(contactId, paymentStatus) {
+    try {
+      console.log(`🔄 Updating contact ${contactId} payment status to: ${paymentStatus}`);
+      
+      // Update the contact document in Firebase through backend API
+      const response = await fetch(`${API_URL}/directorio/${contactId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          estado_pago: paymentStatus
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Contact payment status updated successfully:', result);
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Error updating contact payment status:', error);
       throw error;
     }
   }

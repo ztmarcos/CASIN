@@ -54,6 +54,10 @@ const Directorio = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
   const [contactPolicyTables, setContactPolicyTables] = useState({});
+  
+  // Payment status state - coordinated with reports functionality
+  const [contactPaymentStatuses, setContactPaymentStatuses] = useState({});
+  const [isStatusLoading, setIsStatusLoading] = useState(true);
 
   useEffect(() => {
     console.log('🔄 useEffect triggered:', {
@@ -183,6 +187,11 @@ const Directorio = () => {
     }
   };
 
+  // Load payment statuses on component mount
+  useEffect(() => {
+    loadContactPaymentStatuses();
+  }, []);
+
   const handleSearch = (term) => {
     setSearchTerm(term);
     setCurrentPage(1);
@@ -229,6 +238,51 @@ const Directorio = () => {
       newFilters.status = newFilters.status === filterType ? '' : filterType;
     }
     handleFilterChange(newFilters);
+  };
+
+  // Payment status functions - coordinated with reports functionality
+  const getContactPaymentStatus = (contacto) => {
+    return contactPaymentStatuses[contacto.id] || 'No Pagado';
+  };
+
+  const handleTogglePaymentStatus = async (contacto) => {
+    try {
+      const currentStatus = getContactPaymentStatus(contacto);
+      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      
+      console.log(`🔄 Updating contact ${contacto.id} payment status from ${currentStatus} to ${newStatus}`);
+      
+      // Update via Firebase directorio service
+      await firebaseDirectorioService.updateContactoPaymentStatus(contacto.id, newStatus);
+      
+      // Update local state
+      setContactPaymentStatuses(prev => ({
+        ...prev,
+        [contacto.id]: newStatus
+      }));
+      
+      console.log(`✅ Contact ${contacto.nombre_completo} payment status updated to: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating contact payment status:', err);
+      setError('Error al actualizar el estado de pago del contacto');
+    }
+  };
+
+  const loadContactPaymentStatuses = async () => {
+    try {
+      setIsStatusLoading(true);
+      console.log('📊 Loading contact payment statuses from Firebase...');
+      
+      const statuses = await firebaseDirectorioService.getContactPaymentStatuses();
+      setContactPaymentStatuses(statuses);
+      
+      console.log('✅ Contact payment statuses loaded from Firebase');
+    } catch (err) {
+      console.error('❌ Error loading contact payment statuses:', err);
+    } finally {
+      setIsStatusLoading(false);
+    }
   };
 
   // Enhanced pagination with better UX - memoized to prevent excessive calculations
@@ -381,6 +435,7 @@ const Directorio = () => {
               <th>Email</th>
               <th>Teléfono</th>
               <th>Status</th>
+              <th>Estado Pago</th>
               <th>Pólizas</th>
               <th>Origen</th>
               <th>Género</th>
@@ -391,7 +446,7 @@ const Directorio = () => {
           <tbody>
             {contactos.length === 0 ? (
               <tr>
-                <td colSpan="9" className="no-results">
+                <td colSpan="10" className="no-results">
                   {loading ? 'Cargando...' : 'No se encontraron contactos'}
                 </td>
               </tr>
@@ -405,6 +460,16 @@ const Directorio = () => {
                     <span className={`status-badge ${contacto.status}`}>
                       {contacto.status === 'cliente' ? 'Cliente' : 'Prospecto'}
                     </span>
+                  </td>
+                  <td>
+                    <button 
+                      onClick={() => handleTogglePaymentStatus(contacto)}
+                      className={`status-toggle ${getContactPaymentStatus(contacto).toLowerCase().replace(' ', '-')}`}
+                      disabled={isStatusLoading}
+                      title={`Cambiar estado de pago (actual: ${getContactPaymentStatus(contacto)})`}
+                    >
+                      {getContactPaymentStatus(contacto)}
+                    </button>
                   </td>
                   <td className="policy-tables-cell">
                     {contacto.status === 'cliente' ? (

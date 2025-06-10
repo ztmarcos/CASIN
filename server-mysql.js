@@ -1446,6 +1446,56 @@ app.put('/api/directorio/:id', async (req, res) => {
     const { id } = req.params;
     const contactData = req.body;
     
+    console.log(`🔄 Updating contact ${id} with data:`, contactData);
+    
+    // Use Firebase for directorio updates if available (both production and development)
+    if (isFirebaseEnabled && db) {
+      console.log('📋 Using Firebase for directorio update (Firebase enabled)');
+      
+      try {
+        // Get current document to check if it exists
+        const docRef = db.collection('directorio_contactos').doc(id);
+        const doc = await docRef.get();
+        
+        if (!doc.exists) {
+          return res.status(404).json({
+            success: false,
+            message: 'Contact not found'
+          });
+        }
+        
+        // Update document with new data
+        const updateData = {
+          ...contactData,
+          updated_at: new Date().toISOString()
+        };
+        
+        await docRef.update(updateData);
+        
+        // Get updated document
+        const updatedDoc = await docRef.get();
+        const updatedContact = {
+          id: updatedDoc.id,
+          ...updatedDoc.data()
+        };
+        
+        console.log('✅ Contact updated successfully in Firebase:', updatedContact);
+        
+        return res.json({
+          success: true,
+          message: 'Contact updated successfully',
+          data: updatedContact
+        });
+        
+      } catch (firebaseError) {
+        console.error('❌ Firebase update failed:', firebaseError);
+        // Fall back to MySQL if Firebase fails
+      }
+    }
+    
+    // Fallback to MySQL if Firebase is not available
+    console.log('📋 Using MySQL for directorio update (Firebase not available)');
+    
     // Check if contact exists
     const existingContact = await executeQuery(
       'SELECT * FROM directorio_contactos WHERE id = ?',
