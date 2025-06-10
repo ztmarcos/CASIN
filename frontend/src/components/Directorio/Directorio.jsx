@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import firebaseDirectorioService from '../../services/firebaseDirectorioService';
 import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
@@ -56,6 +56,14 @@ const Directorio = () => {
   const [contactPolicyTables, setContactPolicyTables] = useState({});
 
   useEffect(() => {
+    console.log('🔄 useEffect triggered:', {
+      viewMode,
+      currentPage,
+      itemsPerPage,
+      filtersString: JSON.stringify(filters),
+      searchTerm: searchTerm.substring(0, 20) + (searchTerm.length > 20 ? '...' : '')
+    });
+    
     if (viewMode !== 'relationships') {
       loadData();
     }
@@ -81,18 +89,17 @@ const Directorio = () => {
         firebaseDirectorioService.getStats()
       ]);
       
-      console.log('🔍 Raw contactosData received:', {
-        dataLength: contactosData?.data?.length || 0,
-        total: contactosData?.total,
-        page: contactosData?.page,
-        totalPages: contactosData?.totalPages,
-        fullResponse: contactosData
-      });
-      console.log('🔍 Raw statsData received:', {
-        stats: statsData?.stats,
-        total: statsData?.stats?.total || statsData?.total,
-        fullResponse: statsData
-      });
+      console.log('🔍 Raw contactosData received:');
+      console.log('- dataLength:', contactosData?.data?.length || 0);
+      console.log('- total:', contactosData?.total);
+      console.log('- page:', contactosData?.page);
+      console.log('- totalPages:', contactosData?.totalPages);
+      console.log('- full contactosData:', contactosData);
+      
+      console.log('🔍 Raw statsData received:');
+      console.log('- statsData.stats:', statsData?.stats);
+      console.log('- statsData.total:', statsData?.total);
+      console.log('- full statsData:', statsData);
       
       const contacts = contactosData.data || contactosData;
       setContactos(contacts);
@@ -103,12 +110,12 @@ const Directorio = () => {
         total: contactosData.total || (statsData.stats?.total || statsData?.total)
       };
       
-      console.log('📊 Setting stats:', {
-        originalStatsData: statsData,
-        contactosTotal: contactosData.total,
-        finalStats: newStats,
-        willShowPagination: newStats.total > itemsPerPage
-      });
+      console.log('📊 Setting stats:');
+      console.log('- originalStatsData:', statsData);
+      console.log('- contactosTotal:', contactosData.total);
+      console.log('- finalStats:', newStats);
+      console.log('- finalStats.total:', newStats.total);
+      console.log('- willShowPagination:', newStats.total > itemsPerPage);
       
       setStats(newStats);
       
@@ -201,19 +208,26 @@ const Directorio = () => {
     handleFilterChange(newFilters);
   };
 
-  // Enhanced pagination with better UX
-  const totalPages = stats ? Math.ceil(stats.total / itemsPerPage) : 1;
-  
-  console.log('📊 Pagination calculation:', {
-    statsTotal: stats?.total,
-    itemsPerPage,
-    totalPages,
-    currentPage,
-    shouldShowPagination: totalPages > 1
-  });
+  // Enhanced pagination with better UX - memoized to prevent excessive calculations
+  const totalPages = useMemo(() => {
+    const total = stats ? Math.ceil(stats.total / itemsPerPage) : 1;
+    
+    console.log('📊 Pagination calculation (memoized):');
+    console.log('- statsTotal:', stats?.total);
+    console.log('- itemsPerPage:', itemsPerPage);
+    console.log('- totalPages:', total);
+    console.log('- currentPage:', currentPage);
+    console.log('- shouldShowPagination:', total > 1);
+    console.log('- stats object:', stats);
+    
+    return total;
+  }, [stats?.total, itemsPerPage]);
   
   const renderPagination = () => {
-    console.log('🔍 Rendering pagination:', { totalPages, currentPage, itemsPerPage });
+    console.log('🔍 Rendering pagination:');
+    console.log('- totalPages:', totalPages);
+    console.log('- currentPage:', currentPage);
+    console.log('- itemsPerPage:', itemsPerPage);
     if (totalPages <= 1) {
       console.log('❌ Not rendering pagination: totalPages <= 1');
       return null;
