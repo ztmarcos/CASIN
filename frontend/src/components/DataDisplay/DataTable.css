@@ -2309,25 +2309,29 @@ td .edit-cell-input[type="select"] {
 }
 
 .payment-paid {
-  background-color: #4CAF50; /* Mismo verde que Reports */
-  color: white;
+  background-color: transparent; /* Sin fondo */
+  color: #4CAF50; /* Texto verde */
+  border: 1px solid #4CAF50;
   opacity: 0.85; /* Más tenue */
 }
 
 .payment-paid:hover {
   opacity: 0.95;
   transform: scale(1.03);
+  background-color: rgba(76, 175, 80, 0.1); /* Fondo tenue al hover */
 }
 
 .payment-unpaid {
-  background-color: #f44336; /* Mismo rojo que Reports */
-  color: white;
+  background-color: transparent; /* Sin fondo */
+  color: #f44336; /* Texto rojo */
+  border: 1px solid #f44336;
   opacity: 0.85; /* Más tenue */
 }
 
 .payment-unpaid:hover {
   opacity: 0.95;
   transform: scale(1.03);
+  background-color: rgba(244, 67, 54, 0.1); /* Fondo tenue al hover */
 }
 
 .action-header.payment-header {
@@ -2346,25 +2350,29 @@ td .edit-cell-input[type="select"] {
 }
 
 [data-theme='dark'] .payment-paid {
-  background-color: #4CAF50; /* Mismo verde que Reports */
-  color: white;
+  background-color: transparent; /* Sin fondo */
+  color: #4CAF50; /* Texto verde */
+  border: 1px solid #4CAF50;
   opacity: 0.85; /* Más tenue */
 }
 
 [data-theme='dark'] .payment-paid:hover {
   opacity: 0.95;
   transform: scale(1.03);
+  background-color: rgba(76, 175, 80, 0.15); /* Fondo tenue al hover para dark */
 }
 
 [data-theme='dark'] .payment-unpaid {
-  background-color: #f44336; /* Mismo rojo que Reports */
-  color: white;
+  background-color: transparent; /* Sin fondo */
+  color: #f44336; /* Texto rojo */
+  border: 1px solid #f44336;
   opacity: 0.85; /* Más tenue */
 }
 
 [data-theme='dark'] .payment-unpaid:hover {
   opacity: 0.95;
   transform: scale(1.03);
+  background-color: rgba(244, 67, 54, 0.15); /* Fondo tenue al hover para dark */
 }
 
 [data-theme='dark'] .action-header.payment-header {

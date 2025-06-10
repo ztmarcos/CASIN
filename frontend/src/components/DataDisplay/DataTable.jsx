@@ -662,9 +662,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   };
 
   // Reorder columns to put status after ID only for related tables
-  let reorderedColumns = columns;
+  // Also filter out estado_pago since we show it as action button
+  let reorderedColumns = columns.filter(col => col !== 'estado_pago');
   if (tableName && (data[0]?.status !== undefined)) {
-    reorderedColumns = columns.filter(col => col !== 'status');
+    reorderedColumns = reorderedColumns.filter(col => col !== 'status');
     const idIndex = reorderedColumns.indexOf('id');
     if (idIndex !== -1) {
       reorderedColumns.splice(idIndex + 1, 0, 'status');
