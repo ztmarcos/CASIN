@@ -1089,12 +1089,20 @@ app.get('/api/directorio', async (req, res) => {
         genero 
       } = req.query;
       
+      // Validate and sanitize pagination parameters
+      const pageInt = Math.max(1, parseInt(page) || 1);
+      const limitInt = Math.min(100, Math.max(1, parseInt(limit) || 50));
+      
+      console.log(`📋 Firebase pagination: page=${pageInt}, limit=${limitInt}`);
+      
       // Get all documents from Firebase
       const snapshot = await db.collection('directorio_contactos').get();
       let allContactos = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+      
+      console.log(`📋 Firebase: Retrieved ${allContactos.length} total contactos from database`);
       
       // Apply search filter
       if (search && search.trim()) {
@@ -1140,18 +1148,19 @@ app.get('/api/directorio', async (req, res) => {
       });
       
       // Apply pagination
-      const startIndex = (parseInt(page) - 1) * parseInt(limit);
-      const endIndex = startIndex + parseInt(limit);
+      const startIndex = (pageInt - 1) * limitInt;
+      const endIndex = startIndex + limitInt;
       const paginatedData = allContactos.slice(startIndex, endIndex);
       
-      console.log(`✅ Firebase: Found ${allContactos.length} total contactos, showing ${paginatedData.length}`);
+      console.log(`✅ Firebase: Found ${allContactos.length} total contactos, returning ${paginatedData.length} for page ${pageInt}`);
+      console.log(`📋 Firebase pagination details: startIndex=${startIndex}, endIndex=${endIndex}, totalPages=${Math.ceil(allContactos.length / limitInt)}`);
       
       return res.json({
         data: paginatedData,
         total: allContactos.length,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        totalPages: Math.ceil(allContactos.length / parseInt(limit)),
+        page: pageInt,
+        limit: limitInt,
+        totalPages: Math.ceil(allContactos.length / limitInt),
         source: 'Firebase'
       });
     }
@@ -1169,8 +1178,10 @@ app.get('/api/directorio', async (req, res) => {
       genero 
     } = req.query;
     
-    const offset = (page - 1) * parseInt(limit);
-    const limitInt = parseInt(limit);
+    // Validate and sanitize pagination parameters
+    const pageInt = Math.max(1, parseInt(page) || 1);
+    const limitInt = Math.min(100, Math.max(1, parseInt(limit) || 50));
+    const offset = (pageInt - 1) * limitInt;
     
     // Build WHERE conditions
     const whereConditions = [];
@@ -1242,9 +1253,9 @@ app.get('/api/directorio', async (req, res) => {
     res.json({
       data: data,
       total: total,
-      page: parseInt(page),
-      limit: parseInt(limit),
-      totalPages: Math.ceil(total / limit),
+      page: pageInt,
+      limit: limitInt,
+      totalPages: Math.ceil(total / limitInt),
       source: 'MySQL'
     });
   } catch (error) {

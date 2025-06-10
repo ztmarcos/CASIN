@@ -66,7 +66,13 @@ const Directorio = () => {
       setLoading(true);
       const params = { ...filters, page: currentPage, limit: itemsPerPage };
       
-      console.log('🔄 Loading directorio data from Firebase...', { searchTerm, params });
+      console.log('🔄 Loading directorio data from Firebase...', { 
+        searchTerm, 
+        params, 
+        currentPage, 
+        itemsPerPage,
+        totalPages: stats ? Math.ceil(stats.total / itemsPerPage) : 'unknown'
+      });
       
       const [contactosData, statsData] = await Promise.all([
         searchTerm.trim() 
@@ -75,15 +81,23 @@ const Directorio = () => {
         firebaseDirectorioService.getStats()
       ]);
       
+      console.log('🔍 Raw contactosData received:', {
+        dataLength: contactosData?.data?.length || 0,
+        total: contactosData?.total,
+        page: contactosData?.page,
+        totalPages: contactosData?.totalPages
+      });
       console.log('🔍 Raw statsData received:', statsData);
-      console.log('🔍 statsData.stats:', statsData.stats);
-      console.log('🔍 statsData.stats?.total:', statsData.stats?.total);
-      console.log('🔍 statsData.stats?.clientes:', statsData.stats?.clientes);
-      console.log('🔍 statsData.stats?.prospectos:', statsData.stats?.prospectos);
       
       const contacts = contactosData.data || contactosData;
       setContactos(contacts);
-      setStats(statsData.stats || statsData); // Handle both response formats
+      
+      // Update stats with pagination info from contactosData if available
+      const newStats = {
+        ...(statsData.stats || statsData),
+        total: contactosData.total || (statsData.stats?.total || statsData?.total)
+      };
+      setStats(newStats);
       
       console.log(`✅ Loaded ${contacts.length} contactos from Firebase`);
       
@@ -206,7 +220,10 @@ const Directorio = () => {
 
           <div className="pagination-buttons">
             <button 
-              onClick={() => setCurrentPage(1)} 
+              onClick={() => {
+                console.log(`📄 Clicking Primera: ${currentPage} -> 1`);
+                setCurrentPage(1);
+              }} 
               disabled={currentPage === 1}
               className="pagination-btn"
             >
@@ -214,7 +231,11 @@ const Directorio = () => {
             </button>
             
             <button 
-              onClick={() => setCurrentPage(currentPage - 1)} 
+              onClick={() => {
+                const prevPage = currentPage - 1;
+                console.log(`📄 Clicking Anterior: ${currentPage} -> ${prevPage}`);
+                setCurrentPage(prevPage);
+              }} 
               disabled={currentPage === 1}
               className="pagination-btn"
             >
@@ -226,16 +247,23 @@ const Directorio = () => {
             </span>
 
             <button 
-              onClick={() => setCurrentPage(currentPage + 1)} 
-              disabled={currentPage === totalPages}
+              onClick={() => {
+                const nextPage = currentPage + 1;
+                console.log(`📄 Clicking Siguiente: ${currentPage} -> ${nextPage} (max: ${totalPages})`);
+                setCurrentPage(nextPage);
+              }} 
+              disabled={currentPage >= totalPages}
               className="pagination-btn"
             >
               Siguiente
             </button>
             
             <button 
-              onClick={() => setCurrentPage(totalPages)} 
-              disabled={currentPage === totalPages}
+              onClick={() => {
+                console.log(`📄 Clicking Última: ${currentPage} -> ${totalPages}`);
+                setCurrentPage(totalPages);
+              }} 
+              disabled={currentPage >= totalPages}
               className="pagination-btn"
             >
               Última
