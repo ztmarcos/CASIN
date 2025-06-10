@@ -552,9 +552,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       
       console.log(`🔄 Updating payment status for record ${record.id} from ${currentStatus} to ${newStatus}`);
       
-      await firebaseTableService.updateRecord(tableName, record.id, {
-        estado_pago: newStatus
-      });
+      await firebaseTableService.updateData(tableName, record.id, 'estado_pago', newStatus);
       
       toast.success(`Estado de pago actualizado a: ${newStatus}`);
       
@@ -862,6 +860,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         <table className="data-table">
           <thead>
             <tr>
+              {/* COLUMNA ESTADO PAGO - MOVIDA AL LADO IZQUIERDO */}
+              <th className="action-header payment-header" style={{
+                width: '120px !important',
+                minWidth: '120px !important',
+                maxWidth: '120px !important'
+              }}>
+                ESTADO PAGO
+              </th>
               {/* COLUMNA ENVIAR MAIL */}
               <th className="action-header email-header" style={{
                 width: '100px !important',
@@ -877,14 +883,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                 maxWidth: '80px !important'
               }}>
                 BORRAR
-              </th>
-              {/* COLUMNA ESTADO PAGO */}
-              <th className="action-header payment-header" style={{
-                width: '120px !important',
-                minWidth: '120px !important',
-                maxWidth: '120px !important'
-              }}>
-                ESTADO PAGO
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -903,6 +901,26 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
           <tbody>
             {filteredData.map((row, rowIndex) => (
               <tr key={rowIndex} className="table-row">
+                {/* COLUMNA ESTADO PAGO - MOVIDA AL LADO IZQUIERDO */}
+                <td className="action-cell payment-cell" style={{
+                  width: '120px !important',
+                  minWidth: '120px !important', 
+                  maxWidth: '120px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('PAYMENT STATUS clicked for row:', row);
+                      handlePaymentStatusToggle(row);
+                    }}
+                    className={`action-btn payment-btn ${
+                      (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
+                    }`}
+                    title="Cambiar estado de pago"
+                  >
+                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
+                  </button>
+                </td>
                 {/* COLUMNA ENVIAR MAIL */}
                 <td className="action-cell email-cell" style={{
                   width: '100px !important',
@@ -937,26 +955,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     title="Borrar registro"
                   >
                     ×
-                  </button>
-                </td>
-                {/* COLUMNA ESTADO PAGO */}
-                <td className="action-cell payment-cell" style={{
-                  width: '120px !important',
-                  minWidth: '120px !important', 
-                  maxWidth: '120px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('PAYMENT STATUS clicked for row:', row);
-                      handlePaymentStatusToggle(row);
-                    }}
-                    className={`action-btn payment-btn ${
-                      (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
-                    }`}
-                    title="Cambiar estado de pago"
-                  >
-                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
                   </button>
                 </td>
                 {reorderedColumns.map(column => (

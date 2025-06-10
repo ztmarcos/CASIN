@@ -432,10 +432,10 @@ const Directorio = () => {
           <thead>
             <tr>
               <th>Nombre</th>
+              <th>Estado Pago</th>
               <th>Email</th>
               <th>Teléfono</th>
               <th>Status</th>
-              <th>Estado Pago</th>
               <th>Pólizas</th>
               <th>Origen</th>
               <th>Género</th>
@@ -454,13 +454,6 @@ const Directorio = () => {
               contactos.map((contacto) => (
                 <tr key={contacto.id} className="contacto-row">
                   <td><strong>{contacto.nombre_completo}</strong></td>
-                  <td>{contacto.email || '-'}</td>
-                  <td>{contacto.telefono || '-'}</td>
-                  <td>
-                    <span className={`status-badge ${contacto.status}`}>
-                      {contacto.status === 'cliente' ? 'Cliente' : 'Prospecto'}
-                    </span>
-                  </td>
                   <td>
                     <button 
                       onClick={() => handleTogglePaymentStatus(contacto)}
@@ -470,6 +463,13 @@ const Directorio = () => {
                     >
                       {getContactPaymentStatus(contacto)}
                     </button>
+                  </td>
+                  <td>{contacto.email || '-'}</td>
+                  <td>{contacto.telefono || '-'}</td>
+                  <td>
+                    <span className={`status-badge ${contacto.status}`}>
+                      {contacto.status === 'cliente' ? 'Cliente' : 'Prospecto'}
+                    </span>
                   </td>
                   <td className="policy-tables-cell">
                     {contacto.status === 'cliente' ? (

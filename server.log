@@ -38,110 +38,58 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 📱 Environment: development
 🔥 Firebase enabled: true
 📧 Notion enabled: true
-📊 Getting consolidated policies count
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-📊 Getting consolidated policies count
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Using Firebase for directorio stats (Firebase enabled)
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=2, limit=50
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 2
-📋 Firebase pagination details: startIndex=50, endIndex=100, totalPages=55
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Getting consolidated policies count
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-📊 Getting consolidated policies count
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Getting consolidated policies count
-📊 Using Firebase for directorio stats (Firebase enabled)
-📊 Getting consolidated policies count
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-🔍 Directorio endpoint called
-- process.env.VERCEL: false
-- isFirebaseEnabled: true
-- db available: true
-- admin available: true
-📋 Using Firebase for directorio (Firebase enabled)
-📋 Firebase pagination: page=1, limit=50
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
-📊 Using Firebase for directorio stats (Firebase enabled)
-📋 Firebase: Retrieved 2702 total contactos from database
-✅ Firebase: Found 2702 total contactos, returning 50 for page 1
-📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
-✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
 🔍 Fetching directorio_contactos data from Firebase (limit: 1000)
 🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+🔍 Fetching mascotas data from Firebase (limit: 1000)
+📊 Getting consolidated policies count
+🔍 Fetching rc data from Firebase (limit: 1000)
+🔍 Fetching vida data from Firebase (limit: 1000)
+🔍 Firebase doc ID: Nv0wecijxeyAGSy2Hqhu, contains id field: 1
+✅ Successfully fetched 1 records from mascotas (estimated total: 1)
+🔍 Fetching gmm data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 0eA7J1iXwAYMi9RhGgNv, contains id field: 2
+🔍 Firebase doc ID: HiG5kh8xvgv3gBll10Fn, contains id field: 1
+✅ Successfully fetched 2 records from vida (estimated total: 2)
+🔍 Firebase doc ID: fvRb2hrw5WzjNZbU6QbE, contains id field: 1
+✅ Successfully fetched 1 records from rc (estimated total: 1)
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
+🔍 Fetching diversos data from Firebase (limit: 1000)
+🔍 Fetching negocio data from Firebase (limit: 1000)
+🔍 Fetching gruposgmm data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
 🔍 Firebase doc ID: 008b70SowNYiZjPPUbpr, contains id field: 2122
 🔍 Firebase doc ID: 01RHOzNIUu3J6Icb7vLM, contains id field: 2055
 🔍 Firebase doc ID: 06YlQ4nL9sO2cuuLb6Xb, contains id field: 535
@@ -243,57 +191,15 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 🔍 Firebase doc ID: 1xy5z9jOWyyqICiekeUr, contains id field: 1133
 🔍 Firebase doc ID: 1z75coS0i4Wgxw9Cla1W, contains id field: 1646
 ✅ Successfully fetched 100 records from directorio_contactos (estimated total: 2700)
+📊 Getting consolidated policies count
+📋 Returning cached data for mascotas
+📋 Returning cached data for vida
+📋 Returning cached data for rc
+📋 Returning cached data for transporte
+🚫 Skipping cache for transporte (nocache=true)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+📋 Returning cached data for autos
 📋 Returning cached data for directorio_contactos
-🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
-🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
-🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
-🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
-🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
-🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
-🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
-🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
-🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
-🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
-🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
-🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
-🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
-🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
-🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
-🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
-🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
-🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
-🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
-🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
-🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
-🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
-🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
-🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
-🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
-🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
-🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
-🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
-🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
-🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
-🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
-🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
-✅ Successfully fetched 32 records from autos (estimated total: 33)
-📋 Returning cached data for autos
-📋 Returning cached data for autos
-🔍 Fetching rc data from Firebase (limit: 1000)
-📋 Returning cached data for autos
-🔍 Firebase doc ID: fvRb2hrw5WzjNZbU6QbE, contains id field: 1
-✅ Successfully fetched 1 records from rc (estimated total: 1)
-📋 Returning cached data for rc
-📋 Returning cached data for rc
-📋 Returning cached data for rc
-🔍 Fetching vida data from Firebase (limit: 1000)
-🔍 Firebase doc ID: 0eA7J1iXwAYMi9RhGgNv, contains id field: 2
-🔍 Firebase doc ID: HiG5kh8xvgv3gBll10Fn, contains id field: 1
-✅ Successfully fetched 2 records from vida (estimated total: 2)
-📋 Returning cached data for vida
-📋 Returning cached data for vida
-🔍 Fetching gmm data from Firebase (limit: 1000)
-📋 Returning cached data for vida
 🔍 Firebase doc ID: 01BoMvU7rPIs5fmtikAC, contains id field: 12
 🔍 Firebase doc ID: 0e1LPEwFbkM8KqXKjdEF, contains id field: 8
 🔍 Firebase doc ID: 1I4DIYRREprQp1uzCZh3, contains id field: 27
@@ -349,95 +255,271 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 🔍 Firebase doc ID: xHgWX1sDX7VqvSu0pLjB, contains id field: 31
 ✅ Successfully fetched 53 records from gmm (estimated total: 53)
 📋 Returning cached data for gmm
-📋 Returning cached data for gmm
-🔍 Fetching transporte data from Firebase (limit: 1000)
-📋 Returning cached data for gmm
-✅ Successfully fetched 0 records from transporte (estimated total: 0)
-📋 Returning cached data for transporte
-🔍 Fetching mascotas data from Firebase (limit: 1000)
-📋 Returning cached data for transporte
-📋 Returning cached data for transporte
-🔍 Firebase doc ID: Nv0wecijxeyAGSy2Hqhu, contains id field: 1
-✅ Successfully fetched 1 records from mascotas (estimated total: 1)
-📋 Returning cached data for mascotas
-📋 Returning cached data for mascotas
-📋 Returning cached data for mascotas
-🔍 Fetching diversos data from Firebase (limit: 1000)
 🔍 Firebase doc ID: ANiUaQL3YMIMAKP9qg4b, contains id field: 1
 ✅ Successfully fetched 1 records from diversos (estimated total: 1)
 📋 Returning cached data for diversos
-📋 Returning cached data for diversos
-📋 Returning cached data for diversos
-🔍 Fetching negocio data from Firebase (limit: 1000)
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
+✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
+🚫 Skipping cache for transporte (nocache=true)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+📋 Returning cached data for gruposgmm
 🔍 Firebase doc ID: Nu5FTRgzob0YcOKYMiRx, contains id field: 1
 🔍 Firebase doc ID: RfbmndyA1KgmJ6ky9hXX, contains id field: 4
 🔍 Firebase doc ID: kn03QD3gOACa9a3W1Ngh, contains id field: 2
 🔍 Firebase doc ID: uLwC4t23DR8MPi3N2Jwl, contains id field: 3
 ✅ Successfully fetched 4 records from negocio (estimated total: 4)
+🚫 Skipping cache for gruposgmm (nocache=true)
+🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 📋 Returning cached data for negocio
-📋 Returning cached data for negocio
-📋 Returning cached data for negocio
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
+✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
+🚫 Skipping cache for gruposgmm (nocache=true)
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
-📋 Returning cached data for gruposgmm
-📋 Returning cached data for gruposgmm
-📋 Returning cached data for gruposgmm
-🔍 Fetching Notion tasks from database: 1f7385297f9a80a3bc5bcec8a3c2debb
-📚 Database Schema: [
-  'Fecha límite',
-  'Tipo de tarea',
-  'Encargado',
-  'Status',
-  'Prioriodad',
-  'Descripción',
-  'title'
-]
-📋 Returning cached data for autos
-📋 Returning cached data for transporte
-📋 Returning cached data for directorio_contactos
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+📊 Getting consolidated policies count
 📋 Returning cached data for rc
-📋 Returning cached data for mascotas
-📋 Returning cached data for diversos
+📋 Returning cached data for autos
 📋 Returning cached data for vida
 📋 Returning cached data for gmm
-📋 Returning cached data for negocio
-📋 Returning cached data for gruposgmm
-📋 Returning cached data for autos
 📋 Returning cached data for transporte
-📋 Returning cached data for directorio_contactos
-📋 Returning cached data for rc
 📋 Returning cached data for mascotas
+📋 Returning cached data for negocio
 📋 Returning cached data for diversos
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for directorio_contactos
+📊 Getting consolidated policies count
+📋 Returning cached data for rc
+📋 Returning cached data for autos
 📋 Returning cached data for vida
 📋 Returning cached data for gmm
+📋 Returning cached data for transporte
+📋 Returning cached data for mascotas
 📋 Returning cached data for negocio
+🚫 Skipping cache for transporte (nocache=true)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+📋 Returning cached data for diversos
 📋 Returning cached data for gruposgmm
 🚫 Skipping cache for gruposgmm (nocache=true)
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
+📋 Returning cached data for directorio_contactos
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
 🚫 Skipping cache for transporte (nocache=true)
 🔍 Fetching transporte data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
 🚫 Skipping cache for gruposgmm (nocache=true)
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from transporte (estimated total: 0)
-🚫 Skipping cache for transporte (nocache=true)
-🔍 Fetching transporte data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
-📄 Found 6 pages in Notion database
-✅ Successfully transformed 6 Notion tasks
-🔍 Fetching Notion tasks from database: 1f7385297f9a80a3bc5bcec8a3c2debb
-✅ Successfully fetched 0 records from transporte (estimated total: 0)
-📚 Database Schema: [
-  'Fecha límite',
-  'Tipo de tarea',
-  'Encargado',
-  'Status',
-  'Prioriodad',
-  'Descripción',
-  'title'
-]
-📄 Found 6 pages in Notion database
-✅ Successfully transformed 6 Notion tasks
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
 📋 Returning cached data for autos
 📋 Returning cached data for autos
 📋 Returning cached data for rc
@@ -500,25 +582,25 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 🗑️ Invalidated 0 cache entries for autos after UPDATE
 📋 Returning cached data for directorio_contactos
 🔍 Fetching autos data from Firebase (limit: 1000)
+📋 Returning cached data for directorio_contactos
 📋 Returning cached data for rc
 📋 Returning cached data for vida
-📋 Returning cached data for gmm
-📋 Returning cached data for rc
-📋 Returning cached data for vida
-📋 Returning cached data for transporte
 📋 Returning cached data for mascotas
 📋 Returning cached data for diversos
-📋 Returning cached data for negocio
 📋 Returning cached data for gmm
-📋 Returning cached data for gruposgmm
-📋 Returning cached data for directorio_contactos
+📋 Returning cached data for negocio
 📋 Returning cached data for transporte
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for rc
+📋 Returning cached data for vida
 📋 Returning cached data for mascotas
+📋 Returning cached data for diversos
+📋 Returning cached data for gmm
+📋 Returning cached data for transporte
+📋 Returning cached data for negocio
+📋 Returning cached data for gruposgmm
 🚫 Skipping cache for transporte (nocache=true)
 🔍 Fetching transporte data from Firebase (limit: 1000)
-📋 Returning cached data for diversos
-📋 Returning cached data for negocio
-📋 Returning cached data for gruposgmm
 🚫 Skipping cache for gruposgmm (nocache=true)
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
@@ -556,13 +638,318 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 ✅ Successfully fetched 32 records from autos (estimated total: 33)
 📋 Returning cached data for autos
 ✅ Successfully fetched 0 records from transporte (estimated total: 0)
+✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
 🚫 Skipping cache for transporte (nocache=true)
 🔍 Fetching transporte data from Firebase (limit: 1000)
-✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
 🚫 Skipping cache for gruposgmm (nocache=true)
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from transporte (estimated total: 0)
 ✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🔍 Directorio endpoint called
+- process.env.VERCEL: false
+- isFirebaseEnabled: true
+- db available: true
+- admin available: true
+📋 Using Firebase for directorio (Firebase enabled)
+📋 Firebase pagination: page=1, limit=100
+🔍 Directorio endpoint called
+- process.env.VERCEL: false
+- isFirebaseEnabled: true
+- db available: true
+- admin available: true
+📋 Using Firebase for directorio (Firebase enabled)
+📋 Firebase pagination: page=1, limit=50
+📊 Using Firebase for directorio stats (Firebase enabled)
+📋 Firebase: Retrieved 2702 total contactos from database
+✅ Firebase: Found 2702 total contactos, returning 100 for page 1
+📋 Firebase pagination details: startIndex=0, endIndex=100, totalPages=28
+✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
+📋 Firebase: Retrieved 2702 total contactos from database
+✅ Firebase: Found 2702 total contactos, returning 50 for page 1
+📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
+🔍 Directorio endpoint called
+- process.env.VERCEL: false
+- isFirebaseEnabled: true
+- db available: true
+- admin available: true
+📋 Using Firebase for directorio (Firebase enabled)
+📋 Firebase pagination: page=1, limit=100
+📊 Using Firebase for directorio stats (Firebase enabled)
+🔍 Directorio endpoint called
+- process.env.VERCEL: false
+- isFirebaseEnabled: true
+- db available: true
+- admin available: true
+📋 Using Firebase for directorio (Firebase enabled)
+📋 Firebase pagination: page=1, limit=50
+📋 Firebase: Retrieved 2702 total contactos from database
+✅ Firebase: Found 2702 total contactos, returning 100 for page 1
+📋 Firebase pagination details: startIndex=0, endIndex=100, totalPages=28
+✅ Firebase stats: Total: 2702, Phone: 1421, Email: 736, Clientes: 62, Prospectos: 2640
+📋 Firebase: Retrieved 2702 total contactos from database
+✅ Firebase: Found 2702 total contactos, returning 50 for page 1
+📋 Firebase pagination details: startIndex=0, endIndex=50, totalPages=55
+📋 Returning cached data for autos
+📋 Returning cached data for autos
+📋 Returning cached data for rc
+📋 Returning cached data for rc
+📋 Returning cached data for vida
+📋 Returning cached data for vida
+📋 Returning cached data for gmm
+📋 Returning cached data for gmm
+📋 Returning cached data for transporte
+📋 Returning cached data for transporte
+📋 Returning cached data for mascotas
+📋 Returning cached data for mascotas
+📋 Returning cached data for diversos
+📋 Returning cached data for diversos
+📋 Returning cached data for negocio
+📋 Returning cached data for negocio
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for autos
+📋 Returning cached data for autos
+📋 Returning cached data for rc
+📋 Returning cached data for rc
+📋 Returning cached data for vida
+📋 Returning cached data for vida
+📋 Returning cached data for gmm
+📋 Returning cached data for gmm
+📋 Returning cached data for transporte
+📋 Returning cached data for transporte
+📋 Returning cached data for mascotas
+📋 Returning cached data for mascotas
+📋 Returning cached data for diversos
+📋 Returning cached data for negocio
+📋 Returning cached data for diversos
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for negocio
+📋 Returning cached data for autos
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for rc
+📋 Returning cached data for autos
+📋 Returning cached data for vida
+📋 Returning cached data for rc
+📋 Returning cached data for gmm
+📋 Returning cached data for vida
+📋 Returning cached data for transporte
+📋 Returning cached data for gmm
+📋 Returning cached data for mascotas
+📋 Returning cached data for transporte
+📋 Returning cached data for diversos
+📋 Returning cached data for mascotas
+📋 Returning cached data for negocio
+📋 Returning cached data for diversos
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for negocio
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for autos
+📋 Returning cached data for directorio_contactos
+📋 Returning cached data for rc
+📋 Returning cached data for vida
+📋 Returning cached data for mascotas
+📋 Returning cached data for diversos
+📋 Returning cached data for gmm
+📋 Returning cached data for negocio
+📋 Returning cached data for gruposgmm
+📋 Returning cached data for transporte
+📋 Returning cached data for autos
+📋 Returning cached data for directorio_contactos
+📋 Returning cached data for rc
+📋 Returning cached data for vida
+📋 Returning cached data for mascotas
+📋 Returning cached data for diversos
+📋 Returning cached data for gmm
+📋 Returning cached data for transporte
+📋 Returning cached data for negocio
+📋 Returning cached data for gruposgmm
+🚫 Skipping cache for transporte (nocache=true)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+🚫 Skipping cache for gruposgmm (nocache=true)
+🔍 Fetching gruposgmm data from Firebase (limit: 1000)
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
+🚫 Skipping cache for transporte (nocache=true)
+🔍 Fetching transporte data from Firebase (limit: 1000)
+✅ Successfully fetched 0 records from transporte (estimated total: 0)
+✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
+🚫 Skipping cache for gruposgmm (nocache=true)
+🔍 Fetching gruposgmm data from Firebase (limit: 1000)
+✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
+🚫 Skipping cache for autos (nocache=true)
+🔍 Fetching autos data from Firebase (limit: 1000)
+🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
+🔍 Firebase doc ID: 34XheQpcHRsJ6M52ocKj, contains id field: 15
+🔍 Firebase doc ID: 5v3P6QZczIpFsR0w2ePC, contains id field: 1
+🔍 Firebase doc ID: 6UbpAXF2pXIdOz5mhbep, contains id field: 11
+🔍 Firebase doc ID: 8pcLtop8TSQR21O2Z8MP, contains id field: 25
+🔍 Firebase doc ID: AEn4AEyXMIzpwOamfVzn, contains id field: 28
+🔍 Firebase doc ID: Bb54qSCHpY1NRQuEKGZj, contains id field: 8
+🔍 Firebase doc ID: CJEU3bmNBjVMqC8a80pG, contains id field: 10
+🔍 Firebase doc ID: D2r15fXNjdzOZDPywotq, contains id field: 23
+🔍 Firebase doc ID: GaZLNWWV1CjBrU9R07Ea, contains id field: 26
+🔍 Firebase doc ID: K6oMKbCZX6ZdzPILxySg, contains id field: 2
+🔍 Firebase doc ID: KIUK8iJ53YcrGirC80Ba, contains id field: 22
+🔍 Firebase doc ID: KJjtyV1t4uaPWnMh9y7H, contains id field: 3
+🔍 Firebase doc ID: KaaeKep9D1bXcQiLqTl1, contains id field: 14
+🔍 Firebase doc ID: KdjOPSaTaVJzPWpjlU3S, contains id field: 7
+🔍 Firebase doc ID: KrEDTBAqf6CExX4cKvXq, contains id field: 20
+🔍 Firebase doc ID: KxpUG1c3FjvJVYrbgBDC, contains id field: 34
+🔍 Firebase doc ID: OP1coamjQUJA14UoeuNy, contains id field: 18
+🔍 Firebase doc ID: SePJzsgYrh99nw0AbB7t, contains id field: 21
+🔍 Firebase doc ID: TV4envdzpTVnuFIdp3sf, contains id field: 9
+🔍 Firebase doc ID: XGglQZGlt8pTcQtj9ic0, contains id field: 29
+🔍 Firebase doc ID: YZ5x7kCbWY85BMICQo7L, contains id field: 27
+🔍 Firebase doc ID: Z3FMp5t49I9D2mJSgNZ4, contains id field: 17
+🔍 Firebase doc ID: djZRZFWoPtfxPXQl3PK3, contains id field: 19
+🔍 Firebase doc ID: faW9tquZioRzq7vWePIG, contains id field: 24
+🔍 Firebase doc ID: mEex2yMcuFSKLrjVXtSl, contains id field: 12
+🔍 Firebase doc ID: nbnG62Z4y4gmHm0NFe54, contains id field: 5
+🔍 Firebase doc ID: oVN3YOMcOdK9E0Uk3He5, contains id field: 31
+🔍 Firebase doc ID: qa8CndV6X1Xulgw0Pn2d, contains id field: 6
+🔍 Firebase doc ID: s25uGLkWIzXwijMa2t6x, contains id field: 30
+🔍 Firebase doc ID: v9CVRUdm177gHPNqusrp, contains id field: 16
+🔍 Firebase doc ID: vAuGcgYHUDG7lJSsONXe, contains id field: 4
+✅ Successfully fetched 32 records from autos (estimated total: 33)
 🚫 Skipping cache for autos (nocache=true)
 🔍 Fetching autos data from Firebase (limit: 1000)
 🔍 Firebase doc ID: 148BS3gqObVEjyF0ULYf, contains id field: 13
