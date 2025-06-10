@@ -102,7 +102,30 @@ const Directorio = () => {
       console.log('- full statsData:', statsData);
       
       const contacts = contactosData.data || contactosData;
-      setContactos(contacts);
+      
+      // Check for and filter out duplicates by ID
+      const seenIds = new Set();
+      const duplicateIds = [];
+      const uniqueContacts = contacts.filter(contact => {
+        if (seenIds.has(contact.id)) {
+          duplicateIds.push(contact.id);
+          console.log(`⚠️ Duplicate contact found with ID: ${contact.id}`, contact);
+          return false; // Filter out duplicate
+        }
+        seenIds.add(contact.id);
+        return true;
+      });
+      
+      if (duplicateIds.length > 0) {
+        console.log(`⚠️ Found ${duplicateIds.length} duplicate contacts with IDs:`, duplicateIds);
+        console.log(`✅ Filtered out duplicates, showing ${uniqueContacts.length} unique contacts`);
+      }
+      
+      // Debug: Log all contact IDs for verification
+      console.log(`🔍 Contact IDs being set (first 10):`, uniqueContacts.slice(0, 10).map(c => c.id));
+      console.log(`🔍 Total unique contacts to render: ${uniqueContacts.length}`);
+      
+      setContactos(uniqueContacts);
       
       // Update stats with pagination info from contactosData if available
       const newStats = {
