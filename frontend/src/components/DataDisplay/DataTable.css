@@ -2294,74 +2294,86 @@ td .edit-cell-input[type="select"] {
   border-color: #334155 !important;
 }
 
-/* Payment status buttons */
+/* Payment status buttons - Coordinados con Reports pero más tenues */
 .payment-btn {
   padding: 6px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 20px;
   cursor: pointer;
   font-size: 11px;
-  font-weight: bold;
+  font-weight: 500;
   transition: all 0.2s ease;
   min-width: 80px;
   text-align: center;
+  opacity: 0.85; /* Más tenue que Reports */
 }
 
 .payment-paid {
-  background-color: #22c55e;
+  background-color: #4CAF50; /* Mismo verde que Reports */
   color: white;
+  opacity: 0.85; /* Más tenue */
 }
 
 .payment-paid:hover {
-  background-color: #16a34a;
+  opacity: 0.95;
+  transform: scale(1.03);
 }
 
 .payment-unpaid {
-  background-color: #ef4444;
+  background-color: #f44336; /* Mismo rojo que Reports */
   color: white;
+  opacity: 0.85; /* Más tenue */
 }
 
 .payment-unpaid:hover {
-  background-color: #dc2626;
+  opacity: 0.95;
+  transform: scale(1.03);
 }
 
 .action-header.payment-header {
-  background: #f8fafc;
-  color: #1e293b;
+  background: rgba(76, 175, 80, 0.08) !important; /* Verde tenue coordinado */
+  border-color: rgba(76, 175, 80, 0.15) !important;
+  color: #388e3c !important;
   font-weight: 600;
   text-align: center;
 }
 
 .action-cell.payment-cell {
-  background: #ffffff;
+  background: rgba(76, 175, 80, 0.03) !important; /* Verde muy tenue */
+  border-color: rgba(76, 175, 80, 0.08) !important;
   text-align: center;
   vertical-align: middle;
 }
 
 [data-theme='dark'] .payment-paid {
-  background-color: #22c55e;
+  background-color: #4CAF50; /* Mismo verde que Reports */
   color: white;
+  opacity: 0.85; /* Más tenue */
 }
 
 [data-theme='dark'] .payment-paid:hover {
-  background-color: #16a34a;
+  opacity: 0.95;
+  transform: scale(1.03);
 }
 
 [data-theme='dark'] .payment-unpaid {
-  background-color: #ef4444;
+  background-color: #f44336; /* Mismo rojo que Reports */
   color: white;
+  opacity: 0.85; /* Más tenue */
 }
 
 [data-theme='dark'] .payment-unpaid:hover {
-  background-color: #dc2626;
+  opacity: 0.95;
+  transform: scale(1.03);
 }
 
 [data-theme='dark'] .action-header.payment-header {
-  background: #1e293b;
-  color: #f1f5f9;
+  background: rgba(76, 175, 80, 0.12) !important; /* Verde más visible en dark */
+  border-color: rgba(76, 175, 80, 0.25) !important;
+  color: #4CAF50 !important;
 }
 
 [data-theme='dark'] .action-cell.payment-cell {
-  background: #1e293b;
-  border-color: #334155;
+  background: rgba(76, 175, 80, 0.05) !important; /* Verde muy tenue en dark */
+  border-color: rgba(76, 175, 80, 0.15) !important;
 } 
