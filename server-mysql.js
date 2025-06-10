@@ -1076,9 +1076,9 @@ app.get('/api/directorio', async (req, res) => {
     console.log('- db available:', !!db);
     console.log('- admin available:', !!admin);
     
-    // Check if we're in Vercel (production) and Firebase is available
-    if (process.env.VERCEL && isFirebaseEnabled && db) {
-      console.log('📋 Using Firebase for directorio in production');
+    // Use Firebase for directorio if available (both production and development)
+    if (isFirebaseEnabled && db) {
+      console.log('📋 Using Firebase for directorio (Firebase enabled)');
       
       const { 
         page = 1, 
@@ -1165,9 +1165,9 @@ app.get('/api/directorio', async (req, res) => {
       });
     }
     
-    // Fallback to MySQL for local development
-    console.log('📋 Using MySQL for directorio (local development)');
-    console.log('- Reason: VERCEL=' + !!process.env.VERCEL + ', Firebase=' + isFirebaseEnabled + ', DB=' + !!db);
+    // Fallback to MySQL if Firebase is not available
+    console.log('📋 Using MySQL for directorio (Firebase not available)');
+    console.log('- Reason: Firebase=' + isFirebaseEnabled + ', DB=' + !!db);
     
     const { 
       page = 1, 
@@ -1275,9 +1275,9 @@ app.get('/api/directorio', async (req, res) => {
 
 app.get('/api/directorio/stats', async (req, res) => {
   try {
-    // Check if we're in Vercel (production) and Firebase is available
-    if (process.env.VERCEL && isFirebaseEnabled && db) {
-      console.log('📊 Using Firebase for directorio stats in production');
+    // Use Firebase for directorio stats if available (both production and development)
+    if (isFirebaseEnabled && db) {
+      console.log('📊 Using Firebase for directorio stats (Firebase enabled)');
       
       // Get all documents from Firebase
       const snapshot = await db.collection('directorio_contactos').get();
@@ -1302,8 +1302,8 @@ app.get('/api/directorio/stats', async (req, res) => {
       });
     }
     
-    // Fallback to MySQL for local development
-    console.log('📊 Using MySQL for directorio stats (local development)');
+    // Fallback to MySQL if Firebase is not available
+    console.log('📊 Using MySQL for directorio stats (Firebase not available)');
     
     const totalResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos');
     const withPhoneResult = await executeQuery('SELECT COUNT(*) as total FROM directorio_contactos WHERE telefono_movil IS NOT NULL AND telefono_movil != ""');

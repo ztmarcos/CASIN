@@ -85,9 +85,14 @@ const Directorio = () => {
         dataLength: contactosData?.data?.length || 0,
         total: contactosData?.total,
         page: contactosData?.page,
-        totalPages: contactosData?.totalPages
+        totalPages: contactosData?.totalPages,
+        fullResponse: contactosData
       });
-      console.log('🔍 Raw statsData received:', statsData);
+      console.log('🔍 Raw statsData received:', {
+        stats: statsData?.stats,
+        total: statsData?.stats?.total || statsData?.total,
+        fullResponse: statsData
+      });
       
       const contacts = contactosData.data || contactosData;
       setContactos(contacts);
@@ -97,6 +102,14 @@ const Directorio = () => {
         ...(statsData.stats || statsData),
         total: contactosData.total || (statsData.stats?.total || statsData?.total)
       };
+      
+      console.log('📊 Setting stats:', {
+        originalStatsData: statsData,
+        contactosTotal: contactosData.total,
+        finalStats: newStats,
+        willShowPagination: newStats.total > itemsPerPage
+      });
+      
       setStats(newStats);
       
       console.log(`✅ Loaded ${contacts.length} contactos from Firebase`);
@@ -190,8 +203,21 @@ const Directorio = () => {
 
   // Enhanced pagination with better UX
   const totalPages = stats ? Math.ceil(stats.total / itemsPerPage) : 1;
+  
+  console.log('📊 Pagination calculation:', {
+    statsTotal: stats?.total,
+    itemsPerPage,
+    totalPages,
+    currentPage,
+    shouldShowPagination: totalPages > 1
+  });
+  
   const renderPagination = () => {
-    if (totalPages <= 1) return null;
+    console.log('🔍 Rendering pagination:', { totalPages, currentPage, itemsPerPage });
+    if (totalPages <= 1) {
+      console.log('❌ Not rendering pagination: totalPages <= 1');
+      return null;
+    }
     
     return (
       <div className="pagination">
