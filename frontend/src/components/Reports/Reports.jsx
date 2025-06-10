@@ -127,27 +127,28 @@ export default function Reports() {
     }
   };
 
-  // Handle status toggle for policies
+  // Handle payment status toggle for policies
   const handleToggleStatus = async (policy) => {
     try {
       const currentStatus = getPolicyStatus(policy);
-      const newStatus = currentStatus === 'Vigente' ? 'Cancelada' : 'Vigente';
+      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
       
-      console.log(`🔄 Updating policy ${policy.numero_poliza} status from ${currentStatus} to ${newStatus}`);
+      console.log(`🔄 Updating policy ${policy.numero_poliza} payment status from ${currentStatus} to ${newStatus}`);
       
-      await firebaseReportsService.updatePolicyStatus(policy.id, newStatus);
+      await firebaseReportsService.updatePolicyPaymentStatus(policy.ramo.toLowerCase(), policy.id, newStatus);
       
       // Update local state
+      const policyKey = getPolicyKey(policy);
       setPolicyStatuses(prev => ({
         ...prev,
-        [policy.id]: newStatus
+        [policyKey]: newStatus
       }));
       
       toast.success(`Póliza ${policy.numero_poliza} actualizada a: ${newStatus}`);
       
     } catch (err) {
-      console.error('❌ Error updating policy status:', err);
-      toast.error('Error al actualizar el estado de la póliza');
+      console.error('❌ Error updating payment status:', err);
+      toast.error('Error al actualizar el estado de pago');
     }
   };
 
@@ -425,7 +426,7 @@ export default function Reports() {
     }));
   };
 
-  // Get status for a policy
+  // Get payment status for a policy
   const getPolicyStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
     return policyStatuses[policyKey] || 'No Pagado';

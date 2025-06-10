@@ -2292,4 +2292,76 @@ td .edit-cell-input[type="select"] {
 [data-theme='dark'] .action-cell {
   background: #0f172a !important;
   border-color: #334155 !important;
+}
+
+/* Payment status buttons */
+.payment-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  text-align: center;
+}
+
+.payment-paid {
+  background-color: #22c55e;
+  color: white;
+}
+
+.payment-paid:hover {
+  background-color: #16a34a;
+}
+
+.payment-unpaid {
+  background-color: #ef4444;
+  color: white;
+}
+
+.payment-unpaid:hover {
+  background-color: #dc2626;
+}
+
+.action-header.payment-header {
+  background: #f8fafc;
+  color: #1e293b;
+  font-weight: 600;
+  text-align: center;
+}
+
+.action-cell.payment-cell {
+  background: #ffffff;
+  text-align: center;
+  vertical-align: middle;
+}
+
+[data-theme='dark'] .payment-paid {
+  background-color: #22c55e;
+  color: white;
+}
+
+[data-theme='dark'] .payment-paid:hover {
+  background-color: #16a34a;
+}
+
+[data-theme='dark'] .payment-unpaid {
+  background-color: #ef4444;
+  color: white;
+}
+
+[data-theme='dark'] .payment-unpaid:hover {
+  background-color: #dc2626;
+}
+
+[data-theme='dark'] .action-header.payment-header {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .action-cell.payment-cell {
+  background: #1e293b;
+  border-color: #334155;
 } 

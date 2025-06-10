@@ -545,6 +545,30 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
   };
 
+  const handlePaymentStatusToggle = async (record) => {
+    try {
+      const currentStatus = record.estado_pago || 'No Pagado';
+      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      
+      console.log(`🔄 Updating payment status for record ${record.id} from ${currentStatus} to ${newStatus}`);
+      
+      await firebaseTableService.updateRecord(tableName, record.id, {
+        estado_pago: newStatus
+      });
+      
+      toast.success(`Estado de pago actualizado a: ${newStatus}`);
+      
+      // Refresh the data
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.error('Error al actualizar el estado de pago');
+    }
+  };
+
   const handleStatusChange = async (rowId, newValue) => {
     try {
       console.log('Status change initiated:', { rowId, newValue });
@@ -854,6 +878,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
               }}>
                 BORRAR
               </th>
+              {/* COLUMNA ESTADO PAGO */}
+              <th className="action-header payment-header" style={{
+                width: '120px !important',
+                minWidth: '120px !important',
+                maxWidth: '120px !important'
+              }}>
+                ESTADO PAGO
+              </th>
               {reorderedColumns.map(column => (
                 <th 
                   key={column}
@@ -905,6 +937,26 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     title="Borrar registro"
                   >
                     ×
+                  </button>
+                </td>
+                {/* COLUMNA ESTADO PAGO */}
+                <td className="action-cell payment-cell" style={{
+                  width: '120px !important',
+                  minWidth: '120px !important', 
+                  maxWidth: '120px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('PAYMENT STATUS clicked for row:', row);
+                      handlePaymentStatusToggle(row);
+                    }}
+                    className={`action-btn payment-btn ${
+                      (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
+                    }`}
+                    title="Cambiar estado de pago"
+                  >
+                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
                   </button>
                 </td>
                 {reorderedColumns.map(column => (

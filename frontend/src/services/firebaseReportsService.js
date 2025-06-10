@@ -161,41 +161,76 @@ class FirebaseReportsService {
   }
 
   /**
-   * Get policy statuses (placeholder - you might want to store these in a separate collection)
-   * @returns {Promise<Object>} Policy statuses object
+   * Get policy payment statuses from all collections
+   * @returns {Promise<Object>} Policy payment statuses object
    */
   async getPolicyStatuses() {
     try {
-      console.log('📊 Getting policy statuses from Firebase...');
+      console.log('📊 Getting policy payment statuses from Firebase...');
       
-      // For now, return empty object since statuses might be stored separately
-      // or calculated based on expiration dates
+      const insuranceCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
       const statuses = {};
       
-      console.log('✅ Policy statuses loaded');
+      for (const collectionName of insuranceCollections) {
+        try {
+          console.log(`🔍 Getting payment statuses from collection: ${collectionName}`);
+          
+          // Get all documents from this collection via backend API
+          const response = await fetch(`${API_URL}/data/${collectionName}`);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const result = await response.json();
+          const documents = result.data || [];
+          
+          for (const doc of documents) {
+            const policyKey = `${collectionName}_${doc.id}`;
+            // Get payment status from document, default to 'No Pagado' if not set
+            statuses[policyKey] = doc.estado_pago || 'No Pagado';
+          }
+          
+        } catch (error) {
+          console.warn(`Could not access collection ${collectionName}:`, error);
+        }
+      }
+      
+      console.log(`✅ Payment statuses loaded: ${Object.keys(statuses).length} policies`);
       return statuses;
       
     } catch (error) {
-      console.error('❌ Error getting policy statuses from Firebase:', error);
+      console.error('❌ Error getting policy payment statuses from Firebase:', error);
       return {};
     }
   }
 
   /**
-   * Update policy status
+   * Update policy payment status in Firebase
+   * @param {string} tableName - Collection name (ramo)
    * @param {string} policyId - Policy ID
-   * @param {string} status - New status
+   * @param {string} paymentStatus - New payment status ('Pagado' or 'No Pagado')
    * @returns {Promise<boolean>} Success status
    */
-  async updatePolicyStatus(policyId, status) {
+  async updatePolicyPaymentStatus(tableName, policyId, paymentStatus) {
     try {
-      console.log(`🔄 Updating policy ${policyId} status to: ${status}`);
+      console.log(`🔄 Updating policy ${policyId} payment status to: ${paymentStatus} in collection: ${tableName}`);
       
-      // You might want to implement this by updating a status field in the policy document
-      // or by maintaining a separate collection for policy statuses
-      
-      // For now, this is a placeholder implementation
-      console.log('✅ Policy status updated (placeholder)');
+      // Update the document in Firebase through backend API
+      const response = await fetch(`${API_URL}/data/${tableName}/${policyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          estado_pago: paymentStatus
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Payment status updated successfully:', result);
       return true;
       
     } catch (error) {
