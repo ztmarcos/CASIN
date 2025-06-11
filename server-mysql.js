@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
+const nodemailer = require('nodemailer');
 
 // Load environment variables from root .env file FIRST
 const dotenv = require('dotenv');
@@ -3110,13 +3111,72 @@ app.post('/api/drive/upload', async (req, res) => {
 app.post('/api/email/send-welcome', async (req, res) => {
   try {
     console.log('📧 Email send-welcome request');
-    res.json({
-      success: false,
-      message: 'Email sending endpoint (not implemented)',
-      details: 'Email sending functionality needs to be implemented'
+    const { to, subject, htmlContent, clientData, cotizaciones } = req.body;
+    
+    if (!to || !subject || !htmlContent) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: to, subject, htmlContent'
+      });
+    }
+
+    // Configurar transporter de nodemailer
+    console.log('📧 Configurando transporter...');
+    console.log('📧 SMTP_HOST:', process.env.SMTP_HOST);
+    console.log('📧 SMTP_USER:', process.env.SMTP_USER);
+    console.log('📧 SMTP_PASS configurado:', !!(process.env.SMTP_PASSWORD || process.env.SMTP_PASS));
+    
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASSWORD || process.env.SMTP_PASS
+      }
     });
+
+    console.log('📧 Transporter configurado exitosamente');
+
+    // Configurar el correo
+    const mailOptions = {
+      from: `"CASIN Seguros" <${process.env.SMTP_USER}>`,
+      to: to,
+      subject: subject,
+      html: htmlContent,
+      text: htmlContent.replace(/<[^>]*>/g, '') // Versión texto plano
+    };
+
+    console.log('📤 Enviando correo a:', to);
+    console.log('📋 Asunto:', subject);
+
+    // Enviar el correo
+    let info;
+    try {
+      info = await transporter.sendMail(mailOptions);
+      console.log('✅ Correo enviado exitosamente:', info.messageId);
+    } catch (mailError) {
+      console.error('❌ Error específico de nodemailer:', mailError);
+      console.error('❌ Código de error:', mailError.code);
+      console.error('❌ Mensaje de error:', mailError.message);
+      throw new Error(`Error de nodemailer: ${mailError.message}`);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Correo enviado exitosamente',
+      messageId: info.messageId,
+      recipient: to,
+      subject: subject
+    });
+
   } catch (error) {
-    res.status(500).json({ error: 'Email sending error', details: error.message });
+    console.error('❌ Error enviando correo:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error al enviar correo', 
+      details: error.message 
+    });
   }
 });
 
@@ -3794,6 +3854,223 @@ app.post('/api/analyze-image', async (req, res) => {
 });
 
 // Generate quote with OpenAI
+// PDF Generation endpoint
+app.post('/api/generate-pdf', async (req, res) => {
+  try {
+    const PDFDocument = require('pdfkit');
+    const { clientData, cotizaciones, generatedMail, vehiculo, tabla, recomendaciones } = req.body;
+
+    if (!clientData || !cotizaciones) {
+      return res.status(400).json({ error: 'Datos incompletos para generar PDF' });
+    }
+
+    // Crear nuevo documento PDF
+    const doc = new PDFDocument({
+      margin: 50,
+      size: 'A4'
+    });
+
+    // Headers para descarga
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Propuesta_Seguros_${clientData.nombre.replace(/\s+/g, '_')}.pdf"`);
+
+    // Pipe del documento al response
+    doc.pipe(res);
+
+    // === ENCABEZADO ===
+    doc.fontSize(20)
+       .fillColor('#007bff')
+       .text('CASIN SEGUROS', 50, 50, { align: 'center' })
+       .fontSize(16)
+       .fillColor('#333333')
+       .text('Propuesta de Cotización de Seguros', 50, 80, { align: 'center' });
+
+    // Línea separadora
+    doc.moveTo(50, 110)
+       .lineTo(545, 110)
+       .strokeColor('#007bff')
+       .lineWidth(2)
+       .stroke();
+
+    let currentY = 130;
+
+    // === DATOS DEL CLIENTE ===
+    doc.fontSize(14)
+       .fillColor('#333333')
+       .text('DATOS DEL CLIENTE', 50, currentY);
+    
+    currentY += 25;
+    
+    doc.fontSize(12)
+       .text(`Nombre: ${clientData.nombre}`, 70, currentY);
+    currentY += 20;
+    
+    doc.text(`Email: ${clientData.email}`, 70, currentY);
+    currentY += 20;
+    
+    if (clientData.telefono) {
+      doc.text(`Teléfono: ${clientData.telefono}`, 70, currentY);
+      currentY += 20;
+    }
+    
+    if (clientData.empresa) {
+      doc.text(`Empresa: ${clientData.empresa}`, 70, currentY);
+      currentY += 20;
+    }
+
+    currentY += 10;
+
+    // === INFORMACIÓN DEL VEHÍCULO ===
+    if (vehiculo) {
+      doc.fontSize(14)
+         .fillColor('#333333')
+         .text('INFORMACIÓN DEL VEHÍCULO', 50, currentY);
+      
+      currentY += 25;
+      
+      doc.fontSize(12)
+         .text(`Vehículo: ${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.anio}`, 70, currentY);
+      currentY += 20;
+      
+      if (vehiculo.cp) {
+        doc.text(`Código Postal: ${vehiculo.cp}`, 70, currentY);
+        currentY += 20;
+      }
+      
+      currentY += 10;
+    }
+
+    // === TABLA COMPARATIVA ===
+    if (tabla && tabla.coberturas) {
+      doc.fontSize(14)
+         .fillColor('#333333')
+         .text('TABLA COMPARATIVA DE COTIZACIONES', 50, currentY);
+      
+      currentY += 30;
+
+      // Obtener aseguradoras
+      const aseguradoras = [];
+      if (tabla.coberturas.length > 0) {
+        Object.keys(tabla.coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      // Configurar tabla
+      const tableTop = currentY;
+      const colWidth = Math.min(120, (500 - 50) / (aseguradoras.length + 1));
+      const rowHeight = 25;
+
+      // Headers
+      doc.fontSize(10)
+         .fillColor('#ffffff')
+         .rect(50, tableTop, colWidth, rowHeight)
+         .fill('#007bff')
+         .fillColor('#ffffff')
+         .text('COBERTURA', 55, tableTop + 8);
+
+      let xPos = 50 + colWidth;
+      aseguradoras.forEach((aseg, index) => {
+        const colors = ['#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1'];
+        const color = colors[index % colors.length];
+        
+        doc.rect(xPos, tableTop, colWidth, rowHeight)
+           .fill(color)
+           .fillColor('#ffffff')
+           .text(aseg.replace(/_/g, ' ').toUpperCase(), xPos + 5, tableTop + 8, {
+             width: colWidth - 10,
+             align: 'center'
+           });
+        xPos += colWidth;
+      });
+
+      currentY += rowHeight;
+
+      // Filas de datos
+      tabla.coberturas.forEach((fila, index) => {
+        const isEvenRow = index % 2 === 0;
+        const bgColor = isEvenRow ? '#f8f9fa' : '#ffffff';
+        
+        // Fila de cobertura
+        doc.rect(50, currentY, colWidth, rowHeight)
+           .fill(bgColor)
+           .fillColor('#333333')
+           .fontSize(9)
+           .text(fila.cobertura || '', 55, currentY + 8, {
+             width: colWidth - 10
+           });
+
+        xPos = 50 + colWidth;
+        aseguradoras.forEach(aseg => {
+          doc.rect(xPos, currentY, colWidth, rowHeight)
+             .fill(bgColor)
+             .fillColor('#333333')
+             .text(fila[aseg] || 'N/A', xPos + 5, currentY + 8, {
+               width: colWidth - 10,
+               align: 'center'
+             });
+          xPos += colWidth;
+        });
+
+        currentY += rowHeight;
+      });
+
+      currentY += 20;
+    }
+
+    // === RECOMENDACIONES ===
+    if (recomendaciones && recomendaciones.length > 0) {
+      // Verificar si necesitamos nueva página
+      if (currentY > 650) {
+        doc.addPage();
+        currentY = 50;
+      }
+
+      doc.fontSize(14)
+         .fillColor('#333333')
+         .text('RECOMENDACIONES', 50, currentY);
+      
+      currentY += 25;
+
+      recomendaciones.forEach((rec, index) => {
+        doc.fontSize(12)
+           .fillColor('#007bff')
+           .text(`${index + 1}. ${rec.aseguradora}`, 70, currentY);
+        currentY += 18;
+        
+        doc.fontSize(10)
+           .fillColor('#333333')
+           .text(rec.razon, 90, currentY, { width: 400 });
+        currentY += 30;
+        
+        if (rec.precio) {
+          doc.fontSize(11)
+             .fillColor('#28a745')
+             .text(`Precio: ${rec.precio}`, 90, currentY);
+          currentY += 25;
+        }
+      });
+    }
+
+    // === PIE DE PÁGINA ===
+    const pageHeight = doc.page.height;
+    doc.fontSize(10)
+       .fillColor('#666666')
+       .text('CASIN Seguros - Corredores de Seguros', 50, pageHeight - 80, { align: 'center' })
+       .text('Tel: +52 55 1234-5678 | Email: contacto@casin.com.mx', 50, pageHeight - 65, { align: 'center' })
+       .text(`Propuesta generada el ${new Date().toLocaleDateString('es-MX')}`, 50, pageHeight - 50, { align: 'center' });
+
+    // Finalizar documento
+    doc.end();
+
+  } catch (error) {
+    console.error('Error generando PDF:', error);
+    res.status(500).json({ error: 'Error interno del servidor al generar PDF' });
+  }
+});
+
 app.post('/api/generate-quote', async (req, res) => {
   try {
     if (!isOpenAIEnabled || !openai) {
