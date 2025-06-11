@@ -234,45 +234,99 @@ const Cotiza = () => {
         body: JSON.stringify({
           documentText: combinedText,
           prompt: `
-Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa.
+Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
 
 IMPORTANTE: Responde únicamente con un JSON válido, sin texto adicional.
 
-Extrae y organiza la siguiente información:
-1. Tipo de seguro (Auto, Vida, GMM, RC, etc.)
-2. Aseguradora
-3. Número de póliza (si existe)
-4. Prima/Costo
-5. Coberturas principales
-6. Deducibles
-7. Vigencia
-8. Beneficiarios o asegurados
+Crea una tabla comparativa como matriz con las siguientes columnas por aseguradora:
+- Múltiples opciones de la misma aseguradora (ej: GNP, GNP 2)
+- Diferentes aseguradoras mexicanas (GNP, QUALITAS, HDI, MAPFRE, AXA, ZURICH)
 
 Formato de respuesta (JSON únicamente):
 {
-  "documentos_analizados": [
-    {
-      "documento": "nombre_archivo",
-      "tipo": "Auto/Vida/GMM/etc",
-      "aseguradora": "nombre_aseguradora",
-      "prima": "monto_prima",
-      "coberturas": "descripcion_coberturas"
-    }
-  ],
-  "cotizacion_comparativa": [
-    {
-      "aseguradora": "GNP Seguros",
-      "producto": "Seguro Auto Plus",
-      "prima": "$12,500.00",
-      "coberturas": "RC, Daños Materiales, Robo Total",
-      "deducible": "$3,000.00"
-    }
-  ],
+  "vehiculo": {
+    "marca": "INFINITI",
+    "modelo": "QX60",
+    "anio": "2017",
+    "cp": "06500"
+  },
+  "tabla_comparativa": {
+    "coberturas": [
+      {
+        "cobertura": "SUMA ASEGURADA",
+        "GNP": "$344,850",
+        "GNP_2": "$344,850", 
+        "QUALITAS": "$369,700",
+        "QUALITAS_2": "$369,700",
+        "HDI": "$390,000",
+        "HDI_2": "$390,000"
+      },
+      {
+        "cobertura": "DAÑOS MATERIALES",
+        "GNP": "5%",
+        "GNP_2": "5%",
+        "QUALITAS": "5%", 
+        "QUALITAS_2": "5%",
+        "HDI": "5%",
+        "HDI_2": "5%"
+      },
+      {
+        "cobertura": "ROBO TOTAL",
+        "GNP": "10%",
+        "GNP_2": "10%",
+        "QUALITAS": "10%",
+        "QUALITAS_2": "10%", 
+        "HDI": "10%",
+        "HDI_2": "10%"
+      },
+      {
+        "cobertura": "RESPONSABILIDAD CIVIL",
+        "GNP": "$3,000,000",
+        "GNP_2": "$3,000,000",
+        "QUALITAS": "$3,000,000",
+        "QUALITAS_2": "$3,000,000",
+        "HDI": "$3,000,000",
+        "HDI_2": "$3,000,000"
+      },
+      {
+        "cobertura": "RC FALLECIMIENTO",
+        "GNP": "$3,000,000",
+        "GNP_2": "$3,000,000",
+        "QUALITAS": "$3,000,000",
+        "QUALITAS_2": "$3,000,000",
+        "HDI": "$3,000,000",
+        "HDI_2": "$3,000,000"
+      },
+      {
+        "cobertura": "GASTOS MÉDICOS OCUPANTES",
+        "GNP": "$500,000",
+        "GNP_2": "$500,000",
+        "QUALITAS": "$500,000",
+        "QUALITAS_2": "$500,000",
+        "HDI": "$525,000",
+        "HDI_2": "$525,000"
+      },
+      {
+        "cobertura": "COSTO ANUAL",
+        "GNP": "$23,063.00",
+        "GNP_2": "$27,117.00",
+        "QUALITAS": "$13,246.48",
+        "QUALITAS_2": "$17,714.77",
+        "HDI": "$14,333.52",
+        "HDI_2": "$17,997.96"
+      }
+    ]
+  },
   "recomendaciones": [
     {
-      "aseguradora": "MAPFRE",
-      "descripcion": "Buena opción para cobertura amplia",
-      "ventajas": ["Precios competitivos", "Red nacional", "Atención 24/7"]
+      "aseguradora": "QUALITAS",
+      "razon": "Mejor precio en opción básica",
+      "precio": "$13,246.48"
+    },
+    {
+      "aseguradora": "HDI", 
+      "razon": "Mejor cobertura en gastos médicos",
+      "precio": "$14,333.52"
     }
   ]
 }
@@ -508,28 +562,42 @@ Formato: HTML para correo electrónico
               </div>
             ) : (
               <div className="cotizacion-tables">
-                {cotizaciones.documentos_analizados && (
+                {/* Información del vehículo */}
+                {cotizaciones.vehiculo && (
+                  <div className="vehiculo-info">
+                    <h4>
+                      {cotizaciones.vehiculo.marca} {cotizaciones.vehiculo.modelo} {cotizaciones.vehiculo.anio}
+                    </h4>
+                    <p>C.P. {cotizaciones.vehiculo.cp} | AMPLIA</p>
+                  </div>
+                )}
+
+                {/* Tabla comparativa tipo matriz */}
+                {cotizaciones.tabla_comparativa && cotizaciones.tabla_comparativa.coberturas && (
                   <div className="table-section">
-                    <h4>Documentos analizados</h4>
                     <div className="table-responsive">
-                      <table className="cotizacion-table">
+                      <table className="matriz-table">
                         <thead>
                           <tr>
-                            <th>Documento</th>
-                            <th>Tipo</th>
-                            <th>Aseguradora</th>
-                            <th>Prima</th>
-                            <th>Coberturas</th>
+                            <th className="cobertura-header">COBERTURAS</th>
+                            <th className="aseguradora-header gnp">GNP</th>
+                            <th className="aseguradora-header gnp">GNP 2</th>
+                            <th className="aseguradora-header qualitas">QUALITAS</th>
+                            <th className="aseguradora-header qualitas">QUALITAS 2</th>
+                            <th className="aseguradora-header hdi">HDI</th>
+                            <th className="aseguradora-header hdi">HDI 2</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {cotizaciones.documentos_analizados.map((doc, index) => (
-                            <tr key={index}>
-                              <td>{doc.documento || 'N/A'}</td>
-                              <td>{doc.tipo || 'N/A'}</td>
-                              <td>{doc.aseguradora || 'N/A'}</td>
-                              <td>{doc.prima || 'N/A'}</td>
-                              <td>{doc.coberturas || 'N/A'}</td>
+                          {cotizaciones.tabla_comparativa.coberturas.map((fila, index) => (
+                            <tr key={index} className={fila.cobertura === 'COSTO ANUAL' ? 'costo-row' : ''}>
+                              <td className="cobertura-name">{fila.cobertura}</td>
+                              <td className="valor gnp">{fila.GNP || 'N/A'}</td>
+                              <td className="valor gnp">{fila.GNP_2 || 'N/A'}</td>
+                              <td className="valor qualitas">{fila.QUALITAS || 'N/A'}</td>
+                              <td className="valor qualitas">{fila.QUALITAS_2 || 'N/A'}</td>
+                              <td className="valor hdi">{fila.HDI || 'N/A'}</td>
+                              <td className="valor hdi">{fila.HDI_2 || 'N/A'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -538,36 +606,7 @@ Formato: HTML para correo electrónico
                   </div>
                 )}
 
-                {cotizaciones.cotizacion_comparativa && (
-                  <div className="table-section">
-                    <h4>Cotización comparativa</h4>
-                    <div className="table-responsive">
-                      <table className="cotizacion-table">
-                        <thead>
-                          <tr>
-                            <th>Aseguradora</th>
-                            <th>Producto</th>
-                            <th>Prima estimada</th>
-                            <th>Coberturas</th>
-                            <th>Deducible</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {cotizaciones.cotizacion_comparativa.map((cotiz, index) => (
-                            <tr key={index}>
-                              <td>{cotiz.aseguradora || 'N/A'}</td>
-                              <td>{cotiz.producto || 'N/A'}</td>
-                              <td>{cotiz.prima || 'N/A'}</td>
-                              <td>{cotiz.coberturas || 'N/A'}</td>
-                              <td>{cotiz.deducible || 'N/A'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
+                {/* Recomendaciones */}
                 {cotizaciones.recomendaciones && (
                   <div className="recommendations-section">
                     <h4>Recomendaciones</h4>
@@ -575,17 +614,76 @@ Formato: HTML para correo electrónico
                       {cotizaciones.recomendaciones.map((rec, index) => (
                         <div key={index} className="recommendation-item">
                           <h5>{rec.aseguradora}</h5>
-                          <p>{rec.descripcion}</p>
-                          {rec.ventajas && (
-                            <ul>
-                              {rec.ventajas.map((ventaja, vIndex) => (
-                                <li key={vIndex}>{ventaja}</li>
-                              ))}
-                            </ul>
-                          )}
+                          <p>{rec.razon}</p>
+                          <span className="precio-destacado">{rec.precio}</span>
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Fallback para formato anterior */}
+                {(cotizaciones.documentos_analizados || cotizaciones.cotizacion_comparativa) && !cotizaciones.tabla_comparativa && (
+                  <div className="fallback-tables">
+                    {cotizaciones.documentos_analizados && (
+                      <div className="table-section">
+                        <h4>Documentos analizados</h4>
+                        <div className="table-responsive">
+                          <table className="cotizacion-table">
+                            <thead>
+                              <tr>
+                                <th>Documento</th>
+                                <th>Tipo</th>
+                                <th>Aseguradora</th>
+                                <th>Prima</th>
+                                <th>Coberturas</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cotizaciones.documentos_analizados.map((doc, index) => (
+                                <tr key={index}>
+                                  <td>{doc.documento || 'N/A'}</td>
+                                  <td>{doc.tipo || 'N/A'}</td>
+                                  <td>{doc.aseguradora || 'N/A'}</td>
+                                  <td>{doc.prima || 'N/A'}</td>
+                                  <td>{doc.coberturas || 'N/A'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {cotizaciones.cotizacion_comparativa && (
+                      <div className="table-section">
+                        <h4>Cotización comparativa</h4>
+                        <div className="table-responsive">
+                          <table className="cotizacion-table">
+                            <thead>
+                              <tr>
+                                <th>Aseguradora</th>
+                                <th>Producto</th>
+                                <th>Prima estimada</th>
+                                <th>Coberturas</th>
+                                <th>Deducible</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {cotizaciones.cotizacion_comparativa.map((cotiz, index) => (
+                                <tr key={index}>
+                                  <td>{cotiz.aseguradora || 'N/A'}</td>
+                                  <td>{cotiz.producto || 'N/A'}</td>
+                                  <td>{cotiz.prima || 'N/A'}</td>
+                                  <td>{cotiz.coberturas || 'N/A'}</td>
+                                  <td>{cotiz.deducible || 'N/A'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -346,6 +346,147 @@
   background: var(--hover-background);
 }
 
+/* Información del vehículo */
+.vehiculo-info {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.vehiculo-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.vehiculo-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Tabla matriz estilo imagen */
+.matriz-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.matriz-table .cobertura-header {
+  background: #4a5568;
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.8rem;
+  min-width: 140px;
+}
+
+.matriz-table .aseguradora-header {
+  padding: 12px 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: white;
+  min-width: 100px;
+}
+
+.aseguradora-header.gnp {
+  background: #2563eb; /* Azul para GNP */
+}
+
+.aseguradora-header.qualitas {
+  background: #dc2626; /* Rojo/magenta para Qualitas */
+}
+
+.aseguradora-header.hdi {
+  background: #16a34a; /* Verde para HDI */
+}
+
+.matriz-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.matriz-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.matriz-table .cobertura-name {
+  background: #e2e8f0;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: left;
+  border-right: 2px solid #cbd5e1;
+}
+
+.matriz-table .valor {
+  padding: 10px 8px;
+  text-align: center;
+  font-weight: 500;
+  border: 1px solid #e2e8f0;
+}
+
+.matriz-table .valor.gnp {
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.matriz-table .valor.qualitas {
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.matriz-table .valor.hdi {
+  background: rgba(22, 163, 74, 0.05);
+}
+
+.matriz-table .costo-row {
+  border-top: 2px solid #64748b;
+}
+
+.matriz-table .costo-row .cobertura-name {
+  background: #64748b;
+  color: white;
+  font-weight: 700;
+}
+
+.matriz-table .costo-row .valor {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+/* Responsive para matriz */
+@media (max-width: 768px) {
+  .matriz-table {
+    font-size: 0.7rem;
+  }
+  
+  .matriz-table .cobertura-header,
+  .matriz-table .aseguradora-header {
+    padding: 8px 4px;
+    font-size: 0.7rem;
+  }
+  
+  .matriz-table .valor,
+  .matriz-table .cobertura-name {
+    padding: 8px 4px;
+  }
+}
+
+/* Recomendaciones mejoradas */
+.precio-destacado {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #16a34a;
+  margin-top: 8px;
+}
+
 /* Recommendations */
 .recommendations-section h4 {
   color: var(--text-primary);
