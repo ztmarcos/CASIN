@@ -2798,3 +2798,5 @@ Ignoring invalid configuration option passed to Connection: timeout. This is cur
 🔍 Fetching gruposgmm data from Firebase (limit: 1000)
 ✅ Successfully fetched 0 records from gruposgmm (estimated total: 0)
 📋 Returning cached data for gruposgmm
+🔍 Fetching directorio data from Firebase (limit: 5)
+✅ Successfully fetched 0 records from directorio (estimated total: 0)
