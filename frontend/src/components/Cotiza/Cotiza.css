@@ -122,6 +122,20 @@
   color: #000000 !important;
 }
 
+.format-section h4 {
+  color: #000000 !important;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.file-limit-section h4 {
+  color: #000000 !important;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .format-info {
   display: flex;
   justify-content: space-between;
@@ -139,12 +153,7 @@
   flex-shrink: 0;
 }
 
-.file-limit-section h4 {
-  color: var(--text-primary) !important;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
+
 
 .file-counter {
   display: flex;
