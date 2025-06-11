@@ -22,6 +22,7 @@ import FirebaseViewer from './components/FirebaseViewer/FirebaseViewer'
 import Directorio from './components/Directorio/Directorio'
 import DirectorioSimple from './components/Directorio/DirectorioSimple'
 import FirebaseTest from './components/FirebaseTest/FirebaseTest'
+import Cotiza from './components/Cotiza/Cotiza'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
@@ -149,6 +150,14 @@ function AppRoutes() {
       <Route path="/directorio-standalone" element={
         <ProtectedRoute>
           <DirectorioSimple />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/cotiza" element={
+        <ProtectedRoute>
+          <Layout>
+            <Cotiza />
+          </Layout>
         </ProtectedRoute>
       } />
       

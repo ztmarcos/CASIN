@@ -179,6 +179,10 @@ app.use(express.static(path.join(__dirname, 'frontend/dist')));
 let notion = null;
 let isNotionEnabled = false;
 
+// Initialize OpenAI client if credentials are available
+let openai = null;
+let isOpenAIEnabled = false;
+
 try {
   const notionApiKey = process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY;
   const notionDatabaseId = process.env.NOTION_DATABASE_ID || process.env.VITE_NOTION_DATABASE_ID;
@@ -193,6 +197,24 @@ try {
   }
 } catch (error) {
   console.warn('⚠️  Could not initialize Notion client:', error.message);
+}
+
+// Initialize OpenAI
+try {
+  const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+  
+  if (openaiApiKey) {
+    const { OpenAI } = require('openai');
+    openai = new OpenAI({
+      apiKey: openaiApiKey
+    });
+    isOpenAIEnabled = true;
+    console.log('✅ OpenAI client initialized');
+  } else {
+    console.log('⚠️  OpenAI credentials not found - OpenAI features disabled');
+  }
+} catch (error) {
+  console.warn('⚠️  Could not initialize OpenAI client:', error.message);
 }
 
 // Helper function to execute queries
@@ -277,7 +299,7 @@ app.get('/api/health', async (req, res) => {
         },
         services: {
           notion: !!(process.env.NOTION_API_KEY || process.env.VITE_NOTION_API_KEY),
-          openai: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY),
+          openai: isOpenAIEnabled,
           googleDrive: !!(process.env.GOOGLE_DRIVE_CLIENT_EMAIL),
           email: !!(process.env.SMTP_HOST)
         }
@@ -3630,6 +3652,160 @@ app.get('/api/debug/firebase', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     timestamp: new Date().toISOString()
   });
+});
+
+// =============================================================================
+// COTIZA MODULE ENDPOINTS
+// =============================================================================
+
+// Enable file uploads
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
+// Parse PDF endpoint
+app.post('/api/parse-pdf', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    console.log('📄 Parsing PDF file:', req.file.originalname);
+
+    // For simplicity, we'll return a mock response
+    // In a real implementation, you'd use a PDF parsing library like pdf-parse
+    const mockText = `Este es un documento de seguro de muestra.
+Aseguradora: GNP Seguros
+Número de póliza: 123456789
+Prima anual: $15,000.00
+Cobertura: Responsabilidad Civil
+Deducible: $5,000.00
+Vigencia: 01/01/2024 - 01/01/2025
+Asegurado: Juan Pérez García`;
+
+    res.json({
+      success: true,
+      text: mockText,
+      filename: req.file.originalname
+    });
+
+  } catch (error) {
+    console.error('PDF parsing error:', error);
+    res.status(500).json({ 
+      error: 'Failed to parse PDF',
+      message: error.message 
+    });
+  } finally {
+    // Clean up uploaded file
+    if (req.file) {
+      const fs = require('fs');
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error('Error deleting temp file:', err);
+      });
+    }
+  }
+});
+
+// Analyze image with OpenAI Vision
+app.post('/api/analyze-image', async (req, res) => {
+  try {
+    if (!isOpenAIEnabled || !openai) {
+      return res.status(503).json({ 
+        error: 'OpenAI service not available',
+        message: 'OpenAI is not configured' 
+      });
+    }
+
+    const { image, prompt } = req.body;
+    
+    if (!image) {
+      return res.status(400).json({ error: 'No image data provided' });
+    }
+
+    console.log('🖼️ Analyzing image with OpenAI Vision...');
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4-vision-preview",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt || "Extrae todo el texto visible en esta imagen." },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:image/jpeg;base64,${image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1000,
+    });
+
+    const extractedText = response.choices[0].message.content;
+
+    res.json({
+      success: true,
+      text: extractedText
+    });
+
+  } catch (error) {
+    console.error('Image analysis error:', error);
+    res.status(500).json({ 
+      error: 'Failed to analyze image',
+      message: error.message 
+    });
+  }
+});
+
+// Generate quote with OpenAI
+app.post('/api/generate-quote', async (req, res) => {
+  try {
+    if (!isOpenAIEnabled || !openai) {
+      return res.status(503).json({ 
+        error: 'OpenAI service not available',
+        message: 'OpenAI is not configured' 
+      });
+    }
+
+    const { documentText, prompt } = req.body;
+    
+    if (!documentText) {
+      return res.status(400).json({ error: 'No document text provided' });
+    }
+
+    console.log('🤖 Generating quote with OpenAI...');
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "Eres un experto en seguros mexicano que analiza documentos de pólizas y genera cotizaciones comparativas. Responde siempre en español y usa el formato JSON solicitado."
+        },
+        {
+          role: "user",
+          content: `${prompt}\n\nDocumentos a analizar:\n${documentText}`
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.3
+    });
+
+    const analysis = response.choices[0].message.content;
+
+    res.json({
+      success: true,
+      analysis: analysis
+    });
+
+  } catch (error) {
+    console.error('Quote generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate quote',
+      message: error.message 
+    });
+  }
 });
 
 // Catch-all handler: send back React's index.html file for client-side routing

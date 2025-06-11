@@ -54,4 +54,7 @@ backend-simple-OLD/.env
 cleanup-backup/
 backups/
 .cursorrules
-.cursorrules
+
+# Uploads folder for temporary files
+uploads/
+*.tmp
