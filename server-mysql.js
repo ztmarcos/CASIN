@@ -1480,35 +1480,32 @@ app.put('/api/directorio/:id', async (req, res) => {
         const docRef = db.collection('directorio_contactos').doc(id);
         const doc = await docRef.get();
         
-        if (!doc.exists) {
-          return res.status(404).json({
-            success: false,
-            message: 'Contact not found'
+        if (doc.exists) {
+          // Update document with new data
+          const updateData = {
+            ...contactData,
+            updated_at: new Date().toISOString()
+          };
+          
+          await docRef.update(updateData);
+          
+          // Get updated document
+          const updatedDoc = await docRef.get();
+          const updatedContact = {
+            id: updatedDoc.id,
+            ...updatedDoc.data()
+          };
+          
+          console.log('✅ Contact updated successfully in Firebase:', updatedContact);
+          
+          return res.json({
+            success: true,
+            message: 'Contact updated successfully',
+            data: updatedContact
           });
+        } else {
+          console.log(`📋 Contact ${id} not found in Firebase, falling back to MySQL`);
         }
-        
-        // Update document with new data
-        const updateData = {
-          ...contactData,
-          updated_at: new Date().toISOString()
-        };
-        
-        await docRef.update(updateData);
-        
-        // Get updated document
-        const updatedDoc = await docRef.get();
-        const updatedContact = {
-          id: updatedDoc.id,
-          ...updatedDoc.data()
-        };
-        
-        console.log('✅ Contact updated successfully in Firebase:', updatedContact);
-        
-        return res.json({
-          success: true,
-          message: 'Contact updated successfully',
-          data: updatedContact
-        });
         
       } catch (firebaseError) {
         console.error('❌ Firebase update failed:', firebaseError);
