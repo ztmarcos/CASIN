@@ -481,6 +481,111 @@ app.get('/api/data/tables', async (req, res) => {
 // Get table types
 app.get('/api/data/table-types', async (req, res) => {
   try {
+    console.log('📊 Getting table types...');
+    
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log('📋 Using Firebase for table types');
+      
+      // Firebase collections are predefined
+      const firebaseTableTypes = {
+        'autos': {
+          type: 'AUTOS',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'vigencia_inicio', 'vigencia_fin', 'forma_de_pago', 'pago_total_o_prima_total', 'prima_neta', 'derecho_de_poliza', 'recargo_por_pago_fraccionado', 'i_v_a', 'e_mail', 'tipo_de_vehiculo', 'duracion', 'rfc', 'domicilio_o_direccion', 'descripcion_del_vehiculo', 'serie', 'modelo', 'placas', 'motor', 'uso', 'pdf', 'ramo']
+        },
+        'vida': {
+          type: 'VIDA',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo']
+        },
+        'gmm': {
+          type: 'GMM',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo']
+        },
+        'rc': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['asegurado', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'derecho_poliza', 'prima_neta', 'recargo_pago_fraccionado', 'iva', 'email', 'limite_maximo_responsabilidad', 'responsable', 'ramo']
+        },
+        'transporte': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo']
+        },
+        'mascotas': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo']
+        },
+        'diversos': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'version', 'duracion', 'moneda', 'fecha_expedicion', 'renovacion', 'responsable', 'cobrar_a', 'ramo']
+        },
+        'negocio': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo']
+        },
+        'hogar': {
+          type: 'HOGAR',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total_a_pagar', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'duracion', 'version', 'renovacion', 'fecha_expedicion', 'pdf', 'responsable', 'cobrar_a', 'ramo', 'created_at', 'updated_at']
+        },
+        'gruposgmm': {
+          type: 'simple',
+          isGroup: false,
+          childTable: null,
+          isMainTable: true,
+          isSecondaryTable: false,
+          fields: []
+        },
+        'directorio_contactos': {
+          type: 'DIRECTORIO',
+          isGroup: false,
+          childTable: null,
+          isMainTable: false,
+          isSecondaryTable: false,
+          fields: ['origen', 'comentario', 'nombre_completo', 'nombre_completo_oficial', 'nickname', 'apellido', 'display_name', 'empresa', 'telefono_oficina', 'telefono_casa', 'telefono_asistente', 'telefono_movil', 'telefonos_corregidos', 'email', 'entidad', 'genero', 'status_social', 'ocupacion', 'pais', 'status', 'created_at', 'updated_at']
+        }
+      };
+      
+      console.log('✅ Firebase table types retrieved');
+      res.json(firebaseTableTypes);
+      return;
+    }
+    
+    // Fallback to MySQL if Firebase not available
+    console.log('📋 Using MySQL for table types (Firebase not available)');
     const tables = await executeQuery('SHOW TABLES');
     const tableTypes = {};
     
