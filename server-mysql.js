@@ -3671,25 +3671,60 @@ app.post('/api/parse-pdf', upload.single('file'), async (req, res) => {
 
     console.log('📄 Parsing PDF file:', req.file.originalname);
 
-    // For simplicity, we'll return a mock response
-    // In a real implementation, you'd use a PDF parsing library like pdf-parse
-    const mockText = `Este es un documento de seguro de muestra.
-Aseguradora: GNP Seguros
-Número de póliza: 123456789
-Prima anual: $15,000.00
-Cobertura: Responsabilidad Civil
-Deducible: $5,000.00
-Vigencia: 01/01/2024 - 01/01/2025
-Asegurado: Juan Pérez García`;
+    // Import pdf-parse
+    const pdfParse = require('pdf-parse');
+    const fs = require('fs');
 
-    res.json({
-      success: true,
-      text: mockText,
-      filename: req.file.originalname
-    });
+    try {
+      // Read the uploaded file
+      const dataBuffer = fs.readFileSync(req.file.path);
+      
+      // Parse the PDF
+      console.log('🔍 Extracting text from PDF...');
+      const pdfData = await pdfParse(dataBuffer);
+      
+      // Extract text content
+      const extractedText = pdfData.text.trim();
+      
+      console.log('✅ PDF parsed successfully');
+      console.log('📊 Pages:', pdfData.numpages);
+      console.log('📝 Text length:', extractedText.length);
+      console.log('🔤 First 200 chars:', extractedText.substring(0, 200));
+
+      if (!extractedText || extractedText.length === 0) {
+        throw new Error('No text content found in PDF');
+      }
+
+      res.json({
+        success: true,
+        text: extractedText,
+        filename: req.file.originalname,
+        pages: pdfData.numpages,
+        info: pdfData.info
+      });
+
+    } catch (pdfError) {
+      console.error('❌ PDF parsing failed:', pdfError);
+      
+      // Fallback: return a mock response with filename info
+      const fallbackText = `Documento de seguro: ${req.file.originalname}
+      
+Error al extraer texto del PDF. Contenido de muestra:
+Archivo: ${req.file.originalname}
+Tipo: Documento de seguros
+Estado: Requiere revisión manual
+Nota: El parser no pudo extraer el texto automáticamente.`;
+
+      res.json({
+        success: true,
+        text: fallbackText,
+        filename: req.file.originalname,
+        warning: 'PDF parsing failed, using fallback content'
+      });
+    }
 
   } catch (error) {
-    console.error('PDF parsing error:', error);
+    console.error('❌ General error:', error);
     res.status(500).json({ 
       error: 'Failed to parse PDF',
       message: error.message 

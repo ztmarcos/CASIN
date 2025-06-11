@@ -131,20 +131,30 @@ const Cotiza = () => {
     formData.append('file', file);
 
     try {
+      console.log('📄 Enviando PDF para parsing:', file.name);
+      
       const response = await fetch('/api/parse-pdf', {
         method: 'POST',
         body: formData
       });
 
       if (!response.ok) {
-        throw new Error('Failed to parse PDF');
+        throw new Error(`HTTP ${response.status}: Failed to parse PDF`);
       }
 
       const result = await response.json();
-      return result.text || 'No se pudo extraer texto del PDF';
+      console.log('✅ PDF parseado:', file.name, 'Páginas:', result.pages, 'Caracteres:', result.text?.length);
+      
+      if (result.warning) {
+        console.warn('⚠️ Warning:', result.warning);
+        toast.warn(`PDF ${file.name}: ${result.warning}`);
+      }
+      
+      return result.text || `Error: No se pudo extraer texto del PDF ${file.name}`;
     } catch (error) {
-      console.error('PDF parsing error:', error);
-      return 'Error al procesar PDF: ' + error.message;
+      console.error('❌ PDF parsing error:', error);
+      toast.error(`Error al procesar PDF ${file.name}: ${error.message}`);
+      return `Error al procesar PDF ${file.name}: ${error.message}`;
     }
   };
 
