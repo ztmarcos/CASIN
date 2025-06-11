@@ -185,12 +185,17 @@ const Cotiza = () => {
       return;
     }
 
+    console.log('🚀 Iniciando generación de cotización...');
+    console.log('📄 Textos extraídos:', extractedTexts);
+    
     setIsGeneratingTable(true);
 
     try {
       const combinedText = extractedTexts.map(et => 
         `Archivo: ${et.fileName}\n${et.text}`
       ).join('\n\n---\n\n');
+
+      console.log('📋 Texto combinado enviado:', combinedText.substring(0, 200) + '...');
 
       const response = await fetch('/api/generate-quote', {
         method: 'POST',
@@ -215,27 +220,56 @@ Extrae y organiza la siguiente información:
 Luego genera recomendaciones de productos similares de otras aseguradoras mexicanas como:
 - GNP, MAPFRE, Qualitas, HDI, AXA, Zurich, etc.
 
-Formato de respuesta en JSON:
+Formato de respuesta en JSON estructurado:
 {
-  "documentos_analizados": [...],
-  "cotizacion_comparativa": [...],
-  "recomendaciones": [...]
+  "documentos_analizados": [
+    {
+      "documento": "nombre_archivo",
+      "tipo": "Auto/Vida/GMM/etc",
+      "aseguradora": "nombre_aseguradora",
+      "prima": "monto_prima",
+      "coberturas": "descripcion_coberturas"
+    }
+  ],
+  "cotizacion_comparativa": [
+    {
+      "aseguradora": "nombre_aseguradora",
+      "producto": "nombre_producto",
+      "prima": "monto_estimado",
+      "coberturas": "coberturas_principales",
+      "deducible": "monto_deducible"
+    }
+  ],
+  "recomendaciones": [
+    {
+      "aseguradora": "nombre_aseguradora",
+      "descripcion": "descripcion_recomendacion",
+      "ventajas": ["ventaja1", "ventaja2", "ventaja3"]
+    }
+  ]
 }
           `
         })
       });
 
+      console.log('📡 Respuesta del servidor:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error('Failed to generate quote');
+        const errorText = await response.text();
+        console.error('❌ Error del servidor:', errorText);
+        throw new Error(`Error del servidor: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('✅ Resultado recibido:', result);
       
       try {
         const cotizacionData = JSON.parse(result.analysis);
+        console.log('📊 Datos de cotización parseados:', cotizacionData);
         setCotizaciones(cotizacionData);
         toast.success('Tabla de cotización generada exitosamente');
       } catch (parseError) {
+        console.warn('⚠️ No se pudo parsear JSON, mostrando como texto:', parseError);
         // Si no es JSON válido, mostrar como texto
         setCotizaciones({
           analysis: result.analysis,
@@ -245,8 +279,8 @@ Formato de respuesta en JSON:
       }
 
     } catch (error) {
-      console.error('Error generating quote:', error);
-      toast.error('Error al generar tabla de cotización');
+      console.error('❌ Error completo:', error);
+      toast.error(`Error al generar tabla de cotización: ${error.message}`);
     } finally {
       setIsGeneratingTable(false);
     }
@@ -402,14 +436,41 @@ Formato: HTML para correo electrónico
                   onClick={generateCotizaciones}
                   disabled={isGeneratingTable}
                 >
-                  {isGeneratingTable ? 'Generando tabla...' : 'Generar tabla'}
+                  {isGeneratingTable ? (
+                    <>
+                      <span className="button-spinner"></span>
+                      Generando tabla...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <line x1="9" y1="9" x2="9" y2="15"/>
+                        <line x1="15" y1="9" x2="15" y2="15"/>
+                      </svg>
+                      Generar tabla
+                    </>
+                  )}
                 </button>
                 <button 
                   className="btn-secondary"
                   onClick={generateMail}
                   disabled={isGeneratingMail}
                 >
-                  {isGeneratingMail ? 'Generando correo...' : 'Generar correo'}
+                  {isGeneratingMail ? (
+                    <>
+                      <span className="button-spinner"></span>
+                      Generando correo...
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                        <polyline points="22,6 12,13 2,6"/>
+                      </svg>
+                      Generar correo
+                    </>
+                  )}
                 </button>
               </div>
             </div>
