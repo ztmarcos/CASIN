@@ -7,7 +7,9 @@ const Cotiza = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedTexts, setExtractedTexts] = useState([]);
   const [cotizaciones, setCotizaciones] = useState([]);
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isGeneratingTable, setIsGeneratingTable] = useState(false);
+  const [isGeneratingMail, setIsGeneratingMail] = useState(false);
+  const [generatedMail, setGeneratedMail] = useState(null);
 
   // Tipos de archivo soportados
   const supportedTypes = {
@@ -20,7 +22,7 @@ const Cotiza = () => {
     'image/jpg': 'JPG'
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const uploadedFiles = Array.from(event.target.files);
     
     // Validar tipos de archivo
@@ -33,40 +35,48 @@ const Cotiza = () => {
     });
 
     if (validFiles.length > 0) {
-      setFiles(prev => [...prev, ...validFiles.map(file => ({
+      const fileObjects = validFiles.map(file => ({
         file,
         id: Date.now() + Math.random(),
         name: file.name,
         type: supportedTypes[file.type],
         size: file.size,
         status: 'pending'
-      }))]);
+      }));
       
+      setFiles(prev => [...prev, ...fileObjects]);
       toast.success(`${validFiles.length} archivo(s) agregado(s)`);
+      
+      // Automatically extract text from all uploaded files
+      await extractTextFromFiles(fileObjects);
     }
   };
 
   const removeFile = (id) => {
     setFiles(prev => prev.filter(f => f.id !== id));
-    setSelectedFiles(prev => prev.filter(fId => fId !== id));
+    // Also remove from extracted texts
+    setExtractedTexts(prev => prev.filter(text => text.fileId !== id));
   };
 
-  const extractTextFromFiles = async () => {
-    if (selectedFiles.length === 0) {
-      toast.error('Selecciona al menos un archivo para procesar');
+  const extractTextFromFiles = async (filesToProcess = files) => {
+    if (filesToProcess.length === 0) {
+      toast.error('No hay archivos para procesar');
       return;
     }
 
     setIsProcessing(true);
-    const newExtractedTexts = [];
+    const newExtractedTexts = [...extractedTexts];
 
     try {
-      for (const fileId of selectedFiles) {
-        const fileData = files.find(f => f.id === fileId);
+      for (const fileData of filesToProcess) {
+        // Skip if already processed
+        if (extractedTexts.some(et => et.fileId === fileData.id)) {
+          continue;
+        }
         
         // Actualizar status
         setFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'processing' } : f
+          f.id === fileData.id ? { ...f, status: 'processing' } : f
         ));
 
         let extractedText = '';
@@ -80,14 +90,14 @@ const Cotiza = () => {
         }
 
         newExtractedTexts.push({
-          fileId: fileId,
+          fileId: fileData.id,
           fileName: fileData.name,
           text: extractedText
         });
 
         // Actualizar status
         setFiles(prev => prev.map(f => 
-          f.id === fileId ? { ...f, status: 'completed' } : f
+          f.id === fileData.id ? { ...f, status: 'completed' } : f
         ));
       }
 
@@ -103,7 +113,6 @@ const Cotiza = () => {
   };
 
   const extractTextFromPDF = async (file) => {
-    // Usar el servicio existente de PDF parser
     const formData = new FormData();
     formData.append('file', file);
 
@@ -126,7 +135,6 @@ const Cotiza = () => {
   };
 
   const extractTextFromImage = async (file) => {
-    // Para imágenes, usaremos OCR con OpenAI Vision API
     const base64 = await fileToBase64(file);
     
     try {
@@ -154,7 +162,6 @@ const Cotiza = () => {
   };
 
   const extractTextFromDocument = async (file) => {
-    // Para documentos de texto, leer directamente
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target.result);
@@ -178,7 +185,7 @@ const Cotiza = () => {
       return;
     }
 
-    setIsProcessing(true);
+    setIsGeneratingTable(true);
 
     try {
       const combinedText = extractedTexts.map(et => 
@@ -227,7 +234,7 @@ Formato de respuesta en JSON:
       try {
         const cotizacionData = JSON.parse(result.analysis);
         setCotizaciones(cotizacionData);
-        toast.success('Cotización generada exitosamente');
+        toast.success('Tabla de cotización generada exitosamente');
       } catch (parseError) {
         // Si no es JSON válido, mostrar como texto
         setCotizaciones({
@@ -239,25 +246,66 @@ Formato de respuesta en JSON:
 
     } catch (error) {
       console.error('Error generating quote:', error);
-      toast.error('Error al generar cotización');
+      toast.error('Error al generar tabla de cotización');
     } finally {
-      setIsProcessing(false);
+      setIsGeneratingTable(false);
     }
   };
 
-  const toggleFileSelection = (fileId) => {
-    setSelectedFiles(prev => 
-      prev.includes(fileId) 
-        ? prev.filter(id => id !== fileId)
-        : [...prev, fileId]
-    );
-  };
+  const generateMail = async () => {
+    if (extractedTexts.length === 0) {
+      toast.error('Primero extrae el texto de los archivos');
+      return;
+    }
 
-  const selectAllFiles = () => {
-    if (selectedFiles.length === files.length) {
-      setSelectedFiles([]);
-    } else {
-      setSelectedFiles(files.map(f => f.id));
+    setIsGeneratingMail(true);
+
+    try {
+      const combinedText = extractedTexts.map(et => 
+        `Archivo: ${et.fileName}\n${et.text}`
+      ).join('\n\n---\n\n');
+
+      const cotizacionText = cotizaciones && !cotizaciones.isText 
+        ? JSON.stringify(cotizaciones, null, 2)
+        : cotizaciones?.analysis || '';
+
+      const response = await fetch('/api/generate-quote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          documentText: combinedText + '\n\nCotización generada:\n' + cotizacionText,
+          prompt: `
+Basándote en los documentos de seguros analizados y la cotización generada, crea un correo electrónico profesional dirigido al cliente.
+
+El correo debe incluir:
+1. Saludo profesional
+2. Resumen de los documentos analizados
+3. Principales hallazgos y recomendaciones
+4. Tabla comparativa resumida (si aplica)
+5. Próximos pasos sugeridos
+6. Cierre profesional con datos de contacto
+
+Tono: Profesional, amigable y consultivo
+Formato: HTML para correo electrónico
+          `
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate mail');
+      }
+
+      const result = await response.json();
+      setGeneratedMail(result.analysis);
+      toast.success('Correo generado exitosamente');
+
+    } catch (error) {
+      console.error('Error generating mail:', error);
+      toast.error('Error al generar correo');
+    } finally {
+      setIsGeneratingMail(false);
     }
   };
 
@@ -307,34 +355,16 @@ Formato de respuesta en JSON:
           <div className="files-section">
             <div className="files-header">
               <h3>Archivos cargados ({files.length})</h3>
-              <div className="files-actions">
-                <button 
-                  className="btn-secondary"
-                  onClick={selectAllFiles}
-                >
-                  {selectedFiles.length === files.length ? 'Deseleccionar todos' : 'Seleccionar todos'}
-                </button>
-                <button 
-                  className="btn-primary"
-                  onClick={extractTextFromFiles}
-                  disabled={isProcessing || selectedFiles.length === 0}
-                >
-                  {isProcessing ? 'Procesando...' : 'Extraer texto'}
-                </button>
-              </div>
+              {isProcessing && (
+                <div className="processing-indicator">
+                  <span>Procesando archivos...</span>
+                </div>
+              )}
             </div>
 
             <div className="files-list">
               {files.map(file => (
-                <div key={file.id} className={`file-item ${selectedFiles.includes(file.id) ? 'selected' : ''}`}>
-                  <div className="file-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedFiles.includes(file.id)}
-                      onChange={() => toggleFileSelection(file.id)}
-                    />
-                  </div>
-                  
+                <div key={file.id} className="file-item">
                   <div className="file-info">
                     <div className="file-name">{file.name}</div>
                     <div className="file-details">
@@ -366,13 +396,22 @@ Formato de respuesta en JSON:
           <div className="texts-section">
             <div className="texts-header">
               <h3>Texto extraído</h3>
-              <button 
-                className="btn-primary"
-                onClick={generateCotizaciones}
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Generando...' : 'Generar cotización'}
-              </button>
+              <div className="texts-actions">
+                <button 
+                  className="btn-primary"
+                  onClick={generateCotizaciones}
+                  disabled={isGeneratingTable}
+                >
+                  {isGeneratingTable ? 'Generando tabla...' : 'Generar tabla'}
+                </button>
+                <button 
+                  className="btn-secondary"
+                  onClick={generateMail}
+                  disabled={isGeneratingMail}
+                >
+                  {isGeneratingMail ? 'Generando correo...' : 'Generar correo'}
+                </button>
+              </div>
             </div>
 
             <div className="texts-list">
@@ -383,6 +422,9 @@ Formato de respuesta en JSON:
                     {textData.text.substring(0, 500)}
                     {textData.text.length > 500 && '...'}
                   </div>
+                  <div className="text-stats">
+                    <span>Caracteres: {textData.text.length}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -392,7 +434,7 @@ Formato de respuesta en JSON:
         {/* Cotización Results */}
         {cotizaciones && Object.keys(cotizaciones).length > 0 && (
           <div className="cotizacion-section">
-            <h3>Cotización generada</h3>
+            <h3>Tabla de cotización generada</h3>
             
             {cotizaciones.isText ? (
               <div className="cotizacion-text">
@@ -482,6 +524,24 @@ Formato de respuesta en JSON:
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Generated Mail */}
+        {generatedMail && (
+          <div className="mail-section">
+            <div className="mail-header">
+              <h3>Correo generado</h3>
+              <button 
+                className="btn-secondary"
+                onClick={() => navigator.clipboard.writeText(generatedMail)}
+              >
+                Copiar correo
+              </button>
+            </div>
+            <div className="mail-content">
+              <div dangerouslySetInnerHTML={{ __html: generatedMail }} />
+            </div>
           </div>
         )}
       </div>

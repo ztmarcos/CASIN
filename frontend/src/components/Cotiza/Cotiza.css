@@ -475,4 +475,148 @@
   --code-background: #f9fafb;
   --primary-background: rgba(59, 130, 246, 0.05);
   --error-background: rgba(239, 68, 68, 0.05);
+}
+
+/* New styles for improved workflow */
+.texts-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.processing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.processing-indicator::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--primary-color);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.text-stats {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Mail section styles */
+.mail-section {
+  background: var(--card-background);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.mail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.mail-header h3 {
+  color: var(--text-primary);
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.mail-content {
+  background: var(--background-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.mail-content * {
+  color: var(--text-primary) !important;
+  font-family: inherit !important;
+}
+
+.mail-content h1, .mail-content h2, .mail-content h3,
+.mail-content h4, .mail-content h5, .mail-content h6 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.mail-content p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.mail-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+.mail-content table th,
+.mail-content table td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.mail-content table th {
+  background: var(--primary-color);
+  color: white !important;
+  font-weight: 600;
+}
+
+.mail-content ul, .mail-content ol {
+  margin: 1rem 0;
+  padding-left: 2rem;
+}
+
+.mail-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* Remove file selection styles */
+.file-checkbox {
+  display: none;
+}
+
+/* Update file item without checkbox */
+.file-item {
+  gap: 0;
+  padding-left: 16px;
+}
+
+/* Update responsive design for new elements */
+@media (max-width: 768px) {
+  .texts-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .texts-actions button {
+    width: 100%;
+  }
+  
+  .mail-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .mail-content {
+    max-height: 300px;
+  }
 } 
