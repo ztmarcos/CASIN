@@ -687,27 +687,7 @@ Genera un correo completo y profesional listo para enviar.
             </label>
           </div>
 
-          <div className="supported-formats">
-            <div className="format-info">
-              <div className="format-section">
-                <h4>Formatos soportados:</h4>
-                <div className="format-tags">
-                  <span className="format-tag">PDF</span>
-                  <span className="format-tag">DOC/DOCX</span>
-                  <span className="format-tag">TXT</span>
-                  <span className="format-tag">PNG/JPG</span>
-                </div>
-              </div>
-              <div className="file-limit-section">
-                <h4>Límite de archivos:</h4>
-                <div className="file-counter">
-                  <span className={`counter-badge ${files.length >= 5 ? 'counter-full' : files.length >= 3 ? 'counter-warning' : ''}`}>
-                    {files.length}/5 archivos
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
 
         {files.length > 0 && (

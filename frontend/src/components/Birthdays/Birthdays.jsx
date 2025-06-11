@@ -14,6 +14,24 @@ const Birthdays = () => {
     loadBirthdays();
   }, []);
 
+  // Function to determine if an RFC belongs to a natural person (persona física)
+  const isPersonalRFC = (rfc) => {
+    if (!rfc || typeof rfc !== 'string') return false;
+    
+    // Remove spaces and convert to uppercase
+    const cleanRFC = rfc.trim().toUpperCase();
+    
+    // Personal RFC: 13 characters (4 letters + 6 numbers + 3 characters)
+    // Business RFC: 12 characters (3 letters + 6 numbers + 3 characters)
+    if (cleanRFC.length === 13) {
+      // Check pattern: 4 letters + 6 numbers + 3 alphanumeric characters
+      const personalPattern = /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/;
+      return personalPattern.test(cleanRFC);
+    }
+    
+    return false;
+  };
+
   const loadBirthdays = async () => {
     try {
       setLoading(true);
@@ -50,8 +68,16 @@ const Birthdays = () => {
     }
   };
 
-  // Filter birthdays based on search term
+  // Filter birthdays based on search term and only include personal RFCs (personas físicas)
   const filteredBirthdays = birthdays.filter(birthday => {
+    // First filter: only include personal RFCs (exclude businesses)
+    if (!isPersonalRFC(birthday.rfc)) {
+      return false;
+    }
+    
+    // Second filter: search term
+    if (!searchTerm) return true;
+    
     const searchLower = searchTerm.toLowerCase();
     return (
       birthday.name?.toLowerCase().includes(searchLower) ||
@@ -102,7 +128,7 @@ const Birthdays = () => {
   return (
     <div className="birthdays-container">
       <div className="birthdays-header">
-        <h2>🎂 Cumpleaños (Firebase)</h2>
+        <h2>🎂 Cumpleaños - Personas Físicas</h2>
         <div className="header-actions">
           <div className="search-container">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
@@ -170,7 +196,8 @@ const Birthdays = () => {
         </div>
       ) : filteredBirthdays.length === 0 ? (
         <div className="empty-state">
-          <p>No se encontraron cumpleaños</p>
+          <p>No se encontraron cumpleaños de personas físicas</p>
+          <small>Solo se muestran RFC de personas físicas (13 caracteres)</small>
         </div>
       ) : viewMode === 'grid' ? (
         <div className="birthdays-content">
