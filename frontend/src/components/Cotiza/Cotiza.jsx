@@ -236,13 +236,11 @@ const Cotiza = () => {
           prompt: `
 Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
 
-IMPORTANTE: Responde únicamente con un JSON válido, sin texto adicional.
+CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
 
-Crea una tabla comparativa como matriz con las siguientes columnas por aseguradora:
-- Múltiples opciones de la misma aseguradora (ej: GNP, GNP 2)
-- Diferentes aseguradoras mexicanas (GNP, QUALITAS, HDI, MAPFRE, AXA, ZURICH)
+Extrae información real de los documentos y crea variaciones para múltiples aseguradoras.
 
-Formato de respuesta (JSON únicamente):
+FORMATO EXACTO DE RESPUESTA:
 {
   "vehiculo": {
     "marca": "INFINITI",
@@ -348,18 +346,61 @@ Formato de respuesta (JSON únicamente):
       console.log('✅ Resultado recibido:', result);
       
       try {
-        const cotizacionData = JSON.parse(result.analysis);
+        console.log('🔍 Respuesta completa de OpenAI:', result.analysis);
+        
+        // Limpiar la respuesta para extraer solo el JSON válido
+        let cleanedResponse = result.analysis.trim();
+        
+        // Buscar el primer { y el último }
+        const firstBrace = cleanedResponse.indexOf('{');
+        const lastBrace = cleanedResponse.lastIndexOf('}');
+        
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          cleanedResponse = cleanedResponse.substring(firstBrace, lastBrace + 1);
+          console.log('🧹 JSON limpiado:', cleanedResponse);
+        }
+        
+        const cotizacionData = JSON.parse(cleanedResponse);
         console.log('📊 Datos de cotización parseados:', cotizacionData);
         setCotizaciones(cotizacionData);
         toast.success('Tabla de cotización generada exitosamente');
       } catch (parseError) {
-        console.warn('⚠️ No se pudo parsear JSON, mostrando como texto:', parseError);
-        // Si no es JSON válido, mostrar como texto
+        console.warn('⚠️ No se pudo parsear JSON:', parseError);
+        console.warn('📄 Contenido original:', result.analysis);
+        
+        // Intentar extraer JSON de múltiples maneras
+        try {
+          // Método 1: Buscar bloques de código markdown
+          const jsonMatch = result.analysis.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+          if (jsonMatch) {
+            const extractedJson = JSON.parse(jsonMatch[1]);
+            console.log('✅ JSON extraído de markdown:', extractedJson);
+            setCotizaciones(extractedJson);
+            toast.success('Tabla de cotización generada exitosamente');
+            return;
+          }
+          
+          // Método 2: Buscar cualquier objeto JSON en el texto
+          const jsonRegex = /\{[\s\S]*\}/;
+          const jsonStringMatch = result.analysis.match(jsonRegex);
+          if (jsonStringMatch) {
+            const extractedJson = JSON.parse(jsonStringMatch[0]);
+            console.log('✅ JSON extraído con regex:', extractedJson);
+            setCotizaciones(extractedJson);
+            toast.success('Tabla de cotización generada exitosamente');
+            return;
+          }
+          
+        } catch (secondError) {
+          console.error('❌ Segundo intento de parsing falló:', secondError);
+        }
+        
+        // Si todo falla, mostrar como texto
         setCotizaciones({
           analysis: result.analysis,
           isText: true
         });
-        toast.success('Análisis generado exitosamente');
+        toast.warn('Se generó el análisis pero no se pudo crear la tabla estructurada');
       }
 
     } catch (error) {

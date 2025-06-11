@@ -3816,15 +3816,16 @@ app.post('/api/generate-quote', async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Eres un experto en seguros mexicano que analiza documentos de pólizas y genera cotizaciones comparativas. Responde siempre en español y usa el formato JSON solicitado."
+          content: "Eres un experto en seguros mexicano. Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown, sin explicaciones. Solo el objeto JSON puro."
         },
         {
           role: "user",
           content: `${prompt}\n\nDocumentos a analizar:\n${documentText}`
         }
       ],
-      max_tokens: 2000,
-      temperature: 0.3
+      max_tokens: 3000,
+      temperature: 0.1,
+      response_format: { type: "json_object" }
     });
 
     const analysis = response.choices[0].message.content;
