@@ -65,14 +65,16 @@ const Cotiza = () => {
     }
 
     setIsProcessing(true);
-    const newExtractedTexts = [...extractedTexts];
 
     try {
       for (const fileData of filesToProcess) {
         // Skip if already processed
         if (extractedTexts.some(et => et.fileId === fileData.id)) {
+          console.log('⏭️ Archivo ya procesado:', fileData.name);
           continue;
         }
+        
+        console.log('🔄 Procesando archivo:', fileData.name);
         
         // Actualizar status
         setFiles(prev => prev.map(f => 
@@ -89,10 +91,23 @@ const Cotiza = () => {
           extractedText = await extractTextFromDocument(fileData.file);
         }
 
-        newExtractedTexts.push({
-          fileId: fileData.id,
-          fileName: fileData.name,
-          text: extractedText
+        // Actualizar el estado usando función para evitar duplicados
+        setExtractedTexts(prev => {
+          // Verificar si ya existe este archivo
+          const exists = prev.some(et => et.fileId === fileData.id);
+          if (exists) {
+            console.log('⚠️ Evitando duplicado:', fileData.name);
+            return prev;
+          }
+          
+          const newText = {
+            fileId: fileData.id,
+            fileName: fileData.name,
+            text: extractedText
+          };
+          
+          console.log('✅ Agregando texto extraído:', fileData.name);
+          return [...prev, newText];
         });
 
         // Actualizar status
@@ -101,7 +116,6 @@ const Cotiza = () => {
         ));
       }
 
-      setExtractedTexts(newExtractedTexts);
       toast.success('Texto extraído exitosamente');
       
     } catch (error) {
@@ -197,15 +211,22 @@ const Cotiza = () => {
 
       console.log('📋 Texto combinado enviado:', combinedText.substring(0, 200) + '...');
 
+      // Crear un controlador de abort para timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 segundos
+
       const response = await fetch('/api/generate-quote', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
+        signal: controller.signal,
         body: JSON.stringify({
           documentText: combinedText,
           prompt: `
 Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa.
+
+IMPORTANTE: Responde únicamente con un JSON válido, sin texto adicional.
 
 Extrae y organiza la siguiente información:
 1. Tipo de seguro (Auto, Vida, GMM, RC, etc.)
@@ -217,10 +238,7 @@ Extrae y organiza la siguiente información:
 7. Vigencia
 8. Beneficiarios o asegurados
 
-Luego genera recomendaciones de productos similares de otras aseguradoras mexicanas como:
-- GNP, MAPFRE, Qualitas, HDI, AXA, Zurich, etc.
-
-Formato de respuesta en JSON estructurado:
+Formato de respuesta (JSON únicamente):
 {
   "documentos_analizados": [
     {
@@ -233,24 +251,26 @@ Formato de respuesta en JSON estructurado:
   ],
   "cotizacion_comparativa": [
     {
-      "aseguradora": "nombre_aseguradora",
-      "producto": "nombre_producto",
-      "prima": "monto_estimado",
-      "coberturas": "coberturas_principales",
-      "deducible": "monto_deducible"
+      "aseguradora": "GNP Seguros",
+      "producto": "Seguro Auto Plus",
+      "prima": "$12,500.00",
+      "coberturas": "RC, Daños Materiales, Robo Total",
+      "deducible": "$3,000.00"
     }
   ],
   "recomendaciones": [
     {
-      "aseguradora": "nombre_aseguradora",
-      "descripcion": "descripcion_recomendacion",
-      "ventajas": ["ventaja1", "ventaja2", "ventaja3"]
+      "aseguradora": "MAPFRE",
+      "descripcion": "Buena opción para cobertura amplia",
+      "ventajas": ["Precios competitivos", "Red nacional", "Atención 24/7"]
     }
   ]
 }
           `
         })
       });
+
+      clearTimeout(timeoutId);
 
       console.log('📡 Respuesta del servidor:', response.status, response.statusText);
 
@@ -280,7 +300,14 @@ Formato de respuesta en JSON estructurado:
 
     } catch (error) {
       console.error('❌ Error completo:', error);
-      toast.error(`Error al generar tabla de cotización: ${error.message}`);
+      
+      if (error.name === 'AbortError') {
+        toast.error('⏱️ La generación de tabla tardó demasiado (timeout)');
+      } else if (error.message.includes('Failed to fetch')) {
+        toast.error('🔌 Error de conexión con el servidor');
+      } else {
+        toast.error(`❌ Error al generar tabla: ${error.message}`);
+      }
     } finally {
       setIsGeneratingTable(false);
     }
@@ -384,43 +411,11 @@ Formato: HTML para correo electrónico
           </div>
         </div>
 
-        {/* Files List */}
-        {files.length > 0 && (
-          <div className="files-section">
-            <div className="files-header">
-              <h3>Archivos cargados ({files.length})</h3>
-              {isProcessing && (
-                <div className="processing-indicator">
-                  <span>Procesando archivos...</span>
-                </div>
-              )}
-            </div>
-
-            <div className="files-list">
-              {files.map(file => (
-                <div key={file.id} className="file-item">
-                  <div className="file-info">
-                    <div className="file-name">{file.name}</div>
-                    <div className="file-details">
-                      <span className="file-type">{file.type}</span>
-                      <span className="file-size">{(file.size / 1024).toFixed(1)} KB</span>
-                      <span className={`file-status status-${file.status}`}>
-                        {file.status === 'pending' && 'Pendiente'}
-                        {file.status === 'processing' && 'Procesando...'}
-                        {file.status === 'completed' && 'Completado'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button 
-                    className="remove-file"
-                    onClick={() => removeFile(file.id)}
-                    title="Eliminar archivo"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <div className="processing-section">
+            <div className="processing-indicator">
+              <span>Procesando archivos...</span>
             </div>
           </div>
         )}

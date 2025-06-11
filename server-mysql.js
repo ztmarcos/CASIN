@@ -3724,7 +3724,7 @@ app.post('/api/analyze-image', async (req, res) => {
     console.log('🖼️ Analyzing image with OpenAI Vision...');
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "user",
@@ -3777,7 +3777,7 @@ app.post('/api/generate-quote', async (req, res) => {
     console.log('🤖 Generating quote with OpenAI...');
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
