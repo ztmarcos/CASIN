@@ -430,6 +430,33 @@ class FirebaseTableService {
       return [];
     }
   }
+
+  /**
+   * Get table types from the backend API
+   */
+  async getTableTypes() {
+    try {
+      console.log('📊 Getting table types from backend API...');
+      
+      const response = await fetch(`${API_URL}/data/table-types`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      
+      // Validate the response data
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid table types data received');
+      }
+      
+      console.log('✅ Table types retrieved from backend API');
+      return data;
+    } catch (error) {
+      console.error('Error getting table types:', error);
+      throw error;
+    }
+  }
 }
 
 // Create and export singleton instance
