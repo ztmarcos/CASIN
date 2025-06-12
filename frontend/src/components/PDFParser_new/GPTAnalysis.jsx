@@ -189,32 +189,42 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 throw new Error(`Selected table "${tableName}" not found`);
             }
 
-            // Get columns from the actual table structure
+            // Get columns from table types first (most reliable source)
             let columns;
             
             console.log('Table info:', tableInfo);
             console.log('Target table:', targetTable);
             
-            // Extract columns from the table structure
-            if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                // Firebase returns columns array with {name, type, nullable} structure
-                columns = targetTable.columns
-                    .filter(col => col.name !== 'id') // Filter out id column
-                    .map(col => col.name); // Get just the column names
-            } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
-                // Fallback to tableInfo.fields if available
-                columns = tableInfo.fields;
-            } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields)) {
-                // For group tables, use childFields
-                columns = tableInfo.childFields;
-            } else {
-                // Last resort: try to get from table types endpoint
+            try {
+                // Primary source: table types endpoint (most reliable)
                 const tableTypes = await firebaseTableService.getTableTypes();
                 const tableType = tableTypes[tableName];
-                if (tableType && tableType.fields) {
+                if (tableType && tableType.fields && tableType.fields.length > 0) {
                     columns = tableType.fields;
+                    console.log('✅ Using columns from table types:', columns);
                 } else {
-                    throw new Error(`Could not determine columns for table ${tableName}`);
+                    throw new Error('No fields in table types');
+                }
+            } catch (tableTypesError) {
+                console.warn('Could not get columns from table types:', tableTypesError);
+                
+                // Fallback 1: Extract columns from the table structure
+                if (targetTable.columns && Array.isArray(targetTable.columns) && targetTable.columns.length > 0) {
+                    // Firebase returns columns array with {name, type, nullable} structure
+                    columns = targetTable.columns
+                        .filter(col => col.name !== 'id') // Filter out id column
+                        .map(col => col.name); // Get just the column names
+                    console.log('✅ Using columns from target table:', columns);
+                } else if (tableInfo.fields && Array.isArray(tableInfo.fields) && tableInfo.fields.length > 0) {
+                    // Fallback 2: tableInfo.fields if available
+                    columns = tableInfo.fields;
+                    console.log('✅ Using columns from table info fields:', columns);
+                } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields) && tableInfo.childFields.length > 0) {
+                    // Fallback 3: For group tables, use childFields
+                    columns = tableInfo.childFields;
+                    console.log('✅ Using columns from table info child fields:', columns);
+                } else {
+                    throw new Error(`Could not determine columns for table ${tableName} from any source`);
                 }
             }
 
@@ -324,42 +334,53 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('Table name:', tableName);
             console.log('Table info:', tableInfo);
 
-            // Get the columns the same way as in analyzeContent function
+            // Get the columns using table types first (most reliable source)
             let targetColumns;
             
             try {
-                const tables = await firebaseTableService.getTables();
-                const targetTable = tables.find(t => t.name === tableName);
-                
-                if (!targetTable) {
-                    throw new Error(`Table "${tableName}" not found`);
-                }
-
-                // Extract columns from the actual table structure
-                if (targetTable.columns && Array.isArray(targetTable.columns)) {
-                    // Firebase returns columns array with {name, type, nullable} structure
-                    targetColumns = targetTable.columns
-                        .filter(col => col.name !== 'id') // Filter out id column
-                        .map(col => col.name); // Get just the column names
-                } else if (tableInfo.fields && Array.isArray(tableInfo.fields)) {
-                    // Fallback to tableInfo.fields if available
-                    targetColumns = tableInfo.fields;
-                } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields)) {
-                    // For group tables, use childFields
-                    targetColumns = tableInfo.childFields;
+                // Primary source: table types endpoint (most reliable)
+                const tableTypes = await firebaseTableService.getTableTypes();
+                const tableType = tableTypes[tableName];
+                if (tableType && tableType.fields && tableType.fields.length > 0) {
+                    targetColumns = tableType.fields;
+                    console.log('✅ Using target columns from table types:', targetColumns);
                 } else {
-                    // Last resort: try to get from table types endpoint
-                    const tableTypes = await firebaseTableService.getTableTypes();
-                    const tableType = tableTypes[tableName];
-                    if (tableType && tableType.fields) {
-                        targetColumns = tableType.fields;
-                    } else {
-                        throw new Error(`Could not determine columns for table ${tableName}`);
-                    }
+                    throw new Error('No fields in table types');
                 }
-            } catch (tableError) {
-                console.error('Error getting table columns:', tableError);
-                throw new Error('Failed to get table column information');
+            } catch (tableTypesError) {
+                console.warn('Could not get target columns from table types:', tableTypesError);
+                
+                try {
+                    // Fallback: get from tables structure
+                    const tables = await firebaseTableService.getTables();
+                    const targetTable = tables.find(t => t.name === tableName);
+                    
+                    if (!targetTable) {
+                        throw new Error(`Table "${tableName}" not found`);
+                    }
+
+                    // Extract columns from the actual table structure
+                    if (targetTable.columns && Array.isArray(targetTable.columns) && targetTable.columns.length > 0) {
+                        // Firebase returns columns array with {name, type, nullable} structure
+                        targetColumns = targetTable.columns
+                            .filter(col => col.name !== 'id') // Filter out id column
+                            .map(col => col.name); // Get just the column names
+                        console.log('✅ Using target columns from target table:', targetColumns);
+                    } else if (tableInfo.fields && Array.isArray(tableInfo.fields) && tableInfo.fields.length > 0) {
+                        // Fallback to tableInfo.fields if available
+                        targetColumns = tableInfo.fields;
+                        console.log('✅ Using target columns from table info fields:', targetColumns);
+                    } else if (tableInfo.childFields && Array.isArray(tableInfo.childFields) && tableInfo.childFields.length > 0) {
+                        // For group tables, use childFields
+                        targetColumns = tableInfo.childFields;
+                        console.log('✅ Using target columns from table info child fields:', targetColumns);
+                    } else {
+                        throw new Error(`Could not determine columns for table ${tableName} from any source`);
+                    }
+                } catch (tableError) {
+                    console.error('Error getting table columns:', tableError);
+                    throw new Error('Failed to get table column information');
+                }
             }
 
             console.log('Target columns for insertion:', targetColumns);
