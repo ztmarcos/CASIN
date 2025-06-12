@@ -131,8 +131,12 @@ const ContactoCard = ({ contacto, onClick, onDelete, onViewPolicies, policyTable
         <button
           className="btn-edit"
           onClick={(e) => {
+            console.log('✏️ Edit button clicked in ContactoCard for:', contacto);
+            console.log('- contacto.id:', contacto?.id);
+            console.log('- contacto.nombre_completo:', contacto?.nombre_completo);
             e.stopPropagation();
             onClick();
+            console.log('- onClick() called');
           }}
           title="Editar contacto"
         >

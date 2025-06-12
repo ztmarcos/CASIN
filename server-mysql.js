@@ -660,13 +660,34 @@ app.get('/api/data/:tableName', async (req, res) => {
       const docData = doc.data();
       console.log(`🔍 Firebase doc ID: ${doc.id}, contains id field: ${docData.id || 'none'}`);
       
-      data.push({
-        id: doc.id,  // Always use Firebase document ID
-        firebase_doc_id: doc.id,  // Backup reference
-        ...docData,
-        // Remove any numeric id field from the document data to avoid conflicts
-        id: doc.id  // Ensure Firebase doc ID is not overwritten
-      });
+      // Special filtering for emant_caratula - only show CSV data and exclude status column
+      if (tableName === 'emant_caratula') {
+        // Only include records that match the CSV: "Emant Consultores S.c." with policy "17 559558"
+        if (docData.contratante === 'Emant Consultores S.c.' && docData.numero_poliza === '17 559558') {
+          console.log(`   ✅ Including CSV record: ${docData.contratante}`);
+          
+          // Remove status field from carátula (only listado should have it)
+          const { status, ...caratulaData } = docData;
+          
+          data.push({
+            id: doc.id,
+            firebase_doc_id: doc.id,
+            ...caratulaData,
+            id: doc.id
+          });
+        } else {
+          console.log(`   🚫 Filtering out non-CSV record: ${docData.contratante || docData.nombre_grupo || 'Unknown'}`);
+        }
+      } else {
+        // Normal processing for other tables
+        data.push({
+          id: doc.id,  // Always use Firebase document ID
+          firebase_doc_id: doc.id,  // Backup reference
+          ...docData,
+          // Remove any numeric id field from the document data to avoid conflicts
+          id: doc.id  // Ensure Firebase doc ID is not overwritten
+        });
+      }
     });
 
     // Get estimated total from cache or use known counts
@@ -1268,11 +1289,11 @@ app.get('/api/directorio', async (req, res) => {
         allContactos = allContactos.filter(c => c.genero === genero.trim());
       }
       
-      // Sort by creation date (newest first)
+      // Sort alphabetically by nombre_completo
       allContactos.sort((a, b) => {
-        const dateA = new Date(a.created_at || a.createdAt || 0);
-        const dateB = new Date(b.created_at || b.createdAt || 0);
-        return dateB - dateA;
+        const nameA = (a.nombre_completo || '').toLowerCase();
+        const nameB = (b.nombre_completo || '').toLowerCase();
+        return nameA.localeCompare(nameB);
       });
       
       // Apply pagination
@@ -1582,10 +1603,17 @@ app.put('/api/directorio/:id', async (req, res) => {
       
       try {
         // Get current document to check if it exists
-        const docRef = db.collection('directorio_contactos').doc(id);
+        console.log(`🔍 Firebase - Checking if contact ${id} exists in Firebase...`);
+        console.log(`🔍 Firebase - Contact ID type: ${typeof id}, value: "${id}"`);
+        
+        // Try both string and number versions of the ID
+        const stringId = id.toString();
+        const docRef = db.collection('directorio_contactos').doc(stringId);
         const doc = await docRef.get();
         
+        console.log(`🔍 Firebase - doc.exists: ${doc.exists}`);
         if (doc.exists) {
+          console.log(`✅ Firebase - Contact ${id} found in Firebase, updating...`);
           // Update document with new data
           const updateData = {
             ...contactData,
@@ -1609,70 +1637,28 @@ app.put('/api/directorio/:id', async (req, res) => {
             data: updatedContact
           });
         } else {
-          console.log(`📋 Contact ${id} not found in Firebase, falling back to MySQL`);
+          console.log(`❌ Firebase - Contact ${id} not found in Firebase`);
+          return res.status(404).json({
+            success: false,
+            message: `Contact ${id} not found in Firebase. All contacts should be in Firebase now.`
+          });
         }
         
       } catch (firebaseError) {
         console.error('❌ Firebase update failed:', firebaseError);
-        // Fall back to MySQL if Firebase fails
+        return res.status(500).json({
+          success: false,
+          message: 'Firebase update failed',
+          error: firebaseError.message
+        });
       }
-    }
-    
-    // Fallback to MySQL if Firebase is not available
-    console.log('📋 Using MySQL for directorio update (Firebase not available)');
-    
-    // Check if contact exists
-    const existingContact = await executeQuery(
-      'SELECT * FROM directorio_contactos WHERE id = ?',
-      [id]
-    );
-    
-    if (existingContact.length === 0) {
-      return res.status(404).json({
+    } else {
+      // Firebase not available
+      return res.status(500).json({
         success: false,
-        message: 'Contact not found'
+        message: 'Firebase is required but not available'
       });
     }
-    
-    // Get table structure for dynamic update
-    const structure = await getTableStructure('directorio_contactos');
-    const columns = structure.map(col => col.name).filter(col => col !== 'id');
-    
-    // Build SET clause and values
-    const setClauses = [];
-    const values = [];
-    
-    columns.forEach(col => {
-      if (contactData.hasOwnProperty(col)) {
-        setClauses.push(`\`${col}\` = ?`);
-        
-        // Handle ENUM fields - convert empty strings to NULL
-        let value = contactData[col];
-        if (col === 'genero' && (value === '' || value === null || value === undefined)) {
-          value = null;
-        }
-        
-        values.push(value);
-      }
-    });
-    
-    values.push(id); // Add ID for WHERE clause
-    
-    const query = `UPDATE directorio_contactos SET ${setClauses.join(', ')} WHERE id = ?`;
-    
-    await executeQuery(query, values);
-    
-    // Get the updated contact
-    const updatedContact = await executeQuery(
-      'SELECT * FROM directorio_contactos WHERE id = ?',
-      [id]
-    );
-    
-    res.json({
-      success: true,
-      message: 'Contact updated successfully',
-      data: updatedContact[0]
-    });
     
   } catch (error) {
     console.error('Error updating contact:', error);
@@ -2564,12 +2550,21 @@ app.get('/api/drive/files', async (req, res) => {
     const drive = google.drive({ version: 'v3', auth });
     
     // Construir query para la carpeta específica
+    const { folderId } = req.query;
+    const targetFolderId = folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    
+    console.log('🔍 Drive request parameters:');
+    console.log('- req.query.folderId:', req.query.folderId);
+    console.log('- process.env.GOOGLE_DRIVE_FOLDER_ID:', process.env.GOOGLE_DRIVE_FOLDER_ID);
+    console.log('- targetFolderId (final):', targetFolderId);
+    
     let query = '';
-    if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
-      query = `'${process.env.GOOGLE_DRIVE_FOLDER_ID}' in parents`;
-      console.log(`Listing files from specific folder: ${process.env.GOOGLE_DRIVE_FOLDER_ID}`);
-  } else {
-      console.log('No specific folder ID found, listing all files');
+    if (targetFolderId) {
+      query = `'${targetFolderId}' in parents`;
+      console.log(`📂 Listing files from folder: ${targetFolderId}`);
+      console.log(`📂 Query string: ${query}`);
+    } else {
+      console.log('📂 No specific folder ID found, listing all files');
     }
     
     console.log('📂 Making Drive API request...');
@@ -2585,11 +2580,14 @@ app.get('/api/drive/files', async (req, res) => {
     const files = response.data.files || [];
     
     console.log(`✅ Successfully retrieved ${files.length} files`);
+    console.log('📁 First 3 files:', files.slice(0, 3).map(f => ({ name: f.name, type: f.mimeType, id: f.id })));
     
-    res.json({
+    const responseData = {
       success: true,
       message: `Found ${files.length} files in Google Drive folder`,
-      folderId: process.env.GOOGLE_DRIVE_FOLDER_ID || 'root',
+      folderId: targetFolderId || 'root',
+      requestedFolderId: req.query.folderId,
+      actualQuery: query,
       files: files.map(file => ({
         id: file.id,
         name: file.name,
@@ -2598,7 +2596,12 @@ app.get('/api/drive/files', async (req, res) => {
         modifiedTime: file.modifiedTime,
         webViewLink: file.webViewLink
       }))
-    });
+    };
+    
+    console.log('📤 Response folderId:', responseData.folderId);
+    console.log('📤 Response requestedFolderId:', responseData.requestedFolderId);
+    
+    res.json(responseData);
 
   } catch (error) {
     console.error('❌ Google Drive API error details:', {
@@ -4259,7 +4262,7 @@ app.get('*', (req, res) => {
 // Start server for Heroku (only if not in Vercel environment)
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);

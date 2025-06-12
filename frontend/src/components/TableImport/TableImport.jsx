@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { read, utils } from 'xlsx';
-import tableService from '../../services/data/tableService';
+import firebaseTableService from '../../services/firebaseTableService';
 import './TableImport.css';
 import { toast } from 'react-hot-toast';
 
@@ -96,14 +96,30 @@ const TableImport = ({ onFileData }) => {
             header: 1
           });
 
+          console.log('📊 Raw data from file:', rawData.length, 'rows');
+          console.log('📊 First row (headers):', rawData[0]);
+          
+          if (rawData.length < 1) {
+            throw new Error('File appears to be empty');
+          }
+          
+          // Check if first row looks like it might be data instead of headers
+          const firstRow = rawData[0];
+          if (firstRow.length === 1 && firstRow[0] && firstRow[0].includes(',')) {
+            throw new Error('CSV file might not be properly parsed. Please check the file format and encoding.');
+          }
+          
           if (rawData.length < 2) {
             throw new Error('File must contain headers and at least one data row');
           }
 
           // Get and clean headers
-          const headers = rawData[0].map(header => {
-            if (!header) return '';
-            return String(header)
+          const headers = rawData[0].map((header, index) => {
+            if (!header || header.toString().trim() === '') {
+              return `column_${index + 1}`; // Generate default column name
+            }
+            
+            const cleaned = String(header)
               .toLowerCase()
               .trim()
               .normalize('NFD')
@@ -112,23 +128,39 @@ const TableImport = ({ onFileData }) => {
               .replace(/\s+/g, '_') // Replace spaces with underscore
               .replace(/_+/g, '_') // Replace multiple underscores
               .replace(/^_|_$/g, ''); // Remove leading/trailing underscores
+            
+            // If cleaning results in empty string, use default name
+            return cleaned || `column_${index + 1}`;
           });
 
-          // Validate headers
+          // Validate headers (should not be empty after our cleanup)
           if (headers.some(h => !h)) {
-            throw new Error('Invalid or empty column headers found');
+            throw new Error('Unable to process column headers');
           }
 
-          // Check for duplicate headers
-          const uniqueHeaders = new Set(headers);
-          if (uniqueHeaders.size !== headers.length) {
-            throw new Error('Duplicate column names found');
-          }
+          // Handle duplicate headers by adding suffixes
+          const finalHeaders = [];
+          const headerCount = {};
+          
+          headers.forEach(header => {
+            let finalHeader = header;
+            if (headerCount[header]) {
+              headerCount[header] += 1;
+              finalHeader = `${header}_${headerCount[header]}`;
+            } else {
+              headerCount[header] = 1;
+            }
+            finalHeaders.push(finalHeader);
+          });
+
+          console.log('📊 Original headers:', rawData[0]);
+          console.log('📊 Cleaned headers:', headers);
+          console.log('📊 Final headers (with duplicates resolved):', finalHeaders);
 
           // Convert rows to objects with cleaned headers
           const rows = rawData.slice(1).map(row => {
             const obj = {};
-            headers.forEach((header, index) => {
+            finalHeaders.forEach((header, index) => {
               // Clean and normalize the value
               let value = row[index];
               if (value === undefined || value === '') {
@@ -175,26 +207,64 @@ const TableImport = ({ onFileData }) => {
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '');
 
-      const response = await tableService.importCSV(cleanTableName, previewData);
+      console.log(`📤 Importing ${previewData.length} records to Firebase collection: ${cleanTableName}`);
+
+      // Import data to Firebase collection using insertData
+      // For bulk import, we'll insert each record individually
+      let successCount = 0;
+      let failCount = 0;
+      const batchSize = 10; // Process in batches to avoid overwhelming the API
       
-      if (response.success) {
+      for (let i = 0; i < previewData.length; i += batchSize) {
+        const batch = previewData.slice(i, i + batchSize);
+        const batchPromises = batch.map(async (row) => {
+          try {
+            await firebaseTableService.insertData(cleanTableName, row);
+            return { success: true };
+          } catch (error) {
+            console.error('Error inserting row:', error);
+            return { success: false, error };
+          }
+        });
+        
+        const batchResults = await Promise.all(batchPromises);
+        successCount += batchResults.filter(r => r.success).length;
+        failCount += batchResults.filter(r => !r.success).length;
+        
+        // Update progress
+        const progress = Math.round(((i + batch.length) / previewData.length) * 100);
+        console.log(`📊 Import progress: ${progress}% (${successCount + failCount}/${previewData.length})`);
+      }
+
+      if (successCount > 0) {
+        const message = failCount > 0 
+          ? `Successfully imported ${successCount} records (${failCount} failed)`
+          : `Successfully imported ${successCount} records`;
+        
+        toast.success(message);
+        console.log(`✅ Import completed: ${successCount} success, ${failCount} failed`);
+        
         setError('');
         setPreviewData(null);
         setTableName('');
         setFile(null);
+        
         onFileData?.({
           success: true,
           tableName: cleanTableName,
-          shouldReload: true
+          shouldReload: true,
+          importStats: { successCount, failCount }
         });
-        toast.success('Data imported successfully');
       } else {
-        setError(response.error || 'Error importing data');
+        throw new Error('Failed to import any records');
       }
+      
     } catch (error) {
       console.error('Error importing data:', error);
-      toast.error(error.message || 'Error importing data');
-      onFileData?.({ success: false, error: error.message });
+      const errorMessage = error.message || 'Error importing data';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      onFileData?.({ success: false, error: errorMessage });
     } finally {
       setIsProcessing(false);
     }

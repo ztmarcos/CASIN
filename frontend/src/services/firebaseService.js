@@ -377,7 +377,6 @@ class FirebaseService {
   async getTables() {
     // Return available collections/tables
     return [
-      'directorio_contactos',
       'autos',
       'rc',
       'vida',
@@ -386,7 +385,12 @@ class FirebaseService {
       'mascotas',
       'diversos',
       'negocio',
-      'gruposgmm',
+      'emant_caratula',
+      'emant_listado',
+      'gruposvida',
+      'listadovida',
+      'gruposautos',
+      'listadoautos',
       'prospeccion_cards'
     ];
   }

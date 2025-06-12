@@ -49,18 +49,7 @@ const BreadcrumbPath = ({ folderStack, onNavigate }) => (
   </div>
 );
 
-const Modal = ({ title, children, onClose, actions }) => (
-  <div className="modal-backdrop" onClick={onClose}>
-    <div className="modal-content" onClick={e => e.stopPropagation()}>
-      <div className="modal-header">
-        <span>{title}</span>
-        <button className="modal-close" onClick={onClose}>×</button>
-      </div>
-      <div className="modal-body">{children}</div>
-      <div className="modal-actions">{actions}</div>
-    </div>
-  </div>
-);
+
 
 const Drive = () => {
   const [files, setFiles] = useState([]);
@@ -69,8 +58,7 @@ const Drive = () => {
   const [folderStack, setFolderStack] = useState([]);
   const [currentFolderId, setCurrentFolderId] = useState(ROOT_FOLDER_ID);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [connectionStatus, setConnectionStatus] = useState('checking');
 
   // Test Google Drive connection
@@ -103,6 +91,8 @@ const Drive = () => {
       setError(null);
       
       console.log(`📂 Fetching files from folder: ${folderId}`);
+      console.log(`🎯 Current folder ID: ${currentFolderId}`);
+      console.log(`📋 Folder stack:`, folderStack);
       
       const response = await axios.get(`${API_URL}/drive/files`, {
         params: { folderId }
@@ -111,14 +101,24 @@ const Drive = () => {
       console.log('📁 Drive API response:', response.data);
       
       if (response.data.success) {
-        setFiles(response.data.files || []);
+        const fetchedFiles = response.data.files || [];
+        console.log(`✅ Successfully fetched ${fetchedFiles.length} files`);
+        console.log('📄 Files:', fetchedFiles.map(f => ({ name: f.name, type: f.mimeType })));
+        
+        setFiles(fetchedFiles);
         setConnectionStatus('connected');
       } else {
+        console.error('❌ API error:', response.data.message);
         setError(response.data.message || 'Error al cargar archivos');
         setFiles([]);
       }
     } catch (error) {
       console.error('❌ Error fetching files:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       setError(`Error al cargar archivos: ${error.message}`);
       setFiles([]);
     } finally {
@@ -128,31 +128,50 @@ const Drive = () => {
 
   // Navigate to folder
   const navigateToFolder = (file) => {
+    console.log('🗂️ Navigating to folder:', file);
     if (file.mimeType === 'application/vnd.google-apps.folder') {
-      setFolderStack(prev => [...prev, { id: file.id, name: file.name }]);
+      console.log('✅ Valid folder, updating state...');
+      
+      // Check if we're already in this folder
+      if (currentFolderId === file.id) {
+        console.log('⚠️ Already in this folder, ignoring click');
+        return;
+      }
+      
+      // Update folder stack first
+      const newStack = [...folderStack, { id: file.id, name: file.name }];
+      console.log('📁 New folder stack:', newStack);
+      setFolderStack(newStack);
+      
+      // Then update current folder ID (this will trigger useEffect to fetch files)
+      console.log('🆔 Setting new folder ID:', file.id);
       setCurrentFolderId(file.id);
+    } else {
+      console.log('❌ Not a folder:', file.mimeType);
     }
   };
 
   // Navigate back in breadcrumb
   const navigateBack = (index) => {
+    console.log('🔙 Navigating back, index:', index);
+    console.log('📁 Current folder stack:', folderStack);
+    
     if (index === null) {
       // Go to root
+      console.log('🏠 Going to root folder');
       setFolderStack([]);
       setCurrentFolderId(ROOT_FOLDER_ID);
     } else {
       // Go to specific folder in stack
       const newStack = folderStack.slice(0, index + 1);
+      console.log('📁 New folder stack after navigation:', newStack);
       setFolderStack(newStack);
       setCurrentFolderId(newStack[newStack.length - 1].id);
+      console.log('🆔 New current folder ID:', newStack[newStack.length - 1].id);
     }
   };
 
-  // Open file details modal
-  const openFileModal = (file) => {
-    setSelectedFile(file);
-    setIsModalOpen(true);
-  };
+
 
   // Filter files based on search term
   const filteredFiles = useMemo(() => {
@@ -186,9 +205,11 @@ const Drive = () => {
   // Initial load
   useEffect(() => {
     const initializeDrive = async () => {
+      console.log('🚀 Initializing Drive component...');
       const isConnected = await testConnection();
       if (isConnected) {
-        await fetchFiles();
+        console.log('🎯 Loading initial files...');
+        await fetchFiles(ROOT_FOLDER_ID);
       }
     };
     
@@ -197,8 +218,14 @@ const Drive = () => {
 
   // Fetch files when folder changes
   useEffect(() => {
+    console.log('🔄 useEffect triggered - currentFolderId changed:', currentFolderId);
+    console.log('🔗 Connection status:', connectionStatus);
+    
     if (connectionStatus === 'connected') {
+      console.log('📥 Calling fetchFiles with:', currentFolderId);
       fetchFiles(currentFolderId);
+    } else {
+      console.log('⚠️ Not fetching files - connection status is:', connectionStatus);
     }
   }, [currentFolderId]);
 
@@ -289,10 +316,24 @@ const Drive = () => {
                 <div
                   key={file.id}
                   className={`file-item ${file.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file'}`}
-                  onClick={() => file.mimeType === 'application/vnd.google-apps.folder' 
-                    ? navigateToFolder(file) 
-                    : openFileModal(file)
-                  }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🖱️ File item clicked:', {
+                      name: file.name,
+                      id: file.id,
+                      mimeType: file.mimeType,
+                      isFolder: file.mimeType === 'application/vnd.google-apps.folder'
+                    });
+                    
+                    if (file.mimeType === 'application/vnd.google-apps.folder') {
+                      console.log('🗂️ This is a folder, calling navigateToFolder...');
+                      navigateToFolder(file);
+                    } else {
+                      console.log('📄 This is a file, opening in new tab...');
+                      window.open(file.webViewLink, '_blank');
+                    }
+                  }}
                 >
                   <div className="file-icon">
                     <FileIcon mimeType={file.mimeType} />
@@ -315,41 +356,7 @@ const Drive = () => {
         </div>
       )}
 
-      {isModalOpen && selectedFile && (
-        <Modal
-          title="Detalles del archivo"
-          onClose={() => setIsModalOpen(false)}
-          actions={
-            <div>
-              <button 
-                onClick={() => window.open(selectedFile.webViewLink, '_blank')}
-                className="primary-button"
-              >
-                📖 Abrir en Google Drive
-              </button>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="secondary-button"
-              >
-                Cerrar
-              </button>
-            </div>
-          }
-        >
-          <div className="file-modal-content">
-            <div className="modal-file-icon">
-              <FileIcon mimeType={selectedFile.mimeType} />
-            </div>
-            <div className="modal-file-details">
-              <h3>{selectedFile.name}</h3>
-              <p><strong>Tamaño:</strong> {formatFileSize(selectedFile.size)}</p>
-              <p><strong>Modificado:</strong> {formatDate(selectedFile.modifiedTime)}</p>
-              <p><strong>Tipo:</strong> {selectedFile.mimeType}</p>
-              <p><strong>ID:</strong> {selectedFile.id}</p>
-            </div>
-          </div>
-        </Modal>
-      )}
+
     </div>
   );
 };

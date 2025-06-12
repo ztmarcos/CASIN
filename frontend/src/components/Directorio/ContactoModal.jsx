@@ -2,35 +2,11 @@ import React, { useState, useEffect } from 'react';
 import './ContactoModal.css';
 
 const ContactoModal = ({ contacto, onSave, onClose }) => {
-  const [formData, setFormData] = useState({
-    nombre_completo: '',
-    nombre_completo_oficial: '',
-    nickname: '',
-    apellido: '',
-    display_name: '',
-    empresa: '',
-    telefono_oficina: '',
-    telefono_casa: '',
-    telefono_asistente: '',
-    telefono_movil: '',
-    telefonos_corregidos: '',
-    email: '',
-    entidad: '',
-    genero: '',
-    status_social: '',
-    ocupacion: '',
-    pais: 'MÉXICO',
-    status: 'prospecto',
-    origen: '',
-    comentario: ''
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
-
-  useEffect(() => {
+  // Initialize formData directly with contacto data if available
+  const getInitialFormData = () => {
     if (contacto) {
-      setFormData({
+      console.log('🎯 Initializing formData with contacto:', contacto);
+      return {
         nombre_completo: contacto.nombre_completo || '',
         nombre_completo_oficial: contacto.nombre_completo_oficial || '',
         nickname: contacto.nickname || '',
@@ -51,9 +27,49 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
         status: contacto.status || 'prospecto',
         origen: contacto.origen || '',
         comentario: contacto.comentario || ''
-      });
+      };
+    } else {
+      console.log('🎯 Initializing formData for new contacto');
+      return {
+        nombre_completo: '',
+        nombre_completo_oficial: '',
+        nickname: '',
+        apellido: '',
+        display_name: '',
+        empresa: '',
+        telefono_oficina: '',
+        telefono_casa: '',
+        telefono_asistente: '',
+        telefono_movil: '',
+        telefonos_corregidos: '',
+        email: '',
+        entidad: '',
+        genero: '',
+        status_social: '',
+        ocupacion: '',
+        pais: 'MÉXICO',
+        status: 'prospecto',
+        origen: '',
+        comentario: ''
+      };
     }
-  }, [contacto]);
+  };
+  
+  const [formData, setFormData] = useState(getInitialFormData);
+
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Update formData when contacto changes (for when modal is reused)
+  useEffect(() => {
+    console.log('🔄 useEffect triggered - contacto changed:', contacto?.id);
+    if (contacto) {
+      console.log('📝 Updating formData from new contacto:', contacto);
+      const newFormData = getInitialFormData();
+      console.log('📝 New formData from getInitialFormData:', newFormData);
+      setFormData(newFormData);
+    }
+  }, [contacto?.id]); // Only trigger when contacto ID changes
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -89,16 +105,24 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    console.log('🚀 handleSubmit called');
+    console.log('- contacto:', contacto);
+    console.log('- formData:', formData);
+    console.log('- isEditing:', !!contacto);
+    
     if (!validateForm()) {
+      console.log('❌ Form validation failed');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📤 Calling onSave with formData:', formData);
       await onSave(formData);
+      console.log('✅ onSave completed successfully');
     } catch (error) {
-      console.error('Error saving contacto:', error);
-      alert('Error al guardar el contacto');
+      console.error('❌ Error saving contacto:', error);
+      alert('Error al guardar el contacto: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -110,7 +134,13 @@ const ContactoModal = ({ contacto, onSave, onClose }) => {
     }
   };
 
-  console.log('🎯 ContactoModal RENDERING - contacto:', contacto, 'formData:', formData);
+  console.log('🎯 ContactoModal RENDERING');
+  console.log('- contacto prop:', contacto);
+  console.log('- contacto id:', contacto?.id);
+  console.log('- contacto name:', contacto?.nombre_completo);
+  console.log('- formData:', formData);
+  console.log('- formData.nombre_completo:', formData.nombre_completo);
+  console.log('- isEditing:', !!contacto);
 
   return (
     <div className="contacto-modal-overlay" onClick={handleOverlayClick}>

@@ -1,9 +1,40 @@
 import firebaseService from './firebaseService';
+import firebaseTableService from './firebaseTableService.js';
 import { API_URL } from '../config/api.js';
 
 class FirebaseReportsService {
   constructor() {
     this.firebaseService = firebaseService;
+    this.firebaseTableService = firebaseTableService;
+  }
+
+  /**
+   * Get all available insurance collections dynamically
+   * @returns {Promise<Array>} Array of collection names that contain insurance data
+   */
+  async getAvailableInsuranceCollections() {
+    try {
+      // Get all available tables from firebaseTableService
+      const allTables = await this.firebaseTableService.getTables();
+      
+      // Filter tables that are insurance collections (have count > 0 and are not parent/child tables)
+      const insuranceCollections = allTables
+        .filter(table => 
+          table.count > 0 && // Only tables with data
+          !table.isChildTable && // Exclude child tables (listados)
+          !table.name.includes('listado') && // Extra safety for listado tables
+          table.name !== 'directorio_contactos' // Exclude directorio
+        )
+        .map(table => table.name);
+      
+      console.log('📋 Available insurance collections:', insuranceCollections);
+      return insuranceCollections;
+      
+    } catch (error) {
+      console.warn('Could not get dynamic collections, using fallback:', error);
+      // Fallback to known collections if dynamic detection fails
+      return ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'hogar'];
+    }
   }
 
   /**
@@ -14,8 +45,9 @@ class FirebaseReportsService {
     try {
       console.log('📊 Getting all policies from Firebase...');
       
-      // Insurance collections that contain policies
-      const insuranceCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+      // Get available insurance collections dynamically
+      const insuranceCollections = await this.getAvailableInsuranceCollections();
+      console.log('📋 Using collections for policies:', insuranceCollections);
       
       const allPolicies = [];
       
@@ -168,7 +200,7 @@ class FirebaseReportsService {
     try {
       console.log('📊 Getting policy payment statuses from Firebase...');
       
-      const insuranceCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+      const insuranceCollections = await this.getAvailableInsuranceCollections();
       const statuses = {};
       
       for (const collectionName of insuranceCollections) {
@@ -247,8 +279,8 @@ class FirebaseReportsService {
     try {
       console.log('📅 Getting policy expirations from Firebase...');
       
-      // Insurance collections that have policy expiration dates
-      const insuranceCollections = ['autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+      // Get available insurance collections dynamically
+      const insuranceCollections = await this.getAvailableInsuranceCollections();
       
       const expirations = [];
       
@@ -329,6 +361,8 @@ class FirebaseReportsService {
         return doc.asegurado || doc.nombre_contratante || 'Sin nombre';
       case 'vida':
         return doc.contratante || doc.nombre_contratante || 'Sin nombre';
+      case 'hogar':
+        return doc.contratante || doc.nombre_contratante || 'Sin nombre';
       case 'gmm':
       case 'transporte':
       case 'mascotas':
@@ -337,7 +371,8 @@ class FirebaseReportsService {
       case 'gruposgmm':
         return doc.nombre_contratante || doc.contratante || doc.asegurado || 'Sin nombre';
       default:
-        return doc.nombre_contratante || doc.contratante || doc.asegurado || 'Sin nombre';
+        // For dynamic collections, try common field patterns
+        return doc.nombre_contratante || doc.contratante || doc.asegurado || doc.nombre || 'Sin nombre';
     }
   }
 
@@ -350,6 +385,7 @@ class FirebaseReportsService {
       'rc': 'Responsabilidad Civil',
       'vida': 'Seguro de Vida',
       'gmm': 'Gastos Médicos Mayores',
+      'hogar': 'Seguro de Hogar',
       'transporte': 'Seguro de Transporte',
       'mascotas': 'Seguro de Mascotas',
       'diversos': 'Seguros Diversos',
@@ -357,7 +393,16 @@ class FirebaseReportsService {
       'gruposgmm': 'Grupos GMM'
     };
     
-    return typeMap[collectionName] || collectionName.charAt(0).toUpperCase() + collectionName.slice(1);
+    // If not in map, create a formatted name from collection name
+    if (typeMap[collectionName]) {
+      return typeMap[collectionName];
+    }
+    
+    // Convert collection name to readable format
+    return collectionName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   /**

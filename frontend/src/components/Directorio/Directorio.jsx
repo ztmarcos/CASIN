@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import firebaseDirectorioService from '../../services/firebaseDirectorioService';
 import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
@@ -59,6 +59,10 @@ const Directorio = () => {
   const [contactPaymentStatuses, setContactPaymentStatuses] = useState({});
   const [isStatusLoading, setIsStatusLoading] = useState(true);
 
+  // Refs to prevent render loops
+  const isNavigatingRef = useRef(false);
+  const lastPageChangeRef = useRef(currentPage);
+
   useEffect(() => {
     console.log('🔄 useEffect triggered:', {
       viewMode,
@@ -69,7 +73,10 @@ const Directorio = () => {
     });
     
     if (viewMode !== 'relationships') {
+      console.log('🔄 About to call loadData() due to dependency change');
       loadData();
+    } else {
+      console.log('🔄 Skipping loadData() because viewMode is relationships');
     }
   }, [filters, searchTerm, viewMode, currentPage, itemsPerPage]);
 
@@ -107,22 +114,58 @@ const Directorio = () => {
       
       const contacts = contactosData.data || contactosData;
       
-      // Check for and filter out duplicates by ID
-      const seenIds = new Set();
+      // Check for and filter out duplicates by ID - more robust approach
+      const seenKeys = new Set();
       const duplicateIds = [];
-      const uniqueContacts = contacts.filter(contact => {
-        if (seenIds.has(contact.id)) {
-          duplicateIds.push(contact.id);
-          console.log(`⚠️ Duplicate contact found with ID: ${contact.id}`, contact);
+      const uniqueContacts = contacts.filter((contact, index) => {
+        // Create a unique React key from multiple sources
+        const originalId = contact.id;
+        const firebaseId = contact.firebase_doc_id;
+        const name = contact.nombre_completo || 'unnamed';
+        
+        // Generate a unique key for React rendering
+        let reactKey;
+        if (firebaseId) {
+          reactKey = `fb_${firebaseId}`;
+        } else if (originalId) {
+          reactKey = `id_${originalId}`;
+        } else {
+          reactKey = `temp_${index}_${name.substring(0, 10)}_${Date.now()}`;
+        }
+        
+        // Check for duplicates using the React key
+        if (seenKeys.has(reactKey)) {
+          duplicateIds.push({ originalId, reactKey, name });
+          console.log(`⚠️ Duplicate React key found:`, { 
+            originalId, 
+            reactKey, 
+            name: contact.nombre_completo,
+            contact: contact 
+          });
+          console.log(`⚠️ This causes React key warning: "key ${reactKey}"`);
           return false; // Filter out duplicate
         }
-        seenIds.add(contact.id);
+        
+        // Add unique React key to contact for rendering
+        contact.reactKey = reactKey;
+        
+        // Ensure contact has a valid ID for API calls
+        if (!contact.id && firebaseId) {
+          contact.id = firebaseId;
+          console.log(`🔑 Using Firebase doc ID as ID: ${firebaseId}`);
+        } else if (!contact.id) {
+          contact.id = `generated_${index}_${Date.now()}`;
+          console.log(`🔑 Generated ID for contact: ${contact.id}`);
+        }
+        
+        seenKeys.add(reactKey);
         return true;
       });
       
       if (duplicateIds.length > 0) {
         console.log(`⚠️ Found ${duplicateIds.length} duplicate contacts with IDs:`, duplicateIds);
         console.log(`✅ Filtered out duplicates, showing ${uniqueContacts.length} unique contacts`);
+        console.log(`⚠️ This may be causing React key warnings like "key 2701"`);
       }
       
       // Debug: Log all contact IDs for verification
@@ -193,31 +236,71 @@ const Directorio = () => {
   }, []);
 
   const handleSearch = (term) => {
+    console.log('🔍 handleSearch called with term:', term);
+    console.log('🔍 Current searchTerm:', searchTerm, 'New term:', term);
+    
+    // Don't reset page if search term is the same
+    if (term === searchTerm) {
+      console.log('🔍 Search term unchanged, not resetting page');
+      return;
+    }
+    
     setSearchTerm(term);
+    // Only reset to page 1 if the search term actually changed
     setCurrentPage(1);
   };
 
   const handleFilterChange = (newFilters) => {
+    console.log('🔍 handleFilterChange called with filters:', newFilters);
+    console.log('🔍 Current filters:', filters, 'New filters:', newFilters);
+    
+    // Don't reset page if filters are the same
+    if (JSON.stringify(newFilters) === JSON.stringify(filters)) {
+      console.log('🔍 Filters unchanged, not resetting page');
+      return;
+    }
+    
     setFilters(newFilters);
+    // Only reset to page 1 if filters actually changed
     setCurrentPage(1);
   };
 
-  const handleContactoSave = async (contactoData) => {
+  const handleContactoSave = useCallback(async (contactoData) => {
     try {
+      console.log('💾 handleContactoSave called');
+      console.log('- selectedContacto:', selectedContacto);
+      console.log('- selectedContacto.id:', selectedContacto?.id);
+      console.log('- contactoData:', contactoData);
+      
       if (selectedContacto) {
-        await firebaseDirectorioService.updateContacto(selectedContacto.id, contactoData);
+        console.log(`🔄 Updating existing contacto: ${selectedContacto.id}`);
+        const result = await firebaseDirectorioService.updateContacto(selectedContacto.id, contactoData);
+        console.log('✅ Update result:', result);
       } else {
-        await firebaseDirectorioService.createContacto(contactoData);
+        console.log('➕ Creating new contacto');
+        const result = await firebaseDirectorioService.createContacto(contactoData);
+        console.log('✅ Create result:', result);
       }
       
+      console.log('🔄 Reloading data...');
       await loadData();
+      
+      console.log('🔒 Closing modal and clearing state...');
       setShowModal(false);
       setSelectedContacto(null);
+      
+      console.log('✅ handleContactoSave completed successfully');
     } catch (err) {
-      console.error('Error saving contacto:', err);
+      console.error('❌ Error saving contacto:', err);
+      console.error('❌ Error details:', {
+        message: err.message,
+        stack: err.stack,
+        selectedContacto: selectedContacto,
+        contactoData: contactoData
+      });
       throw err;
     }
-  };
+  }, [selectedContacto]);
 
   const handleContactoDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este contacto?')) {
@@ -299,6 +382,41 @@ const Directorio = () => {
     
     return total;
   }, [stats?.total, itemsPerPage]);
+
+  // Debug effect to track currentPage changes
+  useEffect(() => {
+    console.log('🎯 currentPage CHANGED:', {
+      newCurrentPage: currentPage,
+      totalPages: totalPages,
+      timestamp: new Date().toLocaleTimeString(),
+      stackTrace: new Error().stack
+    });
+  }, [currentPage]);
+
+  // Handler function for page changes
+  const handlePageChange = (newPage) => {
+    console.log('📄 handlePageChange called:', { from: currentPage, to: newPage, totalPages });
+    
+    // Validate page number  
+    const maxPages = totalPages || 1;
+    if (newPage < 1 || newPage > maxPages) {
+      console.warn('⚠️ Invalid page number:', newPage, 'Valid range: 1 -', maxPages);
+      return;
+    }
+    
+    if (newPage === currentPage) {
+      console.log('📄 Same page, ignoring:', newPage);
+      return;
+    }
+    
+    console.log('📄 Setting currentPage from', currentPage, 'to', newPage);
+    setCurrentPage(newPage);
+    
+    // Force scroll to top when page changes
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 100);
+  };
   
   const renderPagination = () => {
     console.log('🔍 Rendering pagination:');
@@ -310,22 +428,75 @@ const Directorio = () => {
       return null;
     }
     
+    // Generate page numbers to show
+    const getPageNumbers = () => {
+      if (totalPages <= 1) return [1];
+      
+      const delta = 2; // Number of pages to show on each side of current page
+      const range = [];
+      const rangeWithDots = [];
+      
+      // If we have few pages, show all
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+          rangeWithDots.push(i);
+        }
+        return rangeWithDots;
+      }
+      
+      // Always show first page
+      rangeWithDots.push(1);
+      
+      // Calculate range around current page
+      const start = Math.max(2, currentPage - delta);
+      const end = Math.min(totalPages - 1, currentPage + delta);
+      
+      // Add ellipsis after first page if needed
+      if (start > 2) {
+        rangeWithDots.push('...');
+      }
+      
+      // Add pages around current page
+      for (let i = start; i <= end; i++) {
+        rangeWithDots.push(i);
+      }
+      
+      // Add ellipsis before last page if needed
+      if (end < totalPages - 1) {
+        rangeWithDots.push('...');
+      }
+      
+      // Always show last page (if different from first)
+      if (totalPages > 1) {
+        rangeWithDots.push(totalPages);
+      }
+      
+      return rangeWithDots;
+    };
+    
+    const pageNumbers = totalPages > 1 ? getPageNumbers() : [];
+    
     return (
-      <div className="pagination">
+      <div className="pagination-wrapper">
         <div className="pagination-info">
-          <span>
-            Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, stats?.total || 0)} de {stats?.total || 0} contactos
+          <span className="pagination-summary">
+            📊 Mostrando <strong>{((currentPage - 1) * itemsPerPage) + 1}</strong> - <strong>{Math.min(currentPage * itemsPerPage, stats?.total || 0)}</strong> de <strong>{stats?.total || 0}</strong> contactos
           </span>
         </div>
         
-        <div className="pagination-controls">
+        <div className="pagination-main">
+          {/* Items per page selector */}
           <div className="items-per-page">
-            <label>Mostrar:</label>
+            <label htmlFor="items-select">📄 Mostrar:</label>
             <select 
+              id="items-select"
+              className="items-select"
               value={itemsPerPage} 
               onChange={(e) => {
-                setItemsPerPage(parseInt(e.target.value));
-                setCurrentPage(1);
+                const newLimit = parseInt(e.target.value);
+                console.log(`📄 Changing items per page: ${itemsPerPage} -> ${newLimit}`);
+                setItemsPerPage(newLimit);
+                handlePageChange(1); // Reset to first page when changing items per page
               }}
             >
               <option value={25}>25</option>
@@ -335,57 +506,104 @@ const Directorio = () => {
             <span>por página</span>
           </div>
 
-          <div className="pagination-buttons">
+          {/* Navigation buttons */}
+          <div className="pagination-nav">
             <button 
-              onClick={() => {
-                console.log(`📄 Clicking Primera: ${currentPage} -> 1`);
-                setCurrentPage(1);
-              }} 
+              onClick={() => handlePageChange(1)} 
               disabled={currentPage === 1}
-              className="pagination-btn"
+              className="pagination-btn nav-btn first-btn"
+              title="Ir a la primera página"
             >
-              Primera
+              <span className="btn-icon">⏮️</span>
+              <span className="btn-text">Primera</span>
             </button>
             
             <button 
-              onClick={() => {
-                const prevPage = currentPage - 1;
-                console.log(`📄 Clicking Anterior: ${currentPage} -> ${prevPage}`);
-                setCurrentPage(prevPage);
-              }} 
+              onClick={() => handlePageChange(currentPage - 1)} 
               disabled={currentPage === 1}
-              className="pagination-btn"
+              className="pagination-btn nav-btn prev-btn"
+              title="Página anterior"
             >
-              Anterior
+              <span className="btn-icon">⬅️</span>
+              <span className="btn-text">Anterior</span>
             </button>
 
-            <span className="page-indicator">
-              Página {currentPage} de {totalPages}
-            </span>
+            {/* Page numbers */}
+            <div className="page-numbers">
+              {pageNumbers.map((pageNum, index) => {
+                if (pageNum === '...') {
+                  return (
+                    <span key={`ellipsis-${index}`} className="pagination-ellipsis">
+                      ...
+                    </span>
+                  );
+                }
+                
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`pagination-btn page-btn ${currentPage === pageNum ? 'active' : ''}`}
+                    title={`Ir a la página ${pageNum}`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
 
             <button 
-              onClick={() => {
-                const nextPage = currentPage + 1;
-                console.log(`📄 Clicking Siguiente: ${currentPage} -> ${nextPage} (max: ${totalPages})`);
-                setCurrentPage(nextPage);
-              }} 
+              onClick={() => handlePageChange(currentPage + 1)} 
               disabled={currentPage >= totalPages}
-              className="pagination-btn"
+              className="pagination-btn nav-btn next-btn"
+              title="Página siguiente"
             >
-              Siguiente
+              <span className="btn-text">Siguiente</span>
+              <span className="btn-icon">➡️</span>
             </button>
             
             <button 
-              onClick={() => {
-                console.log(`📄 Clicking Última: ${currentPage} -> ${totalPages}`);
-                setCurrentPage(totalPages);
-              }} 
+              onClick={() => handlePageChange(totalPages)} 
               disabled={currentPage >= totalPages}
-              className="pagination-btn"
+              className="pagination-btn nav-btn last-btn"
+              title="Ir a la última página"
             >
-              Última
+              <span className="btn-text">Última</span>
+              <span className="btn-icon">⏭️</span>
             </button>
           </div>
+
+          {/* Quick page jump */}
+          <div className="page-jump">
+            <label htmlFor="page-input">🎯 Ir a:</label>
+            <input
+              id="page-input"
+              type="number"
+              min="1"
+              max={totalPages}
+              className="page-input"
+              placeholder={currentPage}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  const pageNum = parseInt(e.target.value);
+                  if (pageNum >= 1 && pageNum <= totalPages) {
+                    console.log(`📄 Jump to page: ${currentPage} -> ${pageNum}`);
+                    handlePageChange(pageNum);
+                    e.target.value = '';
+                  } else {
+                    alert(`Por favor ingresa un número entre 1 y ${totalPages}`);
+                  }
+                }
+              }}
+              title={`Ingresa un número entre 1 y ${totalPages} y presiona Enter`}
+            />
+          </div>
+        </div>
+        
+        <div className="pagination-status">
+          <span className="current-page-indicator">
+            📍 Página <strong>{currentPage}</strong> de <strong>{totalPages}</strong>
+          </span>
         </div>
       </div>
     );
@@ -421,6 +639,13 @@ const Directorio = () => {
       />
 
       {error && <div className="error-message">{error}</div>}
+      
+      {/* Paginación arriba */}
+      {totalPages > 1 && (
+        <div className="pagination-top">
+          {renderPagination()}
+        </div>
+      )}
     </>
   );
 
@@ -452,7 +677,7 @@ const Directorio = () => {
               </tr>
             ) : (
               contactos.map((contacto) => (
-                <tr key={contacto.id} className="contacto-row">
+                <tr key={contacto.reactKey || contacto.id} className="contacto-row">
                   <td><strong>{contacto.nombre_completo}</strong></td>
                   <td>
                     <button 
@@ -508,8 +733,12 @@ const Directorio = () => {
                     <button 
                       className="btn-edit"
                       onClick={() => {
+                        console.log('✏️ Edit button clicked for contacto:', contacto);
+                        console.log('- contacto.id:', contacto?.id);
+                        console.log('- contacto.nombre_completo:', contacto?.nombre_completo);
                         setSelectedContacto(contacto);
                         setShowModal(true);
+                        console.log('- selectedContacto set and modal opened');
                       }}
                       title="Editar contacto"
                     >
@@ -544,7 +773,7 @@ const Directorio = () => {
         ) : (
           contactos.map((contacto) => (
             <ContactoCard
-              key={contacto.id}
+              key={contacto.reactKey || contacto.id}
               contacto={contacto}
               onClick={() => {
                 setSelectedContacto(contacto);
@@ -632,6 +861,7 @@ const Directorio = () => {
 
       {showModal && (
         <ContactoModal
+          key={selectedContacto?.id || 'new'}
           contacto={selectedContacto}
           onSave={handleContactoSave}
           onClose={() => {

@@ -37,6 +37,7 @@ yarn-error.log*
 # Environment files - ALL environment files should be ignored
 .env
 .env.*
+envs
 backend/.env
 backend-simple-OLD/.env
 .vercel

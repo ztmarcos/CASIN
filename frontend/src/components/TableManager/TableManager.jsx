@@ -22,20 +22,17 @@ import './TableManager.css';
 import { toast } from 'react-hot-toast';
 import Modal from '../Modal/Modal';
 
-// Sortable table item component
+// Minimalist sortable table item component
 const SortableTableItem = ({ 
   table, 
   isSecondary, 
   onTableClick, 
   onTableDoubleClick, 
-  onDeleteTable, 
   isSelected, 
   isEditing, 
   editingName, 
   onNameChange, 
-  onNameSubmit,
-  expandedTables,
-  toggleTableExpand
+  onNameSubmit
 }) => {
   const {
     attributes,
@@ -50,87 +47,71 @@ const SortableTableItem = ({
     transition,
   };
 
-  const handleCardClick = (e) => {
-    // Don't trigger if clicking delete button, input, or drag handles
-    if (e.target.closest('.table-actions') || e.target.closest('.table-name-input') || e.target.closest('.drag-handle')) {
+  const handleItemClick = (e) => {
+    // Don't trigger if clicking edit button or input
+    if (e.target.closest('.edit-btn') || e.target.closest('.table-name-input')) {
       return;
     }
     onTableClick(table, isSecondary);
   };
 
   const getDisplayName = () => {
-    // Use Firebase service for consistent formatting
-    return firebaseTableService.formatSingleTableName(table.name);
+    return table.name; // Return original Firebase table name
+  };
+
+  const getTableIcon = () => {
+    // No icons, just return empty string
+    return '';
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`table-item ${isSelected ? 'selected' : ''} ${table.secondaryTable && !isSecondary ? 'has-secondary' : ''} ${isSecondary ? 'secondary' : ''}`}
-      onClick={handleCardClick}
-      onDoubleClick={(e) => onTableDoubleClick(e, table)}
+      className={`table-item-clean ${isSelected ? 'selected' : ''} ${
+        table.isParentTable ? 'parent' : table.isChildTable ? 'child' : 'simple'
+      }`}
+      onClick={handleItemClick}
     >
-      <div className="drag-handle" {...attributes} {...listeners}>
-        <span className="drag-icon">⋮</span>
-      </div>
-
-      <div className="table-content">
-        <div className="table-info">
-          {isEditing ? (
-            <input
-              type="text"
-              value={editingName}
-              onChange={onNameChange}
-              onKeyDown={onNameSubmit}
-              onBlur={(e) => {
-                onNameSubmit({ key: 'Escape' });
-              }}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              className="table-name-input"
-            />
-          ) : (
-            <div className="table-name-container">
-              {table.icon && <span className="table-icon">{table.icon}</span>}
-              {table.secondaryTable && !isSecondary && (
-                <span className="relationship-icon" title="Has Secondary Table">🔗</span>
+      {/* No connection line needed */}
+      
+      <div className="table-main-content" {...attributes} {...listeners}>
+        {isEditing ? (
+          <input
+            type="text"
+            value={editingName}
+            onChange={onNameChange}
+            onKeyDown={onNameSubmit}
+            onBlur={() => onNameSubmit({ key: 'Escape' })}
+            autoFocus
+            className="table-name-input-clean"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <div className="table-info-clean">
+            <div className="table-header-info">
+              <span className="table-name-clean">{getDisplayName()}</span>
+              {table.isParentTable && (
+                <span className="group-badge">GRUPO</span>
               )}
-              <span className="table-name" title={getDisplayName()}>
-                {getDisplayName()}
-              </span>
-              {table.count !== undefined && (
-                <span className="table-count" title={`${table.count} records`}>
-                  ({table.count})
-                </span>
+              {table.count !== undefined && table.count > 0 && (
+                <span className="count-badge">{table.count}</span>
               )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      <div className="table-actions">
-        <button
-          className="action-btn edit-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onTableDoubleClick(e, table);
-          }}
-          title={`Edit ${isSecondary ? 'child' : ''} table "${table.name}"`}
-        >
-          ✏️
-        </button>
-        <button
-          className="action-btn delete-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeleteTable(e, table);
-          }}
-          title={`Delete ${isSecondary ? 'child' : ''} table "${table.name}"`}
-        >
-          ×
-        </button>
-      </div>
+      <button
+        className="edit-btn-clean"
+        onClick={(e) => {
+          e.stopPropagation();
+          onTableDoubleClick(e, table);
+        }}
+        title="Editar tabla"
+      >
+        ✏️
+      </button>
     </div>
   );
 };
@@ -147,7 +128,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const [groupData, setGroupData] = useState({
     mainTableName: '',
     secondaryTableName: '',
-    groupType: 'GRUPAL'
+    groupType: 'primary'
   });
 
   const sensors = useSensors(
@@ -157,10 +138,11 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     })
   );
 
-  // Firebase collections are simpler - no complex grouping needed
+  // Updated table types for Firebase with parent-child support
   const TABLE_TYPES = {
-    'primary': 'Primary Collection',
-    'custom': 'Custom Collection'
+    'primary': 'Tabla Simple',
+    'parent': 'Tabla Principal (con Secundaria)',
+    'child': 'Tabla Secundaria'
   };
 
   useEffect(() => {
@@ -170,14 +152,15 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   const loadTables = async () => {
     try {
       setIsLoading(true);
-      console.log('🔥 Loading Firebase collections...');
+      console.log('🔥 Loading Firebase collections with relationships...');
       
+      // Use firebaseTableService directly instead of backend endpoint
       const tables = await firebaseTableService.getTables();
-      console.log('🔥 Received Firebase collections:', tables);
+      console.log('🔥 Received Firebase collections with relationships:', tables);
       
-      // Firebase collections don't need complex grouping like MySQL tables
-      // Just display them as they are
-      setTables(tables);
+      // Group and organize tables by relationships
+      const organizedTables = organizeTables(tables);
+      setTables(organizedTables);
       setError(null);
     } catch (error) {
       console.error('❌ Error loading Firebase collections:', error);
@@ -186,6 +169,35 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Organize tables to show parent-child relationships properly
+  const organizeTables = (tables) => {
+    const parentTables = [];
+    const childTables = [];
+    const simpleTables = [];
+
+    tables.forEach(table => {
+      if (table.isParentTable) {
+        parentTables.push(table);
+      } else if (table.isChildTable) {
+        childTables.push(table);
+      } else {
+        simpleTables.push(table);
+      }
+    });
+
+    // For minimal design: only show parent tables and simple tables
+    // Child tables are hidden and accessed via dropdown in DataTable
+    const displayTables = [];
+    
+    // Add simple tables first
+    displayTables.push(...simpleTables);
+    
+    // Add only parent tables (they will show as red cards)
+    displayTables.push(...parentTables);
+
+    return displayTables;
   };
 
   const handleCreateGroup = async () => {
@@ -203,7 +215,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
         setGroupData({
           mainTableName: '',
           secondaryTableName: '',
-          groupType: 'GRUPAL'
+          groupType: 'primary'
         });
       }
     } catch (error) {
@@ -225,9 +237,17 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
   };
 
   const handleTableClick = (table, isSecondary = false) => {
-    // Always select the table when clicked
+    console.log('🎯 Table clicked:', { table, isSecondary, isParentTable: table.isParentTable, childTable: table.childTable });
+    
+    // For now, just select the table as-is to let DataTable handle the parent-child navigation
+    // The dropdown in DataTable will handle switching between parent and child tables
+    let tableToSelect = table;
+    
+    console.log('🚀 Selecting table:', tableToSelect.name);
+    
     if (onTableSelect) {
-      onTableSelect(table);
+      console.log('🚀 Calling onTableSelect with:', tableToSelect);
+      onTableSelect(tableToSelect);
     }
     
     // Collapse the section after selection
@@ -354,7 +374,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
             onClick={() => setShowGroupModal(true)}
             className="create-group-btn"
           >
-            <span>🔗</span> New Table
+            New Table
           </button>
         </div>
         {isLoading && <div className="loading-spinner">Loading...</div>}
@@ -371,45 +391,24 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
             strategy={rectSortingStrategy}
           >
             {tables.map(table => (
-              <React.Fragment key={table.name}>
-                <SortableTableItem
-                  table={table}
-                  isSecondary={false}
-                  onTableClick={handleTableClick}
-                  onTableDoubleClick={handleTableDoubleClick}
-                  onDeleteTable={handleDeleteTable}
-                  isSelected={selectedTableProp === table.name}
-                  isEditing={editingTable === table}
-                  editingName={editingName}
-                  onNameChange={handleNameChange}
-                  onNameSubmit={handleNameSubmit}
-                  expandedTables={expandedTables}
-                  toggleTableExpand={toggleTableExpand}
-                />
-                {table.secondaryTable && (
-                  <SortableTableItem
-                    key={`${table.name}-secondary`}
-                    table={table.secondaryTable}
-                    isSecondary={true}
-                    onTableClick={handleTableClick}
-                    onTableDoubleClick={handleTableDoubleClick}
-                    onDeleteTable={handleDeleteTable}
-                    isSelected={selectedTableProp === table.secondaryTable.name}
-                    isEditing={editingTable === table.secondaryTable}
-                    editingName={editingName}
-                    onNameChange={handleNameChange}
-                    onNameSubmit={handleNameSubmit}
-                    expandedTables={expandedTables}
-                    toggleTableExpand={toggleTableExpand}
-                  />
-                )}
-              </React.Fragment>
+              <SortableTableItem
+                key={table.name}
+                table={table}
+                isSecondary={false}
+                onTableClick={handleTableClick}
+                onTableDoubleClick={handleTableDoubleClick}
+                isSelected={selectedTableProp === table.name || (table.secondaryTable && selectedTableProp === table.secondaryTable.name)}
+                isEditing={editingTable === table}
+                editingName={editingName}
+                onNameChange={handleNameChange}
+                onNameSubmit={handleNameSubmit}
+              />
             ))}
           </SortableContext>
         </div>
       </DndContext>
 
-      {/* Modal for creating tables */}
+                {/* Modal for creating tables */}
       <Modal isOpen={showGroupModal} onClose={() => setShowGroupModal(false)} size="md">
         <div className="modal-header">
           <h2>Crear Nueva Tabla</h2>
@@ -423,8 +422,8 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
               onChange={(e) => setGroupData(prev => ({
                 ...prev,
                 groupType: e.target.value,
-                mainTableName: e.target.value === 'GRUPAL' ? 'Grupos' : 'Individual',
-                secondaryTableName: e.target.value === 'GRUPAL' ? 'Listado' : ''
+                mainTableName: '',
+                secondaryTableName: ''
               }))}
               className="form-select"
             >
@@ -433,13 +432,14 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
               ))}
             </select>
             <small className="help-text">
-              {groupData.groupType === 'GRUPAL' && 'Tabla para pólizas grupales con listado de asegurados'}
-              {groupData.groupType === 'INDIVIDUAL' && 'Tabla para pólizas individuales'}
+              {groupData.groupType === 'parent' && 'Tabla principal que tendrá una tabla secundaria relacionada'}
+              {groupData.groupType === 'child' && 'Tabla secundaria que pertenece a una tabla principal'}
+              {groupData.groupType === 'primary' && 'Tabla independiente sin relaciones'}
             </small>
           </div>
 
           {/* Show table names based on type */}
-          {groupData.groupType === 'GRUPAL' ? (
+          {groupData.groupType === 'parent' ? (
             <>
               <div className="form-group">
                 <label>Nombre de Tabla Principal:</label>
@@ -450,7 +450,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
                     ...prev,
                     mainTableName: e.target.value
                   }))}
-                  placeholder="Nombre de la tabla principal"
+                  placeholder="Ej: emant_caratula, gmm_grupos, etc."
                   className="form-input"
                 />
               </div>
@@ -463,7 +463,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
                     ...prev,
                     secondaryTableName: e.target.value
                   }))}
-                  placeholder="Nombre de la tabla secundaria"
+                  placeholder="Ej: emant_listado, gmm_empleados, etc."
                   className="form-input"
                 />
               </div>
@@ -488,7 +488,7 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
             <button
               onClick={handleCreateGroup}
               className="btn btn-primary"
-              disabled={!groupData.mainTableName || (groupData.groupType === 'GRUPAL' && !groupData.secondaryTableName)}
+              disabled={!groupData.mainTableName || (groupData.groupType === 'parent' && !groupData.secondaryTableName)}
             >
               Crear Tabla
             </button>

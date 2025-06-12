@@ -36,7 +36,16 @@ const DataSection = () => {
     setIsLoading(true);
     try {
       console.log('🔥 Loading data for Firebase collection:', targetTableName);
-      const result = await firebaseTableService.getData(targetTableName, filters);
+      
+      // Extract actual table name from combined format (e.g., "emant_caratula → emant_listado")
+      let actualTableName = targetTableName;
+      if (targetTableName.includes('→')) {
+        // For combined tables, get the child table name (after the arrow)
+        actualTableName = targetTableName.split('→')[1].trim();
+        console.log('🔄 Combined table detected, using child table:', actualTableName);
+      }
+      
+      const result = await firebaseTableService.getData(actualTableName, filters);
       console.log('🔥 Received data from Firebase:', result);
       
       if (!result) {
@@ -56,7 +65,8 @@ const DataSection = () => {
         console.log('🔄 Updating selectedTable.name from', selectedTable?.name, 'to', tableName);
         setSelectedTable(prev => ({
           ...prev,
-          name: tableName
+          name: tableName,
+          title: firebaseTableService.formatTableTitle(tableName)
         }));
       }
     } catch (error) {

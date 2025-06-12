@@ -3,13 +3,13 @@ const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env.
 
 // Backend URLs
 const BACKEND_URL = 'https://casin-crm-backend-ztmarcos-projects.vercel.app';
-const LOCAL_BACKEND_URL = 'http://localhost:3001';
+const LOCAL_BACKEND_URL = 'http://192.168.1.125:3001'; // Changed to network IP
 const HEROKU_BACKEND_URL = 'https://sis-casin-216c74c28e12.herokuapp.com';
 const MOCK_BACKEND_URL = 'http://localhost:3002'; // Mock server for Firebase quota issues
 
 // Use localhost for development with billing enabled
 const API_BASE_URL = isDevelopment 
-  ? LOCAL_BACKEND_URL // Use localhost for development  
+  ? LOCAL_BACKEND_URL // Use network IP for development  
   : HEROKU_BACKEND_URL; // Use Heroku in production
 
 export const API_URL = `${API_BASE_URL}/api`;

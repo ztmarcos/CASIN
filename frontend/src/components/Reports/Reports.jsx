@@ -71,7 +71,14 @@ export default function Reports() {
   };
 
   // Function to get policy status key
-  const getPolicyKey = (policy) => `${policy.ramo.toLowerCase()}_${policy.id}`;
+  const getPolicyKey = (policy) => {
+    if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+      console.warn('⚠️ Invalid policy data for getPolicyKey:', policy);
+      return 'unknown_unknown';
+    }
+    const policyId = policy.id || policy.firebase_doc_id;
+    return `${policy.ramo.toLowerCase()}_${policyId}`;
+  };
 
   // Load all policies and related data from Firebase
   const loadPolicies = async () => {
@@ -130,12 +137,20 @@ export default function Reports() {
   // Handle payment status toggle for policies
   const handleToggleStatus = async (policy) => {
     try {
+      // Validate policy data
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
       const currentStatus = getPolicyStatus(policy);
       const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} payment status from ${currentStatus} to ${newStatus}`);
       
-      await firebaseReportsService.updatePolicyPaymentStatus(policy.ramo.toLowerCase(), policy.id, newStatus);
+      const policyId = policy.id || policy.firebase_doc_id;
+      await firebaseReportsService.updatePolicyPaymentStatus(policy.ramo.toLowerCase(), policyId, newStatus);
       
       // Update local state
       const policyKey = getPolicyKey(policy);
@@ -215,7 +230,14 @@ export default function Reports() {
     console.log('Selected type:', selectedType);
     console.log('Total policies:', policies.length);
     
-    let filtered = policies;
+    // First, filter out invalid policies
+    let filtered = policies.filter(policy => {
+      const isValid = validatePolicy(policy);
+      if (!isValid) {
+        console.warn('⚠️ Skipping invalid policy:', policy);
+      }
+      return isValid;
+    });
     
     // If there's a search term, only apply search filter
     if (searchTerm.trim()) {
@@ -272,14 +294,14 @@ export default function Reports() {
     console.log('Policy sources and ramos:', policies.map(p => ({
       id: p.id,
       numero_poliza: p.numero_poliza,
-      contratante: p.contratante,
+              contratante: p.nombre_contratante || p.contratante,
       aseguradora: p.aseguradora,
       ramo: p.ramo,
       sourceTable: p.sourceTable
     })));
 
     // Extract unique values with normalization
-    const clients = [...new Set(policies.map(p => p.contratante).filter(Boolean))].sort();
+          const clients = [...new Set(policies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
     
     const companies = [...new Set(policies
       .map(p => normalizeCompanyName(p.aseguradora))
@@ -313,7 +335,7 @@ export default function Reports() {
 
       // Mark existing relationships
       policies.forEach(policy => {
-        if (policy.contratante === client) {
+                    if ((policy.nombre_contratante || policy.contratante) === client) {
           matrix[client].companies[policy.aseguradora] = true;
           matrix[client].ramos[policy.ramo] = true;
         }
@@ -430,6 +452,16 @@ export default function Reports() {
   const getPolicyStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
     return policyStatuses[policyKey] || 'No Pagado';
+  };
+
+  // Validate and clean policy data
+  const validatePolicy = (policy) => {
+    return policy && 
+           policy.ramo && 
+           (policy.id || policy.firebase_doc_id) && 
+           policy.numero_poliza &&
+           typeof policy.ramo === 'string' &&
+           policy.ramo.trim().length > 0;
   };
 
   // Normalize company names
@@ -606,7 +638,7 @@ export default function Reports() {
                       .filter(client => {
                         // Apply ramo filter
                         if (selectedRamoFilter) {
-                          const clientPolicies = policies.filter(p => p.contratante === client);
+                          const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
                           const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
                           return clientRamos.includes(selectedRamoFilter);
                         }
@@ -615,7 +647,7 @@ export default function Reports() {
                       .filter(client => {
                         // Apply aseguradora filter
                         if (selectedAseguradoraFilter) {
-                          const clientPolicies = policies.filter(p => p.contratante === client);
+                          const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
                           const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
                           return clientCompanies.includes(selectedAseguradoraFilter);
                         }
@@ -650,7 +682,7 @@ export default function Reports() {
                         </thead>
                         <tbody>
                           {filteredClients.map(client => {
-                            const clientPolicies = policies.filter(p => p.contratante === client);
+                            const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
                             const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
                             const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
                             
@@ -769,7 +801,7 @@ export default function Reports() {
                     <tr key={`${policy.id}-${policy.numero_poliza}`}>
                       <td>{policy.ramo}</td>
                       <td>{policy.numero_poliza}</td>
-                      <td>{policy.contratante}</td>
+                      <td>{policy.nombre_contratante || policy.contratante}</td>
                       <td>{policy.email || 'No disponible'}</td>
                       <td>{policy.aseguradora}</td>
                       <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
@@ -816,7 +848,7 @@ export default function Reports() {
                   </div>
                   <div className="card-content">
                     <div className="card-info">
-                      <strong>Contratante: {policy.contratante}</strong>
+                      <strong>Contratante: {policy.nombre_contratante || policy.contratante}</strong>
                     </div>
                     <div className="card-details">
                       {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (

@@ -63,29 +63,50 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   // Add effect to fetch available child tables (Firebase version)
   useEffect(() => {
     const fetchChildTables = async () => {
-      // Get the base parent table name
-      const baseParentTable = tableName?.includes('→') ? tableName.split('→')[0].trim() : tableName;
+      // Determine the parent table name
+      let parentTableName;
       
-      if (!baseParentTable) {
+      if (tableName?.includes('→')) {
+        // If it's a combined table name, get the parent part
+        parentTableName = tableName.split('→')[0].trim();
+      } else if (firebaseTableService.isChildTable(tableName)) {
+        // If it's a child table, get its parent
+        parentTableName = firebaseTableService.getParentTable(tableName);
+      } else if (firebaseTableService.isParentTable(tableName)) {
+        // If it's a parent table, use it directly
+        parentTableName = tableName;
+      } else {
+        // Not a parent-child table
+        setAvailableChildTables([]);
+        setSelectedChildTable('');
+        return;
+      }
+      
+      if (!parentTableName) {
         setAvailableChildTables([]);
         setSelectedChildTable('');
         return;
       }
       
       try {
-        console.log('🔥 Fetching child tables for:', baseParentTable);
-        const childTables = await firebaseTableService.getChildTables(baseParentTable);
+        console.log('🔥 Fetching child tables for parent:', parentTableName);
+        
+        // Use the firebaseTableService methods to get child tables
+        const childTables = await firebaseTableService.getChildTables(parentTableName);
         console.log('🔥 Available child tables:', childTables);
         setAvailableChildTables(childTables);
         
-        // Set selected child table if we're in a combined table
+        // Set selected child table based on current view
         if (tableName?.includes('→')) {
           const currentChildTable = tableName.split('→')[1].trim();
           console.log('🔥 Setting selected child table to:', currentChildTable);
           setSelectedChildTable(currentChildTable);
+        } else if (firebaseTableService.isChildTable(tableName)) {
+          console.log('🔥 Current table is child, setting selected child to:', tableName);
+          setSelectedChildTable(tableName);
         } else {
           console.log('🔥 Resetting selected child table (parent table)');
-          setSelectedChildTable(''); // Reset selection when table changes
+          setSelectedChildTable(''); // Reset selection when viewing parent
         }
       } catch (error) {
         console.error('❌ Error fetching child tables:', error);
@@ -104,10 +125,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       try {
         // Store the parent table name
         setParentTableName(tableName);
-        // Load parent table data from Firebase
-        const parentResult = await firebaseTableService.getData(tableName);
-        // Ensure parentResult.data is an array
-        setParentData(Array.isArray(parentResult.data) ? parentResult.data : []);
+        
+        // Check if this is a parent table that has child tables
+        const isParent = firebaseTableService.isParentTable(tableName);
+        if (isParent) {
+          // Load parent table data from Firebase
+          const parentResult = await firebaseTableService.getData(tableName);
+          // Ensure parentResult.data is an array
+          setParentData(Array.isArray(parentResult.data) ? parentResult.data : []);
+        } else {
+          setParentData([]);
+        }
       } catch (error) {
         console.error('❌ Error loading parent data from Firebase:', error);
         setParentData([]);
@@ -133,6 +161,63 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     setFilteredData(filtered);
   }, [searchTerm, sortedData]);
 
+  // Enhanced dropdown rendering with better parent-child navigation
+  const renderTableSelector = () => {
+    // For EMANT specifically, we know the structure
+    const isEmantCaratula = tableName === 'emant_caratula';
+    const isEmantListado = tableName === 'emant_listado';
+    
+    // Only show dropdown for EMANT tables
+    if (!isEmantCaratula && !isEmantListado) {
+      return null;
+    }
+
+    console.log('🔍 EMANT Dropdown state:', {
+      tableName,
+      isEmantCaratula,
+      isEmantListado
+    });
+
+    // Simple dropdown for EMANT navigation
+    const currentValue = tableName;
+
+    return (
+      <div className="child-table-selector">
+        <select
+          value={currentValue}
+          onChange={(e) => {
+            const selectedValue = e.target.value;
+            console.log('🔄 EMANT Table selector onChange:', selectedValue);
+            
+            // Call handleChildTableSelect with the selected table name
+            handleChildTableSelect(selectedValue);
+          }}
+          className="child-table-dropdown"
+        >
+          <option value="emant_caratula">
+            Emant Caratula
+          </option>
+          <option value="emant_listado">
+            Emant Listado
+          </option>
+        </select>
+        
+        {/* Show relationship indicator */}
+        <div className="relationship-indicator">
+          {isEmantListado ? (
+            <span className="relationship-badge child-badge">
+              Tabla Secundaria de: Emant Caratula
+            </span>
+          ) : (
+            <span className="relationship-badge parent-badge">
+              Tabla Principal con: Emant Listado
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // If no data but we have a tableName, show empty state with capture button
   if ((!data || !Array.isArray(data) || data.length === 0) && tableName) {
     return (
@@ -140,68 +225,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         {tableName && (
           <div className="table-title">
             <h2>{tableTitle}</h2>
-            {(availableChildTables.length > 0 || tableName.includes('→')) && (
-              <div className="child-table-selector">
-                <select
-                  value={tableName.includes('→') ? 'child' : 'parent'}
-                  onChange={(e) => {
-                    console.log('🔄 Empty state dropdown onChange triggered:', e.target.value);
-                    const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
-                    
-                    if (e.target.value === 'parent') {
-                      console.log('🔄 Switching to parent table:', baseParentTable);
-                      handleChildTableSelect(baseParentTable);
-                    } else if (e.target.value === 'child') {
-                      const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
-                      console.log('🔄 Switching to child table:', childTableName);
-                      handleChildTableSelect(childTableName);
-                    }
-                  }}
-                  className="child-table-dropdown"
-                >
-                  {tableName.includes('→') ? (
-                    <>
-                      <option value="parent">
-                        {firebaseTableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
-                      </option>
-                      <option value="child">
-                        {firebaseTableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
-                      </option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="parent">
-                        {firebaseTableService.formatSingleTableName(tableName)} (Principal)
-                      </option>
-                      {availableChildTables.map(childTable => (
-                        <option key={childTable} value="child">
-                          {firebaseTableService.formatSingleTableName(childTable)} (Secundaria)
-                        </option>
-                      ))}
-                    </>
-                  )}
-                </select>
-              </div>
-            )}
-            {tableName.includes('→') && (
-              <div className="table-subtitle">
-                {(() => {
-                  const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
-                  return (
-                    <>
-                      <div className="parent-table">
-                        <span className="table-label">Tabla Principal:</span>
-                        {firebaseTableService.formatSingleTableName(parentTable)}
-                      </div>
-                      <div className="child-table">
-                        <span className="table-label">Tabla Secundaria:</span>
-                        {firebaseTableService.formatSingleTableName(childTable)}
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
+                      {renderTableSelector()}
           </div>
         )}
         <div className="table-controls">
@@ -663,13 +687,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
   // Reorder columns to put status after ID only for related tables
   // Also filter out estado_pago since we show it as action button
-  let reorderedColumns = columns.filter(col => col !== 'estado_pago');
+  // Hide ID and firebase_doc_id columns
+  let reorderedColumns = columns.filter(col => 
+    col !== 'estado_pago' && 
+    col !== 'id' && 
+    col !== 'firebase_doc_id'
+  );
   if (tableName && (data[0]?.status !== undefined)) {
     reorderedColumns = reorderedColumns.filter(col => col !== 'status');
-    const idIndex = reorderedColumns.indexOf('id');
-    if (idIndex !== -1) {
-      reorderedColumns.splice(idIndex + 1, 0, 'status');
-    }
+    // Since we filtered out 'id', we don't need to find its index
+    // Just add status at the beginning
+    reorderedColumns.unshift('status');
   }
 
   // Add the getSortIcon function
@@ -710,7 +738,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     setFilteredData(sorted);
   };
 
-  // Update handleChildTableSelect
+  // Improved child table selection with better parent-child relationship handling
   const handleChildTableSelect = async (selectedTableName) => {
     console.log('🚀 handleChildTableSelect called with:', selectedTableName);
     
@@ -719,35 +747,76 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       return;
     }
     
-    // Get the base parent table name (without arrow if it's a combined table)
-    const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
+    // Get the base parent table name (could be from combined table or direct table)
+    let baseParentTable;
+    
+    if (tableName.includes('→')) {
+      // We're in a combined view
+      baseParentTable = tableName.split('→')[0].trim();
+    } else if (firebaseTableService.isChildTable(tableName)) {
+      // We're viewing a child table directly, get its parent
+      baseParentTable = firebaseTableService.getParentTable(tableName);
+    } else {
+      // We're viewing a parent table directly
+      baseParentTable = tableName;
+    }
     
     console.log('📊 Current state:', { 
       selectedTableName, 
       baseParentTable, 
       currentTableName: tableName,
-      currentSelectedChild: selectedChildTable 
+      currentSelectedChild: selectedChildTable,
+      isChildTable: firebaseTableService.isChildTable(tableName),
+      isParentTable: firebaseTableService.isParentTable(tableName)
     });
     
     // If selecting the parent table
     if (selectedTableName === baseParentTable) {
-      console.log('Loading parent table:', baseParentTable);
+      console.log('🔄 Loading parent table data only:', baseParentTable);
       setSelectedChildTable(''); // Clear child selection
+      
+      // Update table title to show parent only
+      setTableTitle(firebaseTableService.formatSingleTableName(baseParentTable));
+      
       if (onRefresh) {
+        // Load just the parent table data
         await onRefresh(baseParentTable);
       }
       return;
     }
     
-    // If selecting a child table
-    console.log('Selecting child table:', selectedTableName, 'for parent:', baseParentTable);
-    setSelectedChildTable(selectedTableName);
-    const combinedTableName = `${baseParentTable} → ${selectedTableName}`;
-    console.log('Loading combined table:', combinedTableName);
+    // If selecting a child table, verify it's valid for this parent
+    const availableChildTablesForParent = await firebaseTableService.getChildTables(baseParentTable);
+    console.log('📋 Available child tables for parent:', availableChildTablesForParent);
     
-    // Trigger refresh with new combined table name
-    if (onRefresh) {
-      await onRefresh(combinedTableName);
+    if (availableChildTablesForParent.includes(selectedTableName)) {
+      console.log('🔄 Selecting child table:', selectedTableName, 'for parent:', baseParentTable);
+      setSelectedChildTable(selectedTableName);
+      
+      // Update table title to show parent → child format
+      const combinedTitle = `${firebaseTableService.formatSingleTableName(baseParentTable)} → ${firebaseTableService.formatSingleTableName(selectedTableName)}`;
+      setTableTitle(combinedTitle);
+      
+      // Load the child table data directly (not combined)
+      console.log('🔄 Loading child table data:', selectedTableName);
+      
+      // Trigger refresh with just the child table name (not combined)
+      if (onRefresh) {
+        await onRefresh(selectedTableName);
+      }
+    } else {
+      console.warn('⚠️ Selected table is not a valid child of:', baseParentTable);
+      
+      // If it's not a child of the current parent, treat it as a direct table selection
+      console.log('🔄 Loading table directly:', selectedTableName);
+      
+      // Update title and load the selected table directly
+      setTableTitle(firebaseTableService.formatSingleTableName(selectedTableName));
+      setSelectedChildTable('');
+      
+      if (onRefresh) {
+        await onRefresh(selectedTableName);
+      }
     }
   };
 
@@ -756,68 +825,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       {tableTitle && (
         <div className="table-title">
           <h2>{tableTitle}</h2>
-          {(availableChildTables.length > 0 || tableName.includes('→')) && (
-            <div className="child-table-selector">
-              <select
-                value={tableName.includes('→') ? 'child' : 'parent'}
-                onChange={(e) => {
-                  console.log('🔄 DROPDOWN CLICKED! Value:', e.target.value, 'Current table:', tableName);
-                  const baseParentTable = tableName.includes('→') ? tableName.split('→')[0].trim() : tableName;
-                  
-                  if (e.target.value === 'parent') {
-                    console.log('🔄 Switching to parent table:', baseParentTable);
-                    handleChildTableSelect(baseParentTable);
-                  } else if (e.target.value === 'child') {
-                    const childTableName = tableName.includes('→') ? tableName.split('→')[1].trim() : availableChildTables[0];
-                    console.log('🔄 Switching to child table:', childTableName);
-                    handleChildTableSelect(childTableName);
-                  }
-                }}
-                className="child-table-dropdown"
-              >
-                {tableName.includes('→') ? (
-                  <>
-                    <option value="parent">
-                      {firebaseTableService.formatSingleTableName(tableName.split('→')[0].trim())} (Principal)
-                    </option>
-                    <option value="child">
-                      {firebaseTableService.formatSingleTableName(tableName.split('→')[1].trim())} (Secundaria)
-                    </option>
-                  </>
-                ) : (
-                  <>
-                    <option value="parent">
-                      {firebaseTableService.formatSingleTableName(tableName)} (Principal)
-                    </option>
-                    {availableChildTables.map(childTable => (
-                      <option key={childTable} value="child">
-                        {firebaseTableService.formatSingleTableName(childTable)} (Secundaria)
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-          )}
-          {tableName.includes('→') && (
-            <div className="table-subtitle">
-              {(() => {
-                const [parentTable, childTable] = tableName.split('→').map(t => t.trim());
-                return (
-                  <>
-                    <div className="parent-table">
-                      <span className="table-label">Tabla Principal:</span>
-                      {firebaseTableService.formatSingleTableName(parentTable)}
-                    </div>
-                    <div className="child-table">
-                      <span className="table-label">Tabla Secundaria:</span>
-                      {firebaseTableService.formatSingleTableName(childTable)}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          )}
+          {renderTableSelector()}
         </div>
       )}
       <div className="table-controls">

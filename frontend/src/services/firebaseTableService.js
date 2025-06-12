@@ -10,12 +10,6 @@ class FirebaseTableService {
     // Available Firebase collections (equivalent to MySQL tables)
     this.availableCollections = [
       {
-        name: 'directorio_contactos',
-        title: 'Directorio Contactos',
-        type: 'primary',
-        icon: '👥'
-      },
-      {
         name: 'autos',
         title: 'Seguros de Autos',
         type: 'primary', 
@@ -36,40 +30,116 @@ class FirebaseTableService {
       {
         name: 'gmm',
         title: 'Gastos Médicos Mayores',
-        type: 'secondary',
+        type: 'primary',
         icon: '🏥'
       },
       {
         name: 'transporte',
         title: 'Seguros de Transporte',
-        type: 'secondary',
+        type: 'primary',
         icon: '🚛'
       },
       {
         name: 'mascotas',
         title: 'Seguros de Mascotas',
-        type: 'secondary',
+        type: 'primary',
         icon: '🐕'
       },
       {
         name: 'diversos',
         title: 'Seguros Diversos',
-        type: 'secondary',
+        type: 'primary',
         icon: '📦'
       },
       {
         name: 'negocio',
         title: 'Seguros de Negocio',
-        type: 'secondary',
+        type: 'primary',
         icon: '🏢'
       },
+      // Parent-Child table relationships  
       {
-        name: 'gruposgmm',
-        title: 'Grupos GMM',
-        type: 'secondary',
-        icon: '👨‍👩‍👧‍👦'
+        name: 'emant_caratula',
+        title: 'Emant Carátula',
+        type: 'parent',
+        icon: '👨‍👩‍👧‍👦',
+        hasChildTable: true,
+        childTable: 'emant_listado'
+      },
+      {
+        name: 'emant_listado',
+        title: 'Emant Listado',
+        type: 'child',
+        icon: '📋',
+        parentTable: 'emant_caratula'
+      },
+      // Add more parent-child relationships as needed
+      {
+        name: 'gruposvida',
+        title: 'Grupos Vida',
+        type: 'parent',
+        icon: '🛡️',
+        hasChildTable: true,
+        childTable: 'listadovida'
+      },
+      {
+        name: 'listadovida',
+        title: 'Listado Vida',
+        type: 'child',
+        icon: '📋',
+        parentTable: 'gruposvida'
+      },
+      // Grupos Autos parent-child relationship
+      {
+        name: 'gruposautos',
+        title: 'Grupos Autos',
+        type: 'parent',
+        icon: '🚗',
+        hasChildTable: true,
+        childTable: 'listadoautos'
+      },
+      {
+        name: 'listadoautos',
+        title: 'Listado Autos',
+        type: 'child',
+        icon: '📋',
+        parentTable: 'gruposautos'
       }
     ];
+
+    // Define table relationships explicitly
+    this.tableRelationships = {
+      'emant_caratula': {
+        type: 'parent',
+        childTable: 'emant_listado',
+        combinedName: 'emant_caratula → emant_listado'
+      },
+      'emant_listado': {
+        type: 'child',
+        parentTable: 'emant_caratula',
+        combinedName: 'emant_caratula → emant_listado'
+      },
+      'gruposvida': {
+        type: 'parent',
+        childTable: 'listadovida',
+        combinedName: 'gruposvida → listadovida'
+      },
+      'listadovida': {
+        type: 'child',
+        parentTable: 'gruposvida',
+        combinedName: 'gruposvida → listadovida'
+      },
+      'gruposautos': {
+        type: 'parent',
+        childTable: 'listadoautos',
+        combinedName: 'gruposautos → listadoautos'
+      },
+      'listadoautos': {
+        type: 'child',
+        parentTable: 'gruposautos',
+        combinedName: 'gruposautos → listadoautos'
+      }
+    };
   }
 
   // Table title handling (compatible with existing code)
@@ -110,7 +180,12 @@ class FirebaseTableService {
       'mascotas': 'Seguros de Mascotas',
       'diversos': 'Seguros Diversos',
       'negocio': 'Seguros de Negocio',
-      'gruposgmm': 'Grupos GMM'
+      'emant_caratula': 'Emant Carátula',
+      'emant_listado': 'Emant Listado',
+      'gruposvida': 'Grupos Vida',
+      'listadovida': 'Listado Vida',
+      'gruposautos': 'Grupos Autos',
+      'listadoautos': 'Listado Autos'
     };
     
     if (customNames[tableName]) {
@@ -124,59 +199,166 @@ class FirebaseTableService {
   }
 
   /**
+   * Get icon for collection based on name patterns
+   */
+  getCollectionIcon(tableName) {
+    if (!tableName) return '📋';
+    
+    const lowerName = tableName.toLowerCase();
+    
+    // Custom icons for known collections
+    const iconMap = {
+      'autos': '🚗',
+      'rc': '⚖️',
+      'vida': '🛡️',
+      'gmm': '🏥',
+      'hogar': '🏠',
+      'transporte': '🚛',
+      'mascotas': '🐕',
+      'diversos': '📦',
+      'negocio': '🏢',
+      'emant_caratula': '👨‍👩‍👧‍👦',
+      'emant_listado': '📋',
+      'gruposvida': '🛡️',
+      'listadovida': '📋',
+      'gruposautos': '🚗',
+      'listadoautos': '📋',
+      'directorio': '📞',
+      'contactos': '👥',
+      'clientes': '👤'
+    };
+    
+    // Check exact matches first
+    if (iconMap[lowerName]) {
+      return iconMap[lowerName];
+    }
+    
+    // Pattern matching for dynamic collections
+    if (lowerName.includes('auto')) return '🚗';
+    if (lowerName.includes('vida')) return '🛡️';
+    if (lowerName.includes('hogar') || lowerName.includes('casa') || lowerName.includes('home')) return '🏠';
+    if (lowerName.includes('salud') || lowerName.includes('medico')) return '🏥';
+    if (lowerName.includes('contact') || lowerName.includes('cliente')) return '👥';
+    if (lowerName.includes('directorio')) return '📞';
+    if (lowerName.includes('group') || lowerName.includes('grupo')) return '👨‍👩‍👧‍👦';
+    if (lowerName.includes('listado') || lowerName.includes('list')) return '📋';
+    if (lowerName.includes('transporte')) return '🚛';
+    if (lowerName.includes('mascota') || lowerName.includes('pet')) return '🐕';
+    if (lowerName.includes('negocio') || lowerName.includes('business')) return '🏢';
+    if (lowerName.includes('test')) return '🧪';
+    
+    // Default icon
+    return '📋';
+  }
+
+  /**
+   * Discover collections by testing API endpoints
+   */
+  async discoverCollections() {
+    const discoveredCollections = [];
+    
+    // List of possible collection names to test (common patterns)
+    const possibleNames = [
+      'hogar', 'clientes', 'usuarios', 'personas', 
+      'empleados', 'ventas', 'productos', 'servicios', 'facturas', 'pagos', 'reportes', 
+      'configuracion', 'logs', 'auditoria'
+    ];
+    
+    console.log('🔍 Discovering collections by testing API endpoints...');
+    
+    for (const name of possibleNames) {
+              try {
+          const response = await fetch(`${API_URL}/data/${name}`);
+          if (response.ok) {
+            const result = await response.json();
+            const count = result.total || 0;
+            
+            // Only include collections that have data (skip empty collections)
+            if (count > 0) {
+              console.log(`✅ Found collection: ${name} (${count} records)`);
+              discoveredCollections.push({
+                name: name,
+                title: this.formatTableTitle(name),
+                type: 'primary',
+                icon: this.getCollectionIcon(name),
+                count: count
+              });
+            } else {
+              console.log(`⚪ Skipping empty collection: ${name} (0 records)`);
+            }
+          }
+        } catch (error) {
+          // Collection doesn't exist or has access issues - skip silently
+        }
+    }
+    
+    return discoveredCollections;
+  }
+
+  /**
    * Get available Firebase collections as "tables"
    */
   async getTables() {
     try {
-      console.log('📋 Getting Firebase collections as tables...');
+      console.log('🔥 Getting Firebase tables with relationships...');
       
-      // Get statistics for each collection directly from API
-      const tablesWithStats = await Promise.all(
-        this.availableCollections.map(async (collection) => {
-          try {
-            // Get stats directly from API instead of firebaseService
-            const response = await fetch(`${API_URL}/data/${collection.name}`);
-            let count = 0;
-            let columns = [];
-            
-            if (response.ok) {
-              const result = await response.json();
-              const documents = result.data || [];
-              count = documents.length;
-              columns = await this.getTableStructure(collection.name, documents);
+      // Start with predefined collections
+      let allCollections = [...this.availableCollections];
+      
+      // Try to discover additional collections
+      try {
+        const discoveredCollections = await this.discoverCollections();
+        
+        // Merge discovered with predefined (avoid duplicates)
+        const predefinedNames = new Set(this.availableCollections.map(c => c.name));
+        const newDiscovered = discoveredCollections.filter(c => !predefinedNames.has(c.name));
+        
+        if (newDiscovered.length > 0) {
+          console.log('🔍 Discovered new collections:', newDiscovered.map(c => c.name));
+          allCollections = [...allCollections, ...newDiscovered];
+        }
+      } catch (error) {
+        console.warn('Could not discover additional collections:', error);
+      }
+      
+      console.log('📊 All collections to process:', allCollections.map(c => c.name));
+      
+      // Get base collections and enhance with relationship info and counts
+      const enhancedTables = await Promise.all(
+        allCollections.map(async (collection) => {
+          const relationship = this.tableRelationships[collection.name];
+          
+          // Get actual count from Firebase if not already set
+          let count = collection.count || 0;
+          if (count === 0) {
+            try {
+              const response = await fetch(`${API_URL}/data/${collection.name}`);
+              if (response.ok) {
+                const result = await response.json();
+                count = result.total || (result.data ? result.data.length : 0);
+              }
+            } catch (error) {
+              console.warn(`Could not get count for ${collection.name}:`, error);
             }
-            
-            return {
-              name: collection.name,
-              title: this.formatTableTitle(collection.name),
-              type: collection.type,
-              icon: collection.icon,
-              count: count,
-              lastModified: new Date(),
-              isMainTable: true,
-              columns: columns
-            };
-          } catch (error) {
-            console.warn(`Could not get stats for ${collection.name}:`, error);
-            return {
-              name: collection.name,
-              title: this.formatTableTitle(collection.name),
-              type: collection.type,
-              icon: collection.icon,
-              count: 0,
-              lastModified: new Date(),
-              isMainTable: true,
-              columns: []
-            };
           }
+          
+          return {
+            ...collection,
+            isParentTable: relationship?.type === 'parent',
+            isChildTable: relationship?.type === 'child',
+            hasChildTable: relationship?.type === 'parent',
+            childTable: relationship?.type === 'parent' ? relationship.childTable : null,
+            parentTable: relationship?.type === 'child' ? relationship.parentTable : null,
+            count: count
+          };
         })
       );
-      
-      console.log('✅ Firebase tables retrieved:', tablesWithStats);
-      return tablesWithStats;
+
+      console.log('🔥 Enhanced tables with relationships:', enhancedTables.map(t => `${t.name} (${t.count})`));
+      return enhancedTables;
       
     } catch (error) {
-      console.error('❌ Error fetching Firebase tables:', error);
+      console.error('Error getting tables:', error);
       throw error;
     }
   }
@@ -415,20 +597,65 @@ class FirebaseTableService {
   }
 
   /**
-   * Get child tables for a parent table (Firebase compatibility)
+   * Get child tables for a parent table with real Firebase relationships
    */
   async getChildTables(parentTableName) {
     try {
       console.log(`🔗 Getting child tables for: ${parentTableName}`);
       
-      // For Firebase, we don't have traditional table relationships
-      // Return empty array as Firebase collections are independent
+      // Check if this table has a defined relationship
+      const relationship = this.tableRelationships[parentTableName];
+      if (relationship && relationship.type === 'parent') {
+        console.log(`✅ Found child table: ${relationship.childTable}`);
+        return [relationship.childTable];
+      }
+      
+      // No child tables found
+      console.log(`ℹ️ No child tables found for: ${parentTableName}`);
       return [];
       
     } catch (error) {
       console.error('Error getting child tables:', error);
       return [];
     }
+  }
+
+  /**
+   * Get parent table for a child table
+   */
+  getParentTable(childTableName) {
+    const relationship = this.tableRelationships[childTableName];
+    if (relationship && relationship.type === 'child') {
+      return relationship.parentTable;
+    }
+    return null;
+  }
+
+  /**
+   * Check if a table is a parent table
+   */
+  isParentTable(tableName) {
+    const relationship = this.tableRelationships[tableName];
+    return relationship && relationship.type === 'parent';
+  }
+
+  /**
+   * Check if a table is a child table
+   */
+  isChildTable(tableName) {
+    const relationship = this.tableRelationships[tableName];
+    return relationship && relationship.type === 'child';
+  }
+
+  /**
+   * Get combined table name (parent → child)
+   */
+  getCombinedTableName(tableName) {
+    const relationship = this.tableRelationships[tableName];
+    if (relationship) {
+      return relationship.combinedName;
+    }
+    return tableName;
   }
 
   /**
