@@ -2693,15 +2693,43 @@ app.post('/api/gpt/analyze', async (req, res) => {
     console.log('🤖 GPT Analysis request for table:', tableName);
     console.log('📋 Target columns:', targetColumns);
 
-    // Get table structure to validate columns
+    // Get table structure to validate columns (Firebase-compatible)
     let validColumns = [];
+    let availableColumns = [];
+    
     try {
       console.log('🔍 Getting table structure for:', tableName);
-      const structure = await getTableStructure(tableName);
-      console.log('📊 Database structure columns:', structure.map(col => col.Field || col.name));
       
-      const availableColumns = structure.map(col => col.Field || col.name);
-      console.log('📝 Available columns in DB:', availableColumns);
+      // Use Firebase table types if available (production), fallback to MySQL (development)
+      if (isFirebaseEnabled && db) {
+        console.log('📋 Using Firebase table types for column validation');
+        
+        // Firebase collections are predefined in table types
+        const firebaseTableTypes = {
+          'autos': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'vigencia_inicio', 'vigencia_fin', 'forma_de_pago', 'pago_total_o_prima_total', 'prima_neta', 'derecho_de_poliza', 'recargo_por_pago_fraccionado', 'i_v_a', 'e_mail', 'tipo_de_vehiculo', 'duracion', 'rfc', 'domicilio_o_direccion', 'descripcion_del_vehiculo', 'serie', 'modelo', 'placas', 'motor', 'uso', 'pdf', 'ramo'],
+          'vida': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
+          'gmm': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo'],
+          'rc': ['asegurado', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'derecho_poliza', 'prima_neta', 'recargo_pago_fraccionado', 'iva', 'email', 'limite_maximo_responsabilidad', 'responsable', 'ramo'],
+          'transporte': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo'],
+          'mascotas': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo'],
+          'diversos': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'version', 'duracion', 'moneda', 'fecha_expedicion', 'renovacion', 'responsable', 'cobrar_a', 'ramo'],
+          'negocio': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo'],
+          'hogar': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total_a_pagar', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'duracion', 'version', 'renovacion', 'fecha_expedicion', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
+          'gruposgmm': [],
+          'directorio_contactos': ['origen', 'comentario', 'nombre_completo', 'nombre_completo_oficial', 'nickname', 'apellido', 'display_name', 'empresa', 'telefono_oficina', 'telefono_casa', 'telefono_asistente', 'telefono_movil', 'telefonos_corregidos', 'email', 'entidad', 'genero', 'status_social', 'ocupacion', 'pais', 'status', 'created_at', 'updated_at']
+        };
+        
+        availableColumns = firebaseTableTypes[tableName] || [];
+        console.log('📊 Firebase table columns:', availableColumns);
+      } else {
+        // Fallback to MySQL if Firebase not available
+        console.log('📋 Using MySQL for column validation (Firebase not available)');
+        const structure = await getTableStructure(tableName);
+        console.log('📊 Database structure columns:', structure.map(col => col.Field || col.name));
+        availableColumns = structure.map(col => col.Field || col.name);
+      }
+      
+      console.log('📝 Available columns:', availableColumns);
       
       // Filter target columns to only include existing ones
       validColumns = targetColumns.filter(col => availableColumns.includes(col));
