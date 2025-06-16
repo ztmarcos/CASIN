@@ -535,7 +535,7 @@ const Directorio = () => {
                   return (
                     <span key={`ellipsis-${index}`} className="pagination-ellipsis">
                       ...
-                    </span>
+            </span>
                   );
                 }
                 

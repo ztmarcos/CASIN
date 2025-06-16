@@ -48,8 +48,8 @@ const SortableTableItem = ({
   };
 
   const handleItemClick = (e) => {
-    // Don't trigger if clicking edit button or input
-    if (e.target.closest('.edit-btn') || e.target.closest('.table-name-input')) {
+    // Don't trigger if clicking edit button, input, or drag handle
+    if (e.target.closest('.edit-btn') || e.target.closest('.table-name-input') || e.target.closest('.drag-handle')) {
       return;
     }
     onTableClick(table, isSecondary);
@@ -73,9 +73,12 @@ const SortableTableItem = ({
       }`}
       onClick={handleItemClick}
     >
-      {/* No connection line needed */}
+      {/* Left drag handle */}
+      <div className="drag-handle drag-handle-left" {...attributes} {...listeners}>
+        <span className="drag-icon">⋮⋮</span>
+      </div>
       
-      <div className="table-main-content" {...attributes} {...listeners}>
+      <div className="table-main-content">
         {isEditing ? (
           <input
             type="text"
@@ -102,16 +105,22 @@ const SortableTableItem = ({
         )}
       </div>
 
-      <button
-        className="edit-btn-clean"
-        onClick={(e) => {
-          e.stopPropagation();
-          onTableDoubleClick(e, table);
-        }}
-        title="Editar tabla"
-      >
-        ✏️
-      </button>
+      {/* Right side with edit button and drag handle */}
+      <div className="table-actions">
+        <button
+          className="edit-btn-clean"
+          onClick={(e) => {
+            e.stopPropagation();
+            onTableDoubleClick(e, table);
+          }}
+          title="Editar tabla"
+        >
+          ✏️
+        </button>
+        <div className="drag-handle drag-handle-right" {...attributes} {...listeners}>
+          <span className="drag-icon">⋮⋮</span>
+        </div>
+      </div>
     </div>
   );
 };

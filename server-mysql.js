@@ -2420,6 +2420,27 @@ app.post('/api/notion/update-cell', async (req, res) => {
       case 'date':
         formattedProperty[column] = value ? { date: { start: value } } : { date: null };
         break;
+      case 'people':
+        // Para campos people, Notion espera solo IDs de usuario
+        if (Array.isArray(value)) {
+          // Si ya es un array, extraer los IDs
+          formattedProperty[column] = {
+            people: value.map(person => 
+              typeof person === 'string' ? { id: person } : { id: person.id }
+            )
+          };
+        } else if (value) {
+          // Si es un string (ID), formatear correctamente
+          formattedProperty[column] = {
+            people: [{ id: value }]
+          };
+        } else {
+          // Si está vacío
+          formattedProperty[column] = {
+            people: []
+          };
+        }
+        break;
       case 'checkbox':
         formattedProperty[column] = { checkbox: Boolean(value) };
         break;
@@ -2432,35 +2453,24 @@ app.post('/api/notion/update-cell', async (req, res) => {
       case 'email':
         formattedProperty[column] = { email: value || null };
         break;
-      case 'phone_number':
-        formattedProperty[column] = { phone_number: value || null };
-        break;
       default:
-        // Default to rich_text for unknown types
+        // Si no se especifica el tipo, intentar como rich_text
         formattedProperty[column] = {
           rich_text: [{ text: { content: String(value || '') } }]
         };
     }
 
+    // Actualizar la página en Notion
     const response = await notion.pages.update({
       page_id: taskId,
       properties: formattedProperty
     });
 
     console.log('✅ Task updated successfully');
-
-    res.json({
-      success: true,
-      message: 'Task updated successfully',
-      task: {
-        id: response.id,
-        lastEditedTime: response.last_edited_time
-      }
-    });
-
+    res.json({ success: true, data: response });
   } catch (error) {
     console.error('❌ Notion API Error:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       error: 'Failed to update Notion task',
       details: error.message
     });
@@ -3223,6 +3233,41 @@ app.get('/api/notion/debug', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Notion debug error', details: error.message });
+  }
+});
+
+// Notion Database Schema endpoint
+app.get('/api/notion/database-schema', async (req, res) => {
+  try {
+    if (!isNotionEnabled) {
+      return res.status(503).json({ 
+        error: 'Notion service is disabled',
+        details: 'Notion API key is not configured or invalid'
+      });
+    }
+
+    console.log('🔍 Getting detailed database schema');
+    
+    const database = await notion.databases.retrieve({
+      database_id: process.env.NOTION_DATABASE_ID
+    });
+
+    console.log('📚 Detailed Database Properties:');
+    Object.entries(database.properties).forEach(([key, prop]) => {
+      console.log(`- ${key}: ${prop.type}`, JSON.stringify(prop, null, 2));
+    });
+
+    res.json({
+      success: true,
+      properties: database.properties,
+      title: database.title
+    });
+  } catch (error) {
+    console.error('❌ Error getting database schema:', error);
+    res.status(500).json({ 
+      error: 'Failed to get database schema',
+      details: error.message
+    });
   }
 });
 
@@ -4270,5 +4315,5 @@ if (!process.env.VERCEL) {
   });
 }
 
-// Export for Vercel serverless deployment
-module.exports = app;
+  // Export for Vercel serverless deployment
+  module.exports = app;

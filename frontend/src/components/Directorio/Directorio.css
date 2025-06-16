@@ -798,14 +798,14 @@
     gap: 16px;
     align-items: stretch;
   }
-
+  
   .pagination-nav {
     justify-content: center;
     flex-wrap: wrap;
     gap: 6px;
     padding: 12px 8px;
   }
-
+  
   .pagination-btn.nav-btn {
     min-width: 80px;
     padding: 8px 10px;

@@ -51,9 +51,7 @@ export const PROPERTY_CONFIGS = {
   Encargado: {
     type: 'people',
     formatValue: value => ({
-      people: value ? [{
-        id: value
-      }] : []
+      people: value ? [{ id: value }] : []
     })
   }
 }; 

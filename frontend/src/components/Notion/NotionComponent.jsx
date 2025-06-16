@@ -90,11 +90,13 @@ const NotionComponent = () => {
   };
 
   // Handle cell edit
-  const handleCellEdit = async (taskId, column, value, propertyType = null) => {
+  const handleCellEdit = async (taskId, column, value) => {
     try {
-      console.log('Updating cell:', { taskId, column, value, propertyType });
+      console.log('📝 Updating Notion task cell:', { taskId, column, value, propertyType: PROPERTY_CONFIGS[column]?.type });
+      
+      // Para el campo Encargado, enviar solo el ID del usuario
+      let formattedValue = value;
 
-      // Send the raw value and let the backend handle the formatting
       const response = await fetch(`${API_BASE_URL}/notion/update-cell`, {
         method: 'POST',
         headers: {
@@ -103,24 +105,30 @@ const NotionComponent = () => {
         body: JSON.stringify({
           taskId,
           column,
-          value,
-          propertyType
+          value: formattedValue,
+          propertyType: PROPERTY_CONFIGS[column]?.type
         }),
       });
 
+      const responseData = await response.json();
+      console.log('Update response:', responseData);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update cell');
+        throw new Error(responseData.error || responseData.details || 'Failed to update task');
       }
 
-      const responseData = await response.json();
-      
-      // Refresh the tasks list after successful update
-      await fetchTasks();
-      
+      // Actualizar el estado local después de una actualización exitosa
+      setTasks(prevTasks => 
+        prevTasks.map(task => 
+          task.id === taskId 
+            ? { ...task, [column]: value }
+            : task
+        )
+      );
+
       return responseData;
     } catch (error) {
-      console.error('Error in handleCellEdit:', error);
+      console.error('Error updating cell:', error);
       throw error;
     }
   };

@@ -4,10 +4,12 @@ import firebaseTableService from '../../services/firebaseTableService';
 import CellPDFParser from '../PDFParser/CellPDFParser';
 import TableMail from './TableMail';
 import PDFParser from '../PDFParser_new/PDFParser';
-import Modal from '../Modal/Modal';
+import Modal from '../common/Modal';
 import './DataTable.css';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
+import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
+// import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
   // Add console logs for debugging
@@ -35,17 +37,71 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [selectedChildTable, setSelectedChildTable] = useState('');
   const [parentData, setParentData] = useState(null);
   const [parentTableName, setParentTableName] = useState(null);
+  const [newlyInsertedRows, setNewlyInsertedRows] = useState(new Set());
+  const [flashingRows, setFlashingRows] = useState(new Set());
+  const [forceHighlightNext, setForceHighlightNext] = useState(false);
 
+  // Reference to track previous data
+  const previousDataRef = useRef([]);
+
+  // Simple effect just to set the data - NO SORTING HERE
   useEffect(() => {
-    console.log('🔥 Setting sorted data:', data);
+    console.log('🔥 Setting data:', data);
     if (!Array.isArray(data)) {
       console.error('❌ Data is not an array:', data);
       setSortedData([]);
       setFilteredData([]);
       return;
     }
+
     setSortedData(data);
     setFilteredData(data);
+    
+    // Detect new insertions
+    if (forceHighlightNext || (data.length > previousDataRef.current.length && previousDataRef.current.length > 0)) {
+      setForceHighlightNext(false);
+      
+      // We'll highlight after sorting in render
+      setTimeout(() => {
+                 const sorted = [...data].sort((a, b) => {
+           const getTimestamp = (record) => {
+             const createdAt = record.createdAt;
+             if (!createdAt) return 0;
+             
+             if (createdAt._seconds) {
+               return createdAt._seconds * 1000;
+             } else if (createdAt.seconds) {
+               return createdAt.seconds * 1000;
+             } else if (createdAt.toDate) {
+               return createdAt.toDate().getTime();
+             } else if (typeof createdAt === 'string') {
+               return new Date(createdAt).getTime();
+             } else if (createdAt instanceof Date) {
+               return createdAt.getTime();
+             }
+             return 0;
+           };
+           
+           return getTimestamp(b) - getTimestamp(a);
+         });
+
+        if (sorted.length > 0) {
+          const firstRecord = sorted[0];
+          const highlightId = firstRecord.id || firstRecord.docId || firstRecord.firebase_doc_id || `highlight_${Date.now()}`;
+          
+          console.log('✨ Highlighting newest:', firstRecord.numero_poliza);
+          
+          const highlightSet = new Set([highlightId]);
+          setNewlyInsertedRows(highlightSet);
+          setFlashingRows(highlightSet);
+          
+          setTimeout(() => setFlashingRows(new Set()), 3000);
+          setTimeout(() => setNewlyInsertedRows(new Set()), 10000);
+        }
+      }, 100);
+    }
+    
+    previousDataRef.current = data;
   }, [data]);
 
   useEffect(() => {
@@ -146,6 +202,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   }, [tableName]);
 
   useEffect(() => {
+    console.log('🔍 SEARCH TERM:', `"${searchTerm}"`, 'LENGTH:', searchTerm.length);
+    console.log('🔍 SORTED DATA LENGTH:', sortedData.length);
+    
+    const hasJoseInSorted = sortedData.some(r => 
+      r.nombre_contratante?.toLowerCase().includes('jose') && 
+      r.nombre_contratante?.toLowerCase().includes('pacheco')
+    );
+    console.log('🔍 HAS JOSE IN SORTED DATA:', hasJoseInSorted);
+
     if (!searchTerm.trim()) {
       setFilteredData(sortedData);
       return;
@@ -158,8 +223,145 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         return String(value).toLowerCase().includes(searchLower);
       });
     });
+    
+    console.log('🔍 FILTERED RESULTS:', {
+      originalLength: sortedData.length,
+      filteredLength: filtered.length,
+      hasJosePachecoAfterFilter: filtered.some(r => 
+        r.nombre_contratante?.toLowerCase().includes('jose') && 
+        r.nombre_contratante?.toLowerCase().includes('pacheco')
+      )
+    });
+    
     setFilteredData(filtered);
   }, [searchTerm, sortedData]);
+
+  // Enhanced handler for when data is captured/modified
+  const handleDataCaptured = useCallback(async (updatedTableName = null, shouldCloseModal = false) => {
+    console.log('📊 Data captured/modified, triggering refresh:', { 
+      updatedTableName, 
+      currentTableName: tableName,
+      shouldCloseModal
+    });
+    
+    try {
+      // Show loading state
+      setIsRefreshing(true);
+      
+      // Only close PDF parser if explicitly requested (e.g., after successful data insertion)
+      if (shouldCloseModal) {
+        setShowPDFParser(false);
+      }
+      
+      // Refresh the current table data
+      if (onRefresh) {
+        await onRefresh(updatedTableName || tableName);
+      }
+      
+      // Show success message only if modal is being closed (successful operation)
+      if (shouldCloseModal) {
+        toast.success('Datos agregados correctamente');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error refreshing data after capture:', error);
+      toast.error('Error al actualizar los datos');
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh, tableName]);
+
+  // Enhanced refresh function with loading state
+  const refreshData = async () => {
+    console.log('🔄 Manual refresh triggered');
+    setIsRefreshing(true);
+    
+    try {
+      if (onRefresh) {
+        await onRefresh();
+      }
+      toast.success('Datos actualizados');
+    } catch (error) {
+      console.error('❌ Error during manual refresh:', error);
+      toast.error('Error al actualizar datos');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Note: Auto-refresh polling removed to prevent modal from closing prematurely
+  // The modal should only close manually or after successful data insertion
+
+  // Listen for custom data update events
+  useEffect(() => {
+    const handleDataUpdate = (event) => {
+      console.log('📡 Received data update event:', event.detail);
+      
+      // Check if the update is for our current table
+      if (event.detail?.tableName === tableName || event.detail?.tableName === 'all') {
+        console.log('🔄 Triggering refresh due to data update event');
+        
+        // If it's a data insert event, mark for highlighting
+        if (event.detail?.type === 'insert') {
+          console.log('✨ New data insert detected, will highlight new rows');
+          setForceHighlightNext(true);
+        }
+        
+        // Pass shouldCloseModal flag to handleDataCaptured
+        const shouldCloseModal = event.detail?.shouldCloseModal === true;
+        handleDataCaptured(event.detail?.tableName, shouldCloseModal);
+      }
+    };
+
+    // Handle policyDataUpdated event (legacy event from PDF parser)
+    const handlePolicyDataUpdate = (event) => {
+      console.log('📡 Received policyDataUpdated event:', event.detail);
+      
+      // Check if the update is for our current table
+      if (event.detail?.table === tableName || !event.detail?.table) {
+        console.log('🔄 Triggering refresh due to policyDataUpdated event');
+        
+        // Set flag to force highlight of next data refresh
+        setForceHighlightNext(true);
+        
+        // Pass shouldCloseModal flag to handleDataCaptured
+        const shouldCloseModal = event.detail?.shouldCloseModal === true;
+        handleDataCaptured(event.detail?.table || tableName, shouldCloseModal);
+      }
+    };
+
+    // Listen for storage changes (if using localStorage for coordination)
+    const handleStorageChange = (event) => {
+      if (event.key === 'dataTableUpdate' && event.newValue) {
+        try {
+          const updateInfo = JSON.parse(event.newValue);
+          console.log('💾 Storage update detected:', updateInfo);
+          
+          if (updateInfo.tableName === tableName || updateInfo.tableName === 'all') {
+            console.log('🔄 Triggering refresh due to storage update');
+            const shouldCloseModal = updateInfo.shouldCloseModal === true;
+            handleDataCaptured(updateInfo.tableName, shouldCloseModal);
+            
+            // Clear the storage flag
+            localStorage.removeItem('dataTableUpdate');
+          }
+        } catch (error) {
+          console.error('❌ Error parsing storage update:', error);
+        }
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('dataTableUpdate', handleDataUpdate);
+    window.addEventListener('policyDataUpdated', handlePolicyDataUpdate);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('dataTableUpdate', handleDataUpdate);
+      window.removeEventListener('policyDataUpdated', handlePolicyDataUpdate);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [tableName]);
 
   // Enhanced dropdown rendering with better parent-child navigation
   const renderTableSelector = () => {
@@ -231,6 +433,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         <div className="table-controls">
           <div className="search-section">
             <button
+              className="refresh-btn"
+              onClick={refreshData}
+              disabled={isRefreshing}
+              title="Actualizar datos"
+            >
+              <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 4v6h6" />
+                <path d="M23 20v-6h-6" />
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+              </svg>
+              {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+            </button>
+            <button
               className="capturador-btn"
               onClick={() => setShowPDFParser(true)}
               title="Abrir Capturador"
@@ -284,7 +499,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
           size="full"
         >
           <div style={{ height: '100%', width: '100%' }}>
-            <PDFParser selectedTable={tableName} onDataCaptured={onRefresh} />
+            <PDFParser 
+              selectedTable={tableName} 
+              onDataCaptured={handleDataCaptured}
+              onClose={() => setShowPDFParser(false)}
+            />
           </div>
         </Modal>
       </div>
@@ -368,6 +587,18 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       
       // Show success message
       toast.success('Cell updated successfully');
+      
+      // Auto-refresh data to ensure consistency
+      console.log('🔄 Auto-refreshing after cell edit');
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
+      
+      setTimeout(async () => {
+        if (onRefresh) {
+          await onRefresh();
+        }
+      }, 1000);
     } catch (error) {
       console.error('Failed to update cell:', error);
       
@@ -559,6 +790,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       // Show success message
       toast.success('Row deleted successfully');
       
+      // Notify other components about the deletion
+      notifyDataDelete(tableName);
+      
       // Refresh the data
       if (onRefresh) {
         await onRefresh();
@@ -579,6 +813,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       await firebaseTableService.updateData(tableName, record.id, 'estado_pago', newStatus);
       
       toast.success(`Estado de pago actualizado a: ${newStatus}`);
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
       
       // Refresh the data
       if (onRefresh) {
@@ -820,9 +1057,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     }
   };
 
-  return (
-    <div className="data-table-container">
-      {tableTitle && (
+
+
+      return (
+      <div className="data-table-container">
+        {/* Test Component - Temporarily disabled */}
+        {/* <TestInsert tableName={tableName} /> */}
+        
+        {tableTitle && (
         <div className="table-title">
           <h2>{tableTitle}</h2>
           {renderTableSelector()}
@@ -837,6 +1079,37 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="clear-search-btn"
+              title="Limpiar búsqueda"
+              style={{
+                marginLeft: '5px',
+                padding: '5px 10px',
+                backgroundColor: '#ff6b6b',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕ Limpiar ({searchTerm.length})
+            </button>
+          )}
+          <button
+            className="refresh-btn"
+            onClick={refreshData}
+            disabled={isRefreshing}
+            title="Actualizar datos"
+          >
+            <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 4v6h6" />
+              <path d="M23 20v-6h-6" />
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+            </svg>
+            {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+          </button>
           <button
             className="capturador-btn"
             onClick={() => setShowPDFParser(true)}
@@ -861,7 +1134,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         size="full"
       >
         <div style={{ height: '100%', width: '100%' }}>
-          <PDFParser selectedTable={tableName} />
+          <PDFParser 
+            selectedTable={tableName} 
+            onClose={() => setShowPDFParser(false)}
+          />
         </div>
       </Modal>
 
@@ -908,8 +1184,82 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((row, rowIndex) => (
-              <tr key={rowIndex} className="table-row">
+            {(() => {
+              // SORT DATA HERE - NEWEST FIRST ALWAYS
+              const dataToSort = [...filteredData];
+              const sortedForRender = dataToSort.sort((a, b) => {
+                const getTimestamp = (record) => {
+                  const createdAt = record.createdAt;
+                  if (!createdAt) return 0;
+                  
+                  // Handle Firebase Timestamp with underscore (NEW FORMAT)
+                  if (createdAt._seconds) {
+                    return createdAt._seconds * 1000;
+                  }
+                  // Handle Firebase Timestamp without underscore (OLD FORMAT)  
+                  else if (createdAt.seconds) {
+                    return createdAt.seconds * 1000;
+                  } 
+                  // Handle Firestore Timestamp object
+                  else if (createdAt.toDate) {
+                    return createdAt.toDate().getTime();
+                  } 
+                  // Handle string dates
+                  else if (typeof createdAt === 'string') {
+                    return new Date(createdAt).getTime();
+                  } 
+                  // Handle Date objects
+                  else if (createdAt instanceof Date) {
+                    return createdAt.getTime();
+                  }
+                  return 0;
+                };
+                
+                return getTimestamp(b) - getTimestamp(a); // Newest first
+              });
+              
+              // DEBUGGING: Simple logs that show clearly
+              console.log('🎯 TOTAL RECORDS:', sortedForRender.length);
+              console.log('🎯 FIRST 3 NAMES:', sortedForRender.slice(0, 3).map(r => r.nombre_contratante));
+              console.log('🎯 FIRST 3 TIMESTAMPS:', sortedForRender.slice(0, 3).map(r => r.createdAt?.seconds));
+              
+              const joseRecord = sortedForRender.find(r => 
+                r.nombre_contratante?.toLowerCase().includes('jose') && 
+                r.nombre_contratante?.toLowerCase().includes('pacheco')
+              );
+              
+              if (joseRecord) {
+                const joseIndex = sortedForRender.findIndex(r => r === joseRecord);
+                console.log('🎯 JOSE FOUND AT POSITION:', joseIndex + 1, 'of', sortedForRender.length);
+                console.log('🎯 JOSE TIMESTAMP:', joseRecord.createdAt?.seconds);
+                console.log('🎯 JOSE DATE:', joseRecord.createdAt?.seconds ? new Date(joseRecord.createdAt.seconds * 1000).toLocaleString() : 'NO_DATE');
+                console.log('🎯 JOSE FULL RECORD KEYS:', Object.keys(joseRecord));
+                console.log('🎯 JOSE CREATED AT FIELD:', joseRecord.createdAt);
+                console.log('🎯 JOSE ALL DATE FIELDS:', {
+                  createdAt: joseRecord.createdAt,
+                  created_at: joseRecord.created_at,
+                  timestamp: joseRecord.timestamp,
+                  date: joseRecord.date,
+                  fechaCreacion: joseRecord.fechaCreacion,
+                  fecha_creacion: joseRecord.fecha_creacion
+                });
+              } else {
+                console.log('🎯 JOSE NOT FOUND in sorted data');
+              }
+              
+              return sortedForRender;
+            })().map((row, rowIndex) => {
+              const rowId = row.id || row.docId || row.firebase_doc_id || `row_${rowIndex}`;
+              const isNewRow = newlyInsertedRows.has(rowId);
+              const isFlashing = flashingRows.has(rowId);
+              
+              // console.log('🔍 ROW RENDER:', { rowIndex, rowId, isNewRow, isFlashing, rowKeys: Object.keys(row) });
+              
+              return (
+              <tr 
+                key={rowIndex} 
+                className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
+              >
                 {/* COLUMNA ESTADO PAGO - MOVIDA AL LADO IZQUIERDO */}
                 <td className="action-cell payment-cell" style={{
                   width: '120px !important',
@@ -978,7 +1328,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                   </td>
                 ))}
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import firebaseTableService from '../../services/firebaseTableService';
 import { API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
+import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 
-const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false }) => {
+const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -459,10 +460,21 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 setMessage('Datos insertados exitosamente');
                 setError(null);
 
+                // Notify data table about the new data insertion and close modal
                 const event = new CustomEvent('policyDataUpdated', {
-                    detail: { table: tableName }
+                    detail: { table: tableName, shouldCloseModal: true }
                 });
                 window.dispatchEvent(event);
+                
+                // Also trigger the new notification system
+                notifyDataInsert(tableName);
+                
+                // Close the modal after successful insertion
+                if (onClose) {
+                    setTimeout(() => {
+                        onClose();
+                    }, 1500); // Give time to show success message
+                }
             } catch (insertError) {
                 console.error('Error during data insertion:', insertError);
                 console.error('Error details:', {
@@ -526,6 +538,28 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     return (
         <div className="gpt-analysis">
+            <div className="gpt-analysis-header">
+                <h3>Análisis de Contenido</h3>
+                <div className="header-actions">
+                    {mappedData && (
+                        <button 
+                            onClick={() => handleDataInsertion(editedData)}
+                            className="insert-button primary"
+                        >
+                            Agregar Datos
+                        </button>
+                    )}
+                    {onClose && (
+                        <button 
+                            onClick={onClose}
+                            className="close-button"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {!selectedTable && (
                 <div className="error-message">Por favor selecciona una tabla primero</div>
             )}
@@ -553,7 +587,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
             {mappedData && (
                 <div className="mapped-data">
-                    <h3>Extracted Data</h3>
+                    <h4>Datos Extraídos</h4>
                     <div className="data-table">
                         <table>
                             <thead>
@@ -623,16 +657,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     </div>
                     <div className="action-buttons">
                         <button 
-                            onClick={() => handleDataInsertion(editedData)}
-                            className="insert-button"
-                        >
-                            Insert Data
-                        </button>
-                        <button 
                             onClick={analyzeContent}
                             className="reanalyze-button"
                         >
-                            Reanalyze
+                            Reanalizar
                         </button>
                     </div>
                 </div>

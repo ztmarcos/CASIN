@@ -43,10 +43,6 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
       newErrors.Status = 'El estado es requerido';
     }
     
-    if (editedTask['Fecha límite'] && new Date(editedTask['Fecha límite']) < new Date()) {
-      newErrors['Fecha límite'] = 'La fecha límite no puede ser en el pasado';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -69,7 +65,10 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
           }]
         },
         Encargado: {
-          people: editedTask.Encargado ? [{ object: 'user', id: editedTask.Encargado }] : []
+          people: editedTask.Encargado ? [{
+            object: 'user',
+            id: editedTask.Encargado
+          }] : []
         },
         Status: {
           status: {
@@ -107,6 +106,16 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
               return null;
             }
 
+            // Para el campo Encargado, enviar solo el ID
+            if (column === 'Encargado') {
+              return {
+                taskId: editedTask.id,
+                column,
+                value: value || '',
+                propertyType: 'people'
+              };
+            }
+
             return {
               taskId: editedTask.id,
               column,
@@ -127,7 +136,7 @@ const TaskModal = ({ task, isOpen, onClose, onSave, notionUsers }) => {
       onClose();
     } catch (error) {
       console.error('Error saving task:', error);
-      setErrors({ submit: 'Error al guardar la tarea. Por favor, intente nuevamente.' });
+      setErrors({ submit: error.message || 'Error al guardar la tarea' });
     } finally {
       setIsSaving(false);
     }

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import tableService from '../../services/data/tableService';
 import { API_URL } from '../../config/api.js';
+import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 import './ListadoAnalysis.css';
 
-const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false }) => {
+const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -173,14 +174,24 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
             const result = await tableService.insertData(selectedTable, cleanedData);
             console.log('Data insertion result:', result);
             
-            setMessage('Data inserted successfully');
+            setMessage('Datos insertados exitosamente');
             setError(null);
 
-            // Emit a custom event to notify other components
+            // Emit a custom event to notify other components and close modal
             const event = new CustomEvent('policyDataUpdated', {
-                detail: { table: selectedTable }
+                detail: { table: selectedTable, shouldCloseModal: true }
             });
             window.dispatchEvent(event);
+            
+            // Also trigger the new notification system
+            notifyDataInsert(selectedTable);
+            
+            // Close the modal after successful insertion
+            if (onClose) {
+                setTimeout(() => {
+                    onClose();
+                }, 1500); // Give time to show success message
+            }
 
         } catch (err) {
             console.error('Error inserting data:', err);
@@ -208,16 +219,38 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
 
     return (
         <div className="listado-analysis">
+            <div className="listado-analysis-header">
+                <h3>Análisis de Listado</h3>
+                <div className="header-actions">
+                    {mappedData.length > 0 && (
+                        <button 
+                            onClick={() => handleDataInsertion(editedData)}
+                            className="insert-button primary"
+                        >
+                            Agregar Datos
+                        </button>
+                    )}
+                    {onClose && (
+                        <button 
+                            onClick={onClose}
+                            className="close-button"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {!selectedTable && (
                 <div className="error-message">Por favor selecciona una tabla primero</div>
             )}
 
             {!parsedData && (
-                <div className="error-message">Please upload a PDF file first</div>
+                <div className="error-message">Por favor sube un archivo PDF primero</div>
             )}
 
             {loading && (
-                <div className="loading">Analyzing content...</div>
+                <div className="loading">Analizando contenido...</div>
             )}
 
             {error && (
@@ -235,7 +268,7 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
 
             {mappedData.length > 0 && (
                 <div className="mapped-data">
-                    <h3>Extracted Data</h3>
+                    <h4>Datos Extraídos</h4>
                     <div className="data-table">
                         <table>
                             <thead>
@@ -275,16 +308,10 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                     </div>
                     <div className="action-buttons">
                         <button 
-                            onClick={() => handleDataInsertion(editedData)}
-                            className="insert-button"
-                        >
-                            Insert Data
-                        </button>
-                        <button 
                             onClick={analyzeContent}
                             className="reanalyze-button"
                         >
-                            Reanalyze
+                            Reanalizar
                         </button>
                     </div>
                 </div>

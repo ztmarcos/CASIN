@@ -5,7 +5,7 @@ import GPTAnalysis from './GPTAnalysis';
 import ListadoAnalysis from './ListadoAnalysis';
 import './PDFParser.css';
 
-const PDFParser = ({ selectedTable }) => {
+const PDFParser = ({ selectedTable, onClose }) => {
   const [parsedData, setParsedData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -118,6 +118,7 @@ const PDFParser = ({ selectedTable }) => {
                 selectedTable={tableName}
                 tableInfo={getTableInfo(tableName)}
                 autoAnalyze={true}
+                onClose={onClose}
               />
             ) : (
               <GPTAnalysis
@@ -125,6 +126,7 @@ const PDFParser = ({ selectedTable }) => {
                 selectedTable={tableName}
                 tableInfo={getTableInfo(tableName)}
                 autoAnalyze={true}
+                onClose={onClose}
               />
             )}
           </div>
