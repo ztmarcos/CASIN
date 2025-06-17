@@ -217,7 +217,7 @@
 } /* telefono */
 
 /* Regular cell styles */
-.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   width: 200px; /* Default width for regular cells */
   min-width: 200px;
   padding: 6px 12px;
@@ -1902,7 +1902,7 @@ td .edit-cell-input[type="select"] {
 }
 
 /* Ensure table cells are visible */
-.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+.data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   min-width: 180px;
   max-width: 400px;
   padding: 6px 12px;
@@ -1920,7 +1920,7 @@ td .edit-cell-input[type="select"] {
 }
 
 /* Add hover effect to make cells more visible */
-.data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+.data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   background-color: var(--hover-bg, #f8fafc);
 }
 
@@ -1952,13 +1952,13 @@ td .edit-cell-input[type="select"] {
 }
 
 /* Dark mode adjustments */
-[data-theme='dark'] .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+[data-theme='dark'] .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   background: var(--background-primary-dark, #1f2937);
   border-color: var(--border-color-dark, #374151);
   color: var(--text-primary-dark, #F3F4F6);
 }
 
-[data-theme='dark'] .data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+[data-theme='dark'] .data-table td:hover:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   background-color: var(--hover-bg-dark, #2D3748);
 }
 
@@ -1970,7 +1970,7 @@ td .edit-cell-input[type="select"] {
 
 /* Responsive adjustments */
 @media (max-width: 1024px) {
-  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
     min-width: 150px;
     max-width: 300px;
     padding: 4px 10px;
@@ -1978,7 +1978,7 @@ td .edit-cell-input[type="select"] {
 }
 
 @media (max-width: 768px) {
-  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell) {
+  .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
     min-width: 120px;
     max-width: 250px;
     padding: 4px 8px;
@@ -2200,6 +2200,15 @@ td .edit-cell-input[type="select"] {
   color: #dc2626 !important;
   background: rgba(239, 68, 68, 0.08) !important;
   border-color: rgba(239, 68, 68, 0.15) !important;
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.4rem !important;
+  font-weight: bold !important;
 }
 
 .action-btn.delete-btn:hover {
@@ -2233,6 +2242,19 @@ td .edit-cell-input[type="select"] {
   background: rgba(239, 68, 68, 0.05) !important;
   border-color: rgba(239, 68, 68, 0.1) !important;
   color: #dc2626 !important;
+  text-align: center !important;
+  padding: 8px 4px !important;
+  font-size: 1.4rem !important;
+  font-weight: bold !important;
+}
+
+.action-header.drive-header {
+  background: rgba(66, 133, 244, 0.05) !important;
+  border-color: rgba(66, 133, 244, 0.1) !important;
+  color: #4285f4 !important;
+  text-align: center !important;
+  padding: 8px 4px !important;
+  font-size: 1.2rem !important;
 }
 
 /* Celdas de acción más discretas */
@@ -2252,6 +2274,15 @@ td .edit-cell-input[type="select"] {
 .action-cell.delete-cell {
   background: rgba(239, 68, 68, 0.02) !important;
   border-color: rgba(239, 68, 68, 0.08) !important;
+  text-align: center !important;
+  padding: 4px !important;
+}
+
+.action-cell.drive-cell {
+  background: rgba(66, 133, 244, 0.02) !important;
+  border-color: rgba(66, 133, 244, 0.08) !important;
+  text-align: center !important;
+  padding: 4px !important;
 }
 
 /* Hover effect en las filas */
@@ -2261,6 +2292,10 @@ td .edit-cell-input[type="select"] {
 
 .table-row:hover .action-cell.delete-cell {
   background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.table-row:hover .action-cell.drive-cell {
+  background: rgba(66, 133, 244, 0.05) !important;
 }
 
 .table-row:hover .action-btn {
@@ -2284,6 +2319,51 @@ td .edit-cell-input[type="select"] {
   color: #f87171 !important;
   background: rgba(248, 113, 113, 0.1) !important;
   border-color: rgba(248, 113, 113, 0.2) !important;
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.4rem !important;
+  font-weight: bold !important;
+}
+
+.action-btn.drive-btn {
+  color: #4285f4 !important;
+  background: rgba(66, 133, 244, 0.08) !important;
+  border-color: rgba(66, 133, 244, 0.15) !important;
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.1rem !important;
+}
+
+.action-btn.drive-btn:hover {
+  background: rgba(66, 133, 244, 0.15) !important;
+  border-color: rgba(66, 133, 244, 0.25) !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 4px rgba(66, 133, 244, 0.15) !important;
+}
+
+[data-theme='dark'] .action-btn.drive-btn {
+  color: #5ea3ff !important;
+  background: rgba(94, 163, 255, 0.1) !important;
+  border-color: rgba(94, 163, 255, 0.2) !important;
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.1rem !important;
 }
 
 [data-theme='dark'] .action-header {

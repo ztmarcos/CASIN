@@ -3,7 +3,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
-import PolicyCounter from './PolicyCounter';
 import SupportChat from '../SupportChat/SupportChat';
 import { FEATURES } from '../../config/features';
 import logoImage from '/logo.png';
@@ -81,7 +80,6 @@ const Layout = ({ children }) => {
         </div>
         <div className="right-section">
           <div className="user-section">
-            <PolicyCounter />
             <span className="user-email">{user?.email}</span>
             <button className="logout-button" onClick={logout}>
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">

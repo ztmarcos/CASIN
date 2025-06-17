@@ -24,19 +24,21 @@ const DriveSelector = ({ isOpen, onClose, onFolderSelect, selectedFolderId }) =>
       setError(null);
       const targetFolderId = folderId || ROOT_FOLDER_ID;
       
-      const response = await axios.get(`${API_URL}/api/drive/files`, {
+      const response = await axios.get(`${API_URL}/drive/files`, {
         params: {
-          folderId: targetFolderId,
-          fields: 'files(id, name, mimeType)'
+          folderId: targetFolderId
         }
       });
       
-      // Filter only folders
-      const folderList = response.data.files.filter(file => 
-        file.mimeType === 'application/vnd.google-apps.folder'
-      );
-      
-      setFolders(folderList);
+      // Filter only folders from the response
+      if (response.data.success && response.data.files) {
+        const folderList = response.data.files.filter(file => 
+          file.mimeType === 'application/vnd.google-apps.folder'
+        );
+        setFolders(folderList);
+      } else {
+        setFolders([]);
+      }
     } catch (error) {
       console.error('Error fetching folders:', error);
       setError('Error al cargar las carpetas');

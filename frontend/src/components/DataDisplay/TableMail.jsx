@@ -132,35 +132,72 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
   };
 
   const uploadAttachmentsToDrive = async () => {
-    if (!selectedFolder || attachments.length === 0) return [];
+    if (!selectedFolder || attachments.length === 0) {
+      console.log('❌ Drive upload skipped:', { selectedFolder: !!selectedFolder, attachmentsCount: attachments.length });
+      return [];
+    }
 
+    console.log('🚀 Starting Drive upload to folder:', selectedFolder.id);
     setIsUploading(true);
     const uploadedFiles = [];
 
     try {
-      for (const attachment of attachments) {
-        const formData = new FormData();
-        formData.append('file', attachment.file);
-        formData.append('folderId', selectedFolder.id);
+      // Upload all files in a single request
+      const formData = new FormData();
+      formData.append('folderId', selectedFolder.id);
+      
+      // Add all files to FormData
+      attachments.forEach((attachment, index) => {
+        console.log(`📎 Adding file ${index + 1}:`, attachment.name);
+        formData.append('files', attachment.file);
+      });
 
-        const response = await fetch(`${API_URL}/drive/upload`, {
-          method: 'POST',
-          body: formData,
-        });
+      const uploadUrl = `${API_URL.replace('/api', '')}/drive/upload`;
+      console.log('📤 Sending request to:', uploadUrl);
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!response.ok) {
-          throw new Error(`Error uploading ${attachment.name}`);
+      console.log('📊 Drive response status:', response.status);
+
+      if (!response.ok) {
+        // If Drive upload is not available (503), continue without upload
+        if (response.status === 503) {
+          console.warn('⚠️ Google Drive upload not available, skipping upload');
+          setSelectedFolder(null); // Clear folder selection
+          return []; // Return empty array to continue without Drive links
         }
+        throw new Error(`Error uploading files`);
+      }
 
-        const result = await response.json();
-        uploadedFiles.push({
-          ...attachment,
-          driveFileId: result.id,
-          driveLink: result.webViewLink
+      const result = await response.json();
+      console.log('📊 Drive upload result:', result);
+      
+      if (result.success && result.files) {
+        console.log('✅ Drive upload successful, mapping files...');
+        // Map uploaded files to original attachments
+        result.files.forEach((driveFile, index) => {
+          if (index < attachments.length) {
+            uploadedFiles.push({
+              ...attachments[index],
+              driveFileId: driveFile.id,
+              driveLink: driveFile.webViewLink
+            });
+          }
         });
+        console.log('📎 Mapped uploaded files:', uploadedFiles);
+      } else {
+        console.log('❌ Drive upload failed or no files returned:', result);
       }
     } catch (error) {
       console.error('Error uploading to Drive:', error);
+      // For Drive-related errors, clear the selection and continue without upload
+      if (error.message.includes('Drive') || error.message.includes('503')) {
+        setSelectedFolder(null);
+        setError('Google Drive no disponible, enviando email sin subir archivos a Drive');
+        return []; // Continue without Drive upload
+      }
       throw error;
     } finally {
       setIsUploading(false);
@@ -184,8 +221,12 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
       
       // Upload attachments to Drive if folder is selected
       if (attachments.length > 0 && selectedFolder) {
+        console.log('📤 Starting Drive upload process...');
+        console.log('📂 Selected folder:', selectedFolder);
+        console.log('📎 Attachments count:', attachments.length);
         setSuccess('Subiendo archivos a Drive...');
         uploadedFiles = await uploadAttachmentsToDrive();
+        console.log('📤 Drive upload completed. Files:', uploadedFiles);
       }
 
       setSuccess('Enviando correo...');
@@ -197,7 +238,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         // Add email data as JSON string
         formData.append('to', emailAddress);
         formData.append('subject', emailContent.subject);
-        formData.append('gptResponse', emailContent.message);
+        formData.append('htmlContent', emailContent.message);
         
         // Add drive links if any
         if (uploadedFiles.length > 0) {
@@ -235,7 +276,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         // No attachments, use JSON approach
         const emailData = {
           to: emailAddress,
-          gptResponse: emailContent.message,
+          htmlContent: emailContent.message,
           subject: emailContent.subject,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,

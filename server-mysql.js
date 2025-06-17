@@ -3,6 +3,7 @@ const path = require('path');
 const cors = require('cors');
 const mysql = require('mysql2/promise');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
 
 // Load environment variables from root .env file FIRST
 const dotenv = require('dotenv');
@@ -172,6 +173,14 @@ try {
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Configure multer for file uploads (store in memory)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB limit
+  }
+});
 
 // Middleware para servir archivos estáticos - Frontend build
 app.use(express.static(path.join(__dirname, 'frontend/dist')));
@@ -2656,6 +2665,225 @@ app.get('/api/drive/test', (req, res) => {
   }
 });
 
+// Upload file to Google Drive
+app.post('/drive/upload', upload.any(), async (req, res) => {
+  try {
+    console.log('📤 Google Drive upload request');
+    
+    if (!process.env.GOOGLE_DRIVE_CLIENT_EMAIL || !process.env.GOOGLE_DRIVE_PROJECT_ID || !process.env.GOOGLE_DRIVE_PRIVATE_KEY) {
+      console.error('❌ Google Drive credentials not configured');
+      return res.status(503).json({
+        success: false,
+        error: 'Google Drive not configured'
+      });
+    }
+
+    const { google } = require('googleapis');
+    
+    // Configurar autenticación (similar al endpoint de files)
+    const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, '\n');
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        private_key: privateKey,
+        project_id: process.env.GOOGLE_DRIVE_PROJECT_ID,
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.file'],
+    });
+
+    const drive = google.drive({ version: 'v3', auth });
+    
+    // Get folder ID from request
+    const folderId = req.body.folderId || process.env.GOOGLE_DRIVE_FOLDER_ID;
+    
+    const files = req.files?.files || req.files || [];
+    
+    if (!files || files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'No files provided'
+      });
+    }
+
+    console.log(`📤 Uploading ${files.length} files to folder: ${folderId}`);
+    
+    const uploadedFiles = [];
+    
+    for (const file of files) {
+      console.log(`📤 Uploading file: ${file.originalname}`);
+      
+      const fileMetadata = {
+        name: file.originalname,
+        parents: folderId ? [folderId] : []
+      };
+
+      const media = {
+        mimeType: file.mimetype,
+        body: require('stream').Readable.from(file.buffer)
+      };
+
+      const response = await drive.files.create({
+        resource: fileMetadata,
+        media: media,
+        fields: 'id, name, webViewLink'
+      });
+
+      uploadedFiles.push({
+        id: response.data.id,
+        name: response.data.name,
+        webViewLink: response.data.webViewLink
+      });
+      
+      console.log(`✅ File uploaded: ${response.data.name} (ID: ${response.data.id})`);
+    }
+    
+    res.json({
+      success: true,
+      message: `Successfully uploaded ${uploadedFiles.length} files`,
+      files: uploadedFiles
+    });
+    
+  } catch (error) {
+    console.error('❌ Error in Drive upload:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Client Folder Preferences Endpoints
+// Get folder preference for a client
+app.get('/api/drive/client-folder/:clientId', async (req, res) => {
+  try {
+    const { clientId } = req.params;
+    console.log('📁 Getting folder preference for client:', clientId);
+    
+    if (isFirebaseEnabled && db) {
+      // Use Firebase to store client folder preferences
+      const docRef = db.collection('client_drive_preferences').doc(clientId);
+      const doc = await docRef.get();
+      
+      if (doc.exists) {
+        const data = doc.data();
+        console.log('✅ Found folder preference:', data);
+        res.json({
+          success: true,
+          folderId: data.folderId,
+          folderName: data.folderName,
+          lastUpdated: data.lastUpdated
+        });
+      } else {
+        console.log('📁 No folder preference found for client');
+        res.json({
+          success: true,
+          folderId: null,
+          folderName: null
+        });
+      }
+    } else {
+      // Fallback to MySQL
+      const query = `
+        SELECT folder_id, folder_name, updated_at 
+        FROM client_drive_preferences 
+        WHERE client_id = ?
+      `;
+      const results = await executeQuery(query, [clientId]);
+      
+      if (results.length > 0) {
+        res.json({
+          success: true,
+          folderId: results[0].folder_id,
+          folderName: results[0].folder_name,
+          lastUpdated: results[0].updated_at
+        });
+      } else {
+        res.json({
+          success: true,
+          folderId: null,
+          folderName: null
+        });
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error getting client folder preference:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+// Set folder preference for a client
+app.post('/api/drive/client-folder', async (req, res) => {
+  try {
+    const { clientId, folderId, folderName } = req.body;
+    console.log('📁 Setting folder preference for client:', clientId, 'to folder:', folderName);
+    
+    if (!clientId || !folderId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Client ID and folder ID are required'
+      });
+    }
+    
+    if (isFirebaseEnabled && db) {
+      // Use Firebase to store client folder preferences
+      const docRef = db.collection('client_drive_preferences').doc(clientId);
+      await docRef.set({
+        folderId: folderId,
+        folderName: folderName || 'Unknown Folder',
+        lastUpdated: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+      
+      console.log('✅ Folder preference saved to Firebase');
+      res.json({
+        success: true,
+        message: 'Folder preference saved successfully'
+      });
+    } else {
+      // Fallback to MySQL - create table if not exists
+      const createTableQuery = `
+        CREATE TABLE IF NOT EXISTS client_drive_preferences (
+          client_id VARCHAR(255) PRIMARY KEY,
+          folder_id VARCHAR(255) NOT NULL,
+          folder_name VARCHAR(255),
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `;
+      await executeQuery(createTableQuery);
+      
+      // Insert or update folder preference
+      const upsertQuery = `
+        INSERT INTO client_drive_preferences (client_id, folder_id, folder_name) 
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+        folder_id = VALUES(folder_id),
+        folder_name = VALUES(folder_name),
+        updated_at = CURRENT_TIMESTAMP
+      `;
+      await executeQuery(upsertQuery, [clientId, folderId, folderName || 'Unknown Folder']);
+      
+      console.log('✅ Folder preference saved to MySQL');
+      res.json({
+        success: true,
+        message: 'Folder preference saved successfully'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error setting client folder preference:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
 app.post('/api/prospeccion', (req, res) => {
   if (process.env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY) {
     res.json({ 
@@ -3286,12 +3514,38 @@ app.post('/api/drive/upload', async (req, res) => {
 });
 
 // Email endpoints
-app.post('/api/email/send-welcome', async (req, res) => {
+app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
   try {
     console.log('📧 Email send-welcome request');
-    const { to, subject, htmlContent, clientData, cotizaciones } = req.body;
+    console.log('📧 Content-Type:', req.get('Content-Type'));
+    console.log('📧 Has files:', !!req.files);
+    
+    // Handle both FormData and JSON requests
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks;
+    
+    if (req.get('Content-Type')?.includes('multipart/form-data')) {
+      // FormData request (with potential file attachments)
+      console.log('📦 Processing FormData request');
+      to = req.body.to;
+      subject = req.body.subject;
+      htmlContent = req.body.htmlContent;
+      driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
+      
+      // Extract other fields from FormData
+      clientData = {};
+      Object.keys(req.body).forEach(key => {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks'].includes(key)) {
+          clientData[key] = req.body[key];
+        }
+      });
+    } else {
+      // JSON request (no file attachments)
+      console.log('📄 Processing JSON request');
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks } = req.body);
+    }
     
     if (!to || !subject || !htmlContent) {
+      console.log('❌ Missing fields:', { to: !!to, subject: !!subject, htmlContent: !!htmlContent });
       return res.status(400).json({
         success: false,
         error: 'Missing required fields: to, subject, htmlContent'
@@ -3317,13 +3571,35 @@ app.post('/api/email/send-welcome', async (req, res) => {
     console.log('📧 Transporter configurado exitosamente');
 
     // Configurar el correo
+    let emailBody = htmlContent;
+    
+    // Add Drive links to email body if available
+    if (driveLinks && driveLinks.length > 0) {
+      console.log('📎 Adding Drive links to email:', driveLinks.length);
+      emailBody += `<br><br><h3>📁 Archivos adjuntos en Google Drive:</h3><ul>`;
+      driveLinks.forEach(link => {
+        emailBody += `<li><a href="${link.link}" target="_blank">${link.name}</a></li>`;
+      });
+      emailBody += `</ul>`;
+    }
+    
     const mailOptions = {
       from: `"CASIN Seguros" <${process.env.SMTP_USER}>`,
       to: to,
       subject: subject,
-      html: htmlContent,
-      text: htmlContent.replace(/<[^>]*>/g, '') // Versión texto plano
+      html: emailBody,
+      text: emailBody.replace(/<[^>]*>/g, '') // Versión texto plano
     };
+    
+    // Add file attachments if available
+    if (req.files && req.files.length > 0) {
+      console.log('📎 Adding file attachments:', req.files.length);
+      mailOptions.attachments = req.files.map(file => ({
+        filename: file.originalname,
+        content: file.buffer,
+        contentType: file.mimetype
+      }));
+    }
 
     console.log('📤 Enviando correo a:', to);
     console.log('📋 Asunto:', subject);
@@ -3896,12 +4172,11 @@ app.get('/api/debug/firebase', (req, res) => {
 // COTIZA MODULE ENDPOINTS
 // =============================================================================
 
-// Enable file uploads
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+// Enable file uploads (using existing multer configuration)
+const uploadToFile = multer({ dest: 'uploads/' });
 
 // Parse PDF endpoint
-app.post('/api/parse-pdf', upload.single('file'), async (req, res) => {
+app.post('/api/parse-pdf', uploadToFile.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });

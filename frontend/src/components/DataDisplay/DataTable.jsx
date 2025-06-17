@@ -5,6 +5,7 @@ import CellPDFParser from '../PDFParser/CellPDFParser';
 import TableMail from './TableMail';
 import PDFParser from '../PDFParser_new/PDFParser';
 import Modal from '../common/Modal';
+import DriveManager from '../Drive/DriveManager';
 import './DataTable.css';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
@@ -33,6 +34,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [statusModal, setStatusModal] = useState({ isOpen: false, rowId: null, currentStatus: null });
   const [showPDFParser, setShowPDFParser] = useState(false);
   const [tableTitle, setTableTitle] = useState('');
+  const [driveModal, setDriveModal] = useState({ isOpen: false, clientData: null });
   const [availableChildTables, setAvailableChildTables] = useState([]);
   const [selectedChildTable, setSelectedChildTable] = useState('');
   const [parentData, setParentData] = useState(null);
@@ -772,6 +774,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     setMailModal({ isOpen: false, rowData: null });
   };
 
+  const handleDriveClick = (rowData) => {
+    console.log('DRIVE clicked for row:', rowData);
+    setDriveModal({ isOpen: true, clientData: rowData });
+  };
+
+  const handleCloseDriveModal = () => {
+    setDriveModal({ isOpen: false, clientData: null });
+  };
+
   const handleDeleteClick = (row) => {
     setDeleteConfirm(row);
   };
@@ -1145,7 +1156,23 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         <table className="data-table">
           <thead>
             <tr>
-              {/* COLUMNA ESTADO PAGO - MOVIDA AL LADO IZQUIERDO */}
+              {/* COLUMNA BORRAR - PRIMERA Y MÁS PEQUEÑA */}
+              <th className="action-header delete-header" style={{
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
+              }}>
+                ×
+              </th>
+              {/* COLUMNA DRIVE - SEGUNDA Y PEQUEÑA */}
+              <th className="action-header drive-header" style={{
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
+              }}>
+                📁
+              </th>
+              {/* COLUMNA ESTADO PAGO */}
               <th className="action-header payment-header" style={{
                 width: '120px !important',
                 minWidth: '120px !important',
@@ -1160,14 +1187,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                 maxWidth: '100px !important'
               }}>
                 ENVIAR MAIL
-              </th>
-              {/* COLUMNA BORRAR */}
-              <th className="action-header delete-header" style={{
-                width: '80px !important',
-                minWidth: '80px !important',
-                maxWidth: '80px !important'
-              }}>
-                BORRAR
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1260,7 +1279,43 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                 key={rowIndex} 
                 className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
               >
-                {/* COLUMNA ESTADO PAGO - MOVIDA AL LADO IZQUIERDO */}
+                {/* COLUMNA BORRAR - PRIMERA Y MÁS PEQUEÑA */}
+                <td className="action-cell delete-cell" style={{
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DELETE clicked for row:', row);
+                      handleDeleteClick(row);
+                    }}
+                    className="action-btn delete-btn"
+                    title="Eliminar registro"
+                  >
+                    ×
+                  </button>
+                </td>
+                {/* COLUMNA DRIVE - SEGUNDA Y PEQUEÑA */}
+                <td className="action-cell drive-cell" style={{
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DRIVE clicked for row:', row);
+                      handleDriveClick(row);
+                    }}
+                    className="action-btn drive-btn"
+                    title="Gestionar archivos en Drive"
+                  >
+                    📁
+                  </button>
+                </td>
+                {/* COLUMNA ESTADO PAGO */}
                 <td className="action-cell payment-cell" style={{
                   width: '120px !important',
                   minWidth: '120px !important', 
@@ -1298,24 +1353,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     ✉ MAIL
                   </button>
                 </td>
-                {/* COLUMNA BORRAR */}
-                <td className="action-cell delete-cell" style={{
-                  width: '80px !important',
-                  minWidth: '80px !important', 
-                  maxWidth: '80px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DELETE clicked for row:', row);
-                      handleDeleteClick(row);
-                    }}
-                    className="action-btn delete-btn"
-                    title="Borrar registro"
-                  >
-                    ×
-                  </button>
-                </td>
                 {reorderedColumns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
@@ -1339,6 +1376,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         isOpen={mailModal.isOpen}
         onClose={handleCloseMailModal}
         rowData={mailModal.rowData}
+      />
+
+      {/* Drive Manager Modal */}
+      <DriveManager 
+        isOpen={driveModal.isOpen}
+        onClose={handleCloseDriveModal}
+        clientData={driveModal.clientData}
       />
 
       {/* Delete Confirmation Dialog */}
