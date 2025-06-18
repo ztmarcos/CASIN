@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
 import SupportChat from '../SupportChat/SupportChat';
+import TeamSelector from '../TeamSelector/TeamSelector';
 
 import { FEATURES } from '../../config/features';
 import logoImage from '/logo.png';
@@ -81,9 +82,21 @@ const Layout = ({ children }) => {
           </nav>
         </div>
         <div className="right-section">
+          <TeamSelector />
           <AirplaneButton />
           <div className="user-section">
-            <span className="user-email">{user?.email}</span>
+            {user?.photoURL && (
+              <img 
+                src={user.photoURL} 
+                alt="Profile" 
+                className="user-avatar"
+                referrerPolicy="no-referrer"
+              />
+            )}
+            <div className="user-info">
+              {user?.name && <span className="user-name">{user.name}</span>}
+              <span className="user-email">{user?.email}</span>
+            </div>
             <button className="logout-button" onClick={logout}>
               <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />

@@ -9,11 +9,12 @@ import PDFParser from './components/PDFParser_new/PDFParser'
 import Datapool from './components/Datapool/Datapool'
 import Birthdays from './components/Birthdays/Birthdays'
 import Reports from './components/Reports/Reports'
-import Login from './components/Auth/Login'
+import GoogleLogin from './components/Auth/GoogleLogin'
 import UserManagement from './components/UserManagement/UserManagement'
 import Tasks from './pages/Tasks'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { TeamProvider } from './context/TeamContext'
 import './styles/theme.css'
 import './App.css'
 import Sharepoint from './components/Sharepoint/Sharepoint'
@@ -26,7 +27,16 @@ import Cotiza from './components/Cotiza/Cotiza'
 
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
-  // Temporalmente desactivado el chequeo de autenticación
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div>Cargando...</div>;
+  }
+  
+  if (!user) {
+    return <GoogleLogin />;
+  }
+  
   return children;
 };
 
@@ -194,11 +204,13 @@ function App() {
         }}
       />
       <AuthProvider>
-        <ThemeProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </ThemeProvider>
+        <TeamProvider>
+          <ThemeProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </ThemeProvider>
+        </TeamProvider>
       </AuthProvider>
     </>
   );

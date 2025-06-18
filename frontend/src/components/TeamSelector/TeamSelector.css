@@ -1,0 +1,252 @@
+.team-selector {
+  position: relative;
+  display: inline-block;
+}
+
+.team-selector.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 8px;
+  color: var(--text-secondary, #666);
+  font-size: 14px;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.team-selector-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--text-primary, #333);
+  min-width: 180px;
+}
+
+.team-selector-button:hover {
+  background: var(--bg-hover, #f8f9fa);
+  border-color: var(--primary-color, #007bff);
+}
+
+.team-selector-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.team-icon {
+  font-size: 16px;
+}
+
+.team-name {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-arrow {
+  transition: transform 0.2s ease;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+}
+
+.dropdown-arrow.open {
+  transform: rotate(180deg);
+}
+
+.team-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.dropdown-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-secondary, #f8f9fa);
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary, #333);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+  gap: 12px;
+}
+
+.dropdown-item:hover {
+  background: var(--bg-hover, #f8f9fa);
+}
+
+.dropdown-item.active {
+  background: var(--primary-light, #e3f2fd);
+  color: var(--primary-color, #007bff);
+}
+
+.dropdown-item:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.team-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-name-dropdown {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary, #333);
+  margin-bottom: 2px;
+}
+
+.team-description {
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  line-height: 1.3;
+}
+
+.active-indicator {
+  color: var(--success-color, #28a745);
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.default-badge {
+  background: var(--warning-color, #ffc107);
+  color: var(--warning-text, #856404);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dropdown-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-secondary, #f8f9fa);
+  text-align: center;
+}
+
+.dropdown-footer small {
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+}
+
+.switching-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-secondary, #666);
+  z-index: 10;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .team-selector-button {
+    min-width: 150px;
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .team-dropdown {
+    min-width: 250px;
+    left: -50px;
+  }
+  
+  .dropdown-item {
+    padding: 10px 14px;
+  }
+  
+  .team-name-dropdown {
+    font-size: 13px;
+  }
+  
+  .team-description {
+    font-size: 11px;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .team-selector-button {
+    background: var(--bg-dark-primary, #2d3748);
+    border-color: var(--border-dark, #4a5568);
+    color: var(--text-dark-primary, #e2e8f0);
+  }
+  
+  .team-selector-button:hover {
+    background: var(--bg-dark-hover, #4a5568);
+  }
+  
+  .team-dropdown {
+    background: var(--bg-dark-primary, #2d3748);
+    border-color: var(--border-dark, #4a5568);
+  }
+  
+  .dropdown-header {
+    background: var(--bg-dark-secondary, #1a202c);
+    color: var(--text-dark-primary, #e2e8f0);
+  }
+  
+  .dropdown-item:hover {
+    background: var(--bg-dark-hover, #4a5568);
+  }
+  
+  .dropdown-footer {
+    background: var(--bg-dark-secondary, #1a202c);
+  }
+  
+  .team-name-dropdown {
+    color: var(--text-dark-primary, #e2e8f0);
+  }
+  
+  .team-description {
+    color: var(--text-dark-secondary, #a0aec0);
+  }
+} 

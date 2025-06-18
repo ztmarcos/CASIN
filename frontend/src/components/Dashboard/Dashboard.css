@@ -518,4 +518,20 @@
 .test-errors li {
   margin: 2px 0;
   font-size: 0.85rem;
+}
+
+/* Team Demo Card */
+.team-demo-card {
+  grid-column: 1 / -1; /* Ocupa todo el ancho del grid */
+}
+
+.team-demo-card .team-demo {
+  padding: 0; /* Remover padding porque ya está en el card */
+}
+
+.team-demo-card .team-demo-card {
+  border: none; /* Remover borde duplicado */
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
 } 

@@ -10,9 +10,16 @@ export const AuthProvider = ({ children }) => {
     // Verificar si hay un token guardado al cargar la app
     const token = localStorage.getItem('token');
     const email = localStorage.getItem('userEmail');
+    const name = localStorage.getItem('userName');
+    const photoURL = localStorage.getItem('userPhoto');
     
     if (token && email) {
-      setUser({ email, token });
+      setUser({ 
+        email, 
+        token, 
+        name: name || '',
+        photoURL: photoURL || '' 
+      });
     }
     setLoading(false);
   }, []);
@@ -24,6 +31,8 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userPhoto');
     setUser(null);
   };
 

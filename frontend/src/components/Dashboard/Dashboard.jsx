@@ -4,6 +4,7 @@ import Weather from '../Weather/Weather';
 import firebaseDashboardService from '../../services/firebaseDashboardService';
 import { formatDate } from '../../utils/dateUtils';
 import { runFirebaseTests } from '../../utils/firebaseTest';
+import TeamDemo from '../TeamDemo/TeamDemo';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -274,6 +275,11 @@ const Dashboard = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Team Demo Section */}
+        <div className="dashboard-card team-demo-card">
+          <TeamDemo />
         </div>
       </div>
     </div>
