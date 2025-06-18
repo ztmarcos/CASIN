@@ -8,25 +8,20 @@ import toast from 'react-hot-toast';
 import './TeamDataDemo.css';
 
 const TeamDataDemo = () => {
-  const { currentTeam, currentTeamMembers, userTeam } = useTeam();
+  const { currentTeam, currentTeamMembers, userTeam, inviteUserToTeam, removeUserFromTeam, canManageUsers, isAdmin } = useTeam();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
   
   // Estados para datos
   const [stats, setStats] = useState(null);
-  const [contactos, setContactos] = useState([]);
   const [teamInfo, setTeamInfo] = useState(null);
   const [migrationStatus, setMigrationStatus] = useState([]);
   
-  // Estados para formularios
-  const [newContacto, setNewContacto] = useState({
-    nombre: '',
-    email: '',
-    telefono: '',
-    empresa: '',
-    cargo: ''
-  });
+  // Estados para gestión de usuarios
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserName, setNewUserName] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   useEffect(() => {
     const team = currentTeam || userTeam;
@@ -63,20 +58,6 @@ const TeamDataDemo = () => {
     }
   };
 
-  const loadContactos = async () => {
-    try {
-      setLoading(true);
-      const contactosData = await teamDirectorioService.getAllContactos();
-      setContactos(contactosData);
-      console.log('👥 Contacts loaded:', contactosData);
-    } catch (error) {
-      console.error('❌ Error loading contacts:', error);
-      toast.error('Error cargando contactos');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const loadMigrationStatus = async () => {
     try {
       setLoading(true);
@@ -91,56 +72,59 @@ const TeamDataDemo = () => {
     }
   };
 
-  // ================== Operaciones CRUD ==================
+  // ================== Gestión de usuarios ==================
 
-  const handleCreateContacto = async (e) => {
+  const handleInviteUser = async (e) => {
     e.preventDefault();
-    if (!newContacto.nombre.trim()) {
-      toast.error('El nombre es requerido');
+    
+    if (!newUserEmail.trim()) {
+      toast.error('El email es requerido');
+      return;
+    }
+
+    if (!newUserEmail.includes('@gmail.com')) {
+      toast.error('Solo se permiten emails de Gmail (@gmail.com)');
+      return;
+    }
+
+    // Todos los usuarios pueden invitar
+
+    try {
+      setInviteLoading(true);
+      await inviteUserToTeam(newUserEmail.trim());
+      toast.success(`Usuario ${newUserEmail} invitado exitosamente`);
+      
+      setNewUserEmail('');
+      setNewUserName('');
+      
+      console.log('✅ User invited:', newUserEmail);
+    } catch (error) {
+      console.error('❌ Error inviting user:', error);
+      toast.error('Error invitando usuario: ' + error.message);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleRemoveUser = async (memberEmail) => {
+    // Todos los usuarios pueden remover usuarios (excepto a sí mismos)
+
+    if (memberEmail === user?.email) {
+      toast.error('No puedes eliminarte a ti mismo');
+      return;
+    }
+
+    if (!window.confirm(`¿Estás seguro de remover a ${memberEmail} del equipo?`)) {
       return;
     }
 
     try {
       setLoading(true);
-      const createdContacto = await teamDirectorioService.createContacto(newContacto);
-      toast.success('Contacto creado exitosamente');
-      
-      setNewContacto({
-        nombre: '',
-        email: '',
-        telefono: '',
-        empresa: '',
-        cargo: ''
-      });
-      
-      // Actualizar lista
-      await loadContactos();
-      await loadStats();
-      
-      console.log('✅ Contact created:', createdContacto);
+      await removeUserFromTeam(memberEmail);
+      toast.success(`Usuario ${memberEmail} removido del equipo`);
     } catch (error) {
-      console.error('❌ Error creating contact:', error);
-      toast.error('Error creando contacto: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-
-  const handleDeleteContacto = async (contactoId) => {
-    if (!window.confirm('¿Estás seguro de eliminar este contacto?')) return;
-
-    try {
-      setLoading(true);
-      await teamDirectorioService.deleteContacto(contactoId);
-      toast.success('Contacto eliminado');
-      
-      await loadContactos();
-      await loadStats();
-    } catch (error) {
-      console.error('❌ Error deleting contact:', error);
-      toast.error('Error eliminando contacto');
+      console.error('❌ Error removing user:', error);
+      toast.error('Error removiendo usuario: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -193,50 +177,6 @@ const TeamDataDemo = () => {
     }
   };
 
-  // ================== Datos de prueba ==================
-
-  const createSampleData = async () => {
-    try {
-      setLoading(true);
-      const sampleContactos = [
-        {
-          nombre: 'Juan Pérez',
-          email: 'juan.perez@example.com',
-          telefono: '5551234567',
-          empresa: 'Empresa ABC',
-          cargo: 'Gerente'
-        },
-        {
-          nombre: 'María García',
-          email: 'maria.garcia@example.com',
-          telefono: '5559876543',
-          empresa: 'Corporativo XYZ',
-          cargo: 'Directora'
-        },
-        {
-          nombre: 'Carlos López',
-          email: 'carlos.lopez@example.com',
-          telefono: '5555555555',
-          empresa: 'Startup DEF',
-          cargo: 'CEO'
-        }
-      ];
-
-      for (const contacto of sampleContactos) {
-        await teamDirectorioService.createContacto(contacto);
-      }
-
-      toast.success('Datos de prueba creados');
-      await loadContactos();
-      await loadStats();
-    } catch (error) {
-      console.error('❌ Error creating sample data:', error);
-      toast.error('Error creando datos de prueba');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const team = currentTeam || userTeam;
   
   if (!team) {
@@ -258,8 +198,8 @@ const TeamDataDemo = () => {
   return (
     <div className="team-data-demo">
       <div className="demo-header">
-        <h1>🏢 Demo de Datos por Equipo</h1>
-        <p>Gestión de datos aislada por equipo para {team.name}</p>
+        <h1>🏢 Gestión del Equipo</h1>
+        <p>Gestión de usuarios y datos del equipo {team.name}</p>
       </div>
 
       {/* Tabs */}
@@ -271,15 +211,11 @@ const TeamDataDemo = () => {
           📊 Resumen
         </button>
         <button 
-          className={activeTab === 'contactos' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('contactos');
-            if ((contactos?.length || 0) === 0) loadContactos();
-          }}
+          className={activeTab === 'users' ? 'active' : ''}
+          onClick={() => setActiveTab('users')}
         >
-          👥 Contactos
+          👥 Gestión de Usuarios
         </button>
-
         <button 
           className={activeTab === 'config' ? 'active' : ''}
           onClick={() => setActiveTab('config')}
@@ -306,9 +242,9 @@ const TeamDataDemo = () => {
                 </div>
 
                 <div className="stat-card">
-                  <h3>🏢 Equipo</h3>
+                  <h3>🏢 Miembros</h3>
                   <div className="stat-number">{currentTeamMembers?.length || 0}</div>
-                  <div className="stat-detail">miembros</div>
+                  <div className="stat-detail">usuarios activos</div>
                 </div>
                 <div className="stat-card">
                   <h3>💾 Base de Datos</h3>
@@ -326,110 +262,130 @@ const TeamDataDemo = () => {
             )}
 
             <div className="demo-actions">
-              <button onClick={createSampleData} disabled={loading}>
-                📝 Crear Datos de Prueba
-              </button>
               <button onClick={loadStats} disabled={loading}>
                 🔄 Actualizar Estadísticas
               </button>
+              <button onClick={initializeAllCollections} disabled={loading}>
+                🗂️ Inicializar Colecciones
+              </button>
             </div>
           </div>
         )}
 
-        {/* Contactos Tab */}
-        {activeTab === 'contactos' && (
+        {/* Users Tab */}
+        {activeTab === 'users' && (
           <div className="demo-section">
-            <h2>👥 Gestión de Contactos</h2>
+            <h2>👥 Gestión de Usuarios del Equipo</h2>
             
-            {/* Formulario crear contacto */}
-            <div className="form-section">
-              <h3>➕ Nuevo Contacto</h3>
-              <form onSubmit={handleCreateContacto} className="create-form">
-                <div className="form-grid">
-                  <input
-                    type="text"
-                    placeholder="Nombre *"
-                    value={newContacto.nombre}
-                    onChange={(e) => setNewContacto({...newContacto, nombre: e.target.value})}
-                    required
-                  />
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={newContacto.email}
-                    onChange={(e) => setNewContacto({...newContacto, email: e.target.value})}
-                  />
-                  <input
-                    type="tel"
-                    placeholder="Teléfono"
-                    value={newContacto.telefono}
-                    onChange={(e) => setNewContacto({...newContacto, telefono: e.target.value})}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Empresa"
-                    value={newContacto.empresa}
-                    onChange={(e) => setNewContacto({...newContacto, empresa: e.target.value})}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Cargo"
-                    value={newContacto.cargo}
-                    onChange={(e) => setNewContacto({...newContacto, cargo: e.target.value})}
-                  />
+            {canManageUsers() ? (
+              <>
+                {/* Formulario invitar usuario - solo para usuarios con permisos */}
+                <div className="form-section">
+                  <h3>📧 Invitar Nuevo Usuario</h3>
+                  <form onSubmit={handleInviteUser} className="invite-form">
+                    <div className="form-grid">
+                      <div className="input-group">
+                        <label htmlFor="userEmail">
+                          <span className="input-icon">📧</span>
+                          Email de Gmail *
+                        </label>
+                        <input
+                          id="userEmail"
+                          type="email"
+                          placeholder="usuario@gmail.com"
+                          value={newUserEmail}
+                          onChange={(e) => setNewUserEmail(e.target.value)}
+                          required
+                        />
+                        <small className="input-hint">
+                          Solo emails de Gmail (@gmail.com) son permitidos
+                        </small>
+                      </div>
+                      <div className="input-group">
+                        <label htmlFor="userName">
+                          <span className="input-icon">👤</span>
+                          Nombre (opcional)
+                        </label>
+                        <input
+                          id="userName"
+                          type="text"
+                          placeholder="Nombre del usuario"
+                          value={newUserName}
+                          onChange={(e) => setNewUserName(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <button type="submit" disabled={inviteLoading} className="btn-invite">
+                      {inviteLoading ? '📤 Enviando invitación...' : '📤 Invitar Usuario'}
+                    </button>
+                  </form>
                 </div>
-                <button type="submit" disabled={loading}>
-                  {loading ? 'Creando...' : 'Crear Contacto'}
-                </button>
-              </form>
-            </div>
+              </>
+            ) : (
+              <div className="permission-notice">
+                <h3>ℹ️ Solo Lectura</h3>
+                <p>Puedes ver la lista de miembros del equipo, pero no tienes permisos para invitar o remover usuarios.</p>
+                <p>Contacta a un administrador si necesitas gestionar miembros del equipo.</p>
+              </div>
+            )}
 
-            {/* Lista de contactos */}
-            <div className="list-section">
-              <div className="list-header">
-                <h3>📋 Lista de Contactos ({contactos?.length || 0})</h3>
-                <button onClick={loadContactos} disabled={loading}>
-                  🔄 Recargar
-                </button>
+            {/* Lista de usuarios del equipo - visible para todos */}
+            <div className="users-section">
+              <div className="section-header">
+                <h3>👥 Miembros del Equipo ({currentTeamMembers?.length || 0})</h3>
+                <div className="admin-badge">
+                  {canManageUsers() ? '👑 Puedes gestionar usuarios' : '👤 Solo lectura'}
+                </div>
               </div>
               
-              {loading ? (
-                <div className="loading">Cargando contactos...</div>
-              ) : (
-                <div className="contacts-list">
-                  {contactos.map((contacto) => (
-                    <div key={contacto.id} className="contact-card">
-                      <div className="contact-info">
-                        <h4>{contacto.nombre}</h4>
-                        {contacto.email && <p>📧 {contacto.email}</p>}
-                        {contacto.telefono && <p>📱 {contacto.telefono}</p>}
-                        {contacto.empresa && <p>🏢 {contacto.empresa}</p>}
-                        {contacto.cargo && <p>💼 {contacto.cargo}</p>}
+              <div className="users-list">
+                {(currentTeamMembers || []).map((member) => (
+                  <div key={member.id} className="user-card">
+                    <div className="user-info">
+                      <div className="user-avatar">
+                        {member.role === 'admin' ? '👑' : '👤'}
                       </div>
-                      <div className="contact-actions">
+                      <div className="user-details">
+                        <h4>{member.name || member.email}</h4>
+                        <p className="user-email">📧 {member.email}</p>
+                        <div className="user-meta">
+                          <span className={`role-badge ${member.role}`}>
+                            {member.role === 'admin' ? '👑 Administrador' : '👤 Miembro'}
+                          </span>
+                          <span className={`status-badge ${member.status || 'active'}`}>
+                            {member.status === 'invited' ? '📤 Invitado' : '✅ Activo'}
+                          </span>
+                        </div>
+                        {member.invitedBy && (
+                          <p className="invited-by">Invitado por: {member.invitedBy}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {canManageUsers() && member.email !== user?.email && (
+                      <div className="user-actions">
                         <button 
-                          onClick={() => handleDeleteContacto(contacto.id)}
-                          className="delete-btn"
+                          onClick={() => handleRemoveUser(member.email)}
+                          className="remove-user-btn"
+                          title="Remover del equipo"
                         >
-                          🗑️
+                          🗑️ Remover
                         </button>
                       </div>
-                    </div>
-                  ))}
-                  
-                  {(contactos?.length || 0) === 0 && (
-                    <div className="empty-state">
-                      <p>No hay contactos en este equipo</p>
-                      <p>Crea algunos datos de prueba para comenzar</p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                ))}
+                
+                {(currentTeamMembers?.length || 0) === 0 && (
+                  <div className="empty-state">
+                    <p>No se encontraron miembros del equipo</p>
+                    {canManageUsers() && <p>Invita usuarios para comenzar a colaborar</p>}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
-
-
 
         {/* Config Tab */}
         {activeTab === 'config' && (

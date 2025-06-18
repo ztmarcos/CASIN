@@ -79,7 +79,8 @@ class TableServiceAdapter {
       const casinUsers = [
         'z.t.marcos@gmail.com',
         'ztmarcos@gmail.com',
-        'marcos@casin.com'
+        'marcos@casin.com',
+        'bumtekateam@gmail.com' // Admin adicional para pruebas
       ];
       
       const isCasin = casinUsers.includes(userEmail);
@@ -129,7 +130,7 @@ class TableServiceAdapter {
   // ===== MÉTODOS DE TABLAS =====
 
   /**
-   * Obtiene todas las tablas
+   * Obtiene todas las tablas con información de conteo
    */
   async getTables() {
     try {
@@ -137,12 +138,53 @@ class TableServiceAdapter {
         // Usar team data service
         const collections = await teamDataService.listCollections();
         
-        // Convertir a formato esperado por los componentes
-        return collections.map(collectionName => ({
-          name: collectionName,
-          title: this.formatTableTitle(collectionName),
-          count: 0 // Se puede obtener después si es necesario
-        }));
+        // Obtener conteo para cada colección
+        const tablesWithCount = await Promise.all(
+          collections.map(async (collectionName) => {
+            try {
+              // Obtener conteo de la colección del equipo
+              let count = 0;
+              const result = await teamDataService.queryDocuments(collectionName, { 
+                limit: 0, // Solo obtener el conteo, no los documentos
+                countOnly: true 
+              });
+              count = result.total || 0;
+              
+              // Si la colección del equipo está vacía, intentar obtener conteo de CASIN original
+              if (count === 0) {
+                try {
+                  const casinResult = await firebaseTableService.getData(collectionName, { 
+                    limit: 0, // Solo obtener el conteo
+                    countOnly: true 
+                  });
+                  count = casinResult.total || (casinResult.data ? casinResult.data.length : 0);
+                  console.log(`📊 Using CASIN count for ${collectionName}: ${count}`);
+                } catch (fallbackError) {
+                  console.warn(`⚠️ Could not get CASIN count for ${collectionName}:`, fallbackError);
+                }
+              } else {
+                console.log(`📊 Using team count for ${collectionName}: ${count}`);
+              }
+              
+              return {
+                name: collectionName,
+                title: this.formatTableTitle(collectionName),
+                count: count,
+                isTeamData: count > 0 && result.total > 0
+              };
+            } catch (error) {
+              console.warn(`⚠️ Could not get count for ${collectionName}:`, error);
+              return {
+                name: collectionName,
+                title: this.formatTableTitle(collectionName),
+                count: 0
+              };
+            }
+          })
+        );
+        
+        console.log('📊 Tables with counts:', tablesWithCount.map(t => `${t.name} (${t.count})`));
+        return tablesWithCount;
       } else {
         // Fallback al servicio original
         return await firebaseTableService.getTables();
@@ -250,7 +292,7 @@ class TableServiceAdapter {
   // ===== MÉTODOS DE DATOS =====
 
   /**
-   * Obtiene datos de una tabla
+   * Obtiene datos de una tabla con fallback a datos originales de CASIN
    */
   async getData(tableName, filters = {}) {
     try {
@@ -267,12 +309,32 @@ class TableServiceAdapter {
         
         const result = await teamDataService.queryDocuments(tableName, options);
         
+        // Si la colección del equipo está vacía, intentar obtener datos de CASIN original
+        if ((!result.documents || result.documents.length === 0) && result.total === 0) {
+          console.log(`📋 Team collection ${tableName} is empty, trying CASIN fallback...`);
+          
+          try {
+            const casinResult = await firebaseTableService.getData(tableName, filters);
+            if (casinResult.data && casinResult.data.length > 0) {
+              console.log(`✅ Using CASIN data for ${tableName}: ${casinResult.data.length} records`);
+              return {
+                ...casinResult,
+                isFromCASIN: true, // Marcar que viene de CASIN original
+                message: 'Mostrando datos de CASIN original (colección del equipo vacía)'
+              };
+            }
+          } catch (fallbackError) {
+            console.warn(`⚠️ CASIN fallback failed for ${tableName}:`, fallbackError);
+          }
+        }
+        
         // Convertir al formato esperado
         return {
           data: result.documents || [],
           total: result.total || 0,
           page: result.page || 1,
-          totalPages: Math.ceil((result.total || 0) / (options.limit || 50))
+          totalPages: Math.ceil((result.total || 0) / (options.limit || 50)),
+          isFromTeam: true
         };
       } else {
         return await firebaseTableService.getData(tableName, filters);

@@ -36,10 +36,10 @@ import DirectorioSimple from './components/Directorio/DirectorioSimple'
 import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 import Cotiza from './components/Cotiza/Cotiza'
 
-// Componente protector de rutas
-const ProtectedRoute = ({ children }) => {
+// Componente protector de rutas con verificación de permisos
+const ProtectedRoute = ({ children, requireManageUsers = false }) => {
   const { user, loading } = useAuth();
-  const { needsTeamSetup, isLoadingTeam, userTeam } = useTeam();
+  const { needsTeamSetup, isLoadingTeam, userTeam, canManageUsers } = useTeam();
   
   console.log('🛡️ ProtectedRoute: State check', {
     user: !!user,
@@ -48,7 +48,9 @@ const ProtectedRoute = ({ children }) => {
     isLoadingTeam,
     needsTeamSetup,
     userTeam: !!userTeam,
-    teamName: userTeam?.name
+    teamName: userTeam?.name,
+    requireManageUsers,
+    canManageUsers: canManageUsers ? canManageUsers() : false
   });
   
   // 1. Primero verificar si está cargando la autenticación
@@ -109,7 +111,30 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
-  // 6. Todo está listo, mostrar la aplicación
+  // 6. Verificar permisos específicos si se requieren
+  if (requireManageUsers && canManageUsers && !canManageUsers()) {
+    return (
+      <Layout>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '60vh',
+          fontSize: '1.2rem',
+          color: '#666',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <h2 style={{ color: '#e74c3c', marginBottom: '1rem' }}>🚫 Acceso Denegado</h2>
+          <p style={{ marginBottom: '0.5rem' }}>No tienes permisos para acceder a esta sección.</p>
+          <p style={{ fontSize: '1rem', color: '#999' }}>Solo los administradores del equipo pueden gestionar datos y configuraciones.</p>
+        </div>
+      </Layout>
+    );
+  }
+  
+  // 7. Todo está listo, mostrar la aplicación
   return children;
 };
 
@@ -249,7 +274,11 @@ function AppRoutes() {
       } />
 
       <Route path="/database-viewer" element={
-        <DatabaseViewer />
+        <ProtectedRoute requireManageUsers>
+          <Layout>
+            <DatabaseViewer />
+          </Layout>
+        </ProtectedRoute>
       } />
 
       <Route path="/team-firebase" element={
@@ -260,16 +289,8 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      <Route path="/team" element={
-        <ProtectedRoute>
-          <Layout>
-            <TeamManagement />
-          </Layout>
-        </ProtectedRoute>
-      } />
-
       <Route path="/team-data" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireManageUsers>
           <Layout>
             <TeamDataDemo />
           </Layout>

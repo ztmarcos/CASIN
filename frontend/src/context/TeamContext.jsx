@@ -285,7 +285,7 @@ export const TeamProvider = ({ children }) => {
     }
   };
 
-  const createTeam = async (teamName) => {
+  const createTeam = async (teamName, teamMembers = []) => {
     if (!user?.email || !user?.uid) {
       throw new Error('User not properly authenticated - missing email or uid');
     }
@@ -293,6 +293,7 @@ export const TeamProvider = ({ children }) => {
     try {
       console.log('🏢 Creating new team:', teamName);
       console.log('👤 User data:', { email: user.email, uid: user.uid, name: user.name });
+      console.log('👥 Team members to add:', teamMembers);
       
       // Crear el equipo
       const teamData = {
@@ -317,10 +318,34 @@ export const TeamProvider = ({ children }) => {
         teamId: teamDocRef.id,
         role: 'admin',
         invitedBy: user.email,
-        joinedAt: serverTimestamp()
+        joinedAt: serverTimestamp(),
+        status: 'active'
       });
 
       console.log('✅ User added as team admin');
+
+      // Agregar miembros del equipo
+      for (const member of teamMembers) {
+        if (member.email && member.email.trim()) {
+          try {
+            await addDoc(collection(db, 'team_members'), {
+              userId: null, // Se llenará cuando el usuario haga login
+              email: member.email.trim(),
+              name: member.name || member.email.trim(),
+              teamId: teamDocRef.id,
+              role: 'member',
+              invitedBy: user.email,
+              joinedAt: serverTimestamp(),
+              status: 'invited'
+            });
+            console.log(`✅ Member invited: ${member.email}`);
+          } catch (memberError) {
+            console.warn(`⚠️ Could not invite member ${member.email}:`, memberError);
+          }
+        }
+      }
+
+      console.log(`✅ Team created with ${teamMembers.length} invited members`);
 
       // Inicializar colecciones del equipo
       await initializeTeamCollections(teamDocRef.id);
@@ -337,8 +362,8 @@ export const TeamProvider = ({ children }) => {
   };
 
   const inviteUserToTeam = async (emailToInvite) => {
-    if (!userTeam || userRole !== 'admin') {
-      throw new Error('Only team admins can invite users');
+    if (!userTeam) {
+      throw new Error('No team available');
     }
 
     try {
@@ -382,8 +407,8 @@ export const TeamProvider = ({ children }) => {
   };
 
   const removeUserFromTeam = async (memberEmail) => {
-    if (!userTeam || userRole !== 'admin') {
-      throw new Error('Only team admins can remove users');
+    if (!userTeam) {
+      throw new Error('No team available');
     }
 
     if (memberEmail === user.email) {
@@ -421,16 +446,35 @@ export const TeamProvider = ({ children }) => {
 
   const isAdmin = () => userRole === 'admin';
   const isMember = () => userRole === 'member' || userRole === 'admin';
+  
+  // Función para determinar si puede gestionar aspectos básicos del equipo
+  const canManageTeam = () => {
+    // Los admins siempre pueden gestionar
+    if (userRole === 'admin') return true;
+    
+    // Para otros usuarios, verificar si son del equipo y tienen permisos básicos
+    // Solo permitir a usuarios regulares ver datos, pero NO gestionar miembros
+    return false;
+  };
+  
+  // Función para verificar si puede gestionar usuarios del equipo
+  const canManageUsers = () => {
+    // Solo los administradores pueden gestionar usuarios
+    return userRole === 'admin';
+  };
 
   const value = {
     userTeam,
     teamMembers,
+    currentTeamMembers: teamMembers, // Alias para compatibilidad
     isLoadingTeam,
     needsTeamSetup,
     userRole,
     teamFirebaseConfig,
     isAdmin,
     isMember,
+    canManageTeam,
+    canManageUsers,
     createTeam,
     inviteUserToTeam,
     removeUserFromTeam,
