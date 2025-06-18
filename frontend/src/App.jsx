@@ -4,7 +4,6 @@ import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard/Dashboard'
 import DataSection from './components/DataSection/DataSection'
 import TestGPT from './components/TestGPT/TestGPT'
-import Drive from './components/Drive/Drive'
 import Firedrive from './components/Drive/Firedrive'
 import DriveMigration from './components/DriveMigration/DriveMigration'
 import PDFParser from './components/PDFParser_new/PDFParser'
@@ -170,14 +169,6 @@ function AppRoutes() {
       } />
       
       <Route path="/drive" element={
-        <ProtectedRoute>
-          <Layout>
-            <Drive currentUser={user?.email || 'default-user'} />
-          </Layout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/firedrive" element={
         <ProtectedRoute>
           <Layout>
             <Firedrive currentUser={user?.email || 'default-user'} />
