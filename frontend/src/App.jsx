@@ -12,9 +12,11 @@ import Reports from './components/Reports/Reports'
 import GoogleLogin from './components/Auth/GoogleLogin'
 import UserManagement from './components/UserManagement/UserManagement'
 import Tasks from './pages/Tasks'
+import TeamSetup from './components/TeamSetup/TeamSetup'
+import TeamManagement from './components/TeamManagement/TeamManagement'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
-import { TeamProvider } from './context/TeamContext'
+import { TeamProvider, useTeam } from './context/TeamContext'
 import './styles/theme.css'
 import './App.css'
 import Sharepoint from './components/Sharepoint/Sharepoint'
@@ -28,13 +30,44 @@ import Cotiza from './components/Cotiza/Cotiza'
 // Componente protector de rutas
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const { needsTeamSetup, isLoadingTeam, userTeam } = useTeam();
   
-  if (loading) {
-    return <div>Cargando...</div>;
+  if (loading || isLoadingTeam) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontSize: '1.2rem',
+        color: '#666'
+      }}>
+        Cargando...
+      </div>
+    );
   }
   
   if (!user) {
     return <GoogleLogin />;
+  }
+  
+  if (needsTeamSetup) {
+    return <TeamSetup />;
+  }
+  
+  if (!userTeam) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontSize: '1.2rem',
+        color: '#666'
+      }}>
+        Configurando equipo...
+      </div>
+    );
   }
   
   return children;
@@ -171,6 +204,13 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/team" element={
+        <ProtectedRoute>
+          <Layout>
+            <TeamManagement />
+          </Layout>
+        </ProtectedRoute>
+      } />
 
       
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,0 +1,424 @@
+.team-management {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.team-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.team-header h1 {
+  color: var(--text-primary, #333);
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+.team-header p {
+  color: var(--text-secondary, #666);
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+/* Access Denied */
+.access-denied {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: var(--bg-warning, #fff3cd);
+  border: 1px solid var(--border-warning, #ffeaa7);
+  border-radius: 12px;
+  margin: 2rem 0;
+}
+
+.access-denied h2 {
+  color: var(--text-warning, #856404);
+  margin: 0 0 1rem 0;
+}
+
+.access-denied p {
+  color: var(--text-warning, #856404);
+  margin: 0;
+}
+
+/* Invite Section */
+.invite-section {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.invite-section h2 {
+  color: var(--text-primary, #333);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+}
+
+.invite-form .form-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.email-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary, #333);
+}
+
+.email-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #007bff);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.invite-btn {
+  padding: 0.75rem 1.5rem;
+  background: var(--primary-color, #007bff);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.invite-btn:hover:not(:disabled) {
+  background: var(--primary-hover, #0056b3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.invite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.form-hint {
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  margin-top: 0.5rem;
+}
+
+/* Members Section */
+.members-section {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.members-section h2 {
+  color: var(--text-primary, #333);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+}
+
+.no-members {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary, #666);
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 8px;
+  border: 1px dashed var(--border-color, #e0e0e0);
+}
+
+.members-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.member-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  background: var(--bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.member-card:hover {
+  border-color: var(--primary-color, #007bff);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.member-avatar {
+  width: 48px;
+  height: 48px;
+  background: var(--primary-light, #e3f2fd);
+  border: 2px solid var(--primary-color, #007bff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.member-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  font-size: 1.125rem;
+  margin-bottom: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.you-badge {
+  background: var(--success-color, #28a745);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.member-email {
+  color: var(--text-secondary, #666);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+
+.member-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.member-role {
+  background: var(--primary-color, #007bff);
+  color: white;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.member-status {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+}
+
+.member-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.remove-btn {
+  padding: 0.5rem;
+  background: var(--danger-color, #dc3545);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-btn:hover:not(:disabled) {
+  background: var(--danger-hover, #c82333);
+  transform: scale(1.05);
+}
+
+.remove-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Team Info */
+.team-info {
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.team-info h2 {
+  color: var(--text-primary, #333);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+}
+
+.info-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 8px;
+  border: 1px solid var(--border-color-light, #dee2e6);
+}
+
+.info-item strong {
+  color: var(--text-primary, #333);
+  font-weight: 600;
+}
+
+.info-item code {
+  background: var(--bg-code, #f1f3f4);
+  color: var(--text-code, #d73a49);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 0.875rem;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .team-management {
+    padding: 1rem;
+  }
+  
+  .invite-section,
+  .members-section,
+  .team-info {
+    padding: 1.5rem;
+  }
+  
+  .team-header h1 {
+    font-size: 2rem;
+  }
+  
+  .invite-form .form-group {
+    flex-direction: column;
+  }
+  
+  .member-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .member-info {
+    width: 100%;
+  }
+  
+  .member-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .member-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .invite-section,
+  .members-section,
+  .team-info {
+    background: var(--bg-dark-primary, #2d3748);
+    border-color: var(--border-dark, #4a5568);
+  }
+  
+  .email-input {
+    background: var(--bg-dark-secondary, #1a202c);
+    border-color: var(--border-dark, #4a5568);
+    color: var(--text-dark-primary, #e2e8f0);
+  }
+  
+  .email-input:focus {
+    border-color: var(--primary-color, #3182ce);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  }
+  
+  .member-card {
+    background: var(--bg-dark-secondary, #1a202c);
+    border-color: var(--border-dark, #4a5568);
+  }
+  
+  .member-card:hover {
+    border-color: var(--primary-color, #3182ce);
+  }
+  
+  .member-avatar {
+    background: var(--primary-dark, #1a365d);
+    border-color: var(--primary-color, #3182ce);
+  }
+  
+  .no-members {
+    background: var(--bg-dark-secondary, #1a202c);
+    border-color: var(--border-dark, #4a5568);
+  }
+  
+  .info-item {
+    background: var(--bg-dark-secondary, #1a202c);
+    border-color: var(--border-dark, #4a5568);
+  }
+} 

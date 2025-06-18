@@ -71,6 +71,18 @@
   margin: -.7rem;
 }
 
+.admin-badge {
+  background: var(--warning-color, #ffc107);
+  color: var(--warning-text, #856404);
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 0.5rem;
+}
+
 [data-theme='dark'] .top-bar {
   background-color: #121212;
   border-color: #2d3748;
