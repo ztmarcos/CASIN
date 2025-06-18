@@ -196,6 +196,13 @@ class TeamDataService {
         orderBy: orderByField = 'createdAt',
         orderDirection = 'desc'
       } = options;
+
+      // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar consultas simples sin índices
+      const currentTeamInfo = this.getCurrentTeamInfo();
+      if (currentTeamInfo && currentTeamInfo.teamId === '4JlUqhAvfJMlCDhQ4vgH') {
+        console.log(`🎯 Using simple query for team 4JlUqhAvfJMlCDhQ4vgH`);
+        return await this.queryDocumentsSimple(collectionName, options);
+      }
       
       const teamCollection = this.getCollection(collectionName);
       let q = query(teamCollection);
@@ -239,6 +246,57 @@ class TeamDataService {
       };
     } catch (error) {
       console.error(`❌ Error querying documents from ${collectionName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Versión simplificada de consultas sin índices para team específico
+   */
+  async queryDocumentsSimple(collectionName, options = {}) {
+    try {
+      console.log(`🔍 Using simple query for ${collectionName}`);
+      
+      const {
+        filters = {},
+        limit: limitCount = null,
+        page = 1
+      } = options;
+      
+      const teamCollection = this.getCollection(collectionName);
+      let q = query(teamCollection);
+      
+      // Solo aplicar límite si se especifica, sin orderBy ni where
+      if (limitCount) {
+        q = query(q, limit(limitCount));
+      }
+      
+      const querySnapshot = await getDocs(q);
+      let documents = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Aplicar filtros en memoria para evitar índices de Firebase
+      if (filters && typeof filters === 'object' && Object.keys(filters).length > 0) {
+        documents = documents.filter(doc => {
+          return Object.entries(filters).every(([field, value]) => {
+            if (value === undefined || value === null || value === '') return true;
+            return doc[field] === value;
+          });
+        });
+      }
+      
+      console.log(`✅ Simple query returned ${documents.length} documents`);
+      
+      return {
+        documents,
+        total: documents.length,
+        page,
+        totalPages: limitCount ? Math.ceil(documents.length / limitCount) : 1
+      };
+    } catch (error) {
+      console.error(`❌ Error in simple query for ${collectionName}:`, error);
       throw error;
     }
   }
@@ -303,10 +361,49 @@ class TeamDataService {
    */
   async countDocuments(collectionName, filters = {}) {
     try {
+      // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar conteo simple
+      const currentTeamInfo = this.getCurrentTeamInfo();
+      if (currentTeamInfo && currentTeamInfo.teamId === '4JlUqhAvfJMlCDhQ4vgH') {
+        console.log(`🎯 Using simple count for team 4JlUqhAvfJMlCDhQ4vgH`);
+        return await this.countDocumentsSimple(collectionName, filters);
+      }
+      
       const result = await this.queryDocuments(collectionName, { filters });
       return result.total;
     } catch (error) {
       console.error(`❌ Error counting documents:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Conteo simple sin índices para team específico
+   */
+  async countDocumentsSimple(collectionName, filters = {}) {
+    try {
+      console.log(`🔢 Simple count for ${collectionName}`);
+      
+      const teamCollection = this.getCollection(collectionName);
+      const querySnapshot = await getDocs(teamCollection);
+      
+      let count = querySnapshot.size;
+      
+      // Si hay filtros, aplicarlos en memoria
+      if (filters && typeof filters === 'object' && Object.keys(filters).length > 0) {
+        const documents = querySnapshot.docs.map(doc => doc.data());
+        const filteredDocs = documents.filter(doc => {
+          return Object.entries(filters).every(([field, value]) => {
+            if (value === undefined || value === null || value === '') return true;
+            return doc[field] === value;
+          });
+        });
+        count = filteredDocs.length;
+      }
+      
+      console.log(`✅ Simple count result: ${count}`);
+      return count;
+    } catch (error) {
+      console.error(`❌ Error in simple count for ${collectionName}:`, error);
       return 0;
     }
   }

@@ -90,6 +90,30 @@ export const TeamProvider = ({ children }) => {
     try {
       console.log('🔍 Loading team for user:', user.email);
       
+      // Para el usuario específico, asignar directamente al equipo 4JlUqhAvfJMlCDhQ4vgH
+      if (user.email === 'z.t.marcos@gmail.com') {
+        console.log('🎯 Special user detected, assigning to team 4JlUqhAvfJMlCDhQ4vgH');
+        
+        const teamId = '4JlUqhAvfJMlCDhQ4vgH';
+        const teamData = {
+          id: teamId,
+          name: 'CASIN Team',
+          description: 'Equipo principal CASIN',
+          createdAt: new Date(),
+          isMainTeam: true
+        };
+        
+        setUserTeam(teamData);
+        setUserRole('admin');
+        
+        // Configurar Firebase para este equipo
+        await setupTeamFirebase(teamId, teamData);
+        
+        console.log('✅ Special team assignment completed for CASIN');
+        setIsLoadingTeam(false);
+        return;
+      }
+      
       // Buscar al usuario en team_members
       const membersQuery = query(
         collection(db, 'team_members'),
