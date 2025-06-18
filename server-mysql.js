@@ -2665,6 +2665,157 @@ app.get('/api/drive/test', (req, res) => {
   }
 });
 
+// Download file from Google Drive
+app.get('/api/drive/download/:fileId', async (req, res) => {
+  if (!process.env.GOOGLE_DRIVE_CLIENT_EMAIL || !process.env.GOOGLE_DRIVE_PROJECT_ID || !process.env.GOOGLE_DRIVE_PRIVATE_KEY) {
+    return res.status(503).json({
+      success: false,
+      error: 'Google Drive credentials not configured'
+    });
+  }
+
+  try {
+    const { fileId } = req.params;
+    console.log(`⬇️ Downloading file from Google Drive: ${fileId}`);
+    
+    const { google } = require('googleapis');
+    
+    // Configure authentication
+    const privateKey = process.env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, '\n');
+    const auth = new google.auth.GoogleAuth({
+      credentials: {
+        client_email: process.env.GOOGLE_DRIVE_CLIENT_EMAIL,
+        private_key: privateKey,
+        project_id: process.env.GOOGLE_DRIVE_PROJECT_ID,
+      },
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    });
+
+    const drive = google.drive({ version: 'v3', auth });
+    
+    // First, get file metadata to check if it's a Google Apps file
+    console.log(`📋 Getting metadata for file: ${fileId}`);
+    const metadataResponse = await drive.files.get({
+      fileId: fileId,
+      fields: 'id,name,mimeType,size'
+    });
+    
+    const fileMetadata = metadataResponse.data;
+    console.log(`📄 File metadata:`, {
+      name: fileMetadata.name,
+      mimeType: fileMetadata.mimeType,
+      size: fileMetadata.size
+    });
+    
+    let downloadResponse;
+    let filename = fileMetadata.name;
+    let mimeType = fileMetadata.mimeType;
+    
+    // Check if it's a Google Apps file that needs export
+    if (fileMetadata.mimeType.startsWith('application/vnd.google-apps.')) {
+      console.log(`📱 Google Apps file detected, exporting...`);
+      
+      // Map Google Apps types to export formats
+      const exportMimeTypes = {
+        'application/vnd.google-apps.document': 'application/pdf',
+        'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.google-apps.drawing': 'image/png'
+      };
+      
+      const exportMimeType = exportMimeTypes[fileMetadata.mimeType];
+      if (!exportMimeType) {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot export Google Apps file of type: ${fileMetadata.mimeType}`
+        });
+      }
+      
+      console.log(`📤 Exporting as: ${exportMimeType}`);
+      
+      // Export the file
+      downloadResponse = await drive.files.export({
+        fileId: fileId,
+        mimeType: exportMimeType
+      }, {
+        responseType: 'stream'
+      });
+      
+      mimeType = exportMimeType;
+      
+      // Update filename extension
+      const extensionMap = {
+        'application/pdf': '.pdf',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+        'image/png': '.png'
+      };
+      
+      const extension = extensionMap[exportMimeType];
+      if (extension && !filename.endsWith(extension)) {
+        // Remove existing extension if any and add new one
+        filename = filename.replace(/\.[^/.]+$/, '') + extension;
+      }
+      
+    } else {
+      console.log(`📁 Regular file, downloading directly...`);
+      
+      // Regular file, download directly
+      downloadResponse = await drive.files.get({
+        fileId: fileId,
+        alt: 'media'
+      }, {
+        responseType: 'stream'
+      });
+    }
+    
+    console.log(`✅ File download initiated: ${filename}`);
+    
+    // Set appropriate headers
+    res.setHeader('Content-Type', mimeType);
+    
+    // Properly encode filename for Content-Disposition header to handle special characters
+    const encodedFilename = encodeURIComponent(filename);
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFilename}`);
+    
+    if (fileMetadata.size) {
+      res.setHeader('Content-Length', fileMetadata.size);
+    }
+    
+    // Pipe the stream to response
+    downloadResponse.data.pipe(res);
+    
+    downloadResponse.data.on('end', () => {
+      console.log(`✅ File download completed: ${filename}`);
+    });
+    
+    downloadResponse.data.on('error', (error) => {
+      console.error(`❌ Error during file download:`, error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Download stream error',
+          details: error.message
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Google Drive download error:', error);
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: `Failed to download file: ${error.message}`,
+        details: {
+          code: error.code,
+          status: error.status
+        }
+      });
+    }
+  }
+});
+
 // Upload file to Google Drive
 app.post('/drive/upload', upload.any(), async (req, res) => {
   try {

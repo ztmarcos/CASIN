@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import firebaseTeamService from '../services/firebaseTeamService';
+import firebaseTeamStorageService from '../services/firebaseTeamStorageService';
 import { setCurrentTeam } from '../services/firebaseService';
 
 const TeamContext = createContext();
@@ -69,6 +70,10 @@ export const TeamProvider = ({ children }) => {
       // ✨ ACTIVAR SISTEMA DE EQUIPOS EN FIREBASE SERVICE
       setCurrentTeam(teamId);
       console.log('🏢 Team system ACTIVATED in FirebaseService for team:', teamId);
+      
+      // Configurar el servicio de almacenamiento para este equipo
+      firebaseTeamStorageService.setCurrentTeam(teamId);
+      console.log('🗂️ Team storage service configured for team:', teamId);
       
       console.log('✅ Team Firebase configuration ready');
       
@@ -349,6 +354,19 @@ export const TeamProvider = ({ children }) => {
 
       // Inicializar colecciones del equipo
       await initializeTeamCollections(teamDocRef.id);
+
+      // Crear estructura de almacenamiento para el equipo
+      try {
+        console.log('🗂️ Creating Firebase Storage structure for team...');
+        const storageResult = await firebaseTeamStorageService.createTeamStorageStructure(
+          teamDocRef.id, 
+          teamName
+        );
+        console.log('✅ Team storage structure created:', storageResult);
+      } catch (storageError) {
+        console.warn('⚠️ Could not create team storage structure:', storageError);
+        // No lanzar error aquí - el equipo puede funcionar sin storage inicialmente
+      }
 
       // Recargar datos del equipo
       await loadUserTeam();

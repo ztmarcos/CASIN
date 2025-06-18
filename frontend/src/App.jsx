@@ -5,6 +5,8 @@ import Dashboard from './components/Dashboard/Dashboard'
 import DataSection from './components/DataSection/DataSection'
 import TestGPT from './components/TestGPT/TestGPT'
 import Drive from './components/Drive/Drive'
+import Firedrive from './components/Drive/Firedrive'
+import DriveMigration from './components/DriveMigration/DriveMigration'
 import PDFParser from './components/PDFParser_new/PDFParser'
 import Datapool from './components/Datapool/Datapool'
 import Birthdays from './components/Birthdays/Birthdays'
@@ -171,6 +173,22 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <Drive currentUser={user?.email || 'default-user'} />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/firedrive" element={
+        <ProtectedRoute>
+          <Layout>
+            <Firedrive currentUser={user?.email || 'default-user'} />
+          </Layout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/drive-migration" element={
+        <ProtectedRoute>
+          <Layout>
+            <DriveMigration />
           </Layout>
         </ProtectedRoute>
       } />

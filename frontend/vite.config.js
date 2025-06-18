@@ -37,6 +37,32 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:3001',
           changeOrigin: true,
           secure: false
+        },
+        // Proxy Firebase Storage requests to avoid CORS issues in development
+        '/firebasestorage': {
+          target: 'https://firebasestorage.googleapis.com',
+          changeOrigin: true,
+          secure: true,
+          rewrite: (path) => path.replace(/^\/firebasestorage/, ''),
+          configure: (proxy, options) => {
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              console.log('🔄 Proxying Firebase Storage request:', req.url);
+              // Forward auth headers
+              if (req.headers.authorization) {
+                proxyReq.setHeader('Authorization', req.headers.authorization);
+              }
+            });
+            proxy.on('proxyRes', (proxyRes, req, res) => {
+              // Add CORS headers to response
+              proxyRes.headers['access-control-allow-origin'] = '*';
+              proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+              proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, x-goog-resumable';
+              proxyRes.headers['access-control-max-age'] = '86400';
+            });
+            proxy.on('error', (err, req, res) => {
+              console.error('❌ Proxy error:', err);
+            });
+          }
         }
       },
       watch: {
