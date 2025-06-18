@@ -32,7 +32,8 @@ const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   const { needsTeamSetup, isLoadingTeam, userTeam } = useTeam();
   
-  if (loading || isLoadingTeam) {
+  // 1. Primero verificar si está cargando la autenticación
+  if (loading) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -47,14 +48,33 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
+  // 2. Si no está autenticado, mostrar Google Login
   if (!user) {
     return <GoogleLogin />;
   }
   
+  // 3. Si está autenticado, verificar el estado del equipo
+  if (isLoadingTeam) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        fontSize: '1.2rem',
+        color: '#666'
+      }}>
+        Verificando equipo...
+      </div>
+    );
+  }
+  
+  // 4. Si necesita configurar equipo, mostrar TeamSetup
   if (needsTeamSetup) {
     return <TeamSetup />;
   }
   
+  // 5. Si no tiene equipo (estado inválido), mostrar mensaje
   if (!userTeam) {
     return (
       <div style={{ 
@@ -70,6 +90,7 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
+  // 6. Todo está listo, mostrar la aplicación
   return children;
 };
 

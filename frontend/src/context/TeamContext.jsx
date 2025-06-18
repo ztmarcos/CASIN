@@ -26,8 +26,10 @@ export const TeamProvider = ({ children }) => {
   // Cargar equipo del usuario cuando se autentica
   useEffect(() => {
     if (user?.email) {
+      console.log('🔍 User authenticated, loading team data for:', user.email);
       loadUserTeam();
     } else {
+      console.log('👤 User not authenticated, resetting team state');
       resetTeamState();
     }
   }, [user]);

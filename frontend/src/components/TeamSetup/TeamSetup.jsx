@@ -154,7 +154,8 @@ const TeamSetup = () => {
         <div className="setup-card welcome-card">
           <div className="welcome-header">
             <h1>¡Bienvenido a CASIN!</h1>
-            <p>Hola <strong>{user?.name || user?.email}</strong></p>
+            <p>Hola <strong>{user?.name || user?.email}</strong> 👋</p>
+            <p className="auth-success">✅ Autenticación completada</p>
           </div>
 
           <div className="welcome-content">
@@ -190,6 +191,21 @@ const TeamSetup = () => {
             >
               Crear mi Equipo
             </button>
+          </div>
+
+          <div className="user-info-section">
+            <h3>👤 Tu información</h3>
+            <div className="user-details">
+              <div className="user-detail">
+                <strong>Email:</strong> {user?.email}
+              </div>
+              <div className="user-detail">
+                <strong>Nombre:</strong> {user?.name || 'No disponible'}
+              </div>
+              <div className="user-detail">
+                <strong>Rol:</strong> Administrador del equipo
+              </div>
+            </div>
           </div>
 
           <div className="welcome-note">
