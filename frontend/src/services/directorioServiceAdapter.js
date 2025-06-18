@@ -1,12 +1,39 @@
 import teamDirectorioService from './teamDirectorioService';
+import firebaseTeamService from './firebaseTeamService';
 
 /**
  * DirectorioServiceAdapter - Adaptador para migrar gradualmente el Directorio al sistema de equipos
  * 
  * Este adaptador mantiene la API existente del firebaseDirectorioService
  * pero usa internamente el nuevo teamDirectorioService.
+ * 
+ * Para el equipo 4JlUqhAvfJMlCDhQ4vgH, accede directamente a la colección directorio_contactos.
  */
 class DirectorioServiceAdapter {
+
+  /**
+   * Ensure team context is set for data access
+   */
+  ensureTeamContext() {
+    const currentTeamId = firebaseTeamService.currentTeamId;
+    if (!currentTeamId) {
+      console.warn('⚠️ No team context set, directorio may not work properly');
+      console.warn('⚠️ Available teams:', firebaseTeamService.getStats());
+    } else {
+      console.log('✅ Team context active:', currentTeamId);
+      
+      // For team 4JlUqhAvfJMlCDhQ4vgH, verify it will use direct collection
+      if (currentTeamId === '4JlUqhAvfJMlCDhQ4vgH') {
+        const collectionName = firebaseTeamService.getNamespacedCollection('directorio_contactos');
+        console.log('🎯 Team 4JlUqhAvfJMlCDhQ4vgH will use collection:', collectionName);
+        if (collectionName === 'directorio_contactos') {
+          console.log('✅ Confirmed: Using direct directorio_contactos collection');
+        } else {
+          console.warn('⚠️ Expected directorio_contactos but got:', collectionName);
+        }
+      }
+    }
+  }
 
   // ================== Métodos de Contactos ==================
 
@@ -15,6 +42,7 @@ class DirectorioServiceAdapter {
    */
   async getContactos(params = {}) {
     try {
+      this.ensureTeamContext();
       console.log('🔄 DirectorioAdapter: getContactos called with params:', params);
       
       const { page = 1, limit = 50, ...filters } = params;
@@ -78,6 +106,7 @@ class DirectorioServiceAdapter {
    */
   async searchContactos(searchTerm, params = {}) {
     try {
+      this.ensureTeamContext();
       console.log('🔍 DirectorioAdapter: searchContactos called:', { searchTerm, params });
       
       const { page = 1, limit = 50, ...filters } = params;
@@ -129,6 +158,7 @@ class DirectorioServiceAdapter {
    */
   async getStats() {
     try {
+      this.ensureTeamContext();
       console.log('📊 DirectorioAdapter: getStats called');
       
       const stats = await teamDirectorioService.getDirectorioStats();

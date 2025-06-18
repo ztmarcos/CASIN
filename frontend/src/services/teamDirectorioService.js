@@ -16,7 +16,14 @@ class TeamDirectorioService {
   async getAllContactos() {
     try {
       console.log('📋 Getting all contacts for current team');
-      return await teamDataService.getAllDocuments('directorio_contactos', 'nombre', 'asc');
+      console.log('🔍 Current team ID:', teamDataService.firebaseTeamService?.currentTeamId);
+      console.log('🔍 Collection will be:', teamDataService.getCollectionName?.('directorio_contactos'));
+      
+      const contacts = await teamDataService.getAllDocuments('directorio_contactos', 'nombre', 'asc');
+      console.log('📊 Retrieved contacts count:', contacts.length);
+      console.log('📝 First 3 contacts:', contacts.slice(0, 3).map(c => ({ id: c.id, nombre: c.nombre })));
+      
+      return contacts;
     } catch (error) {
       console.error('❌ Error getting contacts:', error);
       throw error;

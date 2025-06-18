@@ -187,18 +187,26 @@ class FirebaseTeamService {
   }
 
   /**
-   * Para desarrollo: usa namespaces en las colecciones del proyecto principal
-   * En producción real esto no sería necesario porque cada equipo tendría su proyecto
+   * Para el equipo 4JlUqhAvfJMlCDhQ4vgH: usa directamente la colección directorio_contactos
+   * Para otros equipos: usa namespaces en las colecciones del proyecto principal
    */
   getNamespacedCollection(collectionName) {
     if (!this.currentTeamId) {
       throw new Error('No team selected for collection access');
     }
     
+    // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar directamente directorio_contactos
+    if (this.currentTeamId === '4JlUqhAvfJMlCDhQ4vgH' && collectionName === 'directorio_contactos') {
+      console.log('🎯 Using direct directorio_contactos collection for team 4JlUqhAvfJMlCDhQ4vgH');
+      return 'directorio_contactos';
+    }
+    
     const config = this.teamConfigs.get(this.currentTeamId);
     if (config && config.isTeamDatabase) {
-      // En desarrollo, usamos prefijos en nombres de colecciones
-      return `team_${this.currentTeamId}_${collectionName}`;
+      // En desarrollo, usamos prefijos en nombres de colecciones para otros equipos
+      const namespacedName = `team_${this.currentTeamId}_${collectionName}`;
+      console.log(`🏷️ Using namespaced collection: ${namespacedName}`);
+      return namespacedName;
     }
     
     return collectionName;

@@ -13,6 +13,14 @@ const Directorio = () => {
   const { userTeam, currentTeam } = useTeam();
   const team = currentTeam || userTeam;
   
+  // Ensure team is set for directorio data access
+  useEffect(() => {
+    if (team?.id) {
+      console.log('🏢 Directorio: Setting team context for data access:', team.id, team.name);
+      // The team services should automatically use the current team context
+    }
+  }, [team]);
+  
   // Check if directorio is enabled
   if (!FEATURES.DIRECTORIO_ENABLED) {
     return (
@@ -632,20 +640,30 @@ const Directorio = () => {
               👥 Directorio de {team.name}
             </h2>
             <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.9rem' }}>
-              Datos aislados por equipo
+              {team.id === '4JlUqhAvfJMlCDhQ4vgH' 
+                ? '🎯 Accediendo directamente a directorio_contactos' 
+                : 'Datos aislados por equipo'}
             </p>
+            <details style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#4a5568' }}>
+              <summary style={{ cursor: 'pointer', fontWeight: '500' }}>🔧 Debug Info</summary>
+              <div style={{ marginTop: '0.25rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '4px' }}>
+                <div>Team ID: <code>{team.id}</code></div>
+                <div>Collection: <code>{team.id === '4JlUqhAvfJMlCDhQ4vgH' ? 'directorio_contactos' : `team_${team.id}_directorio_contactos`}</code></div>
+                <div>Total Contacts: <strong>{stats?.total || 0}</strong></div>
+              </div>
+            </details>
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <span style={{
-              background: '#e6fffa',
-              color: '#234e52',
+              background: team.id === '4JlUqhAvfJMlCDhQ4vgH' ? '#e6fffa' : '#fed7d7',
+              color: team.id === '4JlUqhAvfJMlCDhQ4vgH' ? '#234e52' : '#c53030',
               padding: '0.25rem 0.75rem',
               borderRadius: '20px',
               fontSize: '0.8rem',
               fontWeight: '500',
-              border: '1px solid #81e6d9'
+              border: team.id === '4JlUqhAvfJMlCDhQ4vgH' ? '1px solid #81e6d9' : '1px solid #feb2b2'
             }}>
-              🏢 Team Service v1.0
+              {team.id === '4JlUqhAvfJMlCDhQ4vgH' ? '🎯 Direct Collection' : '🏢 Team Service v1.0'}
             </span>
             <span style={{
               background: '#fed7d7',
