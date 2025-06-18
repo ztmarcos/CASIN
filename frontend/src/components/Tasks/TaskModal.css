@@ -1,0 +1,369 @@
+/* Task Modal Overlay */
+.task-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+  backdrop-filter: blur(4px);
+}
+
+.task-modal {
+  background-color: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+.task-modal-overlay.dark .task-modal {
+  background-color: #2d2d2d;
+  color: white;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid;
+  position: sticky;
+  top: 0;
+  background-color: inherit;
+  z-index: 10;
+}
+
+.task-modal-overlay.light .modal-header {
+  border-color: #e9ecef;
+}
+
+.task-modal-overlay.dark .modal-header {
+  border-color: #404040;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+.task-modal-overlay.dark .close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.close-btn svg {
+  color: #666;
+}
+
+.task-modal-overlay.dark .close-btn svg {
+  color: #ccc;
+}
+
+/* Modal Form */
+.modal-form {
+  padding: 2rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.task-modal-overlay.light .form-group input,
+.task-modal-overlay.light .form-group textarea,
+.task-modal-overlay.light .form-group select {
+  background-color: #f8f9fa;
+  border-color: #e9ecef;
+  color: #333;
+}
+
+.task-modal-overlay.dark .form-group input,
+.task-modal-overlay.dark .form-group textarea,
+.task-modal-overlay.dark .form-group select {
+  background-color: #404040;
+  border-color: #555;
+  color: white;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.form-group input.error,
+.form-group textarea.error,
+.form-group select.error {
+  border-color: #e74c3c;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Form Row */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* Error Messages */
+.error-message {
+  display: block;
+  color: #e74c3c;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
+/* Tags Input */
+.tags-input-container {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tags-input-container input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.add-tag-btn {
+  padding: 0.75rem 1rem;
+  background-color: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.add-tag-btn:hover:not(:disabled) {
+  background-color: #5a6fd8;
+  transform: translateY(-1px);
+}
+
+.add-tag-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tag-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.task-modal-overlay.light .tag-item {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.task-modal-overlay.dark .tag-item {
+  background-color: #555;
+  color: #fff;
+}
+
+.remove-tag-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: 0.25rem;
+}
+
+.remove-tag-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  transform: scale(1.2);
+}
+
+.task-modal-overlay.dark .remove-tag-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid;
+}
+
+.task-modal-overlay.light .modal-actions {
+  border-color: #e9ecef;
+}
+
+.task-modal-overlay.dark .modal-actions {
+  border-color: #404040;
+}
+
+.cancel-btn,
+.save-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 100px;
+}
+
+.cancel-btn {
+  background-color: transparent;
+  border: 2px solid #6c757d;
+  color: #6c757d;
+}
+
+.cancel-btn:hover {
+  background-color: #6c757d;
+  color: white;
+  transform: translateY(-2px);
+}
+
+.save-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.save-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.save-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .task-modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .task-modal {
+    max-height: 95vh;
+  }
+  
+  .modal-header,
+  .modal-form {
+    padding: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .tags-input-container {
+    flex-direction: column;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    width: 100%;
+  }
+}
+
+/* Scrollbar Styling */
+.task-modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-modal::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.task-modal-overlay.dark .task-modal::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+} 

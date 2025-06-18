@@ -1,5 +1,5 @@
 import React from 'react';
-import NotionComponent from '../components/Notion/NotionComponent';
+import FirebaseTasks from '../components/Tasks/FirebaseTasks';
 import { useTheme } from '../context/ThemeContext';
 
 const Tasks = () => {
@@ -18,7 +18,7 @@ const Tasks = () => {
       </div>
       
       <div className={`m-4 rounded overflow-hidden shadow ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <NotionComponent />
+        <FirebaseTasks />
       </div>
     </div>
   );

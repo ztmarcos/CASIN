@@ -208,6 +208,10 @@ export const TeamProvider = ({ children }) => {
           );
           
           console.log(`🎉 Colecciones creadas usando plantillas CASIN: ${results.length}`);
+          
+          // Inicializar colección de tareas también
+          await initializeTasksCollection(teamId);
+          
           return;
         }
       } catch (templateError) {
@@ -277,40 +281,56 @@ export const TeamProvider = ({ children }) => {
             valor: true,
             descripcion: 'Indica que el equipo ha sido inicializado',
             fechaCreacion: serverTimestamp()
-          },
-          {
-            clave: 'default_settings',
-            valor: {
-              notificaciones: true,
-              autoBackup: true,
-              maxContactos: 1000,
-              tema: 'light'
-            },
-            descripcion: 'Configuraciones por defecto del equipo',
-            fechaCreacion: serverTimestamp()
           }
         ]
       };
 
-      // Crear cada colección con datos iniciales
+      // Crear las colecciones y sus datos iniciales
+      const TeamDataService = (await import('../services/teamDataService')).default;
+      const results = [];
+
       for (const collectionName of collectionsToCreate) {
-        const teamCollectionName = `team_${teamId}_${collectionName}`;
-        const collectionRef = collection(db, teamCollectionName);
-        
-        // Agregar datos iniciales
-        const dataToAdd = initialData[collectionName] || [];
-        for (const data of dataToAdd) {
-          await addDoc(collectionRef, data);
+        try {
+          console.log(`📝 Creando colección: ${collectionName}`);
+          
+          const data = initialData[collectionName];
+          if (data && data.length > 0) {
+            for (const item of data) {
+              const result = await TeamDataService.createDocument(collectionName, item);
+              results.push(result);
+            }
+          }
+          
+          console.log(`✅ Colección ${collectionName} creada exitosamente`);
+        } catch (error) {
+          console.error(`❌ Error creando colección ${collectionName}:`, error);
         }
-        
-        console.log(`✅ Created collection: ${teamCollectionName} with ${dataToAdd.length} initial records`);
       }
 
-      console.log('🎉 Team collections initialized successfully');
+      // Inicializar colección de tareas con Firebase Tasks Service
+      await initializeTasksCollection(teamId);
+
+      console.log(`🎉 Inicialización completada. ${results.length} documentos creados.`);
+      return results;
 
     } catch (error) {
-      console.error('❌ Error initializing team collections:', error);
-      // No lanzar error para que no falle la creación del equipo
+      console.error('❌ Error durante la inicialización de colecciones:', error);
+      throw error;
+    }
+  };
+
+  // Inicializar colección de tareas específicamente
+  const initializeTasksCollection = async (teamId) => {
+    try {
+      console.log('📋 Initializing Firebase Tasks collection...');
+      
+      const firebaseTaskService = (await import('../services/firebaseTaskService')).default;
+      await firebaseTaskService.initializeTasksCollection();
+      
+      console.log('✅ Firebase Tasks collection initialized');
+    } catch (error) {
+      console.warn('⚠️ Could not initialize tasks collection:', error.message);
+      // No lanzar error para que no interrumpa la creación del equipo
     }
   };
 
