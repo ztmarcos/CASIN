@@ -187,7 +187,7 @@ class FirebaseTeamService {
   }
 
   /**
-   * Para el equipo 4JlUqhAvfJMlCDhQ4vgH: usa directamente la colección directorio_contactos
+   * Para el equipo 4JlUqhAvfJMlCDhQ4vgH: usa directamente las colecciones específicas
    * Para otros equipos: usa namespaces en las colecciones del proyecto principal
    */
   getNamespacedCollection(collectionName) {
@@ -195,10 +195,27 @@ class FirebaseTeamService {
       throw new Error('No team selected for collection access');
     }
     
-    // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar directamente directorio_contactos
-    if (this.currentTeamId === '4JlUqhAvfJMlCDhQ4vgH' && collectionName === 'directorio_contactos') {
-      console.log('🎯 Using direct directorio_contactos collection for team 4JlUqhAvfJMlCDhQ4vgH');
-      return 'directorio_contactos';
+    // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar directamente ciertas colecciones
+    if (this.currentTeamId === '4JlUqhAvfJMlCDhQ4vgH') {
+      // Colecciones que se acceden directamente para este equipo
+      const directCollections = [
+        'directorio_contactos',
+        'polizas', 
+        'autos',
+        'vida',
+        'gmm',
+        'hogar',
+        'mascotas',
+        'negocio',
+        'rc',
+        'transporte',
+        'diversos'
+      ];
+      
+      if (directCollections.includes(collectionName)) {
+        console.log(`🎯 Using direct ${collectionName} collection for team 4JlUqhAvfJMlCDhQ4vgH`);
+        return collectionName;
+      }
     }
     
     const config = this.teamConfigs.get(this.currentTeamId);

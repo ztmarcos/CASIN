@@ -648,8 +648,10 @@ const Directorio = () => {
               <summary style={{ cursor: 'pointer', fontWeight: '500' }}>🔧 Debug Info</summary>
               <div style={{ marginTop: '0.25rem', padding: '0.5rem', background: '#f8f9fa', borderRadius: '4px' }}>
                 <div>Team ID: <code>{team.id}</code></div>
-                <div>Collection: <code>{team.id === '4JlUqhAvfJMlCDhQ4vgH' ? 'directorio_contactos' : `team_${team.id}_directorio_contactos`}</code></div>
+                <div>Directorio Collection: <code>{team.id === '4JlUqhAvfJMlCDhQ4vgH' ? 'directorio_contactos' : `team_${team.id}_directorio_contactos`}</code></div>
+                <div>Polizas Collection: <code>{team.id === '4JlUqhAvfJMlCDhQ4vgH' ? 'polizas' : `team_${team.id}_polizas`}</code></div>
                 <div>Total Contacts: <strong>{stats?.total || 0}</strong></div>
+                <div>Status: {stats?.total > 0 ? '✅ Data found' : '⚠️ No data found'}</div>
               </div>
             </details>
           </div>

@@ -22,14 +22,19 @@ class DirectorioServiceAdapter {
     } else {
       console.log('✅ Team context active:', currentTeamId);
       
-      // For team 4JlUqhAvfJMlCDhQ4vgH, verify it will use direct collection
+      // For team 4JlUqhAvfJMlCDhQ4vgH, verify it will use direct collections
       if (currentTeamId === '4JlUqhAvfJMlCDhQ4vgH') {
-        const collectionName = firebaseTeamService.getNamespacedCollection('directorio_contactos');
-        console.log('🎯 Team 4JlUqhAvfJMlCDhQ4vgH will use collection:', collectionName);
-        if (collectionName === 'directorio_contactos') {
-          console.log('✅ Confirmed: Using direct directorio_contactos collection');
+        const directorioCollection = firebaseTeamService.getNamespacedCollection('directorio_contactos');
+        const polizasCollection = firebaseTeamService.getNamespacedCollection('polizas');
+        
+        console.log('🎯 Team 4JlUqhAvfJMlCDhQ4vgH collection mapping:');
+        console.log('  - directorio_contactos →', directorioCollection);
+        console.log('  - polizas →', polizasCollection);
+        
+        if (directorioCollection === 'directorio_contactos' && polizasCollection === 'polizas') {
+          console.log('✅ Confirmed: Using direct Firebase collections');
         } else {
-          console.warn('⚠️ Expected directorio_contactos but got:', collectionName);
+          console.warn('⚠️ Expected direct collections but got namespaced ones');
         }
       }
     }

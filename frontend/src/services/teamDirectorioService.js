@@ -15,17 +15,51 @@ class TeamDirectorioService {
    */
   async getAllContactos() {
     try {
-      console.log('📋 Getting all contacts for current team');
-      console.log('🔍 Current team ID:', teamDataService.firebaseTeamService?.currentTeamId);
-      console.log('🔍 Collection will be:', teamDataService.getCollectionName?.('directorio_contactos'));
+      console.log('📋 TeamDirectorioService: Getting all contacts for current team');
+      
+      // Debug team data service info
+      const currentTeamInfo = teamDataService.getCurrentTeamInfo();
+      console.log('🔍 Current team info:', currentTeamInfo);
+      
+      // Debug collection name that will be used
+      const collectionName = teamDataService.getCollectionName('directorio_contactos');
+      console.log('🔍 Collection name to query:', collectionName);
       
       const contacts = await teamDataService.getAllDocuments('directorio_contactos', 'nombre', 'asc');
       console.log('📊 Retrieved contacts count:', contacts.length);
-      console.log('📝 First 3 contacts:', contacts.slice(0, 3).map(c => ({ id: c.id, nombre: c.nombre })));
+      
+      if (contacts.length > 0) {
+        console.log('📝 First 3 contacts:', contacts.slice(0, 3).map(c => ({ 
+          id: c.id, 
+          nombre: c.nombre,
+          email: c.email,
+          hasCreatedAt: !!c.createdAt,
+          hasTeamId: !!c.teamId
+        })));
+      } else {
+        console.warn('⚠️ No contacts found in collection:', collectionName);
+        
+        // Let's try to verify the collection exists by checking other possible field names
+        console.log('🔍 Trying alternative query with nombre_completo field...');
+        try {
+          const altContacts = await teamDataService.getAllDocuments('directorio_contactos', 'createdAt', 'desc');
+          console.log('📊 Alternative query result count:', altContacts.length);
+          if (altContacts.length > 0) {
+            console.log('📝 Sample contact fields:', Object.keys(altContacts[0]));
+          }
+        } catch (altError) {
+          console.error('❌ Alternative query failed:', altError);
+        }
+      }
       
       return contacts;
     } catch (error) {
       console.error('❌ Error getting contacts:', error);
+      console.error('❌ Error details:', {
+        code: error.code,
+        message: error.message,
+        name: error.name
+      });
       throw error;
     }
   }
