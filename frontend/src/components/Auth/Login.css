@@ -90,7 +90,7 @@ button:disabled {
 .admin-link:hover {
   color: #0066cc;
   text-decoration: underline;
-}
+} 
 
 /* Google Login Styles */
 .google-login-section {

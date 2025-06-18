@@ -21,13 +21,37 @@ import { getAuth, connectAuthEmulator } from 'firebase/auth';
 // Re-enable Firebase direct calls now that billing is activated
 const FIREBASE_ENABLED = true; // ✅ Enabled with Blaze plan
 
+// Importar el contexto de equipo para detectar si hay un equipo activo
+let currentTeamId = null;
+let isTeamSystemAvailable = false;
+
+// Función para configurar el equipo actual
+const setCurrentTeam = (teamId) => {
+  currentTeamId = teamId;
+  isTeamSystemAvailable = !!teamId;
+  console.log(`🏢 FirebaseService: Team set to ${teamId}, team system: ${isTeamSystemAvailable ? 'ENABLED' : 'DISABLED'}`);
+};
+
+// Función para obtener el nombre de colección correcto
+const getCollectionName = (baseName) => {
+  if (isTeamSystemAvailable && currentTeamId) {
+    const teamCollectionName = `team_${currentTeamId}_${baseName}`;
+    console.log(`🏢 Using team collection: ${teamCollectionName}`);
+    return teamCollectionName;
+  }
+  console.log(`📄 Using original collection: ${baseName}`);
+  return baseName;
+};
+
 class FirebaseService {
   constructor() {
     this.app = null;
     this.db = null;
     this.auth = null;
     this.isInitialized = false;
-    this.isConnected = false;
+    this.isConnected = true;
+    this.cache = new Map();
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
     
     if (FIREBASE_ENABLED) {
       this.initializeFirebase();
@@ -66,10 +90,286 @@ class FirebaseService {
     }
   }
 
-  // Generic CRUD Operations
-  async getAllDocuments(collectionName, limitCount = 1000) {
+  // ================== Utilidades de Cache ==================
+  getCacheKey(collectionName, query = '') {
+    return `${collectionName}_${query}`;
+  }
+
+  setCacheData(key, data) {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  getCacheData(key) {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+      return cached.data;
+    }
+    return null;
+  }
+
+  clearCache() {
+    this.cache.clear();
+    console.log('🗑️ Firebase cache cleared');
+  }
+
+  // ================== Métodos Básicos de CRUD ==================
+
+  async getAll(collectionName, maxLimit = 1000, useCache = true, nocache = false) {
     if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
+      console.log('🔥 Firebase disabled - returning empty data');
+      return [];
+    }
+    
+    if (!this.isConnected) {
+      throw new Error('Firebase not connected');
+    }
+
+    // Usar nombre de colección correcto (team o original)
+    const actualCollectionName = getCollectionName(collectionName);
+    const cacheKey = this.getCacheKey(actualCollectionName, `limit_${maxLimit}`);
+    
+    // Check cache first (unless nocache is true)
+    if (useCache && !nocache) {
+      const cachedData = this.getCacheData(cacheKey);
+      if (cachedData) {
+        console.log(`📋 Returning cached data for ${actualCollectionName}`);
+        return cachedData;
+      }
+    }
+
+    try {
+      if (nocache) {
+        console.log(`🚫 Skipping cache for ${actualCollectionName} (nocache=true)`);
+      }
+      
+      console.log(`🔍 Fetching ${actualCollectionName} data from Firebase (limit: ${maxLimit})`);
+      
+      const collectionRef = collection(this.db, actualCollectionName);
+      const q = query(collectionRef, limit(maxLimit));
+      const snapshot = await getDocs(q);
+      
+      const data = snapshot.docs.map(doc => {
+        const docData = doc.data();
+        console.log(`🔍 Firebase doc ID: ${doc.id}, contains id field: ${docData.id || 'none'}`);
+        return {
+          firebase_doc_id: doc.id,
+          ...docData,
+          reactKey: `${actualCollectionName}_${doc.id}`
+        };
+      });
+
+      // Cache the result (unless nocache is true)
+      if (useCache && !nocache) {
+        this.setCacheData(cacheKey, data);
+      }
+
+      console.log(`✅ Successfully fetched ${data.length} records from ${actualCollectionName} (estimated total: ${snapshot.docs.length})`);
+      return data;
+
+    } catch (error) {
+      console.error(`❌ Error fetching ${actualCollectionName}:`, error);
+      
+      // En caso de error con colección de equipo, intentar con colección original
+      if (isTeamSystemAvailable && actualCollectionName !== collectionName) {
+        console.log(`🔄 Fallback: trying original collection ${collectionName}`);
+        try {
+          const collectionRef = collection(this.db, collectionName);
+          const q = query(collectionRef, limit(maxLimit));
+          const snapshot = await getDocs(q);
+          
+          const data = snapshot.docs.map(doc => ({
+            firebase_doc_id: doc.id,
+            ...doc.data(),
+            reactKey: `${collectionName}_${doc.id}`
+          }));
+
+          if (useCache && !nocache) {
+            this.setCacheData(cacheKey, data);
+          }
+
+          console.log(`✅ Fallback successful: fetched ${data.length} records from ${collectionName}`);
+          return data;
+        } catch (fallbackError) {
+          console.error(`❌ Fallback also failed for ${collectionName}:`, fallbackError);
+          throw fallbackError;
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  async getAllDocuments(collectionName, maxLimit = 1000) {
+    return this.getAll(collectionName, maxLimit);
+  }
+
+  async search(collectionName, searchTerm, searchFields = ['nombre_completo', 'email']) {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - returning empty search results');
+      return [];
+    }
+
+    const actualCollectionName = getCollectionName(collectionName);
+    
+    try {
+      console.log(`🔍 Searching in ${actualCollectionName} for: "${searchTerm}"`);
+      
+      // Get all documents first (Firestore doesn't support full-text search natively)
+      const allDocs = await this.getAll(actualCollectionName, 1000, false);
+      
+      if (!searchTerm || searchTerm.trim() === '') {
+        return allDocs;
+      }
+
+      const searchTermLower = searchTerm.toLowerCase();
+      const filtered = allDocs.filter(doc => {
+        return searchFields.some(field => {
+          const fieldValue = doc[field];
+          return fieldValue && fieldValue.toString().toLowerCase().includes(searchTermLower);
+        });
+      });
+
+      console.log(`✅ Search found ${filtered.length} matches in ${actualCollectionName}`);
+      return filtered;
+
+    } catch (error) {
+      console.error(`❌ Error searching ${actualCollectionName}:`, error);
+      
+      // Fallback a colección original si hay error
+      if (isTeamSystemAvailable && actualCollectionName !== collectionName) {
+        console.log(`🔄 Fallback search: trying original collection ${collectionName}`);
+        try {
+          const allDocs = await this.getAll(collectionName, 1000, false);
+          
+          if (!searchTerm || searchTerm.trim() === '') {
+            return allDocs;
+          }
+
+          const searchTermLower = searchTerm.toLowerCase();
+          const filtered = allDocs.filter(doc => {
+            return searchFields.some(field => {
+              const fieldValue = doc[field];
+              return fieldValue && fieldValue.toString().toLowerCase().includes(searchTermLower);
+            });
+          });
+
+          console.log(`✅ Fallback search found ${filtered.length} matches in ${collectionName}`);
+          return filtered;
+        } catch (fallbackError) {
+          console.error(`❌ Fallback search also failed for ${collectionName}:`, fallbackError);
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  async create(collectionName, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - simulating create');
+      return { id: 'firebase_disabled_' + Date.now() };
+    }
+
+    const actualCollectionName = getCollectionName(collectionName);
+    
+    try {
+      console.log(`➕ Creating document in ${actualCollectionName}`, data);
+      
+      const docData = {
+        ...data,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const docRef = await addDoc(collection(this.db, actualCollectionName), docData);
+      
+      // Clear cache for this collection
+      this.clearCacheForCollection(actualCollectionName);
+      
+      console.log(`✅ Document created in ${actualCollectionName} with ID: ${docRef.id}`);
+      return { id: docRef.id, ...docData };
+
+    } catch (error) {
+      console.error(`❌ Error creating document in ${actualCollectionName}:`, error);
+      throw error;
+    }
+  }
+
+  async update(collectionName, docId, data) {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - simulating update');
+      return { id: docId, ...data };
+    }
+
+    const actualCollectionName = getCollectionName(collectionName);
+    
+    try {
+      console.log(`📝 Updating document ${docId} in ${actualCollectionName}`, data);
+      
+      const docData = {
+        ...data,
+        updatedAt: new Date().toISOString()
+      };
+
+      const docRef = doc(this.db, actualCollectionName, docId);
+      await updateDoc(docRef, docData);
+      
+      // Clear cache for this collection
+      this.clearCacheForCollection(actualCollectionName);
+      
+      console.log(`✅ Document ${docId} updated in ${actualCollectionName}`);
+      return { id: docId, ...docData };
+
+    } catch (error) {
+      console.error(`❌ Error updating document ${docId} in ${actualCollectionName}:`, error);
+      throw error;
+    }
+  }
+
+  async delete(collectionName, docId) {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - simulating delete');
+      return { success: true };
+    }
+
+    const actualCollectionName = getCollectionName(collectionName);
+    
+    try {
+      console.log(`🗑️ Deleting document ${docId} from ${actualCollectionName}`);
+      
+      const docRef = doc(this.db, actualCollectionName, docId);
+      await deleteDoc(docRef);
+      
+      // Clear cache for this collection
+      this.clearCacheForCollection(actualCollectionName);
+      
+      console.log(`✅ Document ${docId} deleted from ${actualCollectionName}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`❌ Error deleting document ${docId} from ${actualCollectionName}:`, error);
+      throw error;
+    }
+  }
+
+  clearCacheForCollection(collectionName) {
+    // Clear all cache entries for this collection
+    for (let key of this.cache.keys()) {
+      if (key.startsWith(collectionName + '_')) {
+        this.cache.delete(key);
+      }
+    }
+    console.log(`🗑️ Cache cleared for collection: ${collectionName}`);
+  }
+
+  // ================== Métodos Específicos ==================
+
+  async getBirthdays() {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - returning empty data for birthdays');
       return [];
     }
     
@@ -78,36 +378,105 @@ class FirebaseService {
     }
     
     try {
-      const collectionRef = collection(this.db, collectionName);
-      // Order by createdAt descending so newest records appear first
-      const q = query(
-        collectionRef, 
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
-      );
-      const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      console.error(`Error getting documents from ${collectionName}:`, error);
-      // If ordering fails (e.g., no createdAt field), try without ordering
-      try {
-        const collectionRef = collection(this.db, collectionName);
-        const q = query(collectionRef, limit(limitCount));
-        const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-      } catch (fallbackError) {
-        console.error(`Fallback query also failed for ${collectionName}:`, fallbackError);
-        throw fallbackError;
+      const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+      const allBirthdays = [];
+      
+      for (const collectionName of collections) {
+        try {
+          const docs = await this.getAllDocuments(collectionName);
+          const birthdays = docs.filter(doc => 
+            doc.fecha_nacimiento || doc.birthday || doc.fechaNacimiento
+          ).map(doc => ({
+            ...doc,
+            table: collectionName,
+            birthday: doc.fecha_nacimiento || doc.birthday || doc.fechaNacimiento
+          }));
+          
+          allBirthdays.push(...birthdays);
+        } catch (error) {
+          console.warn(`Could not get birthdays from ${collectionName}:`, error);
+        }
       }
+      
+      return allBirthdays;
+    } catch (error) {
+      console.error('Error getting birthdays:', error);
+      throw error;
     }
   }
 
+  // Get contacts (specific method)
+  async getContacts(limit = 50) {
+    return this.getAll('directorio_contactos', limit);
+  }
+
+  // Search contacts
+  async searchContacts(searchTerm) {
+    return this.search('directorio_contactos', searchTerm);
+  }
+
+  // ================== Métodos de Gestión de Datos ==================
+
+  async getTableNames() {
+    if (!FIREBASE_ENABLED) {
+      console.log('🔥 Firebase disabled - returning sample table names');
+      return ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm'];
+    }
+
+    try {
+      console.log('📋 Getting available table names...');
+      
+      // Lista base de colecciones conocidas
+      let baseCollections = [
+        'directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 
+        'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm',
+        'emant_caratula', 'emant_listado', 'gruposautos', 'listadoautos',
+        'gruposvida', 'listadovida', 'hogar'
+      ];
+
+      // Si hay equipo activo, usar colecciones de equipo
+      if (isTeamSystemAvailable && currentTeamId) {
+        const teamCollections = baseCollections.map(name => `team_${currentTeamId}_${name}`);
+        console.log(`✅ Returning team collections for team ${currentTeamId}: ${teamCollections.length} collections`);
+        return teamCollections;
+      }
+
+      console.log(`✅ Returning base collections: ${baseCollections.length} collections`);
+      return baseCollections;
+
+    } catch (error) {
+      console.error('❌ Error getting table names:', error);
+      return [];
+    }
+  }
+
+  async getAllTables() {
+    const tableNames = await this.getTableNames();
+    const tablesData = {};
+
+    for (const tableName of tableNames) {
+      try {
+        // Para nombres de colección de equipo, extraer el nombre base para la clave
+        const keyName = tableName.startsWith('team_') ? 
+          tableName.replace(`team_${currentTeamId}_`, '') : 
+          tableName;
+          
+        const data = await this.getAll(tableName, 100);
+        tablesData[keyName] = data;
+        console.log(`✅ Loaded ${data.length} records from ${tableName}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not load ${tableName}:`, error.message);
+        const keyName = tableName.startsWith('team_') ? 
+          tableName.replace(`team_${currentTeamId}_`, '') : 
+          tableName;
+        tablesData[keyName] = [];
+      }
+    }
+
+    return tablesData;
+  }
+
+  // Generic CRUD Operations
   async getDocumentById(collectionName, id) {
     if (!FIREBASE_ENABLED) {
       console.log(`🔥 Firebase disabled - returning null for ${collectionName}/${id}`);
@@ -210,47 +579,6 @@ class FirebaseService {
   }
 
   // Search and Filter Operations
-  async searchDocuments(collectionName, searchTerm, searchFields = ['nombre_contratante', 'email'], limitCount = 100) {
-    if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
-      return [];
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      const collectionRef = collection(this.db, collectionName);
-      const searchResults = [];
-      
-      // Firebase doesn't support full-text search, so we'll search each field separately
-      for (const field of searchFields) {
-        const q = query(
-          collectionRef,
-          where(field, '>=', searchTerm),
-          where(field, '<=', searchTerm + '\uf8ff'),
-          limit(limitCount)
-        );
-        const snapshot = await getDocs(q);
-        snapshot.docs.forEach(doc => {
-          const existing = searchResults.find(item => item.id === doc.id);
-          if (!existing) {
-            searchResults.push({
-              id: doc.id,
-              ...doc.data()
-            });
-          }
-        });
-      }
-      
-      return searchResults;
-    } catch (error) {
-      console.error(`Error searching documents in ${collectionName}:`, error);
-      throw error;
-    }
-  }
-
   async getDocumentsByField(collectionName, field, value, limitCount = 100) {
     if (!FIREBASE_ENABLED) {
       console.log(`🔥 Firebase disabled - returning empty data for ${collectionName}`);
@@ -374,27 +702,6 @@ class FirebaseService {
   }
 
   // Specific CRM Operations
-  async getTables() {
-    // Return available collections/tables
-    return [
-      'autos',
-      'rc',
-      'vida',
-      'gmm', 
-      'transporte',
-      'mascotas',
-      'diversos',
-      'negocio',
-      'emant_caratula',
-      'emant_listado',
-      'gruposvida',
-      'listadovida',
-      'gruposautos',
-      'listadoautos',
-      'prospeccion_cards'
-    ];
-  }
-
   async getTableStructure(tableName) {
     if (!FIREBASE_ENABLED) {
       console.log(`🔥 Firebase disabled - returning empty data for ${tableName}`);
@@ -424,44 +731,6 @@ class FirebaseService {
     } catch (error) {
       console.error(`Error getting table structure for ${tableName}:`, error);
       return [];
-    }
-  }
-
-  async getBirthdays() {
-    if (!FIREBASE_ENABLED) {
-      console.log('🔥 Firebase disabled - returning empty data for birthdays');
-      return [];
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
-      const allBirthdays = [];
-      
-      for (const collectionName of collections) {
-        try {
-          const docs = await this.getAllDocuments(collectionName);
-          const birthdays = docs.filter(doc => 
-            doc.fecha_nacimiento || doc.birthday || doc.fechaNacimiento
-          ).map(doc => ({
-            ...doc,
-            table: collectionName,
-            birthday: doc.fecha_nacimiento || doc.birthday || doc.fechaNacimiento
-          }));
-          
-          allBirthdays.push(...birthdays);
-        } catch (error) {
-          console.warn(`Could not get birthdays from ${collectionName}:`, error);
-        }
-      }
-      
-      return allBirthdays;
-    } catch (error) {
-      console.error('Error getting birthdays:', error);
-      throw error;
     }
   }
 
@@ -636,112 +905,9 @@ class FirebaseService {
     }
   }
 
-  // Create new record
-  async create(tableName, data) {
-    if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - cannot create record in ${tableName}`);
-      throw new Error('Firebase disabled - use backend API instead');
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      const docRef = await addDoc(collection(this.db, tableName), {
-        ...data,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
-      
-      return {
-        success: true,
-        id: docRef.id,
-        data: data,
-        message: 'Record created successfully',
-        source: 'Firebase'
-      };
-    } catch (error) {
-      console.error(`Error creating ${tableName}:`, error);
-      throw error;
-    }
-  }
-
-  // Update record
-  async update(tableName, firebaseId, data) {
-    if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - cannot update record in ${tableName}`);
-      throw new Error('Firebase disabled - use backend API instead');
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      // Ensure ID is a string for Firebase
-      const stringId = String(firebaseId);
-      const docRef = doc(this.db, tableName, stringId);
-      await updateDoc(docRef, {
-        ...data,
-        updated_at: new Date().toISOString()
-      });
-      
-      return {
-        success: true,
-        id: firebaseId,
-        data: data,
-        message: 'Record updated successfully',
-        source: 'Firebase'
-      };
-    } catch (error) {
-      console.error(`Error updating ${tableName}:`, error);
-      throw error;
-    }
-  }
-
-  // Delete record
-  async delete(tableName, firebaseId) {
-    if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - cannot delete record from ${tableName}`);
-      throw new Error('Firebase disabled - use backend API instead');
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      // Ensure ID is a string for Firebase
-      const stringId = String(firebaseId);
-      const docRef = doc(this.db, tableName, stringId);
-      await deleteDoc(docRef);
-      
-      return {
-        success: true,
-        id: firebaseId,
-        message: 'Record deleted successfully',
-        source: 'Firebase'
-      };
-    } catch (error) {
-      console.error(`Error deleting ${tableName}:`, error);
-      throw error;
-    }
-  }
-
-  // Get contacts (specific method)
-  async getContacts(limit = 50) {
-    return this.getAll('directorio_contactos', limit);
-  }
-
   // Get insurance policies (specific method) 
   async getPolicies(limit = 50) {
     return this.getAll('autos', limit);
-  }
-
-  // Search contacts
-  async searchContacts(searchTerm) {
-    return this.search('directorio_contactos', searchTerm);
   }
 
   // Search policies
@@ -754,4 +920,6 @@ class FirebaseService {
   }
 }
 
-export default new FirebaseService(); 
+const firebaseService = new FirebaseService();
+export default firebaseService;
+export { setCurrentTeam }; 

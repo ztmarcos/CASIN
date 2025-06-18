@@ -12,24 +12,35 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import firebaseTeamService from '../services/firebaseTeamService';
+import { setCurrentTeam } from '../services/firebaseService';
 
 const TeamContext = createContext();
 
 export const TeamProvider = ({ children }) => {
+  console.log('🏢 TeamProvider: Component initializing...');
+  
   const { user } = useAuth();
+  console.log('🏢 TeamProvider: Got user from AuthContext:', user);
+  
   const [userTeam, setUserTeam] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
   const [isLoadingTeam, setIsLoadingTeam] = useState(true);
   const [userRole, setUserRole] = useState(null);
   const [needsTeamSetup, setNeedsTeamSetup] = useState(false);
+  const [teamFirebaseConfig, setTeamFirebaseConfig] = useState(null);
 
   // Cargar equipo del usuario cuando se autentica
   useEffect(() => {
+    console.log('🔄 TeamContext: useEffect triggered, user:', user);
+    
     if (user?.email) {
       console.log('🔍 User authenticated, loading team data for:', user.email);
+      console.log('👤 User details:', { email: user.email, uid: user.uid, name: user.name });
       loadUserTeam();
     } else {
       console.log('👤 User not authenticated, resetting team state');
+      console.log('👤 User value:', user);
       resetTeamState();
     }
   }, [user]);
@@ -39,7 +50,33 @@ export const TeamProvider = ({ children }) => {
     setTeamMembers([]);
     setUserRole(null);
     setNeedsTeamSetup(false);
+    setTeamFirebaseConfig(null);
     setIsLoadingTeam(false);
+    
+    // 🚫 DESACTIVAR SISTEMA DE EQUIPOS EN FIREBASE SERVICE
+    setCurrentTeam(null);
+    console.log('🏢 Team system DEACTIVATED in FirebaseService');
+  };
+
+  const setupTeamFirebase = async (teamId, teamData) => {
+    try {
+      console.log('🔧 Setting up Firebase for team:', teamData.name);
+      
+      // Configurar Firebase para este equipo específico
+      const firebaseConfig = await firebaseTeamService.switchToTeam(teamId, teamData);
+      setTeamFirebaseConfig(firebaseConfig);
+      
+      // ✨ ACTIVAR SISTEMA DE EQUIPOS EN FIREBASE SERVICE
+      setCurrentTeam(teamId);
+      console.log('🏢 Team system ACTIVATED in FirebaseService for team:', teamId);
+      
+      console.log('✅ Team Firebase configuration ready');
+      
+      return firebaseConfig;
+    } catch (error) {
+      console.error('❌ Error setting up team Firebase:', error);
+      throw error;
+    }
   };
 
   const loadUserTeam = async () => {
@@ -76,6 +113,9 @@ export const TeamProvider = ({ children }) => {
       if (teamDoc.exists()) {
         const teamData = { id: teamDoc.id, ...teamDoc.data() };
         setUserTeam(teamData);
+        
+        // Configurar Firebase para este equipo
+        await setupTeamFirebase(teamDoc.id, teamData);
         
         // Cargar todos los miembros del equipo
         await loadTeamMembers(memberData.teamId);
@@ -115,13 +155,144 @@ export const TeamProvider = ({ children }) => {
     }
   };
 
+  // Inicializar colecciones usando plantillas CASIN cuando sea posible
+  const initializeTeamCollections = async (teamId) => {
+    try {
+      console.log('🗂️ Initializing collections for team:', teamId);
+
+      // Intentar usar plantillas de CASIN primero
+      const TeamTemplateService = (await import('../services/teamTemplateService')).default;
+      
+      try {
+        console.log('🎨 Intentando usar plantillas CASIN...');
+        const templates = await TeamTemplateService.extractCASINStructure();
+        
+        if (Object.keys(templates).length > 0) {
+          console.log(`✅ Se encontraron ${Object.keys(templates).length} plantillas CASIN`);
+          
+          // Usar las plantillas para crear las colecciones
+          const results = await TeamTemplateService.createTeamFromTemplate(
+            teamId,
+            'Nuevo Equipo',
+            user?.email || 'admin',
+            templates
+          );
+          
+          console.log(`🎉 Colecciones creadas usando plantillas CASIN: ${results.length}`);
+          return;
+        }
+      } catch (templateError) {
+        console.warn('⚠️ No se pudieron usar plantillas CASIN, usando método básico:', templateError.message);
+      }
+
+      // Fallback: método básico original
+      console.log('📋 Usando inicialización básica...');
+      
+      // Colecciones que cada equipo debe tener
+      const collectionsToCreate = [
+        'contactos',
+        'polizas', 
+        'tareas',
+        'reportes',
+        'configuracion'
+      ];
+
+      // Datos iniciales para cada colección
+      const initialData = {
+        contactos: [
+          {
+            nombre: 'Contacto de Ejemplo',
+            email: 'ejemplo@empresa.com',
+            telefono: '555-0123',
+            empresa: 'Empresa Demo',
+            cargo: 'Gerente',
+            fechaCreacion: serverTimestamp(),
+            activo: true,
+            notas: 'Contacto de ejemplo para empezar'
+          }
+        ],
+        polizas: [
+          {
+            numeroPoliza: 'DEMO-001',
+            tipoPoliza: 'vida',
+            compania: 'Seguros Demo',
+            prima: 1000,
+            fechaInicio: new Date(),
+            fechaVencimiento: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 año
+            status: 'vigente',
+            fechaCreacion: serverTimestamp()
+          }
+        ],
+        tareas: [
+          {
+            titulo: 'Bienvenido a tu equipo',
+            descripcion: 'Configura tu equipo y comienza a trabajar',
+            prioridad: 'alta',
+            status: 'pendiente',
+            fechaCreacion: serverTimestamp(),
+            asignadoA: user?.email || 'admin'
+          }
+        ],
+        reportes: [
+          {
+            nombre: 'Reporte Inicial',
+            tipo: 'general',
+            fechaCreacion: serverTimestamp(),
+            generadoPor: user?.email || 'admin',
+            datos: { mensaje: 'Tu primer reporte está listo' }
+          }
+        ],
+        configuracion: [
+          {
+            clave: 'team_initialized',
+            valor: true,
+            descripcion: 'Indica que el equipo ha sido inicializado',
+            fechaCreacion: serverTimestamp()
+          },
+          {
+            clave: 'default_settings',
+            valor: {
+              notificaciones: true,
+              autoBackup: true,
+              maxContactos: 1000,
+              tema: 'light'
+            },
+            descripcion: 'Configuraciones por defecto del equipo',
+            fechaCreacion: serverTimestamp()
+          }
+        ]
+      };
+
+      // Crear cada colección con datos iniciales
+      for (const collectionName of collectionsToCreate) {
+        const teamCollectionName = `team_${teamId}_${collectionName}`;
+        const collectionRef = collection(db, teamCollectionName);
+        
+        // Agregar datos iniciales
+        const dataToAdd = initialData[collectionName] || [];
+        for (const data of dataToAdd) {
+          await addDoc(collectionRef, data);
+        }
+        
+        console.log(`✅ Created collection: ${teamCollectionName} with ${dataToAdd.length} initial records`);
+      }
+
+      console.log('🎉 Team collections initialized successfully');
+
+    } catch (error) {
+      console.error('❌ Error initializing team collections:', error);
+      // No lanzar error para que no falle la creación del equipo
+    }
+  };
+
   const createTeam = async (teamName) => {
-    if (!user?.email) {
-      throw new Error('User not authenticated');
+    if (!user?.email || !user?.uid) {
+      throw new Error('User not properly authenticated - missing email or uid');
     }
 
     try {
       console.log('🏢 Creating new team:', teamName);
+      console.log('👤 User data:', { email: user.email, uid: user.uid, name: user.name });
       
       // Crear el equipo
       const teamData = {
@@ -150,6 +321,9 @@ export const TeamProvider = ({ children }) => {
       });
 
       console.log('✅ User added as team admin');
+
+      // Inicializar colecciones del equipo
+      await initializeTeamCollections(teamDocRef.id);
 
       // Recargar datos del equipo
       await loadUserTeam();
@@ -254,12 +428,18 @@ export const TeamProvider = ({ children }) => {
     isLoadingTeam,
     needsTeamSetup,
     userRole,
+    teamFirebaseConfig,
     isAdmin,
     isMember,
     createTeam,
     inviteUserToTeam,
     removeUserFromTeam,
-    loadUserTeam
+    loadUserTeam,
+    setupTeamFirebase,
+    // Funciones para acceder a la configuración del equipo
+    getTeamDb: () => firebaseTeamService.getCurrentDb(),
+    getTeamAuth: () => firebaseTeamService.getCurrentAuth(),
+    getTeamStats: () => firebaseTeamService.getStats()
   };
 
   return (

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import firebaseService from '../../services/firebaseService';
+import firebaseServiceAdapter from '../../services/firebaseServiceAdapter';
+import { useTeam } from '../../context/TeamContext';
 
 const FirebaseTest = () => {
+  const { userTeam, currentTeam } = useTeam();
+  const team = currentTeam || userTeam;
+  
   const [contacts, setContacts] = useState([]);
   const [autos, setAutos] = useState([]);
   const [allCollections, setAllCollections] = useState({});
@@ -24,12 +28,12 @@ const FirebaseTest = () => {
     try {
       console.log('🔥 Loading all Firebase collections...');
       
-      const tables = await firebaseService.getTables();
+      const tables = await firebaseServiceAdapter.getTables();
       const collectionData = {};
       
       for (const tableName of tables) {
         try {
-          const data = await firebaseService.getAllDocuments(tableName, 5);
+          const data = await firebaseServiceAdapter.getAllDocuments(tableName, 5);
           collectionData[tableName] = {
             count: data.length,
             sampleData: data
@@ -62,12 +66,12 @@ const FirebaseTest = () => {
       console.log('🔥 Loading Firebase data...');
       
       // Load contacts
-      const contactsData = await firebaseService.getData('directorio_contactos', 5);
+      const contactsData = await firebaseServiceAdapter.getData('directorio_contactos', 5);
       console.log('📇 Contacts loaded:', contactsData.length);
       setContacts(contactsData);
 
       // Load autos
-      const autosData = await firebaseService.getData('autos', 5);
+      const autosData = await firebaseServiceAdapter.getData('autos', 5);
       console.log('🚗 Autos loaded:', autosData.length);
       setAutos(autosData);
 
@@ -86,6 +90,21 @@ const FirebaseTest = () => {
   return (
     <div style={{ padding: '20px', fontFamily: 'monospace' }}>
       <h2>🔥 Firebase Data Test</h2>
+      
+      {team && (
+        <div style={{
+          background: 'linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)',
+          padding: '15px',
+          borderRadius: '8px',
+          marginBottom: '20px',
+          border: '1px solid #e2e8f0',
+          fontSize: '14px'
+        }}>
+          <strong>🏢 Equipo:</strong> {team.name} | 
+          <strong> 📊 Servicio:</strong> {firebaseServiceAdapter.getServiceInfo().service} | 
+          <strong> 🔒 Datos:</strong> Aislados por equipo
+        </div>
+      )}
       
       <div style={{ marginBottom: '20px' }}>
         <h3>📡 Firebase Configuration</h3>

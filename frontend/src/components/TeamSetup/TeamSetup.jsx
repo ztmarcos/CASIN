@@ -3,13 +3,16 @@ import { useTeam } from '../../context/TeamContext';
 import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import './TeamSetup.css';
+import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../../firebase/config';
 
 const TeamSetup = () => {
   const { createTeam, isLoadingTeam } = useTeam();
   const { user } = useAuth();
   const [teamName, setTeamName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-  const [step, setStep] = useState('welcome'); // welcome, create, success
+  const [step, setStep] = useState('welcome'); // welcome, create
+  const [error, setError] = useState(null);
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
@@ -23,12 +26,17 @@ const TeamSetup = () => {
     
     try {
       await createTeam(teamName.trim());
-      setStep('success');
-      toast.success('¡Equipo creado exitosamente!');
+      toast.success('¡Equipo creado exitosamente! Redirigiendo...');
+      
+      // Dar tiempo para que el contexto se actualice y mostrar la app automáticamente
+      setTimeout(() => {
+        // El ProtectedRoute debería detectar automáticamente que ya tiene equipo
+        window.location.reload();
+      }, 1500);
+      
     } catch (error) {
       console.error('Error creating team:', error);
       toast.error('Error al crear el equipo: ' + error.message);
-    } finally {
       setIsCreating(false);
     }
   };
@@ -37,29 +45,84 @@ const TeamSetup = () => {
     setStep('create');
   };
 
-  if (step === 'success') {
-    return (
-      <div className="team-setup">
-        <div className="setup-container">
-          <div className="setup-card success-card">
-            <div className="success-icon">🎉</div>
-            <h1>¡Equipo Creado!</h1>
-            <p>Tu equipo "{teamName}" ha sido creado exitosamente.</p>
-            <p>Ahora puedes invitar a otros usuarios para que se unan a tu equipo.</p>
-            
-            <div className="success-actions">
-              <button 
-                className="btn-primary"
-                onClick={() => window.location.reload()}
-              >
-                Ir al Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Debug function to create MARQ team for testing
+  const createMARQTeamForTesting = async () => {
+    setIsCreating(true);
+    setError(null);
+    
+    try {
+      console.log('🏢 Creating MARQ team for testing...');
+      
+      const userEmail = 'bumtekateam@gmail.com';
+      const userUid = 'cd5BAYELe4aq8SE3XDjQULiwW3w2';
+      
+      // Check if MARQ team already exists
+      const teamsQuery = query(collection(db, 'teams'), where('name', '==', 'MARQ'));
+      const teamsSnapshot = await getDocs(teamsQuery);
+      
+      let teamId;
+      
+      if (teamsSnapshot.empty) {
+        // Create MARQ team
+        const teamData = {
+          name: 'MARQ',
+          owner: userEmail,
+          createdAt: serverTimestamp(),
+          firebaseProject: 'casinbbdd',
+          settings: {
+            allowInvites: true,
+            maxMembers: 50
+          },
+          description: 'Equipo MARQ para pruebas'
+        };
+        
+        const teamDocRef = await addDoc(collection(db, 'teams'), teamData);
+        teamId = teamDocRef.id;
+        console.log('✅ MARQ team created with ID:', teamId);
+      } else {
+        teamId = teamsSnapshot.docs[0].id;
+        console.log('✅ MARQ team already exists with ID:', teamId);
+      }
+      
+      // Check if user is already in team
+      const membersQuery = query(
+        collection(db, 'team_members'), 
+        where('email', '==', userEmail),
+        where('teamId', '==', teamId)
+      );
+      const membersSnapshot = await getDocs(membersQuery);
+      
+      if (membersSnapshot.empty) {
+        // Add user to MARQ team
+        await addDoc(collection(db, 'team_members'), {
+          userId: userUid,
+          email: userEmail,
+          name: 'bumteka team',
+          teamId: teamId,
+          role: 'admin',
+          invitedBy: userEmail,
+          joinedAt: serverTimestamp()
+        });
+        
+        console.log('✅ User added to MARQ team');
+      }
+      
+      console.log('🎉 MARQ team setup complete!');
+      
+      // Reload page to activate team system
+      window.location.reload();
+      
+    } catch (error) {
+      console.error('❌ Error creating MARQ team:', error);
+      setError('Error creando equipo MARQ: ' + error.message);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    // Implementation of handleSubmit function
+  };
 
   if (step === 'create') {
     return (
@@ -133,7 +196,7 @@ const TeamSetup = () => {
                   {isCreating ? (
                     <>
                       <span className="spinner">⏳</span>
-                      Creando...
+                      Creando y entrando...
                     </>
                   ) : (
                     'Crear Equipo'
@@ -191,6 +254,18 @@ const TeamSetup = () => {
             >
               Crear mi Equipo
             </button>
+            
+            {/* Debug button for bumtekateam@gmail.com */}
+            {user?.email === 'bumtekateam@gmail.com' && (
+              <button 
+                className="btn-secondary"
+                onClick={createMARQTeamForTesting}
+                disabled={isCreating}
+                style={{ marginTop: '10px', backgroundColor: '#ff6b6b', color: 'white' }}
+              >
+                {isCreating ? '⏳ Creando MARQ...' : '🛠️ DEBUG: Crear Equipo MARQ'}
+              </button>
+            )}
           </div>
 
           <div className="user-info-section">
@@ -207,6 +282,12 @@ const TeamSetup = () => {
               </div>
             </div>
           </div>
+
+          {error && (
+            <div className="error-message" style={{ color: 'red', margin: '10px 0', padding: '10px', backgroundColor: '#ffebee', borderRadius: '5px' }}>
+              {error}
+            </div>
+          )}
 
           <div className="welcome-note">
             <p>

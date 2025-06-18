@@ -3,7 +3,7 @@
  * Intercepts firebaseTableService calls when airplane mode is enabled
  */
 
-import firebaseTableService from './firebaseTableService.js';
+import tableServiceAdapter from './tableServiceAdapter.js';
 import airplaneModeService from './airplaneModeService.js';
 
 class AirplaneTableService {
@@ -15,8 +15,8 @@ class AirplaneTableService {
       return tables;
     }
     
-    // Normal mode - use Firebase
-    return await firebaseTableService.getTables();
+    // Normal mode - use table service adapter (team system enabled)
+    return await tableServiceAdapter.getTables();
   }
 
   // Get table data - either from localStorage or Firebase
@@ -54,11 +54,11 @@ class AirplaneTableService {
       }
     }
     
-    // Normal mode - use Firebase
-    return await firebaseTableService.getData(tableName, filters);
+    // Normal mode - use table service adapter (team system enabled)
+    return await tableServiceAdapter.getData(tableName, filters);
   }
 
-  // For other methods, just pass through to firebaseTableService
+  // For other methods, just pass through to tableServiceAdapter
   // but prevent writes in airplane mode
   async insertData(tableName, data) {
     if (airplaneModeService.isEnabled()) {
@@ -66,7 +66,7 @@ class AirplaneTableService {
       throw new Error('Cannot insert data in airplane mode. Disable airplane mode first.');
     }
     
-    return await firebaseTableService.insertData(tableName, data);
+    return await tableServiceAdapter.insertData(tableName, data);
   }
 
   async updateData(tableName, id, data) {
@@ -75,7 +75,7 @@ class AirplaneTableService {
       throw new Error('Cannot update data in airplane mode. Disable airplane mode first.');
     }
     
-    return await firebaseTableService.updateData(tableName, id, data);
+    return await tableServiceAdapter.updateData(tableName, id, data);
   }
 
   async deleteData(tableName, id) {
@@ -84,7 +84,7 @@ class AirplaneTableService {
       throw new Error('Cannot delete data in airplane mode. Disable airplane mode first.');
     }
     
-    return await firebaseTableService.deleteData(tableName, id);
+    return await tableServiceAdapter.deleteRow(tableName, id);
   }
 
   async createTable(tableName, data) {
@@ -93,25 +93,27 @@ class AirplaneTableService {
       throw new Error('Cannot create table in airplane mode. Disable airplane mode first.');
     }
     
-    return await firebaseTableService.createTable(tableName, data);
+    return await tableServiceAdapter.createTable(tableName, data);
   }
 
   // Pass through formatting methods
   formatTableTitle(tableName) {
-    return firebaseTableService.formatTableTitle(tableName);
+    return tableServiceAdapter.formatTableTitle(tableName);
   }
 
   formatSingleTableName(tableName) {
-    return firebaseTableService.formatSingleTableName(tableName);
+    return tableServiceAdapter.formatSingleTableName(tableName);
   }
 
   // Pass through other read-only methods
   setCurrentTable(tableName) {
-    return firebaseTableService.setCurrentTable(tableName);
+    // tableServiceAdapter doesn't have setCurrentTable, skip it
+    return tableName;
   }
 
   getCurrentTableTitle() {
-    return firebaseTableService.getCurrentTableTitle();
+    // Return empty string if not available
+    return '';
   }
 }
 

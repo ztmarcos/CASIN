@@ -6,10 +6,15 @@ import TableCardView from '../TableCardView/TableCardView';
 import TableImport from '../TableImport/TableImport';
 import AddEntryModal from './AddEntryModal';
 import airplaneTableService from '../../services/airplaneTableService';
+import tableServiceAdapter from '../../services/tableServiceAdapter';
+import { useTeam } from '../../context/TeamContext';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
 
 const DataSection = () => {
+  const { userTeam, currentTeam } = useTeam();
+  const team = currentTeam || userTeam;
+  
   const [selectedTable, setSelectedTable] = useState(null);
   const [viewMode, setViewMode] = useState('table');
   const [tableData, setTableData] = useState([]);
@@ -163,7 +168,7 @@ const DataSection = () => {
       const dataArray = Array.isArray(data) ? data : [data];
       
       // Firebase can handle batch inserts efficiently
-      await firebaseTableService.insertData(selectedTable.name, dataArray);
+      await tableServiceAdapter.insertData(selectedTable.name, dataArray);
       
       console.log(`✅ Successfully imported ${dataArray.length} records to Firebase`);
       toast.success(`Imported ${dataArray.length} records successfully`);
@@ -191,13 +196,13 @@ const DataSection = () => {
       
       // Firebase doesn't need explicit column definitions like MySQL
       // Just create the collection and insert the data
-      const result = await firebaseTableService.createTable(tableName, data);
+      const result = await tableServiceAdapter.createTable(tableName, data);
       
       console.log('✅ Firebase collection created successfully:', result);
       toast.success(`Collection '${tableName}' created successfully`);
       
       // Select the new table
-      setSelectedTable({ name: tableName, title: firebaseTableService.formatSingleTableName(tableName) });
+      setSelectedTable({ name: tableName, title: tableServiceAdapter.formatSingleTableName(tableName) });
       loadTableData(tableName);
       setShowCreateTableModal(false);
     } catch (error) {
@@ -213,7 +218,7 @@ const DataSection = () => {
     if (!selectedTable) return;
     
     try {
-      await firebaseTableService.insertData(selectedTable.name, formData);
+      await tableServiceAdapter.insertData(selectedTable.name, formData);
       loadTableData(); // Reload the table data after adding new entry
       setShowAddEntryModal(false);
     } catch (error) {
@@ -226,7 +231,7 @@ const DataSection = () => {
     // Force a refresh of the table data
     setIsLoading(true);
     try {
-      const result = await firebaseTableService.getData(selectedTable.name, filters);
+      const result = await tableServiceAdapter.getData(selectedTable.name, filters);
       setTableData(result.data || []);
     } catch (error) {
       console.error('Error refreshing table data:', error);
@@ -243,7 +248,7 @@ const DataSection = () => {
       const currentTableName = selectedTable.name;
       console.log('Updating cell:', { id, column, value, table: currentTableName });
       
-      const result = await firebaseTableService.updateData(currentTableName, id, column, value);
+      const result = await tableServiceAdapter.updateData(currentTableName, id, column, value);
       
       // Update the local data to reflect the change
       setTableData(prevData => 
@@ -267,7 +272,7 @@ const DataSection = () => {
       const currentTableName = selectedTable?.name;
       
       // Reload tables list first
-      const tablesData = await firebaseTableService.getTables();
+      const tablesData = await tableServiceAdapter.getTables();
       
       // If we had a selected table, find it in the new list
       if (currentTableName) {
@@ -291,6 +296,53 @@ const DataSection = () => {
 
   return (
     <div className="data-section">
+      {/* Team info header */}
+      {team && (
+        <div className="team-info-header" style={{
+          background: 'linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)',
+          padding: '1rem',
+          borderRadius: '12px',
+          marginBottom: '1rem',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, color: '#2d3748', fontSize: '1.3rem' }}>
+              📊 Base de Datos de {team.name}
+            </h2>
+            <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.9rem' }}>
+              Datos aislados por equipo - Servicio: {tableServiceAdapter.getServiceInfo().service}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{
+              background: '#e6fffa',
+              color: '#234e52',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              border: '1px solid #81e6d9'
+            }}>
+              🏢 Table Service v1.0
+            </span>
+            <span style={{
+              background: '#fed7d7',
+              color: '#c53030',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              border: '1px solid #feb2b2'
+            }}>
+              🔒 Datos Aislados
+            </span>
+          </div>
+        </div>
+      )}
+      
       <div className="data-section-header">
         <div className="header-top">
           <div className="header-title">

@@ -20,6 +20,11 @@ const GoogleLogin = () => {
       provider.addScope('email');
       provider.addScope('profile');
       
+      // Forzar selección de cuenta
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
@@ -46,6 +51,7 @@ const GoogleLogin = () => {
       localStorage.setItem('userEmail', user.email);
       localStorage.setItem('userName', user.displayName || '');
       localStorage.setItem('userPhoto', user.photoURL || '');
+      localStorage.setItem('userUid', user.uid);
       
       // Use your existing AuthContext login
       login(userData);

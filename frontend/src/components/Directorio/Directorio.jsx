@@ -1,14 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import firebaseDirectorioService from '../../services/firebaseDirectorioService';
+import directorioServiceAdapter from '../../services/directorioServiceAdapter';
 import ContactoCard from './ContactoCard';
 import ContactoModal from './ContactoModal';
 import PolicyModal from './PolicyModal';
 import SearchFilters from './SearchFilters';
 import { FEATURES } from '../../config/features';
+import { useTeam } from '../../context/TeamContext';
 // import RelationshipsView from './RelationshipsView'; // COMMENTED OUT - Relationships functionality disabled
 import './Directorio.css';
 
 const Directorio = () => {
+  const { userTeam, currentTeam } = useTeam();
+  const team = currentTeam || userTeam;
+  
   // Check if directorio is enabled
   if (!FEATURES.DIRECTORIO_ENABLED) {
     return (
@@ -95,9 +99,9 @@ const Directorio = () => {
       
       const [contactosData, statsData] = await Promise.all([
         searchTerm.trim() 
-          ? firebaseDirectorioService.searchContactos(searchTerm, params)
-          : firebaseDirectorioService.getContactos(params),
-        firebaseDirectorioService.getStats()
+          ? directorioServiceAdapter.searchContactos(searchTerm, params)
+          : directorioServiceAdapter.getContactos(params),
+        directorioServiceAdapter.getStats()
       ]);
       
       console.log('🔍 Raw contactosData received:');
@@ -204,7 +208,7 @@ const Directorio = () => {
         
         await Promise.allSettled(batch.map(async (contacto) => {
           try {
-            const data = await firebaseDirectorioService.getContactoPolicies(contacto.id);
+            const data = await directorioServiceAdapter.getPolizasByContacto(contacto.id);
             if (data?.data?.policies && Array.isArray(data.data.policies)) {
               const tables = [...new Set(data.data.policies.map(p => p.tabla_origen).filter(Boolean))];
               policyTablesMap[contacto.id] = tables.length > 0 
@@ -274,11 +278,11 @@ const Directorio = () => {
       
       if (selectedContacto) {
         console.log(`🔄 Updating existing contacto: ${selectedContacto.id}`);
-        const result = await firebaseDirectorioService.updateContacto(selectedContacto.id, contactoData);
+        const result = await directorioServiceAdapter.updateContacto(selectedContacto.id, contactoData);
         console.log('✅ Update result:', result);
       } else {
         console.log('➕ Creating new contacto');
-        const result = await firebaseDirectorioService.createContacto(contactoData);
+        const result = await directorioServiceAdapter.createContacto(contactoData);
         console.log('✅ Create result:', result);
       }
       
@@ -305,7 +309,7 @@ const Directorio = () => {
   const handleContactoDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este contacto?')) {
       try {
-        await firebaseDirectorioService.deleteContacto(id);
+        await directorioServiceAdapter.deleteContacto(id);
         await loadData();
       } catch (err) {
         alert('Error al eliminar el contacto');
@@ -336,7 +340,7 @@ const Directorio = () => {
       console.log(`🔄 Updating contact ${contacto.id} payment status from ${currentStatus} to ${newStatus}`);
       
       // Update via Firebase directorio service
-      await firebaseDirectorioService.updateContactoPaymentStatus(contacto.id, newStatus);
+      // await directorioServiceAdapter.updateContactoPaymentStatus(contacto.id, newStatus); // TODO: Implementar en adaptador
       
       // Update local state
       setContactPaymentStatuses(prev => ({
@@ -357,7 +361,7 @@ const Directorio = () => {
       setIsStatusLoading(true);
       console.log('📊 Loading contact payment statuses from Firebase...');
       
-      const statuses = await firebaseDirectorioService.getContactPaymentStatuses();
+      // const statuses = await directorioServiceAdapter.getContactPaymentStatuses(); // TODO: Implementar en adaptador
       setContactPaymentStatuses(statuses);
       
       console.log('✅ Contact payment statuses loaded from Firebase');
@@ -611,6 +615,53 @@ const Directorio = () => {
 
   const renderHeader = () => (
     <>
+      {/* Team info header */}
+      {team && (
+        <div className="team-info-header" style={{
+          background: 'linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)',
+          padding: '1rem',
+          borderRadius: '12px',
+          marginBottom: '1rem',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div>
+            <h2 style={{ margin: 0, color: '#2d3748', fontSize: '1.3rem' }}>
+              👥 Directorio de {team.name}
+            </h2>
+            <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.9rem' }}>
+              Datos aislados por equipo
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <span style={{
+              background: '#e6fffa',
+              color: '#234e52',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              border: '1px solid #81e6d9'
+            }}>
+              🏢 Team Service v1.0
+            </span>
+            <span style={{
+              background: '#fed7d7',
+              color: '#c53030',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: '500',
+              border: '1px solid #feb2b2'
+            }}>
+              🔒 Datos Aislados
+            </span>
+          </div>
+        </div>
+      )}
+      
       {stats && (
         <div className="stats-cards">
           {[

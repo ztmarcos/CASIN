@@ -14,6 +14,15 @@ import UserManagement from './components/UserManagement/UserManagement'
 import Tasks from './pages/Tasks'
 import TeamSetup from './components/TeamSetup/TeamSetup'
 import TeamManagement from './components/TeamManagement/TeamManagement'
+import TeamFirebaseViewer from './components/TeamFirebaseViewer/TeamFirebaseViewer'
+import TeamDataDemo from './components/TeamDataDemo/TeamDataDemo'
+import DataMigration from './components/DataMigration/DataMigration'
+import DatabaseViewer from './components/DatabaseViewer/DatabaseViewer'
+import CASINSetup from './components/CASINSetup/CASINSetup'
+import CASINSetupTest from './components/CASINSetup/CASINSetupTest'
+import CASINSetupSimple from './components/CASINSetup/CASINSetupSimple'
+
+
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { TeamProvider, useTeam } from './context/TeamContext'
@@ -31,6 +40,16 @@ import Cotiza from './components/Cotiza/Cotiza'
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   const { needsTeamSetup, isLoadingTeam, userTeam } = useTeam();
+  
+  console.log('🛡️ ProtectedRoute: State check', {
+    user: !!user,
+    userEmail: user?.email,
+    loading,
+    isLoadingTeam,
+    needsTeamSetup,
+    userTeam: !!userTeam,
+    teamName: userTeam?.name
+  });
   
   // 1. Primero verificar si está cargando la autenticación
   if (loading) {
@@ -225,6 +244,22 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/migration" element={
+        <DataMigration />
+      } />
+
+      <Route path="/database-viewer" element={
+        <DatabaseViewer />
+      } />
+
+      <Route path="/team-firebase" element={
+        <ProtectedRoute>
+          <Layout>
+            <TeamFirebaseViewer />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
       <Route path="/team" element={
         <ProtectedRoute>
           <Layout>
@@ -233,6 +268,28 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/team-data" element={
+        <ProtectedRoute>
+          <Layout>
+            <TeamDataDemo />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/casin-setup" element={
+        <CASINSetupSimple />
+      } />
+
+      <Route path="/casin-setup-full" element={
+        <CASINSetup />
+      } />
+
+      <Route path="/test" element={
+        <div style={{padding: '2rem', textAlign: 'center'}}>
+          <h1>🧪 Test Route Works!</h1>
+          <p>Si ves esto, las rutas funcionan correctamente.</p>
+        </div>
+      } />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
