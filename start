@@ -1,0 +1,2 @@
+PORT=3001 npm run dev:backend
+cd /Volumes/SSD/X4/frontend && npm run dev

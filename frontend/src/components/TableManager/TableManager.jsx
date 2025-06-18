@@ -17,7 +17,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import firebaseTableService from '../../services/firebaseTableService';
+import airplaneTableService from '../../services/airplaneTableService';
 import './TableManager.css';
 import { toast } from 'react-hot-toast';
 import Modal from '../Modal/Modal';
@@ -163,8 +163,8 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
       setIsLoading(true);
       console.log('🔥 Loading Firebase collections with relationships...');
       
-      // Use firebaseTableService directly instead of backend endpoint
-      const tables = await firebaseTableService.getTables();
+      // Use airplaneTableService which handles online/offline automatically
+      const tables = await airplaneTableService.getTables();
       console.log('🔥 Received Firebase collections with relationships:', tables);
       
       // Group and organize tables by relationships

@@ -4,8 +4,10 @@ import { useAuth } from '../../context/AuthContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
 import SupportChat from '../SupportChat/SupportChat';
+
 import { FEATURES } from '../../config/features';
 import logoImage from '/logo.png';
+import AirplaneButton from '../AirplaneMode/AirplaneButton';
 import './Layout.css';
 
 const Layout = ({ children }) => {
@@ -79,6 +81,7 @@ const Layout = ({ children }) => {
           </nav>
         </div>
         <div className="right-section">
+          <AirplaneButton />
           <div className="user-section">
             <span className="user-email">{user?.email}</span>
             <button className="logout-button" onClick={logout}>

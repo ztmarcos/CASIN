@@ -5,7 +5,7 @@ import DataTable from '../DataDisplay/DataTable';
 import TableCardView from '../TableCardView/TableCardView';
 import TableImport from '../TableImport/TableImport';
 import AddEntryModal from './AddEntryModal';
-import firebaseTableService from '../../services/firebaseTableService';
+import airplaneTableService from '../../services/airplaneTableService';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
 
@@ -45,8 +45,8 @@ const DataSection = () => {
         console.log('🔄 Combined table detected, using child table:', actualTableName);
       }
       
-      const result = await firebaseTableService.getData(actualTableName, filters);
-      console.log('🔥 Received data from Firebase:', result);
+      const result = await airplaneTableService.getData(actualTableName, filters);
+      console.log('🔥 Received data:', result);
       
       if (!result) {
         console.error('❌ No response from Firebase');
@@ -66,7 +66,7 @@ const DataSection = () => {
         setSelectedTable(prev => ({
           ...prev,
           name: tableName,
-          title: firebaseTableService.formatTableTitle(tableName)
+          title: airplaneTableService.formatTableTitle(tableName)
         }));
       }
     } catch (error) {
@@ -97,8 +97,8 @@ const DataSection = () => {
     // Load data immediately after selecting the table
     try {
       setIsLoading(true);
-      const result = await firebaseTableService.getData(table.name);
-      console.log('🔥 Received data from Firebase API:', result);
+      const result = await airplaneTableService.getData(table.name);
+      console.log('🔥 Received data:', result);
       
       if (!result) {
         console.error('❌ No response from Firebase API');
