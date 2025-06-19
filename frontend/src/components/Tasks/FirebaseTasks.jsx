@@ -15,7 +15,7 @@ const FirebaseTasks = () => {
   const [filteredTasks, setFilteredTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [stats, setStats] = useState(null);
+
   
   // Estados para filtros y modal
   const [statusFilter, setStatusFilter] = useState('all');
@@ -28,7 +28,6 @@ const FirebaseTasks = () => {
   useEffect(() => {
     if (userTeam) {
       loadTasks();
-      loadStats();
     }
   }, [userTeam]);
 
@@ -53,14 +52,7 @@ const FirebaseTasks = () => {
     }
   };
 
-  const loadStats = async () => {
-    try {
-      const taskStats = await firebaseTaskService.getTaskStats();
-      setStats(taskStats);
-    } catch (err) {
-      console.error('Error loading stats:', err);
-    }
-  };
+
 
   const filterTasks = () => {
     let filtered = [...tasks];
@@ -103,7 +95,6 @@ const FirebaseTasks = () => {
       try {
         await firebaseTaskService.deleteTask(taskId);
         await loadTasks();
-        await loadStats();
       } catch (err) {
         console.error('Error deleting task:', err);
         alert('Error al eliminar la tarea');
@@ -122,7 +113,6 @@ const FirebaseTasks = () => {
       setShowModal(false);
       setEditingTask(null);
       await loadTasks();
-      await loadStats();
       
     } catch (err) {
       console.error('Error saving task:', err);
@@ -134,7 +124,6 @@ const FirebaseTasks = () => {
     try {
       await firebaseTaskService.updateTask(taskId, { status: newStatus });
       await loadTasks();
-      await loadStats();
     } catch (err) {
       console.error('Error updating task status:', err);
       alert('Error al actualizar el estado de la tarea');
@@ -205,33 +194,7 @@ const FirebaseTasks = () => {
         </button>
       </div>
 
-      {/* Statistics */}
-      {stats && (
-        <div className="stats-row">
-          <div className="stat-card">
-            <div className="stat-number">{stats.total}</div>
-            <div className="stat-label">Total</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number" style={{color: getStatusColor('pending')}}>{stats.pending}</div>
-            <div className="stat-label">Pendientes</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number" style={{color: getStatusColor('in_progress')}}>{stats.inProgress}</div>
-            <div className="stat-label">En Progreso</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number" style={{color: getStatusColor('completed')}}>{stats.completed}</div>
-            <div className="stat-label">Completadas</div>
-          </div>
-          {stats.overdue > 0 && (
-            <div className="stat-card">
-              <div className="stat-number" style={{color: '#e74c3c'}}>{stats.overdue}</div>
-              <div className="stat-label">Vencidas</div>
-            </div>
-          )}
-        </div>
-      )}
+
 
       {/* Filters */}
       <div className="filters-row">

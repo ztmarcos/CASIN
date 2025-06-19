@@ -48,6 +48,37 @@ class FirebaseTaskService {
     console.log('🗑️ Task service cache cleared');
   }
 
+  // ================== Data Cleaning Utilities ==================
+
+  /**
+   * Clean data for Firebase operations - removes undefined, null, and reserved fields
+   */
+  cleanDataForFirebase(data) {
+    const reservedFields = ['id', 'firebase_doc_id'];
+    
+    const cleaned = Object.fromEntries(
+      Object.entries(data).filter(([key, value]) => 
+        !reservedFields.includes(key) && 
+        value !== undefined && 
+        value !== null
+      )
+    );
+
+    // Remove any remaining undefined fields recursively
+    const removeUndefined = (obj) => {
+      Object.keys(obj).forEach(key => {
+        if (obj[key] === undefined) {
+          delete obj[key];
+        } else if (typeof obj[key] === 'object' && obj[key] !== null && !obj[key].constructor.name.includes('Timestamp')) {
+          removeUndefined(obj[key]);
+        }
+      });
+      return obj;
+    };
+
+    return removeUndefined(cleaned);
+  }
+
   // ================== CRUD Operations ==================
 
   /**
@@ -125,15 +156,21 @@ class FirebaseTaskService {
       console.log('➕ Creating new task:', taskData);
 
       const now = new Date();
-      const newTask = {
-        ...taskData,
-        status: taskData.status || 'pending',
-        priority: taskData.priority || 'medium',
-        tags: taskData.tags || [],
+      
+      // Clean the input data
+      const cleanTaskData = this.cleanDataForFirebase(taskData);
+
+      const newTask = this.cleanDataForFirebase({
+        ...cleanTaskData,
+        status: cleanTaskData.status || 'pending',
+        priority: cleanTaskData.priority || 'medium',
+        tags: cleanTaskData.tags || [],
         createdAt: Timestamp.fromDate(now),
         updatedAt: Timestamp.fromDate(now),
-        dueDate: taskData.dueDate ? Timestamp.fromDate(new Date(taskData.dueDate)) : null
-      };
+        dueDate: cleanTaskData.dueDate ? Timestamp.fromDate(new Date(cleanTaskData.dueDate)) : null
+      });
+
+      console.log('🧹 Cleaned task data:', newTask);
 
       const tasksCollection = collection(db, this.collectionName);
       const docRef = await addDoc(tasksCollection, newTask);
@@ -161,12 +198,17 @@ class FirebaseTaskService {
     try {
       console.log('✏️ Updating task:', taskId, updateData);
 
+      // Clean the input data
+      const cleanUpdateData = this.cleanDataForFirebase(updateData);
+
       const taskRef = doc(db, this.collectionName, taskId);
-      const updatedData = {
-        ...updateData,
+      const updatedData = this.cleanDataForFirebase({
+        ...cleanUpdateData,
         updatedAt: Timestamp.fromDate(new Date()),
-        dueDate: updateData.dueDate ? Timestamp.fromDate(new Date(updateData.dueDate)) : null
-      };
+        dueDate: cleanUpdateData.dueDate ? Timestamp.fromDate(new Date(cleanUpdateData.dueDate)) : null
+      });
+
+      console.log('🧹 Cleaned update data:', updatedData);
 
       await updateDoc(taskRef, updatedData);
 

@@ -90,8 +90,8 @@ export const TeamProvider = ({ children }) => {
     try {
       console.log('🔍 Loading team for user:', user.email);
       
-      // Para el usuario específico, asignar directamente al equipo 4JlUqhAvfJMlCDhQ4vgH
-      if (user.email === 'z.t.marcos@gmail.com') {
+      // Para usuarios específicos, asignar directamente al equipo 4JlUqhAvfJMlCDhQ4vgH
+      if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com') {
         console.log('🎯 Special user detected, assigning to team 4JlUqhAvfJMlCDhQ4vgH');
         
         const teamId = '4JlUqhAvfJMlCDhQ4vgH';
@@ -124,7 +124,7 @@ export const TeamProvider = ({ children }) => {
           await addDoc(collection(db, 'team_members'), {
             userId: user.uid || user.email.replace(/[@.]/g, '_'),
             email: user.email,
-            name: user.name || user.displayName || 'Marcos Zavala',
+            name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marcos Zavala' : '2012 Solitario'),
             teamId: teamId,
             role: 'admin',
             invitedBy: user.email,
@@ -614,8 +614,10 @@ export const TeamProvider = ({ children }) => {
     // Los admins siempre pueden gestionar
     if (userRole === 'admin') return true;
     
-    // Para otros usuarios, verificar si son del equipo y tienen permisos básicos
-    // Solo permitir a usuarios regulares ver datos, pero NO gestionar miembros
+    // Los miembros regulares pueden ver datos del equipo, pero no gestionar configuraciones críticas
+    if (userRole === 'member') return true;
+    
+    // Para otros usuarios (invitados), permitir acceso de solo lectura
     return false;
   };
   
@@ -623,6 +625,17 @@ export const TeamProvider = ({ children }) => {
   const canManageUsers = () => {
     // Solo los administradores pueden gestionar usuarios
     return userRole === 'admin';
+  };
+
+  // Nueva función para verificar si puede acceder a datos críticos del equipo
+  const canAccessTeamData = () => {
+    // Solo administradores pueden acceder a datos críticos del equipo y DB viewer
+    return userRole === 'admin';
+  };
+
+  // Función para verificar si es miembro activo del equipo (incluye admin y member)
+  const isActiveMember = () => {
+    return userRole === 'admin' || userRole === 'member';
   };
 
   const value = {
@@ -637,6 +650,8 @@ export const TeamProvider = ({ children }) => {
     isMember,
     canManageTeam,
     canManageUsers,
+    canAccessTeamData,
+    isActiveMember,
     createTeam,
     inviteUserToTeam,
     removeUserFromTeam,

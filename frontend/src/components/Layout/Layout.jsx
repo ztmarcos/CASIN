@@ -15,7 +15,7 @@ import './Layout.css';
 const Layout = ({ children }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { userTeam, canManageUsers } = useTeam();
+  const { userTeam, canAccessTeamData, userRole } = useTeam();
 
   return (
     <div className="layout">
@@ -25,7 +25,8 @@ const Layout = ({ children }) => {
             <img src={logoImage} alt="CASIN Seguros Logo" className="logo-image" />
             <div className="logo-content">
               <span className="logo-text">{userTeam?.name || 'CASIN'}</span>
-              {canManageUsers && canManageUsers() && <span className="admin-badge">Admin</span>}
+              {userRole === 'admin' && <span className="admin-badge">Admin</span>}
+              {userRole === 'member' && <span className="member-badge">Miembro</span>}
             </div>
           </NavLink>
           <nav className="top-nav">
@@ -82,7 +83,7 @@ const Layout = ({ children }) => {
               <span>Directorio {!FEATURES.DIRECTORIO_ENABLED && '⚠️'}</span>
             </NavLink>
             {/* Opciones disponibles solo para administradores */}
-            {canManageUsers && canManageUsers() ? (
+            {canAccessTeamData && canAccessTeamData() ? (
               <>
                 <NavLink to="/team-data">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
@@ -99,7 +100,7 @@ const Layout = ({ children }) => {
               </>
             ) : (
               <>
-                {/* Links deshabilitados para usuarios sin permisos */}
+                {/* Links deshabilitados para usuarios sin permisos de administrador */}
                 <span className="nav-disabled" title="Solo administradores pueden acceder">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
@@ -117,7 +118,7 @@ const Layout = ({ children }) => {
           </nav>
         </div>
         <div className="right-section">
-          <div className="desktop-only">
+          <div className="control-section desktop-only">
             <AirplaneButton />
           </div>
           <div className="user-section">
@@ -125,32 +126,18 @@ const Layout = ({ children }) => {
               <img 
                 src={user.photoURL} 
                 alt="Profile" 
-                className="user-avatar"
+                className="user-avatar desktop-only"
                 referrerPolicy="no-referrer"
               />
             )}
             <div className="user-info">
-              {user?.name && <span className="user-name">{user.name}</span>}
-              <span className="user-email">{user?.email}</span>
+              <span className="user-name">{user?.name || user?.email}</span>
             </div>
             <button className="logout-button" onClick={logout} title="Cerrar sesión">
               <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
               </svg>
             </button>
-            <div className="desktop-only">
-              <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
-                {theme === 'dark' ? (
-                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                    <path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none">
-                    <path d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                )}
-              </button>
-            </div>
           </div>
         </div>
       </header>

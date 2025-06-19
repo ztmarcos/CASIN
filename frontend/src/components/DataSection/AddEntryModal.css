@@ -224,4 +224,20 @@ select.form-input {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.no-columns-message {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+.no-columns-message p {
+  margin: 0.5rem 0;
+  font-size: 0.9rem;
+}
+
+.no-columns-message p:first-child {
+  color: var(--error-text);
+  font-weight: 500;
 } 

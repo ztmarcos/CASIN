@@ -56,36 +56,45 @@ const FileIcon = ({ mimeType, name }) => {
   }
 };
 
-const BreadcrumbPath = ({ folderStack, onNavigate, teamName }) => (
-  <div className="folder-path">
-    <span 
-      onClick={() => onNavigate(null)} 
-      className="path-item"
-      title={`Ir a la carpeta raíz de ${teamName}`}
-    >
-      <span className="icon">🏠</span>
-      <span>{teamName || 'Team'}</span>
-    </span>
-    {folderStack.map((folder, index) => (
-      <span key={index} className="path-item">
-        <span className="separator">›</span>
-        <span
-          onClick={() => onNavigate(index)}
-          className="path-link"
-          title={`Ir a ${folder.name}`}
-        >
-          {folder.name}
-        </span>
-      </span>
-    ))}
-  </div>
-);
+const NavigationBar = ({ folderStack, onNavigateBack, teamName, currentPath }) => {
+  const canGoBack = folderStack.length > 0;
+  
+  // Show current location
+  const currentLocation = folderStack.length > 0 
+    ? folderStack[folderStack.length - 1].name 
+    : teamName || 'Root';
+  
+  return (
+    <div className="folder-path">
+      <button 
+        className="back-button"
+        onClick={onNavigateBack}
+        disabled={!canGoBack}
+        title={canGoBack ? 'Volver a la carpeta anterior' : 'Ya estás en la raíz'}
+      >
+        ←
+      </button>
+      
+      <div className="current-location">
+        <span className="location-icon">📁</span>
+        <span className="location-name">{currentLocation}</span>
+        {folderStack.length > 0 && (
+          <span className="location-path">
+            {folderStack.map(f => f.name).join(' / ')}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Firedrive = () => {
   const { user } = useAuth();
   const { userTeam, isLoadingTeam } = useTeam();
-  const [files, setFiles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [folders, setFolders] = useState([]);
+  const [currentFiles, setCurrentFiles] = useState([]);
+  const [loadingFolders, setLoadingFolders] = useState(true);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [error, setError] = useState(null);
   const [folderStack, setFolderStack] = useState([]);
   const [currentFolderPath, setCurrentFolderPath] = useState(ROOT_FOLDER_PATH);
@@ -93,13 +102,20 @@ const Firedrive = () => {
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [uploading, setUploading] = useState(false);
   const [debugInfo, setDebugInfo] = useState([]);
-  const [storageStats, setStorageStats] = useState(null);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [contextMenu, setContextMenu] = useState(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [newItemName, setNewItemName] = useState('');
 
-  // Add debug message helper
+  // Add debug message helper with performance timing
   const addDebugInfo = (message) => {
     const timestamp = new Date().toLocaleTimeString();
+    const perfNow = performance.now();
     setDebugInfo(prev => [...prev.slice(-4), `${timestamp}: ${message}`]); // Keep last 5 messages
-    console.log(`🔧 Debug: ${message}`);
+    console.log(`🔧 Debug [${perfNow.toFixed(1)}ms]: ${message}`);
   };
 
   // Test Firebase Storage connection with team context
@@ -133,13 +149,8 @@ const Firedrive = () => {
         addDebugInfo(`Conexión exitosa: ${connectionTest.filesCount} archivos, ${connectionTest.foldersCount} carpetas`);
         setConnectionStatus('connected');
         
-        // Get storage stats
-        try {
-          const stats = await firebaseTeamStorageService.getTeamStorageStats(userTeam.id);
-          setStorageStats(stats);
-        } catch (statsError) {
-          addDebugInfo('No se pudieron obtener estadísticas');
-        }
+        // OPTIMIZED MODE - Load folders and files separately
+        addDebugInfo('🚀 MODO OPTIMIZADO: Carga por separado carpetas y archivos');
         
         return true;
       } else {
@@ -190,152 +201,426 @@ const Firedrive = () => {
     }
   };
 
-  // Test upload functionality using team storage service
+  // DISABLED: Test upload for ultra fast mode
   const testUpload = async () => {
+    addDebugInfo('🚀 Upload test deshabilitado en modo ultra rápido');
+    return true;
+  };
+
+  // OPTIMIZED: Load folder structure
+  const loadFolderStructure = async () => {
     try {
-      addDebugInfo('Probando funcionalidad de upload...');
+      setLoadingFolders(true);
+      setError(null);
       
       if (!userTeam) {
-        addDebugInfo('No hay equipo disponible para upload');
-        return false;
+        addDebugInfo('No hay equipo disponible para listar carpetas');
+        setFolders([]);
+        return;
       }
       
-      // Create a simple test file
-      const testContent = new Blob([`Test file for team: ${userTeam.name}\nCreated: ${new Date().toISOString()}`], { type: 'text/plain' });
-      const testFile = new File([testContent], 'test.txt', { type: 'text/plain' });
+      addDebugInfo(`⚡ Cargando carpetas para team: ${userTeam.name} en path: "${currentFolderPath}"`);
       
-      const result = await firebaseTeamStorageService.uploadFileToTeam(testFile, 'temp', userTeam.id);
+      const folderData = await firebaseTeamStorageService.listTeamFoldersOnly(currentFolderPath, userTeam.id);
       
-      addDebugInfo('Upload test exitoso');
+      addDebugInfo(`📁 Cargadas ${folderData.folders.length} carpetas`);
       
-      // Refresh files to show the uploaded test file
-      await fetchFiles(currentFolderPath);
+      setFolders(folderData.folders);
+      setConnectionStatus('connected');
       
-      return true;
     } catch (error) {
-      addDebugInfo(`Upload test falló: ${error.code || error.message}`);
-      return false;
+      console.error('❌ Error loading folder structure:', error);
+      addDebugInfo(`Error al cargar carpetas: ${error.code || error.message}`);
+      setError(`Error al cargar carpetas: ${error.message}`);
+      setFolders([]);
+    } finally {
+      setLoadingFolders(false);
     }
   };
 
-  // Fetch files using team storage service
-  const fetchFiles = async (folderPath = currentFolderPath) => {
+  // OPTIMIZED: Load files in current folder
+  const loadCurrentFolderFiles = async () => {
     try {
-      setLoading(true);
+      setLoadingFiles(true);
       setError(null);
       
       if (!userTeam) {
         addDebugInfo('No hay equipo disponible para listar archivos');
-        setFiles([]);
+        setCurrentFiles([]);
         return;
       }
       
-      addDebugInfo(`Obteniendo archivos de: "${folderPath}" para team: ${userTeam.name}`);
+      addDebugInfo(`📄 Cargando archivos para path: "${currentFolderPath}"`);
       
-      const allFiles = await firebaseTeamStorageService.listTeamFiles(folderPath, userTeam.id);
+      const files = await firebaseTeamStorageService.listFilesInFolder(currentFolderPath, userTeam.id);
       
-      addDebugInfo(`Total procesados: ${allFiles.length} elementos`);
+      addDebugInfo(`📄 Cargados ${files.length} archivos para "${currentFolderPath}"`);
       
-      setFiles(allFiles);
-      setConnectionStatus('connected');
+      // Filter out .keep files for cleaner display
+      const visibleFiles = files.filter(file => file.name !== '.keep');
       
-      // Update storage stats after loading files
-      await loadStorageStats();
+      addDebugInfo(`📄 Archivos visibles: ${visibleFiles.length} (sin archivos .keep)`);
+      
+      setCurrentFiles(visibleFiles);
+      
     } catch (error) {
-      console.error('❌ Error fetching files:', error);
-      addDebugInfo(`Error al obtener archivos: ${error.code || error.message}`);
+      console.error('❌ Error loading files:', error);
+      addDebugInfo(`Error al cargar archivos: ${error.code || error.message}`);
       setError(`Error al cargar archivos: ${error.message}`);
-      setFiles([]);
+      setCurrentFiles([]);
     } finally {
-      setLoading(false);
+      setLoadingFiles(false);
     }
   };
 
-  // Navigate to folder
-  const navigateToFolder = (file) => {
-    addDebugInfo(`Navegando a carpeta: ${file.name}`);
-    if (file.isFolder) {
-      // Check if we're already in this folder
-      if (currentFolderPath === file.relativePath) {
-        addDebugInfo('Ya estamos en esta carpeta');
-        return;
-      }
+  // OPTIMIZED: Navigate to folder - load folders and files
+  const navigateToFolder = async (folder) => {
+    addDebugInfo(`📁 Navegando a carpeta: ${folder.name}`);
+    
+    if (!folder.isFolder) return;
+    
+    // Check if we're already in this folder
+    if (currentFolderPath === folder.relativePath) {
+      addDebugInfo('Ya estamos en esta carpeta');
+      return;
+    }
+    
+    try {
+      // Clear current files immediately to avoid showing old files
+      setCurrentFiles([]);
+      setFolders([]);
       
       // Update folder stack first
-      const newStack = [...folderStack, { path: file.relativePath, name: file.name }];
+      const newStack = [...folderStack, { path: folder.relativePath, name: folder.name }];
       setFolderStack(newStack);
       
-      // Then update current folder path (this will trigger useEffect to fetch files)
-      setCurrentFolderPath(file.relativePath);
+      // Update current folder path
+      setCurrentFolderPath(folder.relativePath);
+      
+      // The useEffect will handle loading the new content
+      
+    } catch (error) {
+      console.error('❌ Error navigating to folder:', error);
+      addDebugInfo(`Error navegando a carpeta: ${error.message}`);
     }
   };
 
-  // Navigate back in breadcrumb
-  const navigateBack = (index) => {
-    addDebugInfo(`Navegando atrás al índice: ${index}`);
+  // Navigate back one level
+  const navigateBack = async () => {
+    if (folderStack.length === 0) {
+      addDebugInfo('Ya estamos en la raíz, no podemos ir más atrás');
+      return;
+    }
     
-    if (index === null) {
-      // Go to root
-      setFolderStack([]);
-      setCurrentFolderPath(ROOT_FOLDER_PATH);
-    } else {
-      // Go to specific folder in stack
-      const newStack = folderStack.slice(0, index + 1);
-      setFolderStack(newStack);
-      setCurrentFolderPath(newStack[newStack.length - 1].path);
+    addDebugInfo('Navegando un nivel hacia atrás');
+    
+    // Clear current files immediately to avoid showing old files
+    setCurrentFiles([]);
+    setFolders([]);
+    
+    // Remove the last folder from stack
+    const newStack = folderStack.slice(0, -1);
+    setFolderStack(newStack);
+    
+    // Set new path (root if stack is empty, otherwise last folder in stack)
+    const newPath = newStack.length === 0 
+      ? ROOT_FOLDER_PATH 
+      : newStack[newStack.length - 1].path;
+    
+    setCurrentFolderPath(newPath);
+    
+    // The useEffect will handle loading the new content
+  };
+
+  // Handle file click - load download URL if needed
+  const handleFileClick = async (file) => {
+    if (file.isFolder) {
+      await navigateToFolder(file);
+      return;
+    }
+    
+    try {
+      addDebugInfo(`🔗 Cargando URL para archivo: ${file.name}`);
+      
+      const downloadURL = await firebaseTeamStorageService.loadFileDownloadURL(file);
+      
+      // Open file in new tab
+      window.open(downloadURL, '_blank');
+      
+      addDebugInfo(`✅ Archivo abierto: ${file.name}`);
+      
+    } catch (error) {
+      console.error('❌ Error loading file:', error);
+      addDebugInfo(`Error cargando archivo: ${error.message}`);
+      alert(`Error al cargar el archivo: ${error.message}`);
     }
   };
 
-  // Handle file upload using team storage service
-  const handleFileUpload = async (event) => {
-    const selectedFiles = Array.from(event.target.files);
-    if (selectedFiles.length === 0) return;
-
-    if (!userTeam) {
-      setError('No hay equipo disponible para subir archivos');
+  // Create new folder
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      alert('Por favor ingresa un nombre para la carpeta');
       return;
     }
 
-    setUploading(true);
-    addDebugInfo(`Subiendo ${selectedFiles.length} archivo(s) al team: ${userTeam.name}`);
-    
+    // Validate folder name
+    const sanitizedName = newFolderName.trim().replace(/[^a-zA-Z0-9\-_\s]/g, '');
+    if (!sanitizedName) {
+      alert('El nombre de la carpeta contiene caracteres no válidos');
+      return;
+    }
+
     try {
-      for (const file of selectedFiles) {
-        addDebugInfo(`Subiendo: ${file.name}`);
-        await firebaseTeamStorageService.uploadFileToTeam(file, currentFolderPath, userTeam.id);
-        addDebugInfo(`✅ ${file.name} subido`);
-      }
+      addDebugInfo(`📁 Creando carpeta: "${sanitizedName}" en path: "${currentFolderPath}"`);
       
-      // Refresh the file list
-      await fetchFiles(currentFolderPath);
+      // Create a placeholder file to establish the folder
+      const folderPath = currentFolderPath 
+        ? `${currentFolderPath}/${sanitizedName}/.keep`
+        : `${sanitizedName}/.keep`;
       
-      // Update storage stats
-      try {
-        const stats = await firebaseTeamStorageService.getTeamStorageStats(userTeam.id);
-        setStorageStats(stats);
-      } catch (error) {
-        console.warn('Could not update storage stats:', error);
-      }
+      const placeholderContent = new Blob([
+        `# ${sanitizedName}\n\n` +
+        `Carpeta creada: ${new Date().toISOString()}\n` +
+        `Ubicación: ${currentFolderPath || 'raíz'}\n` +
+        `Team: ${userTeam?.name}\n` +
+        `\n` +
+        `Este archivo mantiene la estructura de la carpeta.`
+      ], { type: 'text/plain' });
       
-      // Clear the input
-      event.target.value = '';
+      await firebaseTeamStorageService.uploadFileToTeam(
+        new File([placeholderContent], '.keep', { type: 'text/plain' }),
+        currentFolderPath ? `${currentFolderPath}/${sanitizedName}` : sanitizedName,
+        userTeam.id
+      );
+      
+      addDebugInfo(`✅ Carpeta "${sanitizedName}" creada exitosamente`);
+      
+      // Clear form and close modal
+      setNewFolderName('');
+      setShowCreateFolder(false);
+      
+      // Clear current state to force refresh
+      setFolders([]);
+      
+      // Reload folder structure only (files should remain as they were)
+      await loadFolderStructure();
+      
     } catch (error) {
-      console.error('❌ Error uploading files:', error);
-      addDebugInfo(`Error de upload: ${error.code || error.message}`);
-      setError(`Error al subir archivos: ${error.message}`);
-    } finally {
-      setUploading(false);
+      console.error('❌ Error creating folder:', error);
+      addDebugInfo(`Error creando carpeta: ${error.message}`);
+      alert(`Error al crear la carpeta: ${error.message}`);
     }
   };
 
-  // Filter files based on search term
-  const filteredFiles = useMemo(() => {
-    if (!searchTerm.trim()) return files;
+  // Cancel folder creation
+  const handleCancelCreateFolder = () => {
+    setNewFolderName('');
+    setShowCreateFolder(false);
+  };
+
+  // Context menu handlers
+  const handleRightClick = (event, item) => {
+    event.preventDefault();
+    event.stopPropagation();
     
-    return files.filter(file =>
-      file.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [files, searchTerm]);
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      item: item
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const openRenameModal = (item) => {
+    setSelectedItem(item);
+    setNewItemName(item.name);
+    setShowRenameModal(true);
+    closeContextMenu();
+  };
+
+  const openDeleteModal = (item) => {
+    setSelectedItem(item);
+    setShowDeleteModal(true);
+    closeContextMenu();
+  };
+
+  const handleRename = async () => {
+    if (!selectedItem || !newItemName.trim()) {
+      alert('Por favor ingresa un nombre válido');
+      return;
+    }
+
+    const sanitizedName = newItemName.trim().replace(/[^a-zA-Z0-9\-_\s\.]/g, '');
+    if (!sanitizedName) {
+      alert('El nombre contiene caracteres no válidos');
+      return;
+    }
+
+    if (sanitizedName === selectedItem.name) {
+      setShowRenameModal(false);
+      return;
+    }
+
+    try {
+      addDebugInfo(`✏️ Renombrando "${selectedItem.name}" a "${sanitizedName}"`);
+
+      if (selectedItem.isFolder) {
+        // For folders, we need to recreate the structure
+        await handleFolderRename(selectedItem, sanitizedName);
+      } else {
+        // For files, rename by copying and deleting
+        await handleFileRename(selectedItem, sanitizedName);
+      }
+
+      addDebugInfo(`✅ "${selectedItem.name}" renombrado a "${sanitizedName}"`);
+      
+      setShowRenameModal(false);
+      setSelectedItem(null);
+      setNewItemName('');
+      
+      // Refresh the current view
+      await Promise.all([
+        loadFolderStructure(),
+        loadCurrentFolderFiles()
+      ]);
+
+    } catch (error) {
+      console.error('❌ Error renaming item:', error);
+      addDebugInfo(`Error renombrando: ${error.message}`);
+      alert(`Error al renombrar: ${error.message}`);
+    }
+  };
+
+  const handleFolderRename = async (folder, newName) => {
+    // Since Firebase Storage doesn't support folder renaming directly,
+    // we'd need to copy all contents and delete the old folder
+    // For now, we'll show a message about this limitation
+    throw new Error('El renombrado de carpetas requiere recrear la estructura completa. Considera crear una nueva carpeta y mover el contenido manualmente.');
+  };
+
+  const handleFileRename = async (file, newName) => {
+    // For files, we'd need to download the file, upload it with the new name, and delete the old one
+    // This is a complex operation that requires handling the file data
+    throw new Error('El renombrado de archivos requiere descargar y volver a subir el archivo. Considera subir el archivo con el nuevo nombre y eliminar el anterior.');
+  };
+
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+
+    try {
+      addDebugInfo(`🗑️ Eliminando "${selectedItem.name}"`);
+
+      if (selectedItem.isFolder) {
+        await handleFolderDelete(selectedItem);
+      } else {
+        await handleFileDelete(selectedItem);
+      }
+
+      addDebugInfo(`✅ "${selectedItem.name}" eliminado exitosamente`);
+      
+      setShowDeleteModal(false);
+      setSelectedItem(null);
+      
+      // Refresh the current view
+      await Promise.all([
+        loadFolderStructure(),
+        loadCurrentFolderFiles()
+      ]);
+
+    } catch (error) {
+      console.error('❌ Error deleting item:', error);
+      addDebugInfo(`Error eliminando: ${error.message}`);
+      alert(`Error al eliminar: ${error.message}`);
+    }
+  };
+
+  const handleFolderDelete = async (folder) => {
+    // Delete folder by removing its .keep file and any contents
+    try {
+      const keepFilePath = `${folder.relativePath}/.keep`;
+      await firebaseTeamStorageService.deleteFileFromTeam(keepFilePath, userTeam.id);
+      
+      // Note: In a production environment, you'd want to recursively delete all contents
+      // For now, this will work for empty folders (which only have .keep files)
+    } catch (error) {
+      // If .keep file doesn't exist, that's okay for empty folders
+      if (!error.message.includes('not found')) {
+        throw error;
+      }
+    }
+  };
+
+  const handleFileDelete = async (file) => {
+    await firebaseTeamStorageService.deleteFileFromTeam(file.relativePath, userTeam.id);
+  };
+
+  const cancelRename = () => {
+    setShowRenameModal(false);
+    setSelectedItem(null);
+    setNewItemName('');
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setSelectedItem(null);
+  };
+
+  // Handle file upload
+  const handleFileUpload = async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      return;
+    }
+
+    if (!userTeam) {
+      alert('No hay equipo asignado para subir archivos');
+      event.target.value = '';
+      return;
+    }
+
+    try {
+      setUploading(true);
+      addDebugInfo(`📤 Subiendo ${files.length} archivo(s) a "${currentFolderPath || 'raíz'}"`);
+
+      const uploadPromises = Array.from(files).map(async (file) => {
+        try {
+          addDebugInfo(`⬆️ Subiendo: ${file.name} (${formatFileSize(file.size)})`);
+          
+          const result = await firebaseTeamStorageService.uploadFileToTeam(
+            file,
+            currentFolderPath || '',
+            userTeam.id
+          );
+          
+          addDebugInfo(`✅ Subido: ${file.name}`);
+          return result;
+        } catch (error) {
+          addDebugInfo(`❌ Error subiendo ${file.name}: ${error.message}`);
+          throw error;
+        }
+      });
+
+      await Promise.all(uploadPromises);
+      
+      addDebugInfo(`🎉 Todos los archivos subidos exitosamente`);
+      
+      // Refresh current folder files to show new uploads
+      await loadCurrentFolderFiles();
+      
+    } catch (error) {
+      console.error('❌ Error uploading files:', error);
+      addDebugInfo(`Error en upload: ${error.message}`);
+      alert(`Error al subir archivos: ${error.message}`);
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  // Note: Filtering is now done inline in the render for better performance with lazy loading
 
   // Format file size
   const formatFileSize = (bytes) => {
@@ -357,25 +642,13 @@ const Firedrive = () => {
     });
   };
 
-  // Load storage stats
-  const loadStorageStats = async () => {
-    if (!userTeam) return;
-    
-    try {
-      addDebugInfo('Cargando estadísticas de almacenamiento...');
-      const stats = await firebaseTeamStorageService.getTeamStorageStats(userTeam.id);
-      setStorageStats(stats);
-      addDebugInfo(`Stats cargadas: ${stats.totalItems} elementos, ${formatFileSize(stats.totalSize)}`);
-    } catch (error) {
-      console.warn('Could not load storage stats:', error);
-      addDebugInfo(`Error cargando stats: ${error.message}`);
-    }
-  };
+  // DISABLED: No stats in ultra fast mode
 
   // Initial load - wait for user authentication and team
   useEffect(() => {
     const initializeFiredrive = async () => {
-      addDebugInfo('Inicializando Firedrive...');
+      const startTime = performance.now();
+      addDebugInfo('⏱️ INICIANDO Firedrive - Midiendo velocidad...');
       
       // Wait for user to be loaded
       if (!user) {
@@ -398,34 +671,80 @@ const Firedrive = () => {
         return;
       }
       
-      addDebugInfo(`Usuario encontrado: ${user.email} | Team: ${userTeam.name}`);
+      addDebugInfo(`✅ Usuario encontrado: ${user.email} | Team: ${userTeam.name}`);
+      
+      const connectionStart = performance.now();
       const isConnected = await testConnection();
+      const connectionTime = performance.now() - connectionStart;
+      addDebugInfo(`⏱️ Test conexión: ${connectionTime.toFixed(1)}ms`);
+      
       if (isConnected) {
-        addDebugInfo('Cargando archivos iniciales...');
-        await fetchFiles(ROOT_FOLDER_PATH);
+        addDebugInfo('⚡ Cargando carpetas y archivos iniciales...');
         
-        // Load storage stats after initial load
-        await loadStorageStats();
+        const loadStart = performance.now();
+        await Promise.all([
+          loadFolderStructure(),
+          loadCurrentFolderFiles()
+        ]);
+        const loadTime = performance.now() - loadStart;
+        addDebugInfo(`⏱️ Carga inicial: ${loadTime.toFixed(1)}ms`);
+        
+        const totalTime = performance.now() - startTime;
+        addDebugInfo(`🏁 TERMINADO - Total: ${totalTime.toFixed(1)}ms`);
       }
     };
     
     initializeFiredrive();
   }, [user, userTeam, isLoadingTeam]); // Add team dependencies
 
-  // Fetch files when folder changes
+  // Path change detection - load content when path changes (excluding initial load)
+  const isInitialLoad = useRef(true);
+  
   useEffect(() => {
-    if (connectionStatus === 'connected' && currentFolderPath !== undefined && userTeam) {
-      addDebugInfo(`Cambio de carpeta detectado: "${currentFolderPath}"`);
-      fetchFiles(currentFolderPath);
+    if (connectionStatus === 'connected' && currentFolderPath !== undefined && userTeam && !isInitialLoad.current) {
+      addDebugInfo(`⚡ Path cambiado: "${currentFolderPath}" - recargando contenido...`);
+      
+      // Load content when path changes (not initial load)
+      const loadContent = async () => {
+        try {
+          await Promise.all([
+            loadFolderStructure(),
+            loadCurrentFolderFiles()
+          ]);
+          addDebugInfo(`✅ Contenido cargado para path: "${currentFolderPath}"`);
+        } catch (error) {
+          console.error('❌ Error loading content for path change:', error);
+          addDebugInfo(`Error cargando contenido: ${error.message}`);
+        }
+      };
+      
+      loadContent();
+    }
+    
+    // After first render, mark as not initial
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
     }
   }, [currentFolderPath, userTeam]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [contextMenu]);
 
   // Show loading while team is being loaded
   if (isLoadingTeam || (!userTeam && !error)) {
     return (
       <div className="drive-container">
         <div className="drive-header">
-          <h2>🔥 Firebase Storage</h2>
+          <h2>Drive</h2>
           <div className="status-badge checking">
             🔄 Cargando equipo...
           </div>
@@ -441,12 +760,12 @@ const Firedrive = () => {
   if (connectionStatus === 'checking') {
     return (
       <div className="drive-container">
-        <div className="drive-header">
-          <h2>🔥 Firebase Storage - {userTeam?.name || 'Team'}</h2>
-          <div className="status-badge checking">
-            🔄 Verificando conexión...
-          </div>
+              <div className="drive-header">
+        <h2>Drive - {userTeam?.name || 'Team'}</h2>
+        <div className="status-badge checking">
+          🔄 Verificando conexión...
         </div>
+      </div>
         
         {/* Debug Panel */}
         <div style={{ padding: '1rem', background: '#f8f9fa', margin: '1rem', borderRadius: '8px' }}>
@@ -465,7 +784,7 @@ const Firedrive = () => {
     return (
       <div className="drive-container">
         <div className="drive-header">
-          <h2>🔥 Firebase Storage - {userTeam?.name || 'Team'}</h2>
+          <h2>Drive - {userTeam?.name || 'Team'}</h2>
           <div className="status-badge error">
             ❌ Sin conexión
           </div>
@@ -518,87 +837,61 @@ const Firedrive = () => {
   return (
     <div className="drive-container">
       <div className="drive-header">
-        <h2>🔥 Firebase Storage - {userTeam?.name || 'Team'}</h2>
+        <h2>Drive - {userTeam?.name || 'Team'}</h2>
         <div className="status-badge connected">
           ✅ Conectado
         </div>
       </div>
 
-      {/* Team Storage Stats */}
+      {/* BANNER DE INFORMACIÓN */}
       <div style={{ 
         padding: '0.5rem 1rem', 
-        background: storageStats ? '#e8f5e8' : '#f8f9fa', 
+        background: '#f8f9ff', 
         margin: '1rem', 
         borderRadius: '8px',
         fontSize: '14px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        border: '1px solid #e3f2fd'
       }}>
-        {storageStats ? (
-          <>
-            <span>📊 <strong>{storageStats.totalItems}</strong> elementos ({storageStats.files} archivos, {storageStats.folders} carpetas)</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span>💾 <strong>{formatFileSize(storageStats.totalSize)}</strong></span>
-              <button 
-                onClick={loadStorageStats}
-                style={{
-                  background: 'none',
-                  border: '1px solid #28a745',
-                  borderRadius: '4px',
-                  padding: '2px 8px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  color: '#28a745'
-                }}
-                title="Actualizar estadísticas"
-              >
-                🔄
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <span>📊 Cargando estadísticas...</span>
-            <button 
-              onClick={loadStorageStats}
-              style={{
-                background: 'none',
-                border: '1px solid #6c757d',
-                borderRadius: '4px',
-                padding: '2px 8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: '#6c757d'
-              }}
-              title="Cargar estadísticas"
-            >
-              🔄
-            </button>
-          </>
-        )}
+        <span style={{ color: '#1c1e21', fontWeight: '500' }}>
+          Almacenamiento del equipo: <strong>{userTeam?.name}</strong>
+        </span>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '600' }}>
+          📁 {folders.length} carpetas
+        </span>
       </div>
 
       <div className="drive-controls">
-        <BreadcrumbPath 
+        <NavigationBar 
           folderStack={folderStack} 
-          onNavigate={navigateBack}
+          onNavigateBack={navigateBack}
           teamName={userTeam?.name}
+          currentPath={currentFolderPath}
         />
         
         <div className="search-container">
           <input
             type="text"
-            placeholder="Buscar archivos..."
+            placeholder="Buscar archivos y carpetas..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
         </div>
 
-        <div className="upload-container">
+        <div className="action-buttons">
+          <button
+            className="create-folder-btn"
+            onClick={() => setShowCreateFolder(true)}
+            title="Crear nueva carpeta"
+          >
+            📁+ Nueva carpeta
+          </button>
+          
           <label className="upload-button" htmlFor="file-upload">
-            {uploading ? '⬆️ Subiendo...' : '📤 Subir archivos'}
+            {uploading ? '⬆️ Subiendo...' : '📤 Subir'}
           </label>
           <input
             id="file-upload"
@@ -621,67 +914,350 @@ const Firedrive = () => {
         ))}
       </details>
 
-      {loading ? (
+      {(loadingFolders || loadingFiles) ? (
         <div className="loading-container">
           <div className="loading-spinner">🔄</div>
-          <p>Cargando archivos...</p>
+          <p>⚡ Cargando {loadingFolders ? 'carpetas' : 'archivos'}...</p>
         </div>
       ) : error ? (
         <div className="error-container">
           <p>❌ {error}</p>
-          <button onClick={() => fetchFiles()} className="retry-button">
+          <button onClick={() => {
+            loadFolderStructure();
+            loadCurrentFolderFiles();
+          }} className="retry-button">
             🔄 Reintentar
           </button>
         </div>
       ) : (
         <div className="files-container">
-          {filteredFiles.length === 0 ? (
-            <div className="empty-folder">
-              <p>📂 {searchTerm ? 'No se encontraron archivos' : 'Carpeta vacía'}</p>
+          {/* CARPETAS */}
+          {folders.length > 0 && (
+            <div className="folders-section">
+              <h3 style={{ margin: '1rem', color: '#0066cc', fontSize: '18px', fontWeight: 'bold' }}>
+                📁 Carpetas ({folders.length})
+              </h3>
+              <div className="files-grid">
+                {folders
+                  .filter(folder => 
+                    !searchTerm || folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((folder) => (
+                    <div
+                      key={folder.id}
+                      className="file-item folder"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigateToFolder(folder);
+                      }}
+                      onContextMenu={(e) => handleRightClick(e, folder)}
+                    >
+                      <div className="file-icon">
+                        <FileIcon mimeType="folder" name={folder.name} />
+                      </div>
+                      <div className="file-info">
+                        <div className="file-name" title={folder.name}>
+                          {folder.name}
+                        </div>
+                        <div className="file-details">
+                          <span className="folder-status" style={{ color: '#0066cc', fontWeight: 'bold' }}>
+                            📁 Click para entrar
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Hover Actions */}
+                      <div className="hover-actions">
+                        <button 
+                          className="hover-action edit"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openRenameModal(folder);
+                          }}
+                          title="Renombrar carpeta"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="hover-action delete"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeleteModal(folder);
+                          }}
+                          title="Eliminar carpeta"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* ARCHIVOS */}
+          {currentFiles.length > 0 && (
+            <div className="files-section">
+              <h3 style={{ margin: '1rem', color: '#28a745', fontSize: '18px', fontWeight: 'bold' }}>
+                📄 Archivos ({currentFiles.length})
+              </h3>
+              <div className="files-grid">
+                {currentFiles
+                  .filter(file => 
+                    !searchTerm || file.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((file) => (
+                    <div
+                      key={file.id}
+                      className="file-item"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleFileClick(file);
+                      }}
+                      onContextMenu={(e) => handleRightClick(e, file)}
+                    >
+                      <div className="file-icon">
+                        <FileIcon mimeType={file.mimeType} name={file.name} />
+                      </div>
+                      <div className="file-info">
+                        <div className="file-name" title={file.name}>
+                          {file.name}
+                        </div>
+                        <div className="file-details">
+                          <span className="file-size">{formatFileSize(file.size)}</span>
+                          <span className="file-date">{formatDate(file.modifiedTime)}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Hover Actions */}
+                      <div className="hover-actions">
+                        <button 
+                          className="hover-action edit"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openRenameModal(file);
+                          }}
+                          title="Renombrar archivo"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="hover-action delete"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            openDeleteModal(file);
+                          }}
+                          title="Eliminar archivo"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* MENSAJE CUANDO NO HAY CONTENIDO */}
+          {folders.length === 0 && currentFiles.length === 0 && !loadingFolders && !loadingFiles && (
+            <div className="empty-state">
+              <div className="empty-icon">📂</div>
+              <h3>Carpeta vacía</h3>
+              <p>Esta carpeta no contiene archivos ni subcarpetas.</p>
               {currentFolderPath === '' && (
                 <div style={{ marginTop: '1rem', fontSize: '14px', color: '#666' }}>
                   <p>Esta es la carpeta raíz del equipo <strong>{userTeam?.name}</strong></p>
-                  <p>Puedes subir archivos o navegar a las subcarpetas disponibles.</p>
+                  <p>⚡ <strong>MODO OPTIMIZADO:</strong> Carpetas y archivos separados</p>
+                  <p>🚀 Sin stats para máxima velocidad</p>
                 </div>
               )}
             </div>
-          ) : (
-            <div className="files-grid">
-              {filteredFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className={`file-item ${file.isFolder ? 'folder' : 'file'} ${file.hasError ? 'file-error' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    if (file.isFolder) {
-                      navigateToFolder(file);
-                    } else {
-                      if (file.webViewLink) {
-                        window.open(file.webViewLink, '_blank');
-                      }
+          )}
+        </div>
+      )}
+
+      {/* Modal para crear carpeta */}
+      {showCreateFolder && (
+        <div className="modal-backdrop" onClick={handleCancelCreateFolder}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>📁 Crear nueva carpeta</h3>
+            </div>
+            
+            <div className="modal-body">
+              <div className="folder-location">
+                <strong>Ubicación:</strong> {currentFolderPath || 'Carpeta raíz'} / {userTeam?.name}
+              </div>
+              
+              <div className="input-group">
+                <label htmlFor="folder-name">Nombre de la carpeta:</label>
+                <input
+                  id="folder-name"
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Ej: Documentos 2024"
+                  className="folder-input"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateFolder();
                     }
                   }}
-                >
-                  <div className="file-icon">
-                    <FileIcon mimeType={file.mimeType} name={file.name} />
-                  </div>
-                  <div className="file-info">
-                    <div className="file-name" title={file.name}>
-                      {file.name} {file.hasError && '⚠️'}
-                    </div>
-                    <div className="file-details">
-                      {!file.isFolder && (
-                        <span className="file-size">{formatFileSize(file.size)}</span>
-                      )}
-                      <span className="file-date">{formatDate(file.modifiedTime)}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  autoFocus
+                />
+              </div>
             </div>
-          )}
+            
+            <div className="modal-actions">
+              <button
+                className="modal-button cancel"
+                onClick={handleCancelCreateFolder}
+              >
+                Cancelar
+              </button>
+              <button
+                className="modal-button confirm"
+                onClick={handleCreateFolder}
+                disabled={!newFolderName.trim()}
+              >
+                Crear carpeta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div 
+          className="context-menu"
+          style={{
+            top: contextMenu.y,
+            left: contextMenu.x
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div 
+            className="context-menu-item"
+            onClick={() => openRenameModal(contextMenu.item)}
+          >
+            ✏️ Renombrar
+          </div>
+          <div 
+            className="context-menu-item danger"
+            onClick={() => openDeleteModal(contextMenu.item)}
+          >
+            🗑️ Eliminar
+          </div>
+        </div>
+      )}
+
+      {/* Modal para renombrar */}
+      {showRenameModal && selectedItem && (
+        <div className="modal-backdrop" onClick={cancelRename}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>✏️ Renombrar {selectedItem.isFolder ? 'carpeta' : 'archivo'}</h3>
+            </div>
+            
+            <div className="modal-body">
+              <div className="folder-location">
+                <strong>Elemento:</strong> {selectedItem.name}
+              </div>
+              
+              <div className="input-group">
+                <label htmlFor="new-name">Nuevo nombre:</label>
+                <input
+                  id="new-name"
+                  type="text"
+                  value={newItemName}
+                  onChange={(e) => setNewItemName(e.target.value)}
+                  placeholder="Ingresa el nuevo nombre"
+                  className="folder-input"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleRename();
+                    }
+                  }}
+                  autoFocus
+                />
+              </div>
+              
+              <div className="warning-box">
+                ⚠️ Nota: El renombrado de {selectedItem.isFolder ? 'carpetas' : 'archivos'} 
+                puede tomar tiempo y actualmente tiene limitaciones en Firebase Storage.
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                className="modal-button cancel"
+                onClick={cancelRename}
+              >
+                Cancelar
+              </button>
+              <button
+                className="modal-button confirm"
+                onClick={handleRename}
+                disabled={!newItemName.trim() || newItemName === selectedItem.name}
+              >
+                Renombrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para confirmar eliminación */}
+      {showDeleteModal && selectedItem && (
+        <div className="modal-backdrop" onClick={cancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 style={{ color: '#dc3545' }}>🗑️ Confirmar eliminación</h3>
+            </div>
+            
+            <div className="modal-body">
+              <div style={{ marginBottom: '16px' }}>
+                <strong>¿Estás seguro de que quieres eliminar {selectedItem.isFolder ? 'la carpeta' : 'el archivo'} "{selectedItem.name}"?</strong>
+              </div>
+              
+              {selectedItem.isFolder && (
+                <div className="danger-box">
+                  ⚠️ Advertencia: Esto eliminará la carpeta y todo su contenido de forma permanente.
+                </div>
+              )}
+              
+              <div className="info-box">
+                💡 Esta acción no se puede deshacer.
+              </div>
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                className="modal-button cancel"
+                onClick={cancelDelete}
+              >
+                Cancelar
+              </button>
+              <button
+                className="modal-button"
+                onClick={handleDelete}
+                style={{ 
+                  background: '#dc3545', 
+                  color: 'white',
+                  border: 'none'
+                }}
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

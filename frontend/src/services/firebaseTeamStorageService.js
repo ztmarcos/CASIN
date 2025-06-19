@@ -4,6 +4,25 @@ import { ref, listAll, getDownloadURL, getMetadata, uploadBytes, deleteObject } 
 class FirebaseTeamStorageService {
   constructor() {
     this.currentTeamId = null;
+    // Simple cache to avoid expensive operations
+    this.cache = new Map();
+  }
+
+  // Simple cache methods
+  cacheGet(key) {
+    const item = this.cache.get(key);
+    if (item && item.expires > Date.now()) {
+      return item.data;
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  cacheSet(key, data, ttlMs = 5 * 60 * 1000) { // 5 minutes default
+    this.cache.set(key, {
+      data,
+      expires: Date.now() + ttlMs
+    });
   }
 
   // Set the current team context
@@ -340,14 +359,24 @@ class FirebaseTeamStorageService {
     }
   }
 
-  // Get team storage statistics
-  async getTeamStorageStats(teamId = this.currentTeamId) {
+  // Get team storage statistics (EXPENSIVE - use sparingly)
+  async getTeamStorageStats(teamId = this.currentTeamId, force = false) {
     try {
       if (!teamId) {
         throw new Error('No team ID provided');
       }
 
-      console.log(`📊 Calculating storage stats for team ${teamId}...`);
+      // Check cache first (10 minute cache)
+      const cacheKey = `stats_${teamId}`;
+      if (!force) {
+        const cachedStats = this.cacheGet(cacheKey);
+        if (cachedStats) {
+          console.log(`📊 Using cached stats for team ${teamId} (avoiding expensive scan)`);
+          return cachedStats;
+        }
+      }
+
+      console.warn(`📊 🚨 EXPENSIVE: Calculating full storage stats for team ${teamId}... (scanning ALL files)`);
       const files = await this.listAllTeamFilesRecursive('', teamId);
       
       const stats = {
@@ -357,10 +386,15 @@ class FirebaseTeamStorageService {
         totalSize: files
           .filter(item => !item.isFolder && item.size)
           .reduce((total, file) => total + (parseInt(file.size) || 0), 0),
-        teamId
+        teamId,
+        lastUpdated: new Date().toISOString(),
+        type: 'full'
       };
 
-      console.log(`📊 Storage stats for team ${teamId}:`, stats);
+      // Cache for 10 minutes
+      this.cacheSet(cacheKey, stats, 10 * 60 * 1000);
+
+      console.log(`📊 Full storage stats calculated for team ${teamId}:`, stats);
       console.log(`   - Total files found: ${stats.files}`);
       console.log(`   - Total folders found: ${stats.folders}`);
       console.log(`   - Total size: ${stats.totalSize} bytes`);
@@ -368,6 +402,35 @@ class FirebaseTeamStorageService {
 
     } catch (error) {
       console.error('❌ Error getting team storage stats:', error);
+      throw error;
+    }
+  }
+
+  // Get quick stats (MUCH faster - only root level)
+  async getQuickTeamStats(teamId = this.currentTeamId) {
+    try {
+      if (!teamId) {
+        throw new Error('No team ID provided');
+      }
+
+      console.log(`⚡ Getting quick stats for team ${teamId} (root level only)...`);
+      
+      const rootData = await this.listTeamFoldersOnly('', teamId);
+      
+      const quickStats = {
+        rootFolders: rootData.folders.length,
+        rootFiles: rootData.filesCount,
+        hasContent: rootData.folders.length > 0 || rootData.filesCount > 0,
+        teamId,
+        type: 'quick',
+        lastUpdated: new Date().toISOString()
+      };
+      
+      console.log(`⚡ Quick stats for team ${teamId}:`, quickStats);
+      
+      return quickStats;
+    } catch (error) {
+      console.error('❌ Error getting quick stats:', error);
       throw error;
     }
   }
@@ -404,6 +467,161 @@ class FirebaseTeamStorageService {
         error: error.message,
         code: error.code
       };
+    }
+  }
+
+  // ULTRA OPTIMIZED: ONLY folder names - NO files, NO counts, NO processing
+  async listTeamFoldersOnly(folderPath = '', teamId = this.currentTeamId) {
+    try {
+      if (!teamId) {
+        throw new Error('No team ID provided');
+      }
+
+      const fullPath = this.getTeamFolderPath(folderPath, teamId);
+      console.log(`⚡ ULTRA FAST: ONLY folder names for team ${teamId} at path: ${fullPath}`);
+      
+      const storageRef = ref(storage, fullPath);
+      const result = await listAll(storageRef);
+
+      // ONLY process folder names - IGNORE files completely
+      const folders = result.prefixes.map((folderRef) => ({
+        id: folderRef.fullPath,
+        name: folderRef.name,
+        mimeType: 'folder',
+        isFolder: true,
+        webViewLink: null,
+        size: null,
+        modifiedTime: null,
+        fullPath: folderRef.fullPath,
+        relativePath: folderRef.fullPath.replace(`${this.getTeamStoragePath(teamId)}/`, '')
+      }));
+
+      console.log(`🚀 ULTRA FAST: ${folders.length} folders - NO FILE PROCESSING`);
+      return {
+        folders
+      };
+
+    } catch (error) {
+      console.error('❌ Error listing team folders:', error);
+      throw error;
+    }
+  }
+
+  // OPTIMIZED: List files in a specific folder (no download URLs yet)
+  async listFilesInFolder(folderPath, teamId = this.currentTeamId) {
+    try {
+      if (!teamId) {
+        throw new Error('No team ID provided');
+      }
+
+      const fullPath = this.getTeamFolderPath(folderPath, teamId);
+      console.log(`📄 Loading files ONLY for folder: ${fullPath}`);
+      
+      const storageRef = ref(storage, fullPath);
+      const result = await listAll(storageRef);
+
+      // Process files with basic metadata only (NO download URLs)
+      const fileItems = await Promise.allSettled(
+        result.items.map(async (itemRef) => {
+          try {
+            const metadata = await getMetadata(itemRef);
+            
+            return {
+              id: itemRef.fullPath,
+              name: itemRef.name,
+              mimeType: metadata.contentType || 'application/octet-stream',
+              isFolder: false,
+              webViewLink: null, // Don't load download URL yet
+              size: metadata.size,
+              modifiedTime: metadata.timeCreated,
+              fullPath: itemRef.fullPath,
+              relativePath: itemRef.fullPath.replace(`${this.getTeamStoragePath(teamId)}/`, ''),
+              teamId,
+              urlLoaded: false, // Track if download URL has been loaded
+              itemRef: itemRef // Store reference for later URL loading
+            };
+          } catch (error) {
+            console.error(`❌ Error getting metadata for ${itemRef.name}:`, error);
+            return {
+              id: itemRef.fullPath,
+              name: itemRef.name,
+              mimeType: 'application/octet-stream',
+              isFolder: false,
+              webViewLink: null,
+              size: null,
+              modifiedTime: null,
+              fullPath: itemRef.fullPath,
+              relativePath: itemRef.fullPath.replace(`${this.getTeamStoragePath(teamId)}/`, ''),
+              hasError: true,
+              teamId
+            };
+          }
+        })
+      );
+
+      // Extract successful results
+      const validFiles = fileItems
+        .filter(result => result.status === 'fulfilled')
+        .map(result => result.value);
+
+      console.log(`⚡ FAST: Loaded ${validFiles.length} files metadata (no download URLs)`);
+      return validFiles;
+
+    } catch (error) {
+      console.error('❌ Error listing files in folder:', error);
+      throw error;
+    }
+  }
+
+  // OPTIMIZED: Load download URL only when needed (when file is clicked)
+  async loadFileDownloadURL(file) {
+    try {
+      if (file.urlLoaded && file.webViewLink) {
+        return file.webViewLink; // Already loaded
+      }
+
+      console.log(`🔗 Loading download URL for: ${file.name}`);
+      const storageRef = ref(storage, file.fullPath);
+      const downloadURL = await getDownloadURL(storageRef);
+      
+      // Update the file object
+      file.webViewLink = downloadURL;
+      file.urlLoaded = true;
+      
+      console.log(`✅ Download URL loaded for: ${file.name}`);
+      return downloadURL;
+
+    } catch (error) {
+      console.error(`❌ Error loading download URL for ${file.name}:`, error);
+      throw error;
+    }
+  }
+
+  // OPTIMIZED: Get folder structure with lazy loading
+  async getTeamFolderStructure(teamId = this.currentTeamId) {
+    try {
+      console.log(`🗂️ Getting folder structure for team: ${teamId}`);
+      
+      const rootFolders = await this.listTeamFoldersOnly('', teamId);
+      
+      // Build tree structure without loading all files
+      const folderTree = {
+        id: `team-${teamId}`,
+        name: 'Root',
+        isFolder: true,
+        isExpanded: false,
+        children: rootFolders.folders,
+        filesCount: rootFolders.filesCount,
+        hasFiles: rootFolders.hasFiles,
+        teamId
+      };
+
+      console.log(`⚡ ULTRA FAST: Folder structure loaded (${rootFolders.folders.length} folders)`);
+      return folderTree;
+
+    } catch (error) {
+      console.error('❌ Error getting folder structure:', error);
+      throw error;
     }
   }
 }

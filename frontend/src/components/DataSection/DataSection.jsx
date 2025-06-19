@@ -92,7 +92,24 @@ const DataSection = () => {
 
   const handleTableSelect = async (table) => {
     console.log('🔥 Selected Firebase table:', table);
-    setSelectedTable(table);
+    
+    // Create a basic table structure with columns for the modal
+    const enhancedTable = {
+      ...table,
+      columns: [
+        // Add basic columns based on common database fields
+        // This is a temporary solution until we can get actual schema
+        { name: 'id', type: 'INTEGER', isPrimary: true, required: false },
+        { name: 'name', type: 'VARCHAR', isPrimary: false, required: true },
+        { name: 'email', type: 'VARCHAR', isPrimary: false, required: false },
+        { name: 'phone', type: 'VARCHAR', isPrimary: false, required: false },
+        { name: 'company', type: 'VARCHAR', isPrimary: false, required: false },
+        { name: 'notes', type: 'TEXT', isPrimary: false, required: false },
+        { name: 'created_at', type: 'TIMESTAMP', isPrimary: false, required: false }
+      ]
+    };
+    
+    setSelectedTable(enhancedTable);
     setFilters({}); // Reset filters on table change
     
     // Auto-collapse table manager and keep column manager closed when table is selected
@@ -116,6 +133,22 @@ const DataSection = () => {
       const tableData = result.data || [];
       console.log(`✅ Setting table data with ${tableData.length} rows`);
       setTableData(tableData);
+      
+      // If we have data, try to infer columns from the actual data
+      if (tableData.length > 0) {
+        const firstRow = tableData[0];
+        const inferredColumns = Object.keys(firstRow).map(key => ({
+          name: key,
+          type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
+          isPrimary: key === 'id' || key === '_id',
+          required: key === 'name' || key === 'title'
+        }));
+        
+        setSelectedTable(prev => ({
+          ...prev,
+          columns: inferredColumns
+        }));
+      }
     } catch (error) {
       console.error('❌ Error loading Firebase table data:', error);
       setTableData([]);
@@ -285,10 +318,10 @@ const DataSection = () => {
         }
       }
       
-      toast.success('Data refreshed successfully');
+      toast.success('🚀 Data refreshed successfully');
     } catch (error) {
       console.error('Error reloading data:', error);
-      toast.error('Failed to refresh data');
+      toast.error('❌ Failed to refresh data');
     } finally {
       setIsLoading(false);
     }
@@ -296,130 +329,98 @@ const DataSection = () => {
 
   return (
     <div className="data-section">
-      {/* Team info header */}
+      {/* Team info header - Enhanced with better design */}
       {team && (
-        <div className="team-info-header" style={{
-          background: 'linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%)',
-          padding: '1rem',
-          borderRadius: '12px',
-          marginBottom: '1rem',
-          border: '1px solid #e2e8f0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
+        <div className="team-info-header">
           <div>
-            <h2 style={{ margin: 0, color: '#2d3748', fontSize: '1.3rem' }}>
-              📊 Base de Datos de {team.name}
+            <h2>
+              🏢 Base de Datos de {team.name}
             </h2>
-            <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.9rem' }}>
-              Datos aislados por equipo - Servicio: {tableServiceAdapter.getServiceInfo().service}
+            <p>
+              🔒 Datos seguros • Servicio: {tableServiceAdapter.getServiceInfo().service}
             </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{
-              background: '#e6fffa',
-              color: '#234e52',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: '500',
-              border: '1px solid #81e6d9'
-            }}>
-              🏢 Table Service v1.0
-            </span>
-            <span style={{
-              background: '#fed7d7',
-              color: '#c53030',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: '500',
-              border: '1px solid #feb2b2'
-            }}>
-              🔒 Datos Aislados
-            </span>
           </div>
         </div>
       )}
       
       <div className="data-section-header">
-        <div className="header-top">
-          <div className="header-title">
-            <h2>Base de datos</h2>
+        <div className="header-horizontal-layout">
+          <div className="header-left">
+            <h2>💽 Base de Datos Empresarial</h2>
             <button 
               className="reload-btn"
               onClick={handleReload}
-              title="Reload data"
+              title="Actualizar datos"
+              disabled={isLoading}
             >
-              ↻
+              {isLoading ? '⏳' : '🔄'}
             </button>
           </div>
-          <button 
-            className="btn-primary import-btn" 
-            onClick={() => setShowImport(true)}
-          >
-            <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-9-1.5h7.5m-7.5 3h7.5m3-3v3m0 0v3m0-3h-3m3 0h3M3 9l3-3m0 0l3 3m-3-3v12" />
-            </svg>
-            Importar csv
-          </button>
-        </div>
-        <div className="header-actions">
-          {selectedTable && (
-            <>
-              <button 
-                className="btn-primary add-btn" 
-                onClick={() => setShowAddEntryModal(true)}
-                disabled={isLoading}
-              >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
-                Agregar Entrada
-              </button>
+          
+          <div className="header-right">
+            {selectedTable && (
+              <>
+                <button 
+                  className="btn-primary add-btn" 
+                  onClick={() => setShowAddEntryModal(true)}
+                  disabled={isLoading}
+                >
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  ➕ Nuevo Registro
+                </button>
 
-              <button 
-                className="btn-icon-only" 
-                onClick={toggleViewMode}
-                title={viewMode === 'table' ? 'Switch to Card View' : 'Switch to Table View'}
-                disabled={isLoading}
-              >
-                {viewMode === 'table' ? (
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                <button 
+                  className="btn-icon-only" 
+                  onClick={toggleViewMode}
+                  title={viewMode === 'table' ? 'Vista de Tarjetas' : 'Vista de Tabla'}
+                  disabled={isLoading}
+                >
+                  {viewMode === 'table' ? (
+                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <rect x="3" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="3" width="7" height="7"></rect>
+                      <rect x="14" y="14" width="7" height="7"></rect>
+                      <rect x="3" y="14" width="7" height="7"></rect>
+                    </svg>
+                  ) : (
+                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <line x1="8" y1="6" x2="21" y2="6"></line>
+                      <line x1="8" y1="12" x2="21" y2="12"></line>
+                      <line x1="8" y1="18" x2="21" y2="18"></line>
+                      <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                      <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                      <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                  )}
+                </button>
+                <button 
+                  className="btn-icon-only" 
+                  onClick={handleExport}
+                  title="Exportar como CSV"
+                  disabled={!selectedTable || isLoading || !tableData.length}
+                >
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
                   </svg>
-                ) : (
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
-                  </svg>
-                )}
-              </button>
-              <button 
-                className="btn-icon-only" 
-                onClick={handleExport}
-                title="Export as CSV"
-                disabled={!selectedTable || isLoading || !tableData.length}
-              >
-                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-              </button>
-            </>
-          )}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="data-section-content">
-        {/* Compact Managers Panel */}
+        {/* Enhanced Managers Panel */}
         <div className="compact-managers-panel">
           {/* Table Manager Panel */}
           <div className={`manager-panel ${isTableManagerCollapsed ? 'collapsed' : 'expanded'}`}>
             <div className="panel-header">
               <div className="panel-title" onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}>
-                <span className="panel-icon">📋</span>
-                <span>Tablas</span>
-                {selectedTable && <span className="selected-indicator">• {selectedTable.name}</span>}
+                <span className="panel-icon">📊</span>
+                <span>Gestión de Tablas</span>
+                {selectedTable && <span className="selected-indicator">📍 {selectedTable.name}</span>}
               </div>
               <div className="panel-actions">
                 <button 
@@ -430,13 +431,13 @@ const DataSection = () => {
                   }}
                   title="Crear nueva tabla"
                 >
-                  ➕
+                  🆕
                 </button>
                 <button 
                   className="collapse-btn"
                   onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}
                 >
-                  {isTableManagerCollapsed ? '▼' : '▲'}
+                  {isTableManagerCollapsed ? '🔽' : '🔼'}
                 </button>
               </div>
             </div>
@@ -453,8 +454,8 @@ const DataSection = () => {
               <div className="panel-header">
                 <div className="panel-title" onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}>
                   <span className="panel-icon">⚙️</span>
-                  <span>Columnas</span>
-                  <span className="table-name">({selectedTable.name})</span>
+                  <span>Configuración de Columnas</span>
+                  <span className="table-name">📋 {selectedTable.name}</span>
                 </div>
                 <div className="panel-actions">
                   <button 
@@ -481,7 +482,7 @@ const DataSection = () => {
                     className="collapse-btn"
                     onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}
                   >
-                    {isColumnManagerCollapsed ? '▼' : '▲'}
+                    {isColumnManagerCollapsed ? '🔽' : '🔼'}
                   </button>
                 </div>
               </div>
@@ -497,10 +498,12 @@ const DataSection = () => {
           )}
         </div>
 
-        {selectedTable && (
+        {selectedTable ? (
           <div className="data-display-container">
             {isLoading ? (
-              <div className="loading-state">Loading...</div>
+              <div className="loading-state">
+                🔄 Cargando datos de {selectedTable.name}...
+              </div>
             ) : viewMode === 'table' ? (
               <DataTable 
                 data={tableData}
@@ -516,14 +519,56 @@ const DataSection = () => {
               />
             )}
           </div>
+        ) : (
+          <div className="data-display-container">
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '300px',
+              color: '#667eea',
+              textAlign: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{ fontSize: '4rem' }}>📊</div>
+              <h3 style={{ 
+                margin: 0, 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: '1.5rem',
+                fontWeight: '600'
+              }}>
+                Selecciona una tabla para comenzar
+              </h3>
+              <p style={{ margin: 0, opacity: 0.7, fontSize: '1rem' }}>
+                Elige una tabla del panel superior para visualizar y gestionar tus datos
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
-      {/* Import Modal */}
+      {/* Enhanced Import Modal */}
       {showImport && (
         <div className="import-modal">
           <div className="import-modal-content">
             <button className="close-button" onClick={() => setShowImport(false)}>×</button>
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ 
+                margin: '0 0 0.5rem 0', 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontSize: '1.75rem'
+              }}>
+                📊 Importar Datos
+              </h2>
+              <p style={{ margin: 0, color: '#666', fontSize: '1rem' }}>
+                Sube un archivo CSV para importar datos a tu base de datos
+              </p>
+            </div>
             <TableImport 
               onFileData={(result) => {
                 if (result.success) {
@@ -531,6 +576,7 @@ const DataSection = () => {
                     handleReload(); // Use our new comprehensive reload function
                   }
                   setShowImport(false);
+                  toast.success('🎉 Datos importados exitosamente');
                 }
               }} 
             />
@@ -548,12 +594,12 @@ const DataSection = () => {
         />
       )}
 
-      {/* Create Table Modal */}
+      {/* Enhanced Create Table Modal */}
       {showCreateTableModal && (
         <div className="modal-overlay" onClick={() => setShowCreateTableModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Create New Table</h3>
+              <h3>🆕 Crear Nueva Tabla</h3>
               <button 
                 className="close-button" 
                 onClick={() => setShowCreateTableModal(false)}
@@ -562,6 +608,11 @@ const DataSection = () => {
               </button>
             </div>
             <div className="modal-body">
+              <div style={{ marginBottom: '1.5rem' }}>
+                <p style={{ margin: 0, color: 'rgba(255, 255, 255, 0.9)', fontSize: '1rem' }}>
+                  Sube un archivo CSV para crear una nueva tabla con la estructura automática
+                </p>
+              </div>
               <TableImport onFileData={handleCreateTableFromData} mode="create" />
             </div>
           </div>

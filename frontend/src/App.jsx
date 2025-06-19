@@ -38,9 +38,9 @@ import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 import Cotiza from './components/Cotiza/Cotiza'
 
 // Componente protector de rutas con verificación de permisos
-const ProtectedRoute = ({ children, requireManageUsers = false }) => {
+const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
   const { user, loading } = useAuth();
-  const { needsTeamSetup, isLoadingTeam, userTeam, canManageUsers } = useTeam();
+  const { needsTeamSetup, isLoadingTeam, userTeam, canAccessTeamData, isActiveMember } = useTeam();
   
   console.log('🛡️ ProtectedRoute: State check', {
     user: !!user,
@@ -50,8 +50,9 @@ const ProtectedRoute = ({ children, requireManageUsers = false }) => {
     needsTeamSetup,
     userTeam: !!userTeam,
     teamName: userTeam?.name,
-    requireManageUsers,
-    canManageUsers: canManageUsers ? canManageUsers() : false
+    requireAdminAccess,
+    canAccessTeamData: canAccessTeamData ? canAccessTeamData() : false,
+    isActiveMember: isActiveMember ? isActiveMember() : false
   });
   
   // 1. Primero verificar si está cargando la autenticación
@@ -113,7 +114,7 @@ const ProtectedRoute = ({ children, requireManageUsers = false }) => {
   }
   
   // 6. Verificar permisos específicos si se requieren
-  if (requireManageUsers && canManageUsers && !canManageUsers()) {
+  if (requireAdminAccess && canAccessTeamData && !canAccessTeamData()) {
     return (
       <Layout>
         <div style={{ 
@@ -129,7 +130,7 @@ const ProtectedRoute = ({ children, requireManageUsers = false }) => {
         }}>
           <h2 style={{ color: '#e74c3c', marginBottom: '1rem' }}>🚫 Acceso Denegado</h2>
           <p style={{ marginBottom: '0.5rem' }}>No tienes permisos para acceder a esta sección.</p>
-          <p style={{ fontSize: '1rem', color: '#999' }}>Solo los administradores del equipo pueden gestionar datos y configuraciones.</p>
+          <p style={{ fontSize: '1rem', color: '#999' }}>Solo los administradores del equipo pueden acceder a datos críticos y configuraciones del equipo.</p>
         </div>
       </Layout>
     );
@@ -283,7 +284,7 @@ function AppRoutes() {
       } />
 
       <Route path="/database-viewer" element={
-        <ProtectedRoute requireManageUsers>
+        <ProtectedRoute requireAdminAccess>
           <Layout>
             <DatabaseViewer />
           </Layout>
@@ -299,7 +300,7 @@ function AppRoutes() {
       } />
 
       <Route path="/team-data" element={
-        <ProtectedRoute requireManageUsers>
+        <ProtectedRoute requireAdminAccess>
           <Layout>
             <TeamDataDemo />
           </Layout>

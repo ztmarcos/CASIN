@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import './TeamDataDemo.css';
 
 const TeamDataDemo = () => {
-  const { currentTeam, currentTeamMembers, userTeam, inviteUserToTeam, removeUserFromTeam, canManageUsers, isAdmin } = useTeam();
+  const { currentTeam, currentTeamMembers, userTeam, inviteUserToTeam, removeUserFromTeam, canManageUsers, canAccessTeamData, isAdmin } = useTeam();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
