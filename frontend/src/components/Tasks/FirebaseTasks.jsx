@@ -289,7 +289,6 @@ const FirebaseTasks = () => {
               key={task.id}
               task={task}
               onEdit={handleEditTask}
-              onDelete={handleDeleteTask}
               onStatusChange={handleStatusChange}
               getStatusColor={getStatusColor}
               getStatusText={getStatusText}
@@ -304,6 +303,7 @@ const FirebaseTasks = () => {
         <TaskModal
           task={editingTask}
           onSave={handleTaskSave}
+          onDelete={handleDeleteTask}
           onClose={() => {
             setShowModal(false);
             setEditingTask(null);

@@ -109,6 +109,35 @@ export const TeamProvider = ({ children }) => {
         // Configurar Firebase para este equipo
         await setupTeamFirebase(teamId, teamData);
         
+        // Verificar si el usuario existe en team_members, si no, crearlo
+        const memberQuery = query(
+          collection(db, 'team_members'),
+          where('email', '==', user.email),
+          where('teamId', '==', teamId)
+        );
+        
+        const memberSnapshot = await getDocs(memberQuery);
+        
+        if (memberSnapshot.empty) {
+          console.log('👤 Creating team member record for special user');
+          // Crear el registro del miembro del equipo
+          await addDoc(collection(db, 'team_members'), {
+            userId: user.uid || user.email.replace(/[@.]/g, '_'),
+            email: user.email,
+            name: user.name || user.displayName || 'Marcos Zavala',
+            teamId: teamId,
+            role: 'admin',
+            invitedBy: user.email,
+            joinedAt: new Date(),
+            status: 'active',
+            isOwner: true
+          });
+          console.log('✅ Team member record created');
+        }
+        
+        // Cargar todos los miembros del equipo
+        await loadTeamMembers(teamId);
+        
         console.log('✅ Special team assignment completed for CASIN');
         setIsLoadingTeam(false);
         return;
@@ -506,6 +535,77 @@ export const TeamProvider = ({ children }) => {
     }
   };
 
+  // Función para crear usuarios de prueba (solo para desarrollo)
+  const createTestUsers = async () => {
+    if (!userTeam) {
+      console.error('No team available for creating test users');
+      return;
+    }
+
+    const testUsers = [
+      {
+        email: 'maria.garcia@example.com',
+        name: 'María García',
+        role: 'member'
+      },
+      {
+        email: 'carlos.lopez@example.com', 
+        name: 'Carlos López',
+        role: 'member'
+      },
+      {
+        email: 'ana.martinez@example.com',
+        name: 'Ana Martínez', 
+        role: 'admin'
+      },
+      {
+        email: 'pedro.sanchez@example.com',
+        name: 'Pedro Sánchez',
+        role: 'member'
+      }
+    ];
+
+    try {
+      console.log('👥 Creating test users for team:', userTeam.id);
+      
+      for (const testUser of testUsers) {
+        // Verificar si el usuario ya existe
+        const existingQuery = query(
+          collection(db, 'team_members'),
+          where('email', '==', testUser.email),
+          where('teamId', '==', userTeam.id)
+        );
+        
+        const existing = await getDocs(existingQuery);
+        
+        if (existing.empty) {
+          await addDoc(collection(db, 'team_members'), {
+            userId: testUser.email.replace(/[@.]/g, '_'),
+            email: testUser.email,
+            name: testUser.name,
+            teamId: userTeam.id,
+            role: testUser.role,
+            invitedBy: user.email,
+            joinedAt: new Date(),
+            status: 'active',
+            isTestUser: true
+          });
+          console.log(`✅ Created test user: ${testUser.name}`);
+        } else {
+          console.log(`ℹ️ Test user already exists: ${testUser.name}`);
+        }
+      }
+      
+      // Recargar miembros del equipo
+      await loadTeamMembers(userTeam.id);
+      
+      console.log('🎉 Test users creation completed');
+      
+    } catch (error) {
+      console.error('❌ Error creating test users:', error);
+    }
+  };
+
   const isAdmin = () => userRole === 'admin';
   const isMember = () => userRole === 'member' || userRole === 'admin';
   
@@ -545,7 +645,8 @@ export const TeamProvider = ({ children }) => {
     // Funciones para acceder a la configuración del equipo
     getTeamDb: () => firebaseTeamService.getCurrentDb(),
     getTeamAuth: () => firebaseTeamService.getCurrentAuth(),
-    getTeamStats: () => firebaseTeamService.getStats()
+    getTeamStats: () => firebaseTeamService.getStats(),
+    createTestUsers
   };
 
   return (
