@@ -452,7 +452,15 @@ const DeveloperDashboard = () => {
                       <div key={collection.name} className="collection-card team">
                         <div className="collection-header">
                           <span className="collection-icon">{getCollectionTypeIcon(type)}</span>
-                          <h5>{collection.teamName}</h5>
+                          <h5>
+                            {collection.teamName}
+                            {collection.isLegacyPattern && (
+                              <span className="legacy-badge">Legacy</span>
+                            )}
+                            {collection.isOriginalCollection && (
+                              <span className="original-badge">Original</span>
+                            )}
+                          </h5>
                         </div>
                         <div className="collection-info">
                           <code>{collection.name}</code>
@@ -535,6 +543,9 @@ const DeveloperDashboard = () => {
                             {collection.baseType}
                             {collection.isLegacyPattern && (
                               <span className="legacy-badge">Legacy</span>
+                            )}
+                            {collection.isOriginalCollection && (
+                              <span className="original-badge">Original</span>
                             )}
                           </strong>
                           <code>{collection.name}</code>

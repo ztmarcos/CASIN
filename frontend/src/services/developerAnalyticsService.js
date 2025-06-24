@@ -228,6 +228,9 @@ class DeveloperAnalyticsService {
         }
       }
 
+      // ⚠️ AGREGAR COLECCIONES ORIGINALES (sin prefijo de equipo) para CASIN
+      await this.scanOriginalCollections(collections);
+
       // Luego escanear colecciones de equipos de manera más inteligente
       await this.scanTeamCollectionsIntelligent(teams, collections);
 
@@ -237,6 +240,53 @@ class DeveloperAnalyticsService {
     } catch (error) {
       console.error('❌ Error scanning collections:', error);
       return [];
+    }
+  }
+
+  /**
+   * Escanea las colecciones originales (sin prefijo de equipo) que usa el backend
+   */
+  async scanOriginalCollections(collections) {
+    console.log('📁 Scanning original collections (no team prefix)...');
+    
+    const originalCollections = [
+      'directorio_contactos', 'autos', 'vida', 'gmm', 'hogar', 'diversos', 
+      'mascotas', 'rc', 'negocio', 'transporte', 'emant', 'emant_listado', 
+      'emant_caratula', 'policy_status', 'gruposgmm', 'gruposautos', 
+      'gruposvida', 'listadoautos', 'listadovida', 'contactos', 'polizas',
+      'tareas', 'reportes', 'configuracion', 'birthdays', 'sharepoint_tasks',
+      'prospeccion_cards', 'table_order', 'table_relationships', 'users',
+      'clientes', 'empleados', 'ventas', 'productos', 'servicios', 'facturas',
+      'pagos', 'auditoria', 'logs'
+    ];
+
+    // Encontrar el equipo CASIN principal para asignar estas colecciones
+    const casinTeamId = await this.findCASINTeamId();
+
+    for (const collectionName of originalCollections) {
+      try {
+        const collectionRef = collection(db, collectionName);
+        const snapshot = await getDocs(query(collectionRef, limit(1)));
+        
+        if (!snapshot.empty) {
+          const count = await this.getCollectionCount(collectionName);
+          
+          collections.push({
+            name: collectionName,
+            baseType: collectionName,
+            teamId: casinTeamId, // Asignar al equipo CASIN
+            teamName: 'CASIN',
+            type: 'team',
+            exists: true,
+            documentCount: count,
+            isOriginalCollection: true // Marcar como colección original
+          });
+          
+          console.log(`✅ Found original collection: ${collectionName} (${count} docs) -> assigned to CASIN`);
+        }
+      } catch (error) {
+        // Collection doesn't exist, skip silently
+      }
     }
   }
 
