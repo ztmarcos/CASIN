@@ -9,6 +9,7 @@ import {
   query, 
   where, 
   getDocs,
+  deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
@@ -90,11 +91,11 @@ export const TeamProvider = ({ children }) => {
     try {
       console.log('🔍 Loading team for user:', user.email);
       
-      // Para usuarios específicos, asignar directamente al equipo 4JlUqhAvfJMlCDhQ4vgH
+      // Para usuarios específicos, asignar directamente al equipo CASIN
       if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com') {
-        console.log('🎯 Special user detected, assigning to team 4JlUqhAvfJMlCDhQ4vgH');
+        console.log('🎯 Special user detected, assigning to CASIN team ngXzjqxlBy8Bsv8ks3vc');
         
-        const teamId = '4JlUqhAvfJMlCDhQ4vgH';
+        const teamId = 'ngXzjqxlBy8Bsv8ks3vc';
         const teamData = {
           id: teamId,
           name: 'CASIN Team',
@@ -544,7 +545,7 @@ export const TeamProvider = ({ children }) => {
       
       if (!memberSnapshot.empty) {
         const memberDoc = memberSnapshot.docs[0];
-        await memberDoc.ref.delete();
+        await deleteDoc(memberDoc.ref);
         
         console.log('✅ User removed successfully');
         

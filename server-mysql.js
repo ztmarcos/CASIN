@@ -641,7 +641,7 @@ app.get('/api/data/:tableName', async (req, res) => {
     
     // Determinar el nombre de colección correcto basado en el equipo
     let actualCollectionName = tableName;
-    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+    if (team && team !== 'CASIN' && team !== 'ngXzjqxlBy8Bsv8ks3vc') {
       // Para equipos que no sean CASIN, usar el patrón team_{teamId}_{collectionName}
       actualCollectionName = `team_${team}_${tableName}`;
       console.log(`🏢 Using team collection: ${actualCollectionName} for team: ${team}`);
@@ -729,7 +729,7 @@ app.get('/api/data/:tableName', async (req, res) => {
     let totalCount = estimatedTotals[tableName] || data.length;
     
     // Si es un equipo específico (team_casa), usar el conteo real de los datos obtenidos
-    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+    if (team && team !== 'CASIN' && team !== 'ngXzjqxlBy8Bsv8ks3vc') {
       totalCount = data.length; // Usar conteo real para equipos custom
       console.log(`📊 Using actual count for team ${team}: ${totalCount}`);
     }
@@ -779,7 +779,7 @@ app.get('/api/count/:tableName', async (req, res) => {
     
     // Determinar el nombre de colección correcto basado en el equipo
     let actualCollectionName = tableName;
-    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+    if (team && team !== 'CASIN' && team !== 'ngXzjqxlBy8Bsv8ks3vc') {
       actualCollectionName = `team_${team}_${tableName}`;
     }
     
@@ -803,7 +803,7 @@ app.get('/api/count/:tableName', async (req, res) => {
     let count = 0;
     
     // Para equipos custom, obtener conteo real de Firebase
-    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+    if (team && team !== 'CASIN' && team !== 'ngXzjqxlBy8Bsv8ks3vc') {
       try {
         const snapshot = await admin.firestore().collection(actualCollectionName).limit(1).get();
         if (!snapshot.empty) {

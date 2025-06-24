@@ -87,7 +87,8 @@ class TableServiceAdapter {
       const casinUsers = [
         'z.t.marcos@gmail.com',
         'ztmarcos@gmail.com',
-        'marcos@casin.com'
+        'marcos@casin.com',
+        '2012solitario@gmail.com'
         // bumtekateam@gmail.com removido - debe usar sistema de equipos
       ];
       
@@ -107,16 +108,20 @@ class TableServiceAdapter {
    */
   isTeamSystemAvailable() {
     try {
-      // FORZAR: Si encontramos z.t.marcos@gmail.com en cualquier lugar, usar sistema CASIN
+      // FORZAR: Si encontramos usuarios CASIN en cualquier lugar, usar sistema CASIN
       const allLocalStorageData = [];
+      const casinEmails = ['z.t.marcos@gmail.com', '2012solitario@gmail.com'];
+      
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         const value = localStorage.getItem(key) || '';
         allLocalStorageData.push(`${key}: ${value}`);
         
-        if (value.includes('z.t.marcos@gmail.com')) {
-          console.log('🔥 FORCE CASIN: Found z.t.marcos@gmail.com in localStorage, forcing CASIN system');
-          return false;
+        for (const casinEmail of casinEmails) {
+          if (value.includes(casinEmail)) {
+            console.log(`🔥 FORCE CASIN: Found ${casinEmail} in localStorage, forcing CASIN system`);
+            return false;
+          }
         }
       }
       

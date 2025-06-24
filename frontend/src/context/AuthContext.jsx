@@ -13,13 +13,14 @@ export const AuthProvider = ({ children }) => {
     // Verificar si hay un token guardado al cargar la app
     console.log('🔍 AuthContext: Checking localStorage for user data...');
     
+    // Método 1: Buscar claves individuales (formato GoogleLogin)
     const token = localStorage.getItem('token');
     const email = localStorage.getItem('userEmail');
     const name = localStorage.getItem('userName');
     const photoURL = localStorage.getItem('userPhoto');
     const uid = localStorage.getItem('userUid');
     
-    console.log('🔍 AuthContext: localStorage data:', { 
+    console.log('🔍 AuthContext: localStorage individual keys:', { 
       hasToken: !!token, 
       email, 
       name, 
@@ -27,19 +28,91 @@ export const AuthProvider = ({ children }) => {
       uid 
     });
     
+    // Método 2: Buscar objeto 'user' completo
+    let userFromObject = null;
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        userFromObject = JSON.parse(userStr);
+        console.log('🔍 AuthContext: Found user object:', userFromObject);
+      }
+    } catch (e) {
+      console.log('🔍 AuthContext: No valid user object in localStorage');
+    }
+    
+    // Método 3: Buscar cualquier clave que contenga email conocidos (fallback para testing)
+    const knownEmails = ['z.t.marcos@gmail.com', '2012solitario@gmail.com'];
+    let userData = null;
+    
     if (token && email && uid) {
-      const userData = { 
+      // Usar datos de claves individuales
+      userData = { 
         email, 
         token, 
         name: name || '',
         photoURL: photoURL || '',
         uid: uid
       };
-      console.log('✅ AuthContext: Setting user from localStorage:', userData);
+      console.log('✅ AuthContext: Using individual keys data');
+    } else if (userFromObject && userFromObject.email) {
+      // Usar datos del objeto user
+      userData = {
+        email: userFromObject.email,
+        token: userFromObject.token || 'fallback-token',
+        name: userFromObject.name || userFromObject.displayName || '',
+        photoURL: userFromObject.photoURL || '',
+        uid: userFromObject.uid || userFromObject.email.replace(/[@.]/g, '_')
+      };
+      console.log('✅ AuthContext: Using user object data');
+    } else {
+      // Fallback: buscar emails conocidos en cualquier clave
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key);
+        
+        if (knownEmails.some(email => value.includes(email))) {
+          console.log(`🎯 AuthContext: Found known email in key '${key}'`);
+          
+          // Intentar parsear como JSON
+          try {
+            const parsed = JSON.parse(value);
+            if (parsed.email && knownEmails.includes(parsed.email)) {
+              userData = {
+                email: parsed.email,
+                token: parsed.token || 'fallback-token',
+                name: parsed.name || parsed.displayName || '',
+                photoURL: parsed.photoURL || '',
+                uid: parsed.uid || parsed.email.replace(/[@.]/g, '_')
+              };
+              console.log('✅ AuthContext: Using fallback data from JSON');
+              break;
+            }
+          } catch (e) {
+            // Si no es JSON, verificar si es un email directo
+            if (knownEmails.includes(value)) {
+              userData = {
+                email: value,
+                token: 'fallback-token',
+                name: value === 'z.t.marcos@gmail.com' ? 'Marcos Zavala' : '2012 Solitario',
+                photoURL: '',
+                uid: value.replace(/[@.]/g, '_')
+              };
+              console.log('✅ AuthContext: Using fallback data from email string');
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (userData) {
+      console.log('✅ AuthContext: Setting user:', userData);
       setUser(userData);
     } else {
-      console.log('❌ AuthContext: No valid user data in localStorage');
+      console.log('❌ AuthContext: No valid user data found in localStorage');
+      console.log('💡 AuthContext: Available localStorage keys:', Object.keys(localStorage));
     }
+    
     setLoading(false);
   }, []);
 

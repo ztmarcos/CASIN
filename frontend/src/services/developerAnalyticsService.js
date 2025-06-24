@@ -337,7 +337,7 @@ class DeveloperAnalyticsService {
   async findCASINTeamId() {
     try {
       // IDs conocidos de equipos CASIN
-      const casinTeamIds = ['4JlUqhAvfJMlCDhQ4vgH', 'ngXzjqxlBy8Bsv8ks3vc'];
+      const casinTeamIds = ['ngXzjqxlBy8Bsv8ks3vc'];
       
       // Obtener información de los equipos CASIN
       const teams = await this.getAllTeams();
@@ -363,7 +363,7 @@ class DeveloperAnalyticsService {
 
     } catch (error) {
       console.warn('⚠️ Error finding CASIN team ID, using fallback:', error);
-      return '4JlUqhAvfJMlCDhQ4vgH'; // Fallback
+      return 'ngXzjqxlBy8Bsv8ks3vc'; // Fallback
     }
   }
 
@@ -626,7 +626,7 @@ class DeveloperAnalyticsService {
     collections.push(...normalCollections);
 
          // Para equipos CASIN, agregar también las colecciones legacy
-     if (team.name === 'CASIN' || teamId === '4JlUqhAvfJMlCDhQ4vgH' || teamId === 'ngXzjqxlBy8Bsv8ks3vc') {
+           if (team.name === 'CASIN' || teamId === 'ngXzjqxlBy8Bsv8ks3vc') {
        // Verificar si este es el equipo CASIN principal
        const mainCasinTeamId = await this.findCASINTeamId();
        

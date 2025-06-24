@@ -199,7 +199,7 @@ class TeamDataService {
 
       // Para equipos custom (no CASIN), usar consultas simples sin índices para evitar errores
       const currentTeamInfo = this.getCurrentTeamInfo();
-      if (currentTeamInfo && currentTeamInfo.teamId !== '4JlUqhAvfJMlCDhQ4vgH') {
+      if (currentTeamInfo && currentTeamInfo.teamId !== 'ngXzjqxlBy8Bsv8ks3vc') {
         console.log(`🎯 Using simple query for custom team: ${currentTeamInfo.teamId}`);
         return await this.queryDocumentsSimple(collectionName, options);
       }
@@ -363,7 +363,7 @@ class TeamDataService {
     try {
       // Para equipos custom (no CASIN), usar conteo simple
       const currentTeamInfo = this.getCurrentTeamInfo();
-      if (currentTeamInfo && currentTeamInfo.teamId !== '4JlUqhAvfJMlCDhQ4vgH') {
+      if (currentTeamInfo && currentTeamInfo.teamId !== 'ngXzjqxlBy8Bsv8ks3vc') {
         console.log(`🎯 Using simple count for custom team: ${currentTeamInfo.teamId}`);
         return await this.countDocumentsSimple(collectionName, filters);
       }
