@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard/Dashboard'
@@ -20,10 +20,9 @@ import TeamDataDemo from './components/TeamDataDemo/TeamDataDemo'
 import DataMigration from './components/DataMigration/DataMigration'
 import DatabaseViewer from './components/DatabaseViewer/DatabaseViewer'
 import CASINSetup from './components/CASINSetup/CASINSetup'
-  import CASINSetupTest from './components/CASINSetup/CASINSetupTest'
-  import CASINSetupSimple from './components/CASINSetup/CASINSetupSimple'
-  import DeveloperDashboard from './components/DeveloperDashboard/DeveloperDashboard'
-
+import CASINSetupTest from './components/CASINSetup/CASINSetupTest'
+import CASINSetupSimple from './components/CASINSetup/CASINSetupSimple'
+import DeveloperDashboard from './components/DeveloperDashboard/DeveloperDashboard'
 
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -143,6 +142,20 @@ const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
 
 function AppRoutes() {
   const { user, login } = useAuth();
+
+  useEffect(() => {
+    // Clear any cached table counts on app start
+    console.log('🧹 Clearing cached table counts...');
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('table_count_') || key.includes('firebase_cache_'))) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log(`🧹 Removed ${keysToRemove.length} cached items`);
+  }, []);
 
   return (
     <Routes>

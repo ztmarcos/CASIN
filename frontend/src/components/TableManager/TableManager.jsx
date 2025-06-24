@@ -156,7 +156,53 @@ const TableManager = ({ onTableSelect, selectedTableProp }) => {
 
   useEffect(() => {
     loadTables();
+    checkAutoInitialization();
   }, []);
+
+  const checkAutoInitialization = async () => {
+    try {
+      // Solo verificar si hay un equipo actual
+      const currentTeamId = localStorage.getItem('currentTeamId');
+      const userEmail = localStorage.getItem('userEmail');
+      
+      if (!currentTeamId || !userEmail || currentTeamId === '4JlUqhAvfJMlCDhQ4vgH') {
+        // No hacer nada para CASIN o usuarios sin equipo
+        return;
+      }
+
+      console.log('🔍 Verificando si el equipo necesita inicialización automática...');
+      
+      // Esperar un poco para que se carguen las tablas
+      setTimeout(async () => {
+        // Verificar si el equipo tiene colecciones vacías
+        const tables = await airplaneTableService.getTables();
+        const totalDocuments = tables.reduce((sum, table) => sum + (table.count || 0), 0);
+        
+        if (totalDocuments === 0) {
+          console.log('🚀 Equipo vacío detectado, iniciando inicialización automática...');
+          
+          const AutoTeamInitializer = (await import('../../services/autoTeamInitializer')).default;
+          const teamName = localStorage.getItem('currentTeamName') || 'Mi Equipo';
+          
+          try {
+            await AutoTeamInitializer.initializeNewTeam(currentTeamId, teamName, userEmail);
+            
+            // Recargar tablas después de la inicialización
+            setTimeout(() => {
+              loadTables();
+            }, 2000);
+            
+          } catch (error) {
+            console.error('❌ Error en inicialización automática:', error);
+            toast.error('Error inicializando equipo automáticamente');
+          }
+        }
+      }, 3000); // Esperar 3 segundos para asegurar que todo esté cargado
+      
+    } catch (error) {
+      console.error('❌ Error verificando inicialización automática:', error);
+    }
+  };
 
   const loadTables = async () => {
     try {

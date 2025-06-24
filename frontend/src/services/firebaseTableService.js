@@ -332,10 +332,13 @@ class FirebaseTableService {
           let count = collection.count || 0;
           if (count === 0) {
             try {
-              const response = await fetch(`${API_URL}/data/${collection.name}`);
+              // Add random timestamp to avoid browser caching
+              const timestamp = Date.now();
+              const response = await fetch(`${API_URL}/data/${collection.name}?nocache=${timestamp}&_t=${Math.random()}`);
               if (response.ok) {
                 const result = await response.json();
                 count = result.total || (result.data ? result.data.length : 0);
+                console.log(`📊 Got count for ${collection.name}: ${count}`);
               }
             } catch (error) {
               console.warn(`Could not get count for ${collection.name}:`, error);

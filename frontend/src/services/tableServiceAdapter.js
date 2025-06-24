@@ -13,6 +13,8 @@ class TableServiceAdapter {
    */
   isCasinUser() {
     try {
+      console.log('🔍 isCasinUser() - Starting check...');
+      
       // Intentar obtener email desde diferentes fuentes
       let userEmail = null;
       
@@ -20,8 +22,9 @@ class TableServiceAdapter {
       try {
         const userData = JSON.parse(localStorage.getItem('user') || '{}');
         userEmail = userData.email;
+        console.log(`🔍 isCasinUser() - From 'user' localStorage:`, userEmail);
       } catch (e) {
-        // Continuar con otras opciones
+        console.log(`🔍 isCasinUser() - Error reading 'user' localStorage:`, e.message);
       }
       
       // 2. Si no está en 'user', intentar desde otras claves de localStorage
@@ -29,18 +32,21 @@ class TableServiceAdapter {
         try {
           const authData = JSON.parse(localStorage.getItem('authUser') || '{}');
           userEmail = authData.email;
+          console.log(`🔍 isCasinUser() - From 'authUser' localStorage:`, userEmail);
         } catch (e) {
-          // Continuar
+          console.log(`🔍 isCasinUser() - Error reading 'authUser' localStorage:`, e.message);
         }
       }
       
       // 3. Intentar desde window.userEmail si está disponible
       if (!userEmail && typeof window !== 'undefined' && window.userEmail) {
         userEmail = window.userEmail;
+        console.log(`🔍 isCasinUser() - From window.userEmail:`, userEmail);
       }
       
       // 4. Buscar en todas las claves de localStorage que contengan email
       if (!userEmail) {
+        console.log(`🔍 isCasinUser() - Searching all localStorage keys...`);
         try {
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
@@ -51,12 +57,14 @@ class TableServiceAdapter {
                   const parsed = JSON.parse(value);
                   if (parsed.email && typeof parsed.email === 'string') {
                     userEmail = parsed.email;
+                    console.log(`🔍 isCasinUser() - Found email in key '${key}':`, userEmail);
                     break;
                   }
                 } catch (e) {
                   // Si no es JSON, verificar si el valor mismo es un email
                   if (value.includes('@') && value.includes('.')) {
                     userEmail = value;
+                    console.log(`🔍 isCasinUser() - Found raw email in key '${key}':`, userEmail);
                     break;
                   }
                 }
@@ -64,14 +72,14 @@ class TableServiceAdapter {
             }
           }
         } catch (e) {
-          // Continuar
+          console.log(`🔍 isCasinUser() - Error searching localStorage:`, e.message);
         }
       }
       
-      console.log(`🔍 Found user email: ${userEmail}`);
+      console.log(`🔍 isCasinUser() - Final found email: ${userEmail}`);
       
       if (!userEmail) {
-        console.warn('⚠️ No user email found in any source');
+        console.warn('⚠️ isCasinUser() - No user email found in any source');
         return false;
       }
       
@@ -79,16 +87,17 @@ class TableServiceAdapter {
       const casinUsers = [
         'z.t.marcos@gmail.com',
         'ztmarcos@gmail.com',
-        'marcos@casin.com',
-        'bumtekateam@gmail.com' // Admin adicional para pruebas
+        'marcos@casin.com'
+        // bumtekateam@gmail.com removido - debe usar sistema de equipos
       ];
       
       const isCasin = casinUsers.includes(userEmail);
-      console.log(`🔍 Checking if user is CASIN: ${userEmail} → ${isCasin ? 'YES' : 'NO'}`);
+      console.log(`🔍 isCasinUser() - Checking if user is CASIN: ${userEmail} → ${isCasin ? 'YES' : 'NO'}`);
+      console.log(`🔍 isCasinUser() - CASIN users list:`, casinUsers);
       
       return isCasin;
     } catch (error) {
-      console.warn('⚠️ Error checking CASIN user:', error);
+      console.warn('⚠️ isCasinUser() - Error checking CASIN user:', error);
       return false;
     }
   }
@@ -98,8 +107,26 @@ class TableServiceAdapter {
    */
   isTeamSystemAvailable() {
     try {
+      // FORZAR: Si encontramos z.t.marcos@gmail.com en cualquier lugar, usar sistema CASIN
+      const allLocalStorageData = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        const value = localStorage.getItem(key) || '';
+        allLocalStorageData.push(`${key}: ${value}`);
+        
+        if (value.includes('z.t.marcos@gmail.com')) {
+          console.log('🔥 FORCE CASIN: Found z.t.marcos@gmail.com in localStorage, forcing CASIN system');
+          return false;
+        }
+      }
+      
+      console.log('🔍 All localStorage data:', allLocalStorageData);
+      
       // Si es usuario CASIN, NO usar sistema de equipos
-      if (this.isCasinUser()) {
+      const isCasinUser = this.isCasinUser();
+      console.log(`🔍 isTeamSystemAvailable - isCasinUser result: ${isCasinUser}`);
+      
+      if (isCasinUser) {
         console.log('👑 CASIN user detected, using original tables');
         return false;
       }
@@ -150,21 +177,10 @@ class TableServiceAdapter {
               });
               count = result.total || 0;
               
-              // Si la colección del equipo está vacía, intentar obtener conteo de CASIN original
-              if (count === 0) {
-                try {
-                  const casinResult = await firebaseTableService.getData(collectionName, { 
-                    limit: 0, // Solo obtener el conteo
-                    countOnly: true 
-                  });
-                  count = casinResult.total || (casinResult.data ? casinResult.data.length : 0);
-                  console.log(`📊 Using CASIN count for ${collectionName}: ${count}`);
-                } catch (fallbackError) {
-                  console.warn(`⚠️ Could not get CASIN count for ${collectionName}:`, fallbackError);
-                }
-              } else {
-                console.log(`📊 Using team count for ${collectionName}: ${count}`);
-              }
+              // Para equipos que no son CASIN, usar SOLO los datos del equipo
+              console.log(`📊 Using team count for ${collectionName}: ${count}`);
+              
+              // NOTA: Se removió el fallback a CASIN para que cada equipo use solo sus datos
               
               return {
                 name: collectionName,
@@ -309,24 +325,10 @@ class TableServiceAdapter {
         
         const result = await teamDataService.queryDocuments(tableName, options);
         
-        // Si la colección del equipo está vacía, intentar obtener datos de CASIN original
-        if ((!result.documents || result.documents.length === 0) && result.total === 0) {
-          console.log(`📋 Team collection ${tableName} is empty, trying CASIN fallback...`);
-          
-          try {
-            const casinResult = await firebaseTableService.getData(tableName, filters);
-            if (casinResult.data && casinResult.data.length > 0) {
-              console.log(`✅ Using CASIN data for ${tableName}: ${casinResult.data.length} records`);
-              return {
-                ...casinResult,
-                isFromCASIN: true, // Marcar que viene de CASIN original
-                message: 'Mostrando datos de CASIN original (colección del equipo vacía)'
-              };
-            }
-          } catch (fallbackError) {
-            console.warn(`⚠️ CASIN fallback failed for ${tableName}:`, fallbackError);
-          }
-        }
+        // Para equipos que no son CASIN, usar SOLO los datos del equipo (sin fallback a CASIN)
+        console.log(`📋 Using team data for ${tableName}: ${result.documents?.length || 0} records (total: ${result.total || 0})`);
+        
+        // NOTA: Se removió el fallback a CASIN para que cada equipo use solo sus datos
         
         // Convertir al formato esperado
         return {

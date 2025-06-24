@@ -214,37 +214,27 @@ export const TeamProvider = ({ children }) => {
   };
 
   // Inicializar colecciones usando plantillas CASIN cuando sea posible
-  const initializeTeamCollections = async (teamId) => {
+  const initializeTeamCollections = async (teamId, teamName, ownerEmail) => {
     try {
       console.log('🗂️ Initializing collections for team:', teamId);
 
-      // Intentar usar plantillas de CASIN primero
-      const TeamTemplateService = (await import('../services/teamTemplateService')).default;
+      // Usar el nuevo servicio automático de inicialización
+      const AutoTeamInitializer = (await import('../services/autoTeamInitializer')).default;
       
       try {
-        console.log('🎨 Intentando usar plantillas CASIN...');
-        const templates = await TeamTemplateService.extractCASINStructure();
+        console.log('🚀 Usando inicialización automática avanzada...');
+        const results = await AutoTeamInitializer.initializeNewTeam(teamId, teamName, ownerEmail);
         
-        if (Object.keys(templates).length > 0) {
-          console.log(`✅ Se encontraron ${Object.keys(templates).length} plantillas CASIN`);
-          
-          // Usar las plantillas para crear las colecciones
-          const results = await TeamTemplateService.createTeamFromTemplate(
-            teamId,
-            'Nuevo Equipo',
-            user?.email || 'admin',
-            templates
-          );
-          
-          console.log(`🎉 Colecciones creadas usando plantillas CASIN: ${results.length}`);
+        if (results.length > 0) {
+          console.log(`✅ Equipo inicializado automáticamente con ${results.length} colecciones`);
           
           // Inicializar colección de tareas también
           await initializeTasksCollection(teamId);
           
-          return;
+          return results;
         }
-      } catch (templateError) {
-        console.warn('⚠️ No se pudieron usar plantillas CASIN, usando método básico:', templateError.message);
+      } catch (autoError) {
+        console.warn('⚠️ Error en inicialización automática, usando método básico:', autoError.message);
       }
 
       // Fallback: método básico original
@@ -373,7 +363,38 @@ export const TeamProvider = ({ children }) => {
       console.log('👤 User data:', { email: user.email, uid: user.uid, name: user.name });
       console.log('👥 Team members to add:', teamMembers);
       
-      // Crear el equipo
+      // Generar ID personalizado basado en el nombre del equipo
+      const generateTeamId = (name) => {
+        // Convertir a minúsculas, quitar espacios y caracteres especiales
+        const cleanName = name
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9\s]/g, '') // Quitar caracteres especiales
+          .replace(/\s+/g, '_') // Reemplazar espacios por guiones bajos
+          .replace(/_+/g, '_') // Reemplazar múltiples guiones bajos por uno solo
+          .replace(/^_|_$/g, ''); // Quitar guiones bajos al inicio y final
+        
+        // Si el nombre queda vacío, usar un fallback
+        const finalName = cleanName || 'equipo';
+        
+        return `team_${finalName}`;
+      };
+
+      const teamId = generateTeamId(teamName);
+      console.log('🆔 Generated team ID:', teamId);
+
+      // Verificar que el ID no esté ya en uso
+      const existingTeamDoc = await getDoc(doc(db, 'teams', teamId));
+      let finalTeamId = teamId;
+      
+      if (existingTeamDoc.exists()) {
+        // Si existe, agregar timestamp para hacerlo único
+        const timestamp = Date.now().toString().slice(-6); // Últimos 6 dígitos
+        finalTeamId = `${teamId}_${timestamp}`;
+        console.log('⚠️ Team ID exists, using unique ID:', finalTeamId);
+      }
+
+      // Crear el equipo con el ID personalizado
       const teamData = {
         name: teamName,
         owner: user.email,
@@ -385,15 +406,17 @@ export const TeamProvider = ({ children }) => {
         }
       };
 
-      const teamDocRef = await addDoc(collection(db, 'teams'), teamData);
-      console.log('✅ Team created with ID:', teamDocRef.id);
+      await setDoc(doc(db, 'teams', finalTeamId), teamData);
+      console.log('✅ Team created with ID:', finalTeamId);
+      
+      const teamDocRef = { id: finalTeamId };
 
       // Agregar al usuario como admin del equipo
       await addDoc(collection(db, 'team_members'), {
         userId: user.uid,
         email: user.email,
         name: user.name || user.email,
-        teamId: teamDocRef.id,
+        teamId: finalTeamId,
         role: 'admin',
         invitedBy: user.email,
         joinedAt: serverTimestamp(),
@@ -410,7 +433,7 @@ export const TeamProvider = ({ children }) => {
               userId: null, // Se llenará cuando el usuario haga login
               email: member.email.trim(),
               name: member.name || member.email.trim(),
-              teamId: teamDocRef.id,
+              teamId: finalTeamId,
               role: 'member',
               invitedBy: user.email,
               joinedAt: serverTimestamp(),
@@ -425,14 +448,14 @@ export const TeamProvider = ({ children }) => {
 
       console.log(`✅ Team created with ${teamMembers.length} invited members`);
 
-      // Inicializar colecciones del equipo
-      await initializeTeamCollections(teamDocRef.id);
+      // Inicializar colecciones del equipo con estructura automática
+      await initializeTeamCollections(finalTeamId, teamName, user.email);
 
       // Crear estructura de almacenamiento para el equipo
       try {
         console.log('🗂️ Creating Firebase Storage structure for team...');
         const storageResult = await firebaseTeamStorageService.createTeamStorageStructure(
-          teamDocRef.id, 
+          finalTeamId, 
           teamName
         );
         console.log('✅ Team storage structure created:', storageResult);
@@ -444,7 +467,7 @@ export const TeamProvider = ({ children }) => {
       // Recargar datos del equipo
       await loadUserTeam();
       
-      return teamDocRef.id;
+      return finalTeamId;
 
     } catch (error) {
       console.error('❌ Error creating team:', error);

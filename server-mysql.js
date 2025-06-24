@@ -636,23 +636,34 @@ const dataCache = new Map();
 app.get('/api/data/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
+    const { team } = req.query; // Obtener parámetro de equipo
     const limit = parseInt(req.query.limit) || 1000; // Default limit
     
+    // Determinar el nombre de colección correcto basado en el equipo
+    let actualCollectionName = tableName;
+    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+      // Para equipos que no sean CASIN, usar el patrón team_{teamId}_{collectionName}
+      actualCollectionName = `team_${team}_${tableName}`;
+      console.log(`🏢 Using team collection: ${actualCollectionName} for team: ${team}`);
+    } else {
+      console.log(`🎯 Using original collection: ${tableName} for CASIN or default`);
+    }
+    
     // Check cache first (unless nocache parameter is set)
-    const cacheKey = `${tableName}_${limit}`;
+    const cacheKey = `${actualCollectionName}_${limit}`;
     const cached = dataCache.get(cacheKey);
     const skipCache = req.query.nocache === 'true';
     
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION && !skipCache) {
-      console.log(`📋 Returning cached data for ${tableName}`);
+      console.log(`📋 Returning cached data for ${actualCollectionName}`);
       return res.json(cached.data);
     }
     
     if (skipCache) {
-      console.log(`🚫 Skipping cache for ${tableName} (nocache=true)`);
+      console.log(`🚫 Skipping cache for ${actualCollectionName} (nocache=true)`);
     }
 
-    console.log(`🔍 Fetching ${tableName} data from Firebase (limit: ${limit})`);
+    console.log(`🔍 Fetching ${actualCollectionName} data from Firebase (limit: ${limit})`);
     
     if (!admin.firestore) {
       throw new Error('Firebase not initialized');
@@ -660,7 +671,7 @@ app.get('/api/data/:tableName', async (req, res) => {
 
     // Use smaller batches and pagination to reduce quota usage
     const batchSize = Math.min(limit, BATCH_SIZE);
-    let query = admin.firestore().collection(tableName).limit(batchSize);
+    let query = admin.firestore().collection(actualCollectionName).limit(batchSize);
     
     const snapshot = await query.get();
     const data = [];
@@ -670,7 +681,7 @@ app.get('/api/data/:tableName', async (req, res) => {
       console.log(`🔍 Firebase doc ID: ${doc.id}, contains id field: ${docData.id || 'none'}`);
       
       // Special filtering for emant_caratula - only show CSV data and exclude status column
-      if (tableName === 'emant_caratula') {
+      if (tableName === 'emant_caratula' || actualCollectionName.includes('emant_caratula')) {
         // Only include records that match the CSV: "Emant Consultores S.c." with policy "17 559558"
         if (docData.contratante === 'Emant Consultores S.c.' && docData.numero_poliza === '17 559558') {
           console.log(`   ✅ Including CSV record: ${docData.contratante}`);
@@ -704,6 +715,7 @@ app.get('/api/data/:tableName', async (req, res) => {
       'autos': 33,
       'vida': 2,
       'gmm': 53,
+      'hogar': 51,  // Agregar conteo correcto para hogar
       'rc': 1,
       'transporte': 0,
       'mascotas': 1,
@@ -713,10 +725,21 @@ app.get('/api/data/:tableName', async (req, res) => {
       'directorio_contactos': 2700
     };
 
+    // Para equipos específicos, usar los conteos reales si están disponibles
+    let totalCount = estimatedTotals[tableName] || data.length;
+    
+    // Si es un equipo específico (team_casa), usar el conteo real de los datos obtenidos
+    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+      totalCount = data.length; // Usar conteo real para equipos custom
+      console.log(`📊 Using actual count for team ${team}: ${totalCount}`);
+    }
+
     const result = {
       data,
-      total: estimatedTotals[tableName] || data.length,
-      cached: false
+      total: totalCount,
+      cached: false,
+      team: team || 'CASIN',
+      collection: actualCollectionName
     };
 
     // Cache the result
@@ -725,7 +748,7 @@ app.get('/api/data/:tableName', async (req, res) => {
       timestamp: Date.now()
     });
 
-    console.log(`✅ Successfully fetched ${data.length} records from ${tableName} (estimated total: ${result.total})`);
+    console.log(`✅ Successfully fetched ${data.length} records from ${actualCollectionName} (total: ${result.total}) for team: ${team || 'CASIN'}`);
     res.json(result);
 
   } catch (error) {
@@ -752,14 +775,22 @@ app.get('/api/data/:tableName', async (req, res) => {
 app.get('/api/count/:tableName', async (req, res) => {
   try {
     const { tableName } = req.params;
+    const { team } = req.query;
     
-    console.log(`🔢 Getting count for ${tableName}`);
+    // Determinar el nombre de colección correcto basado en el equipo
+    let actualCollectionName = tableName;
+    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+      actualCollectionName = `team_${team}_${tableName}`;
+    }
     
-    // Use estimated counts to avoid Firebase quota usage
+    console.log(`🔢 Getting count for ${actualCollectionName} (team: ${team || 'CASIN'})`);
+    
+    // Use estimated counts to avoid Firebase quota usage for CASIN
     const estimatedTotals = {
       'autos': 33,
       'vida': 2, 
       'gmm': 53,
+      'hogar': 51,  // Agregar conteo correcto para hogar
       'rc': 1,
       'transporte': 0,
       'mascotas': 1,
@@ -769,11 +800,32 @@ app.get('/api/count/:tableName', async (req, res) => {
       'directorio_contactos': 2700
     };
     
-    const count = estimatedTotals[tableName] || 0;
+    let count = 0;
+    
+    // Para equipos custom, obtener conteo real de Firebase
+    if (team && team !== 'CASIN' && team !== '4JlUqhAvfJMlCDhQ4vgH') {
+      try {
+        const snapshot = await admin.firestore().collection(actualCollectionName).limit(1).get();
+        if (!snapshot.empty) {
+          // Si tiene datos, hacer una consulta más completa para obtener el conteo
+          const fullSnapshot = await admin.firestore().collection(actualCollectionName).get();
+          count = fullSnapshot.size;
+        }
+        console.log(`📊 Real count for team ${team}: ${count}`);
+      } catch (error) {
+        console.warn(`⚠️ Could not get real count for ${actualCollectionName}:`, error.message);
+        count = 0;
+      }
+    } else {
+      // Para CASIN, usar conteos estimados
+      count = estimatedTotals[tableName] || 0;
+    }
     
     res.json({
       table: tableName,
-      count: count
+      actualCollection: actualCollectionName,
+      count: count,
+      team: team || 'CASIN'
     });
     
   } catch (error) {

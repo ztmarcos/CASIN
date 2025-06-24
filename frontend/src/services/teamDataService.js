@@ -197,10 +197,10 @@ class TeamDataService {
         orderDirection = 'desc'
       } = options;
 
-      // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar consultas simples sin índices
+      // Para equipos custom (no CASIN), usar consultas simples sin índices para evitar errores
       const currentTeamInfo = this.getCurrentTeamInfo();
-      if (currentTeamInfo && currentTeamInfo.teamId === '4JlUqhAvfJMlCDhQ4vgH') {
-        console.log(`🎯 Using simple query for team 4JlUqhAvfJMlCDhQ4vgH`);
+      if (currentTeamInfo && currentTeamInfo.teamId !== '4JlUqhAvfJMlCDhQ4vgH') {
+        console.log(`🎯 Using simple query for custom team: ${currentTeamInfo.teamId}`);
         return await this.queryDocumentsSimple(collectionName, options);
       }
       
@@ -361,10 +361,10 @@ class TeamDataService {
    */
   async countDocuments(collectionName, filters = {}) {
     try {
-      // Para el equipo específico 4JlUqhAvfJMlCDhQ4vgH, usar conteo simple
+      // Para equipos custom (no CASIN), usar conteo simple
       const currentTeamInfo = this.getCurrentTeamInfo();
-      if (currentTeamInfo && currentTeamInfo.teamId === '4JlUqhAvfJMlCDhQ4vgH') {
-        console.log(`🎯 Using simple count for team 4JlUqhAvfJMlCDhQ4vgH`);
+      if (currentTeamInfo && currentTeamInfo.teamId !== '4JlUqhAvfJMlCDhQ4vgH') {
+        console.log(`🎯 Using simple count for custom team: ${currentTeamInfo.teamId}`);
         return await this.countDocumentsSimple(collectionName, filters);
       }
       
