@@ -8,6 +8,7 @@ import AddEntryModal from './AddEntryModal';
 import airplaneTableService from '../../services/airplaneTableService';
 import tableServiceAdapter from '../../services/tableServiceAdapter';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
 
@@ -327,177 +328,116 @@ const DataSection = () => {
     }
   };
 
-  return (
-    <div className="data-section">
-      {/* Team info header - Enhanced with better design */}
-      {team && (
-        <div className="team-info-header">
-          <div>
-            <h2>
-              🏢 Base de Datos de {team.name}
-            </h2>
-            <p>
-              🔒 Datos seguros • Servicio: {tableServiceAdapter.getServiceInfo().service}
-            </p>
-          </div>
-        </div>
-      )}
-      
-      <div className="data-section-header">
-        <div className="header-horizontal-layout">
-          <div className="header-left">
-            <h2>💽 Base de Datos Empresarial</h2>
-            <button 
-              className="reload-btn"
-              onClick={handleReload}
-              title="Actualizar datos"
-              disabled={isLoading}
-            >
-              {isLoading ? '⏳' : '🔄'}
-            </button>
-          </div>
-          
-          <div className="header-right">
-            {selectedTable && (
-              <>
-                <button 
-                  className="btn-primary add-btn" 
-                  onClick={() => setShowAddEntryModal(true)}
-                  disabled={isLoading}
-                >
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                  ➕ Nuevo Registro
-                </button>
-
-                <button 
-                  className="btn-icon-only" 
-                  onClick={toggleViewMode}
-                  title={viewMode === 'table' ? 'Vista de Tarjetas' : 'Vista de Tabla'}
-                  disabled={isLoading}
-                >
-                  {viewMode === 'table' ? (
-                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <rect x="3" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="3" width="7" height="7"></rect>
-                      <rect x="14" y="14" width="7" height="7"></rect>
-                      <rect x="3" y="14" width="7" height="7"></rect>
-                    </svg>
-                  ) : (
-                    <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <line x1="8" y1="6" x2="21" y2="6"></line>
-                      <line x1="8" y1="12" x2="21" y2="12"></line>
-                      <line x1="8" y1="18" x2="21" y2="18"></line>
-                      <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                      <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                      <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                    </svg>
-                  )}
-                </button>
-                <button 
-                  className="btn-icon-only" 
-                  onClick={handleExport}
-                  title="Exportar como CSV"
-                  disabled={!selectedTable || isLoading || !tableData.length}
-                >
-                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                  </svg>
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="data-section-content">
-        {/* Enhanced Managers Panel */}
-        <div className="compact-managers-panel">
-          {/* Table Manager Panel */}
-          <div className={`manager-panel ${isTableManagerCollapsed ? 'collapsed' : 'expanded'}`}>
-            <div className="panel-header">
-              <div className="panel-title" onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}>
-                <span className="panel-icon">📊</span>
-                <span>Gestión de Tablas</span>
-                {selectedTable && <span className="selected-indicator">📍 {selectedTable.name}</span>}
-              </div>
-              <div className="panel-actions">
-                <button 
-                  className="action-btn create-table-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowCreateTableModal(true);
-                  }}
-                  title="Crear nueva tabla"
-                >
-                  🆕
-                </button>
-                <button 
-                  className="collapse-btn"
-                  onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}
-                >
-                  {isTableManagerCollapsed ? '🔽' : '🔼'}
-                </button>
-              </div>
-            </div>
-            {!isTableManagerCollapsed && (
-              <div className="panel-content">
-                <TableManager onTableSelect={handleTableSelect} />
-              </div>
-            )}
-          </div>
-
-          {/* Column Manager Panel */}
-          {selectedTable && (
-            <div className={`manager-panel ${isColumnManagerCollapsed ? 'collapsed' : 'expanded'}`}>
-              <div className="panel-header">
-                <div className="panel-title" onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}>
-                  <span className="panel-icon">⚙️</span>
-                  <span>Configuración de Columnas</span>
-                  <span className="table-name">📋 {selectedTable.name}</span>
-                </div>
-                <div className="panel-actions">
-                  <button 
-                    className="action-btn add-column-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowAddColumnModal(true);
-                    }}
-                    title="Agregar columna"
-                  >
-                    ➕
-                  </button>
-                  <button 
-                    className="action-btn edit-columns-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowEditColumnsModal(true);
-                    }}
-                    title="Editar columnas"
-                  >
-                    ✏️
-                  </button>
-                  <button 
-                    className="collapse-btn"
-                    onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}
-                  >
-                    {isColumnManagerCollapsed ? '🔽' : '🔼'}
-                  </button>
-                </div>
-              </div>
-              {!isColumnManagerCollapsed && (
-                <div className="panel-content">
-                  <ColumnManager 
-                    selectedTable={selectedTable} 
-                    onOrderChange={handleColumnOrderChange}
-                  />
-                </div>
-              )}
-            </div>
+    return (
+    <div className="data-section excel-layout">
+      {/* Excel-like Toolbar Header */}
+      <div className="excel-toolbar">
+        {/* Left Section - Team Info */}
+        <div className="toolbar-left">
+          {team && (
+            <>
+              <span className="team-badge">🏢 {getCleanTeamName(team.name)}</span>
+              <span className="service-badge">🔒 {tableServiceAdapter.getServiceInfo().service}</span>
+            </>
           )}
         </div>
 
+        {/* Center Section - Table Management */}
+        <div className="toolbar-center">
+          <div className="table-selector-compact">
+            <button 
+              className="table-select-btn"
+              onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}
+            >
+              📊 {selectedTable ? selectedTable.name : 'Seleccionar Tabla'}
+              <span className="dropdown-arrow">{isTableManagerCollapsed ? '▼' : '▲'}</span>
+            </button>
+            
+            {selectedTable && (
+              <button 
+                className="column-config-btn"
+                onClick={() => setIsColumnManagerCollapsed(!isColumnManagerCollapsed)}
+                title="Configurar Columnas"
+              >
+                ⚙️
+              </button>
+            )}
+            
+            <button 
+              className="create-table-btn-compact"
+              onClick={() => setShowCreateTableModal(true)}
+              title="Crear Nueva Tabla"
+            >
+              🆕
+            </button>
+          </div>
+        </div>
+
+        {/* Right Section - Actions */}
+        <div className="toolbar-right">
+          <button 
+            className="toolbar-btn reload-btn"
+            onClick={handleReload}
+            title="Actualizar datos"
+            disabled={isLoading}
+          >
+            {isLoading ? '⏳' : '🔄'}
+          </button>
+
+          {selectedTable && (
+            <>
+              <button 
+                className="toolbar-btn add-btn" 
+                onClick={() => setShowAddEntryModal(true)}
+                disabled={isLoading}
+                title="Nuevo Registro"
+              >
+                ➕
+              </button>
+
+              <button 
+                className="toolbar-btn view-btn" 
+                onClick={toggleViewMode}
+                title={viewMode === 'table' ? 'Vista de Tarjetas' : 'Vista de Tabla'}
+                disabled={isLoading}
+              >
+                {viewMode === 'table' ? '🔲' : '📋'}
+              </button>
+
+              <button 
+                className="toolbar-btn export-btn" 
+                onClick={handleExport}
+                title="Exportar como CSV"
+                disabled={!selectedTable || isLoading || !tableData.length}
+              >
+                📤
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Collapsible Panels - Minimized by default */}
+      {!isTableManagerCollapsed && (
+        <div className="panel-dropdown table-manager-dropdown">
+          <TableManager onTableSelect={(table) => {
+            handleTableSelect(table);
+            setIsTableManagerCollapsed(true); // Auto-close after selection
+          }} />
+        </div>
+      )}
+
+      {!isColumnManagerCollapsed && selectedTable && (
+        <div className="panel-dropdown column-manager-dropdown">
+          <ColumnManager 
+            selectedTable={selectedTable} 
+            onOrderChange={handleColumnOrderChange}
+          />
+        </div>
+      )}
+
+      {/* Main Data Display Area */}
+      <div className="excel-main-content">
         {selectedTable ? (
           <div className="data-display-container">
             {isLoading ? (
@@ -526,7 +466,7 @@ const DataSection = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '300px',
+              height: '400px',
               color: '#667eea',
               textAlign: 'center',
               gap: '1rem'

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import './TeamDemo.css';
 
 const TeamDemo = () => {
@@ -23,7 +24,7 @@ const TeamDemo = () => {
             <div className="team-badge">
               <span className="team-icon">👥</span>
               <div>
-                <h4>{currentTeam.name}</h4>
+                <h4>{getCleanTeamName(currentTeam.name)}</h4>
                 <p>{currentTeam.description}</p>
               </div>
               {currentTeam.isDefault && (
@@ -61,7 +62,7 @@ const TeamDemo = () => {
                 className={`team-card ${team.id === currentTeam?.id ? 'active' : ''}`}
               >
                 <div className="team-card-header">
-                  <span className="team-name">{team.name}</span>
+                  <span className="team-name">{getCleanTeamName(team.name)}</span>
                   {team.id === currentTeam?.id && (
                     <span className="current-indicator">🎯</span>
                   )}

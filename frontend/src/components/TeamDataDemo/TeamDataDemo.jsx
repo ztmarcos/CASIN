@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTeam } from '../../context/TeamContext';
 import { useAuth } from '../../context/AuthContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import teamDataService from '../../services/teamDataService';
 import teamDirectorioService from '../../services/teamDirectorioService';
 import teamTemplateService from '../../services/teamTemplateService';
@@ -199,7 +200,7 @@ const TeamDataDemo = () => {
     <div className="team-data-demo">
       <div className="demo-header">
         <h1>🏢 Gestión del Equipo</h1>
-        <p>Gestión de usuarios y datos del equipo {team.name}</p>
+                  <p>Gestión de usuarios y datos del equipo {getCleanTeamName(team.name)}</p>
       </div>
 
       {/* Tabs */}

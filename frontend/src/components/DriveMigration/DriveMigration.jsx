@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import driveMigrationService from '../../services/driveMigrationService';
 import './DriveMigration.css';
 
@@ -42,9 +43,9 @@ const DriveMigration = () => {
     }
     if (selectedTeamId && allTeams) {
       const team = allTeams.find(t => t.id === selectedTeamId);
-      return team?.name || `Team ${selectedTeamId}`;
+      return getCleanTeamName(team?.name) || `Team ${selectedTeamId}`;
     }
-    return userTeam?.name || 'Current Team';
+    return getCleanTeamName(userTeam?.name) || 'Current Team';
   };
 
   const startMigration = async () => {
@@ -135,12 +136,12 @@ const DriveMigration = () => {
               >
                 <option value="">Seleccionar equipo...</option>
                 {userTeam && (
-                  <option value={userTeam.id}>{userTeam.name} (Mi equipo)</option>
+                  <option value={userTeam.id}>{getCleanTeamName(userTeam.name)} (Mi equipo)</option>
                 )}
                 {allTeams && allTeams
                   .filter(team => team.id !== userTeam?.id)
                   .map(team => (
-                    <option key={team.id} value={team.id}>{team.name}</option>
+                    <option key={team.id} value={team.id}>{getCleanTeamName(team.name)}</option>
                   ))
                 }
               </select>

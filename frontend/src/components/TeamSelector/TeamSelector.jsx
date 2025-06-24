@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import './TeamSelector.css';
 
 const TeamSelector = () => {
@@ -44,7 +45,7 @@ const TeamSelector = () => {
         disabled={isSwitching}
       >
         <span className="team-icon">👥</span>
-        <span className="team-name">{currentTeam.name}</span>
+                        <span className="team-name">{getCleanTeamName(currentTeam.name)}</span>
         <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>
           ▼
         </span>
@@ -64,7 +65,7 @@ const TeamSelector = () => {
               disabled={isSwitching}
             >
               <div className="team-info">
-                <div className="team-name-dropdown">{team.name}</div>
+                <div className="team-name-dropdown">{getCleanTeamName(team.name)}</div>
                 <div className="team-description">{team.description}</div>
               </div>
               

@@ -20,8 +20,9 @@ import TeamDataDemo from './components/TeamDataDemo/TeamDataDemo'
 import DataMigration from './components/DataMigration/DataMigration'
 import DatabaseViewer from './components/DatabaseViewer/DatabaseViewer'
 import CASINSetup from './components/CASINSetup/CASINSetup'
-import CASINSetupTest from './components/CASINSetup/CASINSetupTest'
-import CASINSetupSimple from './components/CASINSetup/CASINSetupSimple'
+  import CASINSetupTest from './components/CASINSetup/CASINSetupTest'
+  import CASINSetupSimple from './components/CASINSetup/CASINSetupSimple'
+  import DeveloperDashboard from './components/DeveloperDashboard/DeveloperDashboard'
 
 
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -315,7 +316,15 @@ function AppRoutes() {
         <CASINSetup />
       } />
 
-      <Route path="/test" element={
+              <Route path="/developer-dashboard" element={
+          <ProtectedRoute requireAdminAccess>
+            <Layout>
+              <DeveloperDashboard />
+            </Layout>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/test" element={
         <div style={{padding: '2rem', textAlign: 'center'}}>
           <h1>🧪 Test Route Works!</h1>
           <p>Si ves esto, las rutas funcionan correctamente.</p>

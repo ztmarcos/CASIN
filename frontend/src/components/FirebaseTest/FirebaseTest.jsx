@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import firebaseServiceAdapter from '../../services/firebaseServiceAdapter';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 
 const FirebaseTest = () => {
   const { userTeam, currentTeam } = useTeam();
@@ -100,7 +101,7 @@ const FirebaseTest = () => {
           border: '1px solid #e2e8f0',
           fontSize: '14px'
         }}>
-          <strong>🏢 Equipo:</strong> {team.name} | 
+          <strong>🏢 Equipo:</strong> {getCleanTeamName(team.name)} | 
           <strong> 📊 Servicio:</strong> {firebaseServiceAdapter.getServiceInfo().service} | 
           <strong> 🔒 Datos:</strong> Aislados por equipo
         </div>

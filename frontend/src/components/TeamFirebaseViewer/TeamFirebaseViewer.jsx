@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import firebaseTeamService from '../../services/firebaseTeamService';
 import './TeamFirebaseViewer.css';
 
@@ -91,7 +92,7 @@ const TeamFirebaseViewer = () => {
           <div className="info-grid">
             <div className="info-item">
               <strong>Team Name:</strong>
-              <span>{userTeam.name}</span>
+              <span>{getCleanTeamName(userTeam.name)}</span>
             </div>
             <div className="info-item">
               <strong>Team ID:</strong>

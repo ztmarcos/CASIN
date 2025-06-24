@@ -6,6 +6,7 @@ import PolicyModal from './PolicyModal';
 import SearchFilters from './SearchFilters';
 import { FEATURES } from '../../config/features';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 // import RelationshipsView from './RelationshipsView'; // COMMENTED OUT - Relationships functionality disabled
 import './Directorio.css';
 
@@ -637,7 +638,7 @@ const Directorio = () => {
         }}>
           <div>
             <h2 style={{ margin: 0, color: '#2d3748', fontSize: '1.3rem' }}>
-              👥 Directorio de {team.name}
+              👥 Directorio de {getCleanTeamName(team.name)}
             </h2>
             <p style={{ margin: '0.25rem 0 0 0', color: '#718096', fontSize: '0.9rem' }}>
               {team.id === '4JlUqhAvfJMlCDhQ4vgH' 

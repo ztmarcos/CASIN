@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { storage } from '../../firebase/config.js';
 import { useAuth } from '../../context/AuthContext';
 import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
 import firebaseTeamStorageService from '../../services/firebaseTeamStorageService';
 import firebaseStorageProxy from '../../services/firebaseStorageProxy';
 import { ref, listAll, getDownloadURL, getMetadata, uploadBytes } from 'firebase/storage';
@@ -139,7 +140,7 @@ const Firedrive = () => {
         return false;
       }
       
-      addDebugInfo(`Usuario: ${user.email} | Team: ${userTeam.name}`);
+      addDebugInfo(`Usuario: ${user.email} | Team: ${getCleanTeamName(userTeam.name)}`);
       addDebugInfo(`Team ID: ${userTeam.id}`);
       
       // Test team storage connection
@@ -162,7 +163,7 @@ const Firedrive = () => {
           addDebugInfo('Storage del equipo no existe, creando...');
           
           try {
-            await firebaseTeamStorageService.createTeamStorageStructure(userTeam.id, userTeam.name);
+            await firebaseTeamStorageService.createTeamStorageStructure(userTeam.id, getCleanTeamName(userTeam.name));
             addDebugInfo('Storage del equipo creado exitosamente');
             setConnectionStatus('connected');
             return true;
@@ -219,7 +220,7 @@ const Firedrive = () => {
         return;
       }
       
-      addDebugInfo(`⚡ Cargando carpetas para team: ${userTeam.name} en path: "${currentFolderPath}"`);
+              addDebugInfo(`⚡ Cargando carpetas para team: ${getCleanTeamName(userTeam.name)} en path: "${currentFolderPath}"`);
       
       const folderData = await firebaseTeamStorageService.listTeamFoldersOnly(currentFolderPath, userTeam.id);
       
@@ -671,7 +672,7 @@ const Firedrive = () => {
         return;
       }
       
-      addDebugInfo(`✅ Usuario encontrado: ${user.email} | Team: ${userTeam.name}`);
+              addDebugInfo(`✅ Usuario encontrado: ${user.email} | Team: ${getCleanTeamName(userTeam.name)}`);
       
       const connectionStart = performance.now();
       const isConnected = await testConnection();
