@@ -363,9 +363,9 @@ export const TeamProvider = ({ children }) => {
       console.log('👤 User data:', { email: user.email, uid: user.uid, name: user.name });
       console.log('👥 Team members to add:', teamMembers);
       
-      // Generar ID personalizado basado en el nombre del equipo
+      // Generar ID simple y legible basado en el nombre del equipo
       const generateTeamId = (name) => {
-        // Convertir a minúsculas, quitar espacios y caracteres especiales
+        // Convertir a minúsculas y limpiar
         const cleanName = name
           .toLowerCase()
           .trim()
@@ -377,7 +377,9 @@ export const TeamProvider = ({ children }) => {
         // Si el nombre queda vacío, usar un fallback
         const finalName = cleanName || 'equipo';
         
-        return `team_${finalName}`;
+        // Retornar directamente el nombre sin prefijo "team_" adicional
+        // Ya que las colecciones usarán el patrón team_{teamId}_{collection}
+        return finalName;
       };
 
       const teamId = generateTeamId(teamName);
