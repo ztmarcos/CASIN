@@ -513,84 +513,7 @@
 
 /* Accessibility */
 /* Collections List */
-.collections-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.collection-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: #f8f9fa;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-}
-
-.collection-name {
-  flex: 1;
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 0.85rem;
-  color: #2d3748;
-}
-
-.collection-desc {
-  flex: 1;
-  color: #718096;
-  font-size: 0.9rem;
-}
-
-.collection-count {
-  flex-shrink: 0;
-}
-
-.count-badge {
-  background: #48bb78;
-  color: white;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.empty-badge {
-  background: #e2e8f0;
-  color: #718096;
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.dev-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.dev-tools button {
-  padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-  font-size: 0.9rem;
-}
-
-.dev-tools button:hover {
-  background: #5a67d8;
-}
-
-.dev-tools button:disabled {
-  background: #a0aec0;
-  cursor: not-allowed;
-}
+/* Estilos obsoletos removidos - reemplazados por los nuevos estilos de configuración */
 
 @media (prefers-reduced-motion: reduce) {
   * {
@@ -624,4 +547,172 @@
 .permission-notice p:last-child {
   margin-bottom: 0;
   font-weight: 500;
+}
+
+/* Configuration Section Styles */
+.config-info {
+  background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.config-info h3 {
+  color: #1a202c;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.config-details {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.config-item strong {
+  color: #1a202c;
+  font-weight: 600;
+}
+
+.collections-list {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.collection-item {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.collection-item:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+  transform: translateY(-1px);
+}
+
+.collection-name {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.collection-desc {
+  color: #4a5568;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.collection-count {
+  text-align: right;
+}
+
+.count-badge {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.empty-badge {
+  background: linear-gradient(135deg, #cbd5e0 0%, #a0aec0 100%);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.collections-summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.collections-summary p {
+  margin: 0;
+  color: #1a202c;
+  font-size: 0.875rem;
+}
+
+.config-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.action-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.members-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
 } 

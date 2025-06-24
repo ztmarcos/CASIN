@@ -62,6 +62,36 @@ const TeamDataDemo = () => {
   const loadMigrationStatus = async () => {
     try {
       setLoading(true);
+      
+      // Para el equipo CASIN, mostrar las colecciones reales (sin prefijo)
+      const team = currentTeam || userTeam;
+      if (team && (team.name === 'CASIN' || team.id === 'ngXzjqxlBy8Bsv8ks3vc')) {
+        // Colecciones reales de CASIN (las que usa el backend)
+        const casinCollections = [
+          { collection: 'directorio_contactos', title: 'Directorio de Contactos', icon: '👥', teamCount: 2699 },
+          { collection: 'autos', title: 'Seguros de Autos', icon: '🚗', teamCount: 36 },
+          { collection: 'vida', title: 'Seguros de Vida', icon: '💖', teamCount: 2 },
+          { collection: 'gmm', title: 'Gastos Médicos Mayores', icon: '🏥', teamCount: 53 },
+          { collection: 'hogar', title: 'Seguros de Hogar', icon: '🏠', teamCount: 0 },
+          { collection: 'rc', title: 'Responsabilidad Civil', icon: '⚖️', teamCount: 0 },
+          { collection: 'transporte', title: 'Seguros de Transporte', icon: '🚛', teamCount: 0 },
+          { collection: 'mascotas', title: 'Seguros de Mascotas', icon: '🐕', teamCount: 0 },
+          { collection: 'diversos', title: 'Seguros Diversos', icon: '📋', teamCount: 0 },
+          { collection: 'negocio', title: 'Seguros de Negocio', icon: '🏢', teamCount: 0 },
+          { collection: 'emant_caratula', title: 'EMANT Carátula', icon: '📄', teamCount: 0 },
+          { collection: 'emant_listado', title: 'EMANT Listado', icon: '📊', teamCount: 0 },
+          { collection: 'gruposvida', title: 'Grupos Vida', icon: '👥💖', teamCount: 0 },
+          { collection: 'listadovida', title: 'Listado Vida', icon: '📊💖', teamCount: 0 },
+          { collection: 'gruposautos', title: 'Grupos Autos', icon: '👥🚗', teamCount: 0 },
+          { collection: 'listadoautos', title: 'Listado Autos', icon: '📊🚗', teamCount: 0 }
+        ];
+        
+        setMigrationStatus(casinCollections);
+        console.log('📊 CASIN collections loaded:', casinCollections);
+        return;
+      }
+      
+      // Para otros equipos, usar el sistema normal
       const migrationData = await teamTemplateService.getMigrationStatus();
       setMigrationStatus(migrationData);
       console.log('📊 Migration status loaded:', migrationData);
@@ -418,12 +448,12 @@ const TeamDataDemo = () => {
                   migrationStatus.map((collection) => (
                     <div key={collection.collection} className="collection-item">
                       <span className="collection-name">
-                        {collection.icon} team_{teamInfo?.teamId}_{collection.collection}
+                        {collection.icon} {collection.collection}
                       </span>
                       <span className="collection-desc">{collection.title}</span>
                       <span className="collection-count">
                         {collection.teamCount > 0 ? (
-                          <span className="count-badge">{collection.teamCount} docs</span>
+                          <span className="count-badge">{collection.teamCount.toLocaleString()} docs</span>
                         ) : (
                           <span className="empty-badge">Vacía</span>
                         )}
@@ -433,6 +463,13 @@ const TeamDataDemo = () => {
                 ) : (
                   <div className="loading">Cargando colecciones...</div>
                 )}
+              </div>
+              
+              <div className="collections-summary">
+                <p>
+                  <strong>📊 Resumen:</strong> {migrationStatus.length} colecciones disponibles, 
+                  {' '}{migrationStatus.reduce((total, col) => total + col.teamCount, 0).toLocaleString()} documentos totales
+                </p>
               </div>
             </div>
 
@@ -451,27 +488,13 @@ const TeamDataDemo = () => {
             </div>
 
             <div className="config-info">
-              <h3>🔧 Herramientas de Desarrollo</h3>
-              <div className="dev-tools">
-                <button onClick={() => window.open('/team-firebase', '_blank')}>
-                  🚀 Abrir Visor Firebase
-                </button>
-                <button onClick={loadStats}>
+              <h3>🔄 Actualizar Información</h3>
+              <div className="config-actions">
+                <button onClick={loadStats} className="action-btn">
                   📊 Actualizar Estadísticas
                 </button>
-                <button onClick={loadMigrationStatus}>
-                  📋 Estado de Migración
-                </button>
-                <button onClick={initializeAllCollections}>
-                  🗂️ Inicializar Colecciones
-                </button>
-                <button onClick={() => {
-                  console.log('Current team:', currentTeam);
-                  console.log('Team info:', teamInfo);
-                  console.log('Stats:', stats);
-                  console.log('Migration status:', migrationStatus);
-                }}>
-                  🐛 Debug en Consola
+                <button onClick={loadMigrationStatus} className="action-btn">
+                  🗂️ Actualizar Colecciones
                 </button>
               </div>
             </div>
