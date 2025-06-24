@@ -1,10 +1,37 @@
-import { collection, getDocs, addDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { toast } from 'react-hot-toast';
 import teamDataService from './teamDataService';
 
+/**
+ * AutoTeamInitializer - Inicializa automáticamente nuevos equipos con el esquema completo de CASIN
+ * 
+ * Este servicio crea todas las colecciones que tiene CASIN pero vacías (solo con documentos de ejemplo)
+ * para que los nuevos equipos tengan la misma estructura desde el inicio.
+ */
 class AutoTeamInitializer {
-  
+
+  constructor() {
+    // Esquema completo de CASIN - todas las colecciones que debe tener cada equipo
+    this.casinCollections = [
+      'autos',
+      'vida', 
+      'gmm',
+      'hogar',
+      'rc',
+      'transporte',
+      'mascotas',
+      'diversos',
+      'negocio',
+      'emant_caratula',
+      'emant_listado',
+      'gruposvida',
+      'listadovida',
+      'gruposautos',
+      'listadoautos'
+    ];
+  }
+
   /**
    * Inicializa automáticamente un nuevo equipo con todas las colecciones necesarias
    * pero con datos de ejemplo/placeholder solamente
@@ -446,6 +473,367 @@ class AutoTeamInitializer {
       }
     };
   }
+
+  /**
+   * Analiza la estructura de una colección CASIN existente
+   */
+  async analyzeCasinCollection(collectionName) {
+    try {
+      console.log(`📋 Analyzing CASIN collection: ${collectionName}`);
+      
+      const casinCollection = collection(db, collectionName);
+      const snapshot = await getDocs(casinCollection);
+      
+      if (snapshot.empty) {
+        console.log(`⚠️ CASIN collection ${collectionName} is empty, using predefined structure`);
+        return this.getPredefinedStructure(collectionName);
+      }
+      
+      // Tomar múltiples documentos para análisis más completo
+      const sampleDocs = [];
+      let count = 0;
+      for (const docSnap of snapshot.docs) {
+        if (count >= 5) break; // Analizar hasta 5 documentos
+        sampleDocs.push(docSnap.data());
+        count++;
+      }
+      
+      // Extraer todos los campos únicos
+      const allFields = new Set();
+      sampleDocs.forEach(doc => {
+        Object.keys(doc).forEach(field => {
+          // Excluir campos internos de Firebase
+          if (!field.startsWith('_') && 
+              field !== 'createdAt' && 
+              field !== 'updatedAt' && 
+              field !== 'firebase_doc_id') {
+            allFields.add(field);
+          }
+        });
+      });
+      
+      // Crear estructura inteligente basada en datos reales
+      const structure = {};
+      const firstDoc = sampleDocs[0];
+      
+      Array.from(allFields).forEach(field => {
+        const value = firstDoc[field];
+        structure[field] = this.generateIntelligentPlaceholder(field, value, collectionName);
+      });
+      
+      console.log(`✅ Analyzed ${collectionName}: ${Object.keys(structure).length} fields`);
+      return structure;
+      
+    } catch (error) {
+      console.error(`❌ Error analyzing ${collectionName}:`, error);
+      return this.getPredefinedStructure(collectionName);
+    }
+  }
+
+  /**
+   * Genera placeholders inteligentes basados en el nombre del campo y tipo de datos
+   */
+  generateIntelligentPlaceholder(fieldName, originalValue, collectionName) {
+    const field = fieldName.toLowerCase();
+    
+    // Placeholders específicos por campo
+    if (field.includes('email')) return 'ejemplo@empresa.com';
+    if (field.includes('telefono') || field.includes('phone')) return '5512345678';
+    if (field.includes('rfc')) return 'XEXX010101000';
+    if (field.includes('curp')) return 'XEXX010101HDFXXX01';
+    
+    // Campos de pólizas
+    if (field.includes('poliza') || field.includes('numero')) {
+      const prefix = collectionName.toUpperCase().substring(0, 3);
+      return `${prefix}-EJEMPLO-001`;
+    }
+    
+    // Nombres y personas
+    if (field.includes('contratante') || field.includes('nombre') || field.includes('cliente')) {
+      return 'CLIENTE EJEMPLO S.A. DE C.V.';
+    }
+    if (field.includes('aseguradora')) return 'ASEGURADORA EJEMPLO';
+    if (field.includes('agente') || field.includes('responsable')) return 'AGENTE EJEMPLO';
+    
+    // Direcciones y ubicaciones
+    if (field.includes('direccion') || field.includes('domicilio')) {
+      return 'Av. Ejemplo #123, Col. Centro, Ciudad de México, C.P. 01000';
+    }
+    if (field.includes('ciudad')) return 'Ciudad de México';
+    if (field.includes('estado')) return 'CDMX';
+    if (field.includes('cp') || field.includes('postal')) return '01000';
+    
+    // Vehículos (para autos)
+    if (field.includes('marca')) return 'Toyota';
+    if (field.includes('modelo')) return 'Corolla';
+    if (field.includes('año') || field.includes('year')) return '2024';
+    if (field.includes('placas')) return 'ABC-123-D';
+    if (field.includes('serie') || field.includes('vin')) return 'EJEMPLO123456789';
+    
+    // Montos y pagos
+    if (field.includes('importe') || field.includes('prima') || field.includes('precio') || 
+        field.includes('total') || field.includes('monto')) {
+      return '10,000.00';
+    }
+    if (field.includes('iva')) return '1,600.00';
+    if (field.includes('deducible')) return '5,000.00';
+    if (field.includes('coaseguro')) return '10%';
+    if (field.includes('suma_asegurada')) return '100,000.00';
+    
+    // Formas de pago
+    if (field.includes('forma_pago') || field.includes('pago')) return 'Anual';
+    if (field.includes('vigencia') || field.includes('duracion')) return '365 días';
+    
+    // Fechas
+    if (field.includes('fecha') || field.includes('date')) return '2024-01-01';
+    if (field.includes('inicio')) return '2024-01-01';
+    if (field.includes('fin') || field.includes('vencimiento')) return '2024-12-31';
+    
+    // Estados y status
+    if (field.includes('status') || field.includes('estado')) return 'Activo';
+    if (field.includes('renovacion')) return 'Nueva';
+    if (field.includes('version')) return '1';
+    
+    // Documentos
+    if (field.includes('pdf') || field.includes('documento')) return 'DISPONIBLE';
+    
+    // Basado en el tipo del valor original
+    if (typeof originalValue === 'number') {
+      if (originalValue > 1000) return 10000; // Probablemente un monto
+      return 1;
+    }
+    if (typeof originalValue === 'boolean') return true;
+    if (originalValue instanceof Date) return '2024-01-01';
+    
+    // Placeholder genérico
+    return 'EJEMPLO';
+  }
+
+  /**
+   * Estructuras predefinidas para colecciones específicas
+   */
+  getPredefinedStructure(collectionName) {
+    const structures = {
+      autos: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "AUTO-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        forma_pago: "Anual",
+        importe_total_a_pagar: "10,000.00",
+        prima_neta: "8,000.00",
+        iva_16: "1,280.00",
+        marca: "Toyota",
+        modelo: "Corolla",
+        año: "2024",
+        placas: "ABC-123-D",
+        rfc: "XEXX010101000",
+        telefono: "5512345678",
+        email: "ejemplo@empresa.com"
+      },
+      vida: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "VIDA-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        suma_asegurada: "100,000.00",
+        prima_anual: "12,000.00",
+        beneficiario: "BENEFICIARIO EJEMPLO",
+        rfc: "XEXX010101000"
+      },
+      gmm: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "GMM-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        tipo_plan: "Plan Básico",
+        deducible: "5,000.00",
+        coaseguro: "10%",
+        suma_asegurada: "500,000.00",
+        prima_anual: "15,000.00"
+      },
+      hogar: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "HOGAR-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        direccion: "Av. Ejemplo #123, Col. Centro, Ciudad de México",
+        valor_inmueble: "500,000.00",
+        prima_anual: "8,000.00"
+      },
+      rc: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "RC-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        tipo_responsabilidad: "Civil General",
+        suma_asegurada: "1,000,000.00"
+      },
+      transporte: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "TRANS-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        tipo_mercancia: "Mercancía General",
+        valor_mercancia: "100,000.00"
+      },
+      mascotas: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "MASC-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        nombre_mascota: "Mascota Ejemplo",
+        especie: "Perro",
+        raza: "Labrador"
+      },
+      diversos: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "DIV-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        tipo_seguro: "Seguro Diverso",
+        descripcion: "Descripción del seguro"
+      },
+      negocio: {
+        contratante: "CLIENTE EJEMPLO S.A. DE C.V.",
+        numero_poliza: "NEG-EJEMPLO-001",
+        aseguradora: "ASEGURADORA EJEMPLO",
+        tipo_negocio: "Comercio",
+        giro_comercial: "Servicios"
+      }
+    };
+    
+    return structures[collectionName] || {
+      nombre: "EJEMPLO",
+      descripcion: "Documento de ejemplo para " + collectionName,
+      activo: true
+    };
+  }
+
+  /**
+   * Inicializa un equipo con el esquema completo de CASIN
+   */
+  async initializeTeamWithCasinSchema(teamId) {
+    try {
+      console.log(`🚀 Initializing team ${teamId} with complete CASIN schema...`);
+      console.log(`📋 Creating ${this.casinCollections.length} collections:`, this.casinCollections);
+      
+      const results = [];
+      
+      for (const collectionName of this.casinCollections) {
+        try {
+          console.log(`📝 Creating collection: ${collectionName}`);
+          
+          // Analizar estructura de CASIN
+          const structure = await this.analyzeCasinCollection(collectionName);
+          
+          // Crear documento de ejemplo para el equipo
+          const result = await this.createExampleDocument(teamId, collectionName, structure);
+          results.push(result);
+          
+        } catch (error) {
+          console.error(`❌ Error creating ${collectionName}:`, error);
+          results.push({ collection: collectionName, success: false, error: error.message });
+        }
+      }
+      
+      const successful = results.filter(r => r.success).length;
+      console.log(`🎉 Team ${teamId} initialized: ${successful}/${this.casinCollections.length} collections created`);
+      
+      return {
+        success: true,
+        teamId,
+        collectionsCreated: successful,
+        totalCollections: this.casinCollections.length,
+        results
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error initializing team ${teamId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Crea un documento de ejemplo en una colección del equipo
+   */
+  async createExampleDocument(teamId, collectionName, structure) {
+    try {
+      const teamCollectionName = `team_${teamId}_${collectionName}`;
+      
+      // Verificar si ya existe
+      const existingCollection = collection(db, teamCollectionName);
+      const existingSnapshot = await getDocs(existingCollection);
+      
+      if (!existingSnapshot.empty) {
+        console.log(`⚠️ Collection ${teamCollectionName} already exists with ${existingSnapshot.size} documents`);
+        return { collection: collectionName, success: true, existed: true };
+      }
+      
+      // Crear documento de ejemplo
+      const exampleDoc = {
+        ...structure,
+        _isPlaceholder: true,
+        _schemaVersion: '1.0',
+        _teamId: teamId,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+      
+      // Guardar en Firebase
+      const docRef = doc(db, teamCollectionName, 'ejemplo_001');
+      await setDoc(docRef, exampleDoc);
+      
+      console.log(`✅ Created example document in ${teamCollectionName}`);
+      
+      return { 
+        collection: collectionName, 
+        success: true, 
+        docId: 'ejemplo_001',
+        fieldsCount: Object.keys(structure).length
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error creating example document for ${collectionName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verifica si un equipo necesita inicialización
+   */
+  async teamNeedsInitialization(teamId) {
+    try {
+      // Verificar si al menos las colecciones principales existen
+      const mainCollections = ['autos', 'vida', 'gmm', 'hogar'];
+      let existingCount = 0;
+      
+      for (const collectionName of mainCollections) {
+        const teamCollectionName = `team_${teamId}_${collectionName}`;
+        const collectionRef = collection(db, teamCollectionName);
+        const snapshot = await getDocs(collectionRef);
+        
+        if (!snapshot.empty) {
+          existingCount++;
+        }
+      }
+      
+      // Si tiene menos de 2 colecciones principales, necesita inicialización
+      const needsInit = existingCount < 2;
+      console.log(`🔍 Team ${teamId} needs initialization: ${needsInit} (has ${existingCount}/${mainCollections.length} main collections)`);
+      
+      return needsInit;
+      
+    } catch (error) {
+      console.error(`❌ Error checking team ${teamId} initialization:`, error);
+      return true; // En caso de error, asumir que necesita inicialización
+    }
+  }
+
+  /**
+   * Obtiene estadísticas de inicialización
+   */
+  getInitializationStats() {
+    return {
+      totalCollections: this.casinCollections.length,
+      collections: this.casinCollections,
+      description: 'Complete CASIN schema with all insurance types and management collections'
+    };
+  }
 }
 
-export default AutoTeamInitializer; 
+// Exportar instancia única
+const autoTeamInitializer = new AutoTeamInitializer();
+export default autoTeamInitializer; 
