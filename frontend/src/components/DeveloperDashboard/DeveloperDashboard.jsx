@@ -18,17 +18,32 @@ const DeveloperDashboard = () => {
 
   useEffect(() => {
     if (isDeveloper) {
+      // Limpiar cache para obtener datos frescos con las colecciones CASIN
+      developerAnalyticsService.clearCache();
       loadAnalytics();
     }
   }, [isDeveloper]);
 
   const loadAnalytics = async () => {
     setIsLoading(true);
+    const startTime = Date.now();
+    
     try {
       console.log('🔄 Loading developer analytics...');
       const data = await developerAnalyticsService.getGlobalAnalytics();
       setAnalytics(data);
-      console.log('✅ Analytics loaded:', data.totals);
+      
+      const loadTime = Date.now() - startTime;
+      const performanceStats = developerAnalyticsService.getPerformanceStats();
+      
+      console.log(`✅ Analytics loaded in ${loadTime}ms:`, data.totals);
+      console.log('📊 Cache stats:', performanceStats);
+      
+      if (loadTime < 2000) {
+        toast.success(`Analytics cargados (${loadTime}ms) - Cache: ${performanceStats.totalCachedItems} items`);
+      } else {
+        toast.success(`Analytics cargados (${(loadTime/1000).toFixed(1)}s)`);
+      }
     } catch (error) {
       console.error('❌ Error loading analytics:', error);
       toast.error('Error cargando analíticas: ' + error.message);
@@ -40,11 +55,21 @@ const DeveloperDashboard = () => {
   const loadTeamDetails = async (teamId) => {
     setIsLoadingTeam(true);
     setSelectedTeam(teamId);
+    const startTime = Date.now();
+    
     try {
       console.log(`🔍 Loading details for team: ${teamId}`);
       const details = await developerAnalyticsService.getTeamDetails(teamId);
       setTeamDetails(details);
-      console.log('✅ Team details loaded:', details.stats);
+      
+      const loadTime = Date.now() - startTime;
+      console.log(`✅ Team details loaded in ${loadTime}ms:`, details.stats);
+      
+      if (loadTime < 1000) {
+        toast.success(`Detalles cargados (${loadTime}ms)`);
+      } else {
+        toast.success(`Detalles cargados (${(loadTime/1000).toFixed(1)}s)`);
+      }
     } catch (error) {
       console.error('❌ Error loading team details:', error);
       toast.error('Error cargando detalles del equipo: ' + error.message);
@@ -54,12 +79,15 @@ const DeveloperDashboard = () => {
   };
 
   const refreshData = async () => {
+    console.log('🧹 Clearing all caches before refresh...');
     developerAnalyticsService.clearCache();
+    
+    // También limpiar el state local
+    setTeamDetails(null);
+    setSelectedTeam(null);
+    
     await loadAnalytics();
-    if (selectedTeam) {
-      await loadTeamDetails(selectedTeam);
-    }
-    toast.success('Datos actualizados');
+    toast.success('Datos actualizados - Cache limpiado');
   };
 
   const formatDate = (date) => {
@@ -503,7 +531,12 @@ const DeveloperDashboard = () => {
                           {getCollectionTypeIcon(collection.baseType)}
                         </span>
                         <div className="collection-info">
-                          <strong>{collection.baseType}</strong>
+                          <strong>
+                            {collection.baseType}
+                            {collection.isLegacyPattern && (
+                              <span className="legacy-badge">Legacy</span>
+                            )}
+                          </strong>
                           <code>{collection.name}</code>
                         </div>
                         <span className="doc-count">

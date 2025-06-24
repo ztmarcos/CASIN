@@ -1101,4 +1101,19 @@
   .overview-stats {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* Legacy badge */
+.legacy-badge {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 12px;
+  margin-left: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(255, 152, 0, 0.3);
+  display: inline-block;
 } 
