@@ -31,6 +31,7 @@ export const TeamProvider = ({ children }) => {
   const [userRole, setUserRole] = useState(null);
   const [needsTeamSetup, setNeedsTeamSetup] = useState(false);
   const [teamFirebaseConfig, setTeamFirebaseConfig] = useState(null);
+  const [error, setError] = useState(null);
 
   // Cargar equipo del usuario cuando se autentica
   useEffect(() => {
@@ -91,82 +92,130 @@ export const TeamProvider = ({ children }) => {
     try {
       console.log('🔍 Loading team for user:', user.email);
       
-      // Para usuarios específicos, asignar directamente al equipo CASIN
+      // Para usuarios específicos, FORZAR el uso del equipo CASIN específico
       if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com') {
-        console.log('🎯 Special user detected, assigning to CASIN team ngXzjqxlBy8Bsv8ks3vc');
+        console.log('🎯 Special user detected, forcing CASIN team 4JlUqhAvfJMlCDhQ4vgH');
         
-        const teamId = 'ngXzjqxlBy8Bsv8ks3vc';
-        const teamData = {
-          id: teamId,
-          name: 'CASIN Team',
-          description: 'Equipo principal CASIN',
-          createdAt: new Date(),
-          isMainTeam: true
-        };
+        const forcedTeamId = '4JlUqhAvfJMlCDhQ4vgH';
         
-        setUserTeam(teamData);
-        setUserRole('admin');
-        
-        // Configurar Firebase para este equipo
-        await setupTeamFirebase(teamId, teamData);
-        
-        // Verificar si el usuario existe en team_members, si no, crearlo
-        const memberQuery = query(
-          collection(db, 'team_members'),
-          where('email', '==', user.email),
-          where('teamId', '==', teamId)
-        );
-        
-        const memberSnapshot = await getDocs(memberQuery);
-        
-        if (memberSnapshot.empty) {
-          console.log('👤 Creating team member record for special user');
-          // Crear el registro del miembro del equipo
-          await addDoc(collection(db, 'team_members'), {
-            userId: user.uid || user.email.replace(/[@.]/g, '_'),
-            email: user.email,
-            name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marcos Zavala' : '2012 Solitario'),
-            teamId: teamId,
-            role: 'admin',
-            invitedBy: user.email,
-            joinedAt: new Date(),
-            status: 'active',
-            isOwner: true
-          });
-          console.log('✅ Team member record created');
+        try {
+          // Verificar si el equipo existe en Firebase
+          const teamDoc = await getDoc(doc(db, 'teams', forcedTeamId));
+          
+          let teamData;
+          if (teamDoc.exists()) {
+            // Usar el equipo existente
+            teamData = {
+              id: forcedTeamId,
+              ...teamDoc.data(),
+              isMainTeam: true
+            };
+            console.log('✅ Found existing CASIN team:', forcedTeamId);
+          } else {
+            // Crear el equipo CASIN si no existe
+            console.log('🆕 Creating CASIN team with fixed ID');
+            const newTeamData = {
+              name: 'CASIN Team',
+              description: 'Equipo principal CASIN con datos en Firebase Storage gs://casinbbdd.firebasestorage.app',
+              owner: user.email,
+              createdAt: new Date(),
+              isMainTeam: true,
+              firebaseStorageBucket: 'gs://casinbbdd.firebasestorage.app',
+              settings: {
+                allowInvites: true,
+                maxMembers: 100,
+                useDirectCollections: true,
+                driveStorageEnabled: true
+              }
+            };
+            
+            await setDoc(doc(db, 'teams', forcedTeamId), newTeamData);
+            teamData = {
+              id: forcedTeamId,
+              ...newTeamData,
+              isMainTeam: true
+            };
+            console.log('✅ Created CASIN team with ID:', forcedTeamId);
+          }
+          
+          setUserTeam(teamData);
+          setUserRole('admin');
+          
+          // Configurar Firebase para este equipo
+          await setupTeamFirebase(forcedTeamId, teamData);
+          
+          // Verificar si el usuario existe en team_members, si no, crearlo
+          const memberQuery = query(
+            collection(db, 'team_members'),
+            where('email', '==', user.email),
+            where('teamId', '==', forcedTeamId)
+          );
+          
+          const memberSnapshot = await getDocs(memberQuery);
+          
+          if (memberSnapshot.empty) {
+            console.log('👤 Creating team member record for admin user');
+            // Crear el registro del miembro del equipo
+            await addDoc(collection(db, 'team_members'), {
+              userId: user.uid || user.email.replace(/[@.]/g, '_'),
+              email: user.email,
+              name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marcos Zavala Torres' : '2012 Solitario'),
+              teamId: forcedTeamId,
+              role: 'admin',
+              invitedBy: user.email,
+              joinedAt: new Date(),
+              status: 'active',
+              isOwner: true
+            });
+            console.log('✅ Team member record created');
+          } else {
+            console.log('✅ Team member record already exists');
+          }
+          
+          // Cargar todos los miembros del equipo
+          await loadTeamMembers(forcedTeamId);
+          
+          setNeedsTeamSetup(false);
+          console.log('🎉 Admin user setup complete for CASIN team:', forcedTeamId);
+          console.log('📊 Team data:', teamData);
+          console.log('🗂️ Firebase Storage:', 'gs://casinbbdd.firebasestorage.app');
+          return;
+          
+        } catch (teamError) {
+          console.error('❌ Error setting up CASIN team:', teamError);
+          setError('Error configurando equipo CASIN: ' + teamError.message);
+          setNeedsTeamSetup(true);
+          return;
         }
-        
-        // Cargar todos los miembros del equipo
-        await loadTeamMembers(teamId);
-        
-        console.log('✅ Special team assignment completed for CASIN');
-        setIsLoadingTeam(false);
-        return;
       }
       
-      // Buscar al usuario en team_members
-      const membersQuery = query(
+      // Código existente para otros usuarios...
+      console.log('👤 Regular user, checking team membership');
+      
+      // Buscar en team_members
+      const memberQuery = query(
         collection(db, 'team_members'),
         where('email', '==', user.email)
       );
       
-      const memberSnapshot = await getDocs(membersQuery);
+      const memberSnapshot = await getDocs(memberQuery);
       
       if (memberSnapshot.empty) {
-        console.log('👤 User not found in any team - needs setup');
+        console.log('👤 User not found in any team, needs setup');
         setNeedsTeamSetup(true);
-        setIsLoadingTeam(false);
+        setUserTeam(null);
+        setUserRole(null);
         return;
       }
-
-      // Usuario existe en un equipo
+      
+      // Usuario tiene equipo, cargar datos
       const memberDoc = memberSnapshot.docs[0];
       const memberData = memberDoc.data();
       
-      console.log('👥 User found in team:', memberData.teamId);
+      console.log('👤 Found team membership:', memberData);
       setUserRole(memberData.role);
-
-      // Cargar datos completos del equipo
+      
+      // Cargar datos del equipo
       const teamDoc = await getDoc(doc(db, 'teams', memberData.teamId));
       
       if (teamDoc.exists()) {
@@ -174,19 +223,21 @@ export const TeamProvider = ({ children }) => {
         setUserTeam(teamData);
         
         // Configurar Firebase para este equipo
-        await setupTeamFirebase(teamDoc.id, teamData);
+        await setupTeamFirebase(teamData.id, teamData);
         
-        // Cargar todos los miembros del equipo
-        await loadTeamMembers(memberData.teamId);
+        // Cargar miembros del equipo
+        await loadTeamMembers(teamData.id);
         
+        setNeedsTeamSetup(false);
         console.log('✅ Team loaded successfully:', teamData.name);
       } else {
         console.error('❌ Team document not found');
         setNeedsTeamSetup(true);
       }
-
+      
     } catch (error) {
       console.error('❌ Error loading user team:', error);
+      setError('Error cargando equipo: ' + error.message);
       setNeedsTeamSetup(true);
     } finally {
       setIsLoadingTeam(false);

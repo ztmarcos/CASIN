@@ -8,7 +8,7 @@ import { db } from '../../firebase/config';
 
 const TeamSetup = () => {
   const { createTeam, isLoadingTeam } = useTeam();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [teamName, setTeamName] = useState('');
   const [teamMembers, setTeamMembers] = useState([{ email: '', name: '' }]);
   const [isCreating, setIsCreating] = useState(false);
@@ -151,6 +151,38 @@ const TeamSetup = () => {
 
   const handleSubmit = async (e) => {
     // Implementation of handleSubmit function
+  };
+
+  const handleLogout = async () => {
+    try {
+      console.log('🚪 User logging out...');
+      
+      // Limpiar localStorage problemático
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('team') || key.includes('auth') || key.includes('user') || key.includes('firebase'))) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        console.log(`🗑️ Removed: ${key}`);
+      });
+      
+      sessionStorage.clear();
+      
+      // Hacer logout
+      await logout();
+      
+      console.log('✅ Logout completed');
+      
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      // Forzar recarga de página como fallback
+      window.location.reload();
+    }
   };
 
   if (step === 'create') {
@@ -357,6 +389,21 @@ const TeamSetup = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Logout button in create form */}
+              <div className="logout-section">
+                <button 
+                  type="button"
+                  className="btn-logout"
+                  onClick={handleLogout}
+                  title="Cerrar sesión y volver a intentar"
+                >
+                  🚪 Cerrar Sesión
+                </button>
+                <p className="logout-help">
+                  Si tienes problemas, puedes cerrar sesión y volver a intentar
+                </p>
+              </div>
             </form>
           </div>
         </div>
@@ -471,6 +518,20 @@ const TeamSetup = () => {
                 Asegúrate de usar un nombre apropiado para tu organización.
               </div>
             </div>
+          </div>
+
+          {/* Logout button */}
+          <div className="logout-section">
+            <button 
+              className="btn-logout"
+              onClick={handleLogout}
+              title="Cerrar sesión y volver a intentar"
+            >
+              🚪 Cerrar Sesión
+            </button>
+            <p className="logout-help">
+              Si tienes problemas, puedes cerrar sesión y volver a intentar
+            </p>
           </div>
         </div>
       </div>

@@ -84,34 +84,3 @@ export default async function handler(req, res) {
     res.status(405).json({ error: 'Method not allowed' });
   }
 } 
-    } catch (error) {
-      console.error('Firebase error:', error);
-      
-      // Fallback to mock data if Firebase is not available
-      const mockTables = [
-        { name: 'autos', row_count: 34, last_updated: new Date().toISOString() },
-        { name: 'directorio_contactos', row_count: 2701, last_updated: new Date().toISOString() },
-        { name: 'vida', row_count: 2, last_updated: new Date().toISOString() },
-        { name: 'rc', row_count: 1, last_updated: new Date().toISOString() },
-        { name: 'gmm', row_count: 0, last_updated: new Date().toISOString() },
-        { name: 'transporte', row_count: 0, last_updated: new Date().toISOString() },
-        { name: 'mascotas', row_count: 0, last_updated: new Date().toISOString() },
-        { name: 'diversos', row_count: 0, last_updated: new Date().toISOString() },
-        { name: 'negocio', row_count: 0, last_updated: new Date().toISOString() },
-        { name: 'gruposgmm', row_count: 0, last_updated: new Date().toISOString() }
-      ];
-
-      res.status(200).json({ 
-        success: true,
-        tables: mockTables,
-        total_tables: mockTables.length,
-        timestamp: new Date().toISOString(),
-        source: 'Mock data (Firebase connection failed)',
-        hasData: false,
-        error: 'Firebase not configured or not accessible'
-      });
-    }
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
-  }
-} 

@@ -195,8 +195,8 @@ class FirebaseTeamService {
       throw new Error('No team selected for collection access');
     }
     
-    // Para el equipo CASIN ngXzjqxlBy8Bsv8ks3vc, usar directamente ciertas colecciones
-    if (this.currentTeamId === 'ngXzjqxlBy8Bsv8ks3vc') {
+    // Para el equipo CASIN 4JlUqhAvfJMlCDhQ4vgH, usar directamente ciertas colecciones
+    if (this.currentTeamId === '4JlUqhAvfJMlCDhQ4vgH') {
       // Colecciones que se acceden directamente para este equipo
       const directCollections = [
         'directorio_contactos',
@@ -213,7 +213,7 @@ class FirebaseTeamService {
       ];
       
       if (directCollections.includes(collectionName)) {
-        console.log(`🎯 Using direct ${collectionName} collection for CASIN team ngXzjqxlBy8Bsv8ks3vc`);
+        console.log(`🎯 Using direct ${collectionName} collection for CASIN team 4JlUqhAvfJMlCDhQ4vgH`);
         return collectionName;
       }
     }

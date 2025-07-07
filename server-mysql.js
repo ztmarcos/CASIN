@@ -428,7 +428,7 @@ app.get('/api/data/tables', async (req, res) => {
             
             if (typeof value === 'number') {
               fieldType = Number.isInteger(value) ? 'int' : 'decimal(10,2)';
-            } else if (value instanceof Date || (typeof value === 'object' && value.toDate)) {
+            } else if (value instanceof Date || (typeof value === 'object' && value && value.toDate)) {
               fieldType = 'timestamp';
             } else if (typeof value === 'boolean') {
               fieldType = 'boolean';
