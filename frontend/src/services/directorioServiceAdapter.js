@@ -63,6 +63,12 @@ class DirectorioServiceAdapter {
         allContactos = await teamDirectorioService.getAllContactos();
       }
 
+      // Ensure allContactos is always an array (handle both array and object responses)
+      if (!Array.isArray(allContactos)) {
+        console.warn('⚠️ DirectorioAdapter: allContactos is not an array, extracting documents:', typeof allContactos);
+        allContactos = allContactos?.documents || allContactos?.data || [];
+      }
+
       // Simular paginación (en el futuro esto se hará en el servidor)
       const startIndex = (page - 1) * limit;
       const endIndex = startIndex + limit;
@@ -117,7 +123,13 @@ class DirectorioServiceAdapter {
       const { page = 1, limit = 50, ...filters } = params;
       
       // Usar el nuevo servicio de búsqueda
-      const searchResults = await teamDirectorioService.searchContactos(searchTerm, filters);
+      let searchResults = await teamDirectorioService.searchContactos(searchTerm, filters);
+      
+      // Ensure searchResults is always an array (handle both array and object responses)
+      if (!Array.isArray(searchResults)) {
+        console.warn('⚠️ DirectorioAdapter: searchResults is not an array, extracting documents:', typeof searchResults);
+        searchResults = searchResults?.documents || searchResults?.data || [];
+      }
       
       // Aplicar paginación
       const startIndex = (page - 1) * limit;

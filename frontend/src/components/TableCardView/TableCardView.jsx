@@ -76,7 +76,7 @@ const TableCardView = ({ data, onCardClick }) => {
     if (!value) return '-';
     
     // Formatear forma de pago
-    if (key === 'forma_de_pago') {
+    if (key === 'forma_de_pago' || key === 'forma_pago') {
       const formaDePago = value.toString().trim().toLowerCase();
       if (!formaDePago || formaDePago === 'null' || formaDePago === 'undefined') {
         return 'No especificada';
@@ -129,7 +129,7 @@ const TableCardView = ({ data, onCardClick }) => {
     const subtitle = getDisplaySubtitle(item);
 
     // Campos que siempre se muestran
-    const alwaysShowFields = ['vigencia_fin', 'forma_de_pago'];
+    const alwaysShowFields = ['vigencia_fin', 'forma_de_pago', 'forma_pago'];
     
     // Campos que no se deben mostrar
     const excludeFields = [

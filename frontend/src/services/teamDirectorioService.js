@@ -91,12 +91,20 @@ class TeamDirectorioService {
 
       // Para búsqueda por término, necesitaríamos implementar búsqueda full-text
       // Por ahora, obtenemos todos y filtramos en el cliente
-      const allContacts = await teamDataService.queryDocuments(
+      const queryResult = await teamDataService.queryDocuments(
         'directorio_contactos', 
-        queryFilters, 
-        'nombre', 
-        'asc'
+        {
+          filters: queryFilters.reduce((acc, filter) => {
+            acc[filter.field] = filter.value;
+            return acc;
+          }, {}),
+          orderBy: 'nombre', 
+          orderDirection: 'asc'
+        }
       );
+      
+      // Extract documents array from the result object
+      const allContacts = Array.isArray(queryResult) ? queryResult : queryResult.documents || [];
 
       // Filtro de búsqueda por término (básico)
       if (searchTerm) {
