@@ -399,9 +399,11 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   // Add refresh function
   const refreshData = async () => {
+    console.log('🔄 ColumnManager: refreshData called for table:', selectedTable?.name);
     if (selectedTable?.name) {
       await loadColumns();
       if (onOrderChange) {
+        console.log('🔄 ColumnManager: Calling onOrderChange to refresh DataTable');
         onOrderChange();
       }
     }
@@ -409,9 +411,17 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   // Add event listener for table updates
   useEffect(() => {
-    const handleTableUpdate = () => {
-      console.log('Table structure updated, refreshing...');
-      refreshData();
+    const handleTableUpdate = (event) => {
+      console.log('🔄 ColumnManager: Table structure updated event received:', event.detail);
+      console.log('🔄 ColumnManager: Current selected table:', selectedTable?.name);
+      
+      // Only refresh if the event is for our current table
+      if (event.detail?.tableName === selectedTable?.name) {
+        console.log('🔄 ColumnManager: Refreshing for current table');
+        refreshData();
+      } else {
+        console.log('🔄 ColumnManager: Ignoring event for different table');
+      }
     };
 
     window.addEventListener('tableStructureUpdated', handleTableUpdate);

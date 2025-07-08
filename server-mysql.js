@@ -1026,6 +1026,93 @@ app.get('/api/data/tables/:tableName/structure', async (req, res) => {
   }
 });
 
+// Update column order for a table
+app.put('/api/tables/:tableName/columns/order', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const { columnOrder } = req.body;
+    
+    console.log(`🔄 Updating column order for table ${tableName}:`, columnOrder);
+    
+    if (!columnOrder || !Array.isArray(columnOrder)) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid columnOrder array' 
+      });
+    }
+    
+    // For now, we'll store this in memory or you can implement database storage
+    // Since column order is UI-specific, we can handle it differently
+    
+    // Option 1: Store in a JSON file (simple solution)
+    const fs = require('fs');
+    const path = require('path');
+    const ordersFile = path.join(__dirname, 'column-orders.json');
+    
+    let orders = {};
+    try {
+      if (fs.existsSync(ordersFile)) {
+        orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8'));
+      }
+    } catch (error) {
+      console.warn('Could not read existing column orders:', error.message);
+    }
+    
+    orders[tableName] = columnOrder;
+    
+    try {
+      fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2));
+      console.log(`✅ Column order saved for table ${tableName}`);
+    } catch (error) {
+      console.error('Error saving column order:', error);
+      return res.status(500).json({ 
+        error: 'Failed to save column order' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: `Column order updated for table ${tableName}`,
+      columnOrder: columnOrder
+    });
+    
+  } catch (error) {
+    console.error(`Error updating column order for ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get column order for a table
+app.get('/api/tables/:tableName/columns/order', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    
+    const fs = require('fs');
+    const path = require('path');
+    const ordersFile = path.join(__dirname, 'column-orders.json');
+    
+    let orders = {};
+    try {
+      if (fs.existsSync(ordersFile)) {
+        orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8'));
+      }
+    } catch (error) {
+      console.warn('Could not read column orders:', error.message);
+    }
+    
+    const columnOrder = orders[tableName] || null;
+    
+    res.json({
+      success: true,
+      tableName: tableName,
+      columnOrder: columnOrder
+    });
+    
+  } catch (error) {
+    console.error(`Error getting column order for ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get child tables for a parent table
 app.get('/api/data/tables/:tableName/children', async (req, res) => {
   try {

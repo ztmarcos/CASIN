@@ -31,7 +31,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5174,
       strictPort: true,
-      host: '0.0.0.0',
+      host: 'localhost',
       proxy: {
         '/api': {
           target: 'http://localhost:3001',
@@ -71,7 +71,7 @@ export default defineConfig(({ mode }) => {
       },
       hmr: {
         protocol: 'ws',
-        host: '192.168.1.125',
+        host: 'localhost',
         overlay: false,
         timeout: 30000
       }

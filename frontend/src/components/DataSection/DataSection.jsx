@@ -34,6 +34,9 @@ const DataSection = () => {
   // New modal states
   const [showAddColumnModal, setShowAddColumnModal] = useState(false);
   const [showEditColumnsModal, setShowEditColumnsModal] = useState(false);
+  
+  // Column order state
+  const [columnOrder, setColumnOrder] = useState([]);
 
   const loadTableData = useCallback(async (tableName = null) => {
     const targetTableName = tableName || selectedTable?.name;
@@ -149,6 +152,9 @@ const DataSection = () => {
           ...prev,
           columns: inferredColumns
         }));
+        
+        // Load column order for this table
+        await loadColumnOrder(table.name);
       }
     } catch (error) {
       console.error('❌ Error loading Firebase table data:', error);
@@ -261,12 +267,38 @@ const DataSection = () => {
     }
   };
 
+  // Function to load column order from backend
+  const loadColumnOrder = async (tableName) => {
+    try {
+      console.log('🔄 Loading column order for table:', tableName);
+      const response = await fetch(`http://localhost:3001/api/tables/${tableName}/columns/order`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.columnOrder) {
+          console.log('✅ Column order loaded:', result.columnOrder);
+          setColumnOrder(result.columnOrder);
+          return result.columnOrder;
+        }
+      }
+      console.log('ℹ️ No saved column order found, using default');
+      setColumnOrder([]);
+      return [];
+    } catch (error) {
+      console.error('Error loading column order:', error);
+      setColumnOrder([]);
+      return [];
+    }
+  };
+
   const handleColumnOrderChange = async () => {
-    // Force a refresh of the table data
+    // Reload both table data and column order
     setIsLoading(true);
     try {
       const result = await tableServiceAdapter.getData(selectedTable.name, filters);
       setTableData(result.data || []);
+      
+      // Also reload column order
+      await loadColumnOrder(selectedTable.name);
     } catch (error) {
       console.error('Error refreshing table data:', error);
     } finally {
@@ -451,6 +483,7 @@ const DataSection = () => {
                 onCellUpdate={handleCellUpdate}
                 onRefresh={loadTableData}
                 tableName={selectedTable.name}
+                columnOrder={columnOrder}
               />
             ) : (
               <TableCardView 

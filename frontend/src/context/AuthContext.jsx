@@ -117,6 +117,16 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
+    console.log('🔐 AuthContext: Logging in user:', userData);
+    
+    // Save user data to localStorage for persistence
+    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('userEmail', userData.email);
+    localStorage.setItem('userName', userData.name || '');
+    localStorage.setItem('userPhoto', userData.photoURL || '');
+    localStorage.setItem('userUid', userData.uid);
+    localStorage.setItem('token', userData.token || 'firebase-token');
+    
     setUser(userData);
   };
 
@@ -129,6 +139,7 @@ export const AuthProvider = ({ children }) => {
       console.log('✅ Firebase logout successful');
       
       // Limpiar localStorage
+      localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userName');
@@ -149,6 +160,7 @@ export const AuthProvider = ({ children }) => {
       console.error('❌ Error during logout:', error);
       
       // Aunque Firebase falle, limpiar datos locales
+      localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userName');

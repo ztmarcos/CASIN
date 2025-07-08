@@ -12,10 +12,10 @@ import { API_URL } from '../../config/api.js';
 import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
 // import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
-const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => {
+const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, columnOrder }) => {
   // Add console logs for debugging
-  console.log('🔥 DataTable received data:', data);
-  console.log('🔥 DataTable received tableName:', tableName);
+  // Component received props
+  console.log('🔥 DataTable received data length:', data?.length, 'tableName:', tableName);
 
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -42,9 +42,48 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const [newlyInsertedRows, setNewlyInsertedRows] = useState(new Set());
   const [flashingRows, setFlashingRows] = useState(new Set());
   const [forceHighlightNext, setForceHighlightNext] = useState(false);
+  const [tableColumns, setTableColumns] = useState([]);
+  const [isEditingFlag, setIsEditingFlag] = useState(false);
 
   // Reference to track previous data
   const previousDataRef = useRef([]);
+  
+  // Use column order from ColumnManager if available, otherwise use original order
+  const reorderedColumns = useMemo(() => {
+    if (!tableColumns || tableColumns.length === 0) return [];
+    
+    console.log('🔧 Column order calculation:', {
+      tableColumns,
+      columnOrder,
+      hasColumnOrder: columnOrder && columnOrder.length > 0
+    });
+    
+    // Filter out action columns first
+    const filteredColumns = tableColumns.filter(col => 
+      col !== 'estado_pago' && 
+      col !== 'id' && 
+      col !== 'firebase_doc_id'
+    );
+    
+    // If we have a saved column order, use it
+    if (columnOrder && columnOrder.length > 0) {
+      console.log('✅ Using saved column order:', columnOrder);
+      
+      // Reorder columns according to saved order, but only include columns that exist in data
+      const orderedColumns = columnOrder.filter(col => filteredColumns.includes(col));
+      
+      // Add any new columns that aren't in the saved order to the end
+      const newColumns = filteredColumns.filter(col => !columnOrder.includes(col));
+      
+      const finalOrder = [...orderedColumns, ...newColumns];
+      console.log('✅ Final ordered columns:', finalOrder);
+      return finalOrder;
+    }
+    
+    // Otherwise, use original order
+    console.log('✅ Using original column order:', filteredColumns);
+    return filteredColumns;
+  }, [tableColumns, columnOrder, tableName]);
 
   // Simple effect just to set the data - NO SORTING HERE
   useEffect(() => {
@@ -53,58 +92,86 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       console.error('❌ Data is not an array:', data);
       setSortedData([]);
       setFilteredData([]);
+      setTableColumns([]);
       return;
     }
 
+    if (data.length === 0) {
+      setSortedData([]);
+      setFilteredData([]);
+      setTableColumns([]);
+      return;
+    }
+
+    // Set columns first - ONLY if they actually changed
+    const newColumns = Object.keys(data[0]);
+    console.log('🔧 Checking if table columns changed:', { 
+      newColumns, 
+      currentTableColumns: tableColumns,
+      hasChanged: JSON.stringify(newColumns) !== JSON.stringify(tableColumns)
+    });
+    
+    // Only update columns if they actually changed
+    if (JSON.stringify(newColumns) !== JSON.stringify(tableColumns)) {
+      console.log('🔧 Setting NEW table columns:', newColumns);
+      setTableColumns(newColumns);
+    } else {
+      console.log('🔧 Table columns unchanged, keeping current order');
+    }
+    
+    // Then set the data immediately
     setSortedData(data);
     setFilteredData(data);
     
-    // Detect new insertions
+    // Detect new insertions and handle highlighting
     if (forceHighlightNext || (data.length > previousDataRef.current.length && previousDataRef.current.length > 0)) {
       setForceHighlightNext(false);
       
-      // We'll highlight after sorting in render
+      // Highlight the newest record after a short delay
       setTimeout(() => {
-                 const sorted = [...data].sort((a, b) => {
-           const getTimestamp = (record) => {
-             const createdAt = record.createdAt;
-             if (!createdAt) return 0;
-             
-             if (createdAt._seconds) {
-               return createdAt._seconds * 1000;
-             } else if (createdAt.seconds) {
-               return createdAt.seconds * 1000;
-             } else if (createdAt.toDate) {
-               return createdAt.toDate().getTime();
-             } else if (typeof createdAt === 'string') {
-               return new Date(createdAt).getTime();
-             } else if (createdAt instanceof Date) {
-               return createdAt.getTime();
-             }
-             return 0;
-           };
-           
-           return getTimestamp(b) - getTimestamp(a);
-         });
+        if (data.length > 0) {
+          // Find the newest record by timestamp
+          const sorted = [...data].sort((a, b) => {
+            const getTimestamp = (record) => {
+              const createdAt = record.createdAt;
+              if (!createdAt) return 0;
+              
+              if (createdAt._seconds) {
+                return createdAt._seconds * 1000;
+              } else if (createdAt.seconds) {
+                return createdAt.seconds * 1000;
+              } else if (createdAt.toDate) {
+                return createdAt.toDate().getTime();
+              } else if (typeof createdAt === 'string') {
+                return new Date(createdAt).getTime();
+              } else if (createdAt instanceof Date) {
+                return createdAt.getTime();
+              }
+              return 0;
+            };
+            
+            return getTimestamp(b) - getTimestamp(a);
+          });
 
-        if (sorted.length > 0) {
-          const firstRecord = sorted[0];
-          const highlightId = firstRecord.id || firstRecord.docId || firstRecord.firebase_doc_id || `highlight_${Date.now()}`;
-          
-          console.log('✨ Highlighting newest:', firstRecord.numero_poliza);
-          
-          const highlightSet = new Set([highlightId]);
-          setNewlyInsertedRows(highlightSet);
-          setFlashingRows(highlightSet);
-          
-          setTimeout(() => setFlashingRows(new Set()), 3000);
-          setTimeout(() => setNewlyInsertedRows(new Set()), 10000);
+          if (sorted.length > 0) {
+            const firstRecord = sorted[0];
+            const highlightId = firstRecord.id || firstRecord.docId || firstRecord.firebase_doc_id || `highlight_${Date.now()}`;
+            
+            console.log('✨ Highlighting newest:', firstRecord.numero_poliza);
+            
+            const highlightSet = new Set([highlightId]);
+            setNewlyInsertedRows(highlightSet);
+            setFlashingRows(highlightSet);
+            
+            setTimeout(() => setFlashingRows(new Set()), 3000);
+            setTimeout(() => setNewlyInsertedRows(new Set()), 10000);
+          }
         }
       }, 100);
     }
     
     previousDataRef.current = data;
-  }, [data]);
+  }, [data, forceHighlightNext]);
 
   useEffect(() => {
     if (tableName) {
@@ -204,14 +271,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   }, [tableName]);
 
   useEffect(() => {
+    // Don't process if sortedData is empty (still loading)
+    if (!sortedData || sortedData.length === 0) {
+      console.log('🔍 Skipping search - no sorted data yet');
+      return;
+    }
+
     console.log('🔍 SEARCH TERM:', `"${searchTerm}"`, 'LENGTH:', searchTerm.length);
     console.log('🔍 SORTED DATA LENGTH:', sortedData.length);
-    
-    const hasJoseInSorted = sortedData.some(r => 
-      r.nombre_contratante?.toLowerCase().includes('jose') && 
-      r.nombre_contratante?.toLowerCase().includes('pacheco')
-    );
-    console.log('🔍 HAS JOSE IN SORTED DATA:', hasJoseInSorted);
 
     if (!searchTerm.trim()) {
       setFilteredData(sortedData);
@@ -228,11 +295,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     
     console.log('🔍 FILTERED RESULTS:', {
       originalLength: sortedData.length,
-      filteredLength: filtered.length,
-      hasJosePachecoAfterFilter: filtered.some(r => 
-        r.nombre_contratante?.toLowerCase().includes('jose') && 
-        r.nombre_contratante?.toLowerCase().includes('pacheco')
-      )
+      filteredLength: filtered.length
     });
     
     setFilteredData(filtered);
@@ -243,8 +306,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     console.log('📊 Data captured/modified, triggering refresh:', { 
       updatedTableName, 
       currentTableName: tableName,
-      shouldCloseModal
+      shouldCloseModal,
+      isEditing: isEditingFlag
     });
+    
+    // Don't refresh if user is currently editing
+    if (isEditingFlag) {
+      console.log('⚠️ Skipping data refresh - user is editing');
+      return;
+    }
     
     try {
       // Show loading state
@@ -271,10 +341,16 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     } finally {
       setIsRefreshing(false);
     }
-  }, [onRefresh, tableName]);
+  }, [onRefresh, tableName, isEditingFlag]);
 
   // Enhanced refresh function with loading state
   const refreshData = async () => {
+    // Don't refresh if user is currently editing
+    if (isEditingFlag) {
+      console.log('⚠️ Skipping refresh - user is editing');
+      return;
+    }
+    
     console.log('🔄 Manual refresh triggered');
     setIsRefreshing(true);
     
@@ -517,15 +593,29 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     return <div className="no-data">No data available</div>;
   }
 
-  const columns = Object.keys(data[0]);
+  // Use the stable tableColumns instead of dynamic Object.keys
 
   const handleCellClick = (rowIndex, column, value) => {
     // Remove single click handler functionality
   };
 
   const handleCellDoubleClick = (rowIndex, column, value) => {
+    console.log('✏️ Double click detected:', { rowIndex, column, value, isEditing: isEditingFlag });
+    
+    // Prevent editing if already editing
+    if (isEditingFlag) {
+      console.log('⚠️ Already editing, ignoring double click');
+      return;
+    }
+    
+    // First, clear any existing edit state
+    setEditingCell(null);
+    setEditValue('');
+    setShowPdfUpload(false);
+    setIsAnalyzing(false);
+
     if (column === 'status') {
-      const row = data[rowIndex];
+      const row = filteredData[rowIndex];
       setStatusModal({
         isOpen: true,
         rowId: row.id,
@@ -533,20 +623,49 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       });
       return;
     }
-    setEditingCell({ rowIndex, column, value });
-    setEditValue(value !== null ? String(value) : '');
+
+    console.log('✏️ Starting edit for:', { rowIndex, column, value });
+    
+    // Set editing flag
+    setIsEditingFlag(true);
+    
+    // Clear any cell selections
+    setSelectedCells([]);
+    setSelectionStart(null);
+    
+    // Small delay to ensure state is cleared
+    setTimeout(() => {
+      setEditingCell({ rowIndex, column, value });
+      setEditValue(value !== null ? String(value) : '');
+    }, 10);
   };
 
   const handleCancelEdit = () => {
+    console.log('🚫 Canceling edit - current editing cell:', editingCell);
     setEditingCell(null);
     setEditValue('');
+    setShowPdfUpload(false);
+    setIsAnalyzing(false);
+    setSelectedCells([]);
+    setSelectionStart(null);
+    setIsEditingFlag(false);
+    console.log('🚫 Edit canceled - state cleared');
   };
 
   const handleConfirmEdit = async () => {
     if (!editingCell) return;
 
     const { rowIndex, column } = editingCell;
-    const row = data[rowIndex];
+    // Use filteredData since that's what's actually being displayed in the table
+    const row = filteredData[rowIndex];
+    
+    // Prevent multiple simultaneous edits
+    if (isAnalyzing) {
+      console.log('⏳ Edit already in progress, ignoring');
+      return;
+    }
+    
+    setIsAnalyzing(true); // Use this as a "processing" flag
     
     try {
       // Validate the data before updating
@@ -559,57 +678,67 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
         throw new Error('Invalid row data');
       }
 
-      console.log('Updating cell with:', {
+      console.log('🔄 Updating cell with:', {
         id: row.id,
         column,
-        value: editValue
+        value: editValue,
+        tableName,
+        rowIndex,
+        originalRow: row
       });
 
       // Make the API call first
       const result = await onCellUpdate(row.id, column, editValue);
       
       // Log the result for debugging
-      console.log('Update result:', result);
+      console.log('✅ Update result:', result);
 
       // Check if result exists and has success property
       if (!result || result.success === false) {
         throw new Error(result?.message || 'Failed to update cell');
       }
 
-      // Update the UI with the returned data
-      if (result.updatedData) {
-        const updatedData = filteredData.map((r) => 
-          r.id === row.id ? { ...r, ...result.updatedData } : r
-        );
-        setFilteredData(updatedData);
-      }
+      // Update the UI immediately with the new value
+      const updatedData = filteredData.map((r) => 
+        r.id === row.id ? { ...r, [column]: editValue } : r
+      );
+      setFilteredData(updatedData);
+      setSortedData(prev => prev.map((r) => 
+        r.id === row.id ? { ...r, [column]: editValue } : r
+      ));
       
-      // Close the edit popup
-      handleCancelEdit();
+      // Show success message first
+      toast.success('✅ Celda actualizada correctamente');
       
-      // Show success message
-      toast.success('Cell updated successfully');
+      // Close the edit popup immediately - no delay needed
+      setEditingCell(null);
+      setEditValue('');
+      setShowPdfUpload(false);
+      setSelectedCells([]);
+      setSelectionStart(null);
       
-      // Auto-refresh data to ensure consistency
-      console.log('🔄 Auto-refreshing after cell edit');
-      
-      // Notify other components about the edit
+      // Notify other components about the edit and force refresh
       notifyDataEdit(tableName);
       
-      setTimeout(async () => {
-        if (onRefresh) {
-          await onRefresh();
-        }
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to update cell:', error);
-      
-      // Show error message with more specific information
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to update cell';
-      toast.error(`Update failed: ${errorMessage}`);
-      
-      // Keep the edit popup open so user can try again or cancel
-    }
+      // Force refresh from parent component to ensure data consistency
+      if (onRefresh) {
+        console.log('🔄 Forcing data refresh after cell update');
+        setTimeout(() => {
+          onRefresh();
+        }, 300);
+      }
+          } catch (error) {
+        console.error('Failed to update cell:', error);
+        
+        // Show error message with more specific information
+        const errorMessage = error.response?.data?.error || error.message || 'Failed to update cell';
+        toast.error(`Update failed: ${errorMessage}`);
+        
+        // Keep the edit popup open so user can try again or cancel
+      } finally {
+        setIsAnalyzing(false); // Reset processing flag
+        setIsEditingFlag(false); // Reset editing flag
+      }
   };
 
   // Input field keyboard handler
@@ -620,6 +749,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     } else if (e.key === 'Escape') {
       handleCancelEdit();
     }
+  };
+
+  // Close edit popup when clicking outside
+  const handleEditPopupClick = (e) => {
+    e.stopPropagation();
+  };
+
+  const handleOverlayClick = () => {
+    handleCancelEdit();
   };
 
   const handlePdfUpload = async (event) => {
@@ -686,6 +824,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
   const handleCellSelection = (event, rowIndex, column, value) => {
     event.preventDefault();
     
+    // If we're currently editing, don't handle selection
+    if (editingCell) {
+      return;
+    }
+    
     // Handle double click for editing
     if (event.detail === 2) {
       handleCellDoubleClick(rowIndex, column, value);
@@ -698,15 +841,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       // Calculate range selection
       const startRow = Math.min(selectionStart.rowIndex, rowIndex);
       const endRow = Math.max(selectionStart.rowIndex, rowIndex);
-      const startColIndex = columns.indexOf(selectionStart.column);
-      const endColIndex = columns.indexOf(column);
+      const startColIndex = tableColumns.indexOf(selectionStart.column);
+      const endColIndex = tableColumns.indexOf(column);
       const startCol = Math.min(startColIndex, endColIndex);
       const endCol = Math.max(startColIndex, endColIndex);
       
       const newSelection = [];
       for (let r = startRow; r <= endRow; r++) {
         for (let c = startCol; c <= endCol; c++) {
-          newSelection.push(`${r}-${columns[c]}`);
+          newSelection.push(`${r}-${tableColumns[c]}`);
         }
       }
       setSelectedCells(newSelection);
@@ -737,7 +880,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       selectedCells.forEach(cellKey => {
         const [rowIndex, column] = cellKey.split('-');
         const row = parseInt(rowIndex);
-        const col = columns.indexOf(column);
+        const col = tableColumns.indexOf(column);
         
         minRow = Math.min(minRow, row);
         maxRow = Math.max(maxRow, row);
@@ -764,7 +907,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
     document.addEventListener('copy', handleCopy);
     return () => document.removeEventListener('copy', handleCopy);
-  }, [selectedCells, data, columns]);
+  }, [selectedCells, data, tableColumns]);
 
   const handleEmailClick = (rowData) => {
     setMailModal({ isOpen: true, rowData });
@@ -933,20 +1076,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
     return <span>{cellValue}</span>;
   };
 
-  // Reorder columns to put status after ID only for related tables
-  // Also filter out estado_pago since we show it as action button
-  // Hide ID and firebase_doc_id columns
-  let reorderedColumns = columns.filter(col => 
-    col !== 'estado_pago' && 
-    col !== 'id' && 
-    col !== 'firebase_doc_id'
-  );
-  if (tableName && (data[0]?.status !== undefined)) {
-    reorderedColumns = reorderedColumns.filter(col => col !== 'status');
-    // Since we filtered out 'id', we don't need to find its index
-    // Just add status at the beginning
-    reorderedColumns.unshift('status');
-  }
+  // Column reordering logic moved to useMemo above for stability
 
   // Add the getSortIcon function
   const getSortIcon = (column) => {
@@ -974,7 +1104,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
     setSortConfig({ key: column, direction });
 
-    const sorted = [...filteredData].sort((a, b) => {
+    // Sort the base sortedData, not filteredData
+    const sorted = [...sortedData].sort((a, b) => {
       if (a[column] === null) return 1;
       if (b[column] === null) return -1;
       if (a[column] === b[column]) return 0;
@@ -983,7 +1114,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
       return direction === 'ascending' ? compareResult : -compareResult;
     });
 
-    setFilteredData(sorted);
+    // Update both sorted and filtered data to stay in sync
+    setSortedData(sorted);
+    // The search useEffect will handle filtering the sorted data
   };
 
   // Improved child table selection with better parent-child relationship handling
@@ -1237,34 +1370,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                 return getTimestamp(b) - getTimestamp(a); // Newest first
               });
               
-              // DEBUGGING: Simple logs that show clearly
-              console.log('🎯 TOTAL RECORDS:', sortedForRender.length);
-              console.log('🎯 FIRST 3 NAMES:', sortedForRender.slice(0, 3).map(r => r.nombre_contratante));
-              console.log('🎯 FIRST 3 TIMESTAMPS:', sortedForRender.slice(0, 3).map(r => r.createdAt?.seconds));
-              
-              const joseRecord = sortedForRender.find(r => 
-                r.nombre_contratante?.toLowerCase().includes('jose') && 
-                r.nombre_contratante?.toLowerCase().includes('pacheco')
-              );
-              
-              if (joseRecord) {
-                const joseIndex = sortedForRender.findIndex(r => r === joseRecord);
-                console.log('🎯 JOSE FOUND AT POSITION:', joseIndex + 1, 'of', sortedForRender.length);
-                console.log('🎯 JOSE TIMESTAMP:', joseRecord.createdAt?.seconds);
-                console.log('🎯 JOSE DATE:', joseRecord.createdAt?.seconds ? new Date(joseRecord.createdAt.seconds * 1000).toLocaleString() : 'NO_DATE');
-                console.log('🎯 JOSE FULL RECORD KEYS:', Object.keys(joseRecord));
-                console.log('🎯 JOSE CREATED AT FIELD:', joseRecord.createdAt);
-                console.log('🎯 JOSE ALL DATE FIELDS:', {
-                  createdAt: joseRecord.createdAt,
-                  created_at: joseRecord.created_at,
-                  timestamp: joseRecord.timestamp,
-                  date: joseRecord.date,
-                  fechaCreacion: joseRecord.fechaCreacion,
-                  fecha_creacion: joseRecord.fecha_creacion
-                });
-              } else {
-                console.log('🎯 JOSE NOT FOUND in sorted data');
-              }
+              // Debug: basic record count
+              console.log('📊 Rendering', sortedForRender.length, 'records');
               
               return sortedForRender;
             })().map((row, rowIndex) => {
@@ -1359,7 +1466,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
                     onClick={(e) => handleCellSelection(e, rowIndex, column, row[column])}
                     className={`editable-cell ${column === 'id' ? 'id-cell' : ''} ${
                       column === 'status' ? 'status-cell' : ''
-                    } ${selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''}`}
+                    } ${selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''} ${
+                      editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column ? 'editing-cell' : ''
+                    }`}
+                    title="Double-click to edit"
                   >
                     {renderCell(row, rowIndex, column)}
                   </td>
@@ -1405,18 +1515,32 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName }) => 
 
       {/* Edit Cell Popup */}
       {editingCell && (
-        <div className="edit-cell-popup">
-          <div className="edit-cell-content" onClick={e => e.stopPropagation()}>
-            <h4>Edit Cell</h4>
+        <div className="edit-cell-popup" onClick={handleOverlayClick}>
+          <div className="edit-cell-content" onClick={handleEditPopupClick}>
+            <div className="edit-cell-header">
+              <h4>Edit Cell: {editingCell.column}</h4>
+              <button 
+                className="edit-cell-close" 
+                onClick={handleCancelEdit}
+                title="Close (Esc)"
+              >
+                ×
+              </button>
+            </div>
             <div className="edit-cell-info">
-              <p>Column: {editingCell.column}</p>
               <textarea
                 value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
+                onChange={(e) => {
+                  console.log('📝 Textarea value changed:', e.target.value);
+                  setEditValue(e.target.value);
+                }}
                 onKeyDown={handleInputKeyDown}
+                onFocus={() => console.log('🎯 Textarea focused')}
+                onBlur={() => console.log('🔍 Textarea blurred')}
                 autoFocus
                 rows={3}
                 className="edit-cell-textarea"
+                placeholder={`Enter value for ${editingCell.column}...`}
               />
               
               {/* PDF Upload Section */}
