@@ -8,6 +8,24 @@ import firebaseStorageProxy from '../../services/firebaseStorageProxy';
 import { ref, listAll, getDownloadURL, getMetadata, uploadBytes } from 'firebase/storage';
 import './Drive.css';
 
+// DEBUGGING: Direct Firebase check
+const debugDirectFirebaseCheck = async (teamId, folderPath) => {
+  try {
+    console.log(`🐛 DIRECT FIREBASE CHECK: team ${teamId}, path "${folderPath}"`);
+    const fullPath = `teams/${teamId}/${folderPath}`;
+    const storageRef = ref(storage, fullPath);
+    const result = await listAll(storageRef);
+    
+    console.log(`🐛 DIRECT RESULT: ${result.items.length} files found`);
+    console.log(`🐛 DIRECT FILE NAMES:`, result.items.map(item => item.name));
+    
+    return result.items.length;
+  } catch (error) {
+    console.error('🐛 DIRECT CHECK ERROR:', error);
+    return -1;
+  }
+};
+
 // Root folder path for Firebase Storage
 const ROOT_FOLDER_PATH = '';
 
@@ -253,14 +271,23 @@ const Firedrive = () => {
       
       addDebugInfo(`📄 Cargando archivos para path: "${currentFolderPath}"`);
       
+      // DEBUGGING: Direct Firebase check
+      const directCount = await debugDirectFirebaseCheck(userTeam.id, currentFolderPath);
+      addDebugInfo(`🐛 DIRECT COUNT: ${directCount} files found via direct Firebase call`);
+      
       const files = await firebaseTeamStorageService.listFilesInFolder(currentFolderPath, userTeam.id);
       
       addDebugInfo(`📄 Cargados ${files.length} archivos para "${currentFolderPath}"`);
+      addDebugInfo(`🔍 COMPARISON: Direct count ${directCount} vs Service count ${files.length}`);
       
       // Filter out .keep files for cleaner display
       const visibleFiles = files.filter(file => file.name !== '.keep');
       
       addDebugInfo(`📄 Archivos visibles: ${visibleFiles.length} (sin archivos .keep)`);
+      
+      if (directCount !== files.length) {
+        addDebugInfo(`⚠️ MISMATCH DETECTED! Direct Firebase vs Service count differs`);
+      }
       
       setCurrentFiles(visibleFiles);
       
@@ -607,6 +634,14 @@ const Firedrive = () => {
       await Promise.all(uploadPromises);
       
       addDebugInfo(`🎉 Todos los archivos subidos exitosamente`);
+      
+      // Add delay to allow Firebase to propagate changes
+      addDebugInfo(`⏳ Esperando 2 segundos para refrescar...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Clear current files before refreshing to force a clean reload
+      setCurrentFiles([]);
+      addDebugInfo(`🔄 Limpiando cache y recargando archivos...`);
       
       // Refresh current folder files to show new uploads
       await loadCurrentFolderFiles();

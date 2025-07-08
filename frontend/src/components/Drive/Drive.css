@@ -362,6 +362,9 @@
   flex: 1;
   padding: 24px 32px 32px;
   background: #fafbfc;
+  overflow-y: auto;
+  max-height: calc(100vh - 180px); /* Better calculation for scroll */
+  min-height: 400px; /* Ensure minimum scrollable area */
 }
 
 /* Section Headers */
@@ -376,16 +379,32 @@
   gap: 8px;
 }
 
-.folders-section {
+.folders-section,
+.files-section {
   margin-bottom: 32px;
+  overflow-x: auto;
+  width: 100%;
+  /* Ensure sections can expand fully */
+  min-height: fit-content;
+}
+
+.folders-section:last-child,
+.files-section:last-child {
+  margin-bottom: 16px;
 }
 
 /* Modern Grid */
 .files-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-auto-rows: auto; /* Allow multiple rows */
   gap: 16px;
   margin-top: 16px;
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  /* Ensure grid can expand vertically */
+  min-height: fit-content;
 }
 
 /* Modern File Items */
@@ -400,6 +419,8 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  /* Ensure consistent height for grid layout */
+  min-height: 120px;
 }
 
 .file-item:hover {

@@ -25,6 +25,25 @@ class FirebaseTeamStorageService {
     });
   }
 
+  // Clear cache for a team (useful after uploads/changes)
+  cacheClearTeam(teamId) {
+    const keysToDelete = [];
+    for (const [key] of this.cache) {
+      if (key.includes(teamId)) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach(key => this.cache.delete(key));
+    console.log(`🧹 Cache cleared for team ${teamId}: ${keysToDelete.length} entries removed`);
+  }
+
+  // Clear all cache
+  cacheClearAll() {
+    const count = this.cache.size;
+    this.cache.clear();
+    console.log(`🧹 All cache cleared: ${count} entries removed`);
+  }
+
   // Set the current team context
   setCurrentTeam(teamId) {
     this.currentTeamId = teamId;
@@ -237,7 +256,29 @@ class FirebaseTeamStorageService {
       const storageRef = ref(storage, filePath);
       const result = await uploadBytes(storageRef, file);
       
+      // Clear cache for this team to ensure fresh data
+      this.cacheClearTeam(teamId);
+      
       console.log(`✅ File ${file.name} uploaded successfully`);
+      
+      // VERIFICATION: Try to immediately list files to confirm upload
+      console.log(`🔍 VERIFICATION: Checking if file exists after upload...`);
+      try {
+        const verificationPath = this.getTeamFolderPath(folderPath, teamId);
+        const verificationRef = ref(storage, verificationPath);
+        const listResult = await listAll(verificationRef);
+        
+        const uploadedFile = listResult.items.find(item => item.name === file.name);
+        if (uploadedFile) {
+          console.log(`✅ VERIFICATION PASSED: File ${file.name} confirmed in storage`);
+        } else {
+          console.warn(`⚠️ VERIFICATION FAILED: File ${file.name} not found in immediate listing`);
+          console.log(`🔍 Files found in verification:`, listResult.items.map(item => item.name));
+        }
+      } catch (verifyError) {
+        console.warn(`⚠️ VERIFICATION ERROR: Could not verify upload:`, verifyError);
+      }
+      
       return {
         success: true,
         filePath,
@@ -268,6 +309,9 @@ class FirebaseTeamStorageService {
       
       const storageRef = ref(storage, fullPath);
       await deleteObject(storageRef);
+      
+      // Clear cache for this team to ensure fresh data
+      this.cacheClearTeam(teamId);
       
       console.log(`✅ File deleted successfully: ${fullPath}`);
       return { success: true, deletedPath: fullPath, teamId };
@@ -520,6 +564,9 @@ class FirebaseTeamStorageService {
       const storageRef = ref(storage, fullPath);
       const result = await listAll(storageRef);
 
+      console.log(`📋 DEBUG: Found ${result.items.length} raw files in Firebase Storage:`);
+      console.log(`📋 Raw file names:`, result.items.map(item => item.name));
+
       // Process files with basic metadata only (NO download URLs)
       const fileItems = await Promise.allSettled(
         result.items.map(async (itemRef) => {
@@ -565,6 +612,9 @@ class FirebaseTeamStorageService {
         .map(result => result.value);
 
       console.log(`⚡ FAST: Loaded ${validFiles.length} files metadata (no download URLs)`);
+      console.log(`📋 Final processed file names:`, validFiles.map(f => f.name));
+      console.log(`📋 Failed processing count:`, fileItems.filter(result => result.status === 'rejected').length);
+      
       return validFiles;
 
     } catch (error) {
