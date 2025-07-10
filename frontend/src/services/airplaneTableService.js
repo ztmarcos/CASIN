@@ -18,7 +18,7 @@ class AirplaneTableService {
     
     const cacheKey = 'datasection_tables';
     
-    // Check cache first
+    // Check cache first (unless forcing refresh)
     if (!forceRefresh) {
       const cachedTables = localCacheService.get(cacheKey);
       if (cachedTables) {
@@ -30,8 +30,8 @@ class AirplaneTableService {
     // Normal mode - use table service adapter (team system enabled)
     const tables = await tableServiceAdapter.getTables();
     
-    // Cache the result for 3 minutes
-    localCacheService.set(cacheKey, tables, {}, 3 * 60 * 1000);
+    // Cache the result for 10 minutes (tables don't change often)
+    localCacheService.set(cacheKey, tables, {}, 10 * 60 * 1000);
     
     return tables;
   }
@@ -74,7 +74,7 @@ class AirplaneTableService {
     const cacheKey = `datasection_table_${tableName}`;
     const cacheParams = { filters };
     
-    // Check cache first
+    // Check cache first (unless forcing refresh)
     if (!forceRefresh) {
       const cachedData = localCacheService.get(cacheKey, cacheParams);
       if (cachedData) {
@@ -83,11 +83,13 @@ class AirplaneTableService {
       }
     }
     
+    console.log(`🚫 Skipping cache for ${tableName} (${forceRefresh ? 'forceRefresh=true' : 'no cache found'})`);
+    
     // Normal mode - use table service adapter (team system enabled)
     const result = await tableServiceAdapter.getData(tableName, filters);
     
-    // Cache the result for 2 minutes (shorter TTL since table data changes more frequently)
-    localCacheService.set(cacheKey, result, cacheParams, 2 * 60 * 1000);
+    // Cache the result for 5 minutes (longer TTL for better performance)
+    localCacheService.set(cacheKey, result, cacheParams, 5 * 60 * 1000);
     
     return result;
   }
