@@ -12,6 +12,7 @@ import { getCleanTeamName } from '../../utils/teamUtils';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
 import localCacheService from '../../services/localCacheService';
+import airplaneModeService from '../../services/airplaneModeService';
 
 const DataSection = () => {
   const { userTeam, currentTeam } = useTeam();
@@ -55,10 +56,18 @@ const DataSection = () => {
         console.log('🔄 Combined table detected, using child table:', actualTableName);
       }
       
-      // Add force refresh parameter to bypass cache
-      console.log('📡 Calling airplaneTableService.getData with:', { actualTableName, filters, forceRefresh });
-      const result = await airplaneTableService.getData(actualTableName, filters, forceRefresh);
-      console.log('🔥 Received data from airplaneTableService:', result);
+      // Use appropriate service based on airplane mode
+      let result;
+      
+      if (airplaneModeService.isEnabled()) {
+        console.log('✈️ Using airplaneTableService (airplane mode ON)');
+        result = await airplaneTableService.getData(actualTableName, filters, forceRefresh);
+      } else {
+        console.log('🌐 Using tableServiceAdapter directly (airplane mode OFF)');
+        console.log('📡 Calling tableServiceAdapter.getData with:', { actualTableName, filters });
+        result = await tableServiceAdapter.getData(actualTableName, filters);
+      }
+      console.log('🔥 Received data from service:', result);
       console.log('🔍 Result data length:', result?.data?.length || 0);
       console.log('🔍 First item aseguradora:', result?.data?.[0]?.aseguradora);
       
@@ -163,7 +172,16 @@ const DataSection = () => {
     // Load data immediately after selecting the table
     try {
       setIsLoading(true);
-      const result = await airplaneTableService.getData(table.name);
+      
+      // Use appropriate service based on airplane mode
+      let result;
+      if (airplaneModeService.isEnabled()) {
+        console.log('✈️ handleTableSelect: Using airplaneTableService (airplane mode ON)');
+        result = await airplaneTableService.getData(table.name);
+      } else {
+        console.log('🌐 handleTableSelect: Using tableServiceAdapter directly (airplane mode OFF)');
+        result = await tableServiceAdapter.getData(table.name);
+      }
       console.log('🔥 Received data:', result);
       
       if (!result) {
@@ -410,42 +428,28 @@ const DataSection = () => {
     if (!selectedTable) return;
     
     try {
-      // Get the actual table name (could be combined table name)
       const currentTableName = selectedTable.name;
-      console.log('Updating cell:', { id, column, value, table: currentTableName });
+      console.log('🔄 Cell update:', { id, column, value });
       
-      // FIRST: Invalidate cache BEFORE updating to prevent stale data
-      localCacheService.invalidate(`datasection_table_${currentTableName}`);
-      localCacheService.invalidateService('reports');
-      console.log('🗑️ Pre-invalidated cache before cell update');
-      
-      // SECOND: Update data on server
+      // STEP 1: Update server first
       const result = await tableServiceAdapter.updateData(currentTableName, id, column, value);
       
-      // THIRD: Force immediate UI update then reload from server
-      console.log('🔄 Force updating UI state immediately...');
+      if (!result || result.success === false) {
+        throw new Error(result?.message || 'Update failed');
+      }
       
-      // Update local state immediately for instant UI feedback
+      // STEP 2: Only if server update succeeded, update UI
       setTableData(prevData => 
         prevData.map(row => 
           row.id === id ? { ...row, [column]: value } : row
         )
       );
       
-      // Then reload fresh data from server (with small delay for Firebase sync)
-      setTimeout(async () => {
-        console.log('🔄 Reloading fresh data from server...');
-        console.log('🔍 BEFORE loadTableData - current tableData length:', tableData.length);
-        const result = await loadTableData(currentTableName, true);
-        console.log('🔍 AFTER loadTableData - result:', result);
-        console.log('🔍 AFTER loadTableData - current tableData length:', tableData.length);
-      }, 500); // 500ms delay
-      
-      // Return the result from the server
+      console.log('✅ Cell updated successfully');
       return result;
     } catch (error) {
-      console.error('Error updating cell:', error);
-      throw error; // Let DataTable handle the error
+      console.error('❌ Cell update failed:', error);
+      throw error;
     }
   };
 

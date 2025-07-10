@@ -162,9 +162,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     
     updateTableColumns();
     
-    // Then set the data immediately
-    setSortedData(data);
-    setFilteredData(data);
+      // Then set the data immediately and synchronously
+  console.log('🔄 DataTable updating internal state with new data');
+  console.log('🔍 New data first row aseguradora:', data[0]?.aseguradora);
+  setSortedData(data);
+  setFilteredData(data);
+  console.log('✅ DataTable internal state updated');
+  
+  // Force re-render if user is currently editing
+  if (editingCell) {
+    console.log('⚡ User is editing - ensuring fresh data for current edit');
+  }
     
     // Detect new insertions and handle highlighting
     if (forceHighlightNext || (data.length > previousDataRef.current.length && previousDataRef.current.length > 0)) {
@@ -675,8 +683,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     // Remove single click handler functionality
   };
 
-  const handleCellDoubleClick = (rowIndex, column, value) => {
-    console.log('✏️ Double click detected:', { rowIndex, column, value, isEditing: isEditingFlag });
+  const handleCellDoubleClickWithRow = (row, column, value) => {
+    console.log('✏️ Double click - Direct row access:', { 
+      id: row.id, 
+      nombre: row.nombre_contratante, 
+      column, 
+      value: row[column] 
+    });
     
     // Prevent editing if already editing
     if (isEditingFlag) {
@@ -684,23 +697,25 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return;
     }
     
-    // First, clear any existing edit state
+    if (!row || !row.id) {
+      console.error('❌ Invalid row data');
+      return;
+    }
+    
+    // Clear any existing edit state
     setEditingCell(null);
     setEditValue('');
     setShowPdfUpload(false);
     setIsAnalyzing(false);
 
     if (column === 'status') {
-      const row = filteredData[rowIndex];
       setStatusModal({
         isOpen: true,
         rowId: row.id,
-        currentStatus: value || 'Vigente 🟢'
+        currentStatus: row[column] || 'Vigente 🟢'
       });
       return;
     }
-
-    console.log('✏️ Starting edit for:', { rowIndex, column, value });
     
     // Set editing flag
     setIsEditingFlag(true);
@@ -709,11 +724,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     setSelectedCells([]);
     setSelectionStart(null);
     
-    // Small delay to ensure state is cleared
+    // Use the row object directly - NO INDEX CONFUSION
     setTimeout(() => {
-      setEditingCell({ rowIndex, column, value });
-      setEditValue(value !== null ? String(value) : '');
+      setEditingCell({ 
+        rowId: row.id,
+        column, 
+        value: row[column]
+      });
+      setEditValue(row[column] !== null ? String(row[column]) : '');
     }, 10);
+  };
+
+  // Keep old function for backwards compatibility
+  const handleCellDoubleClick = (rowIndex, column, value) => {
+    const row = filteredData[rowIndex];
+    handleCellDoubleClickWithRow(row, column, value);
   };
 
   const handleCancelEdit = () => {
@@ -731,9 +756,23 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const handleConfirmEdit = async () => {
     if (!editingCell) return;
 
-    const { rowIndex, column } = editingCell;
-    // Use filteredData since that's what's actually being displayed in the table
-    const row = filteredData[rowIndex];
+    const { rowId, column } = editingCell;
+    
+    // Find the row by ID instead of using index
+    const row = filteredData.find(r => r.id === rowId);
+    
+    if (!row) {
+      console.error('❌ Could not find row with ID:', rowId);
+      return;
+    }
+    
+    console.log('🔄 Updating cell:', {
+      id: rowId,
+      nombre: row.nombre_contratante,
+      column,
+      oldValue: row[column],
+      newValue: editValue
+    });
     
     // Prevent multiple simultaneous edits
     if (isAnalyzing) {
@@ -741,7 +780,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return;
     }
     
-    setIsAnalyzing(true); // Use this as a "processing" flag
+    setIsAnalyzing(true);
     
     try {
       // Validate the data before updating
@@ -749,22 +788,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         throw new Error('Invalid value: Value cannot be empty');
       }
 
-      // Validate that we have the necessary data
-      if (!row || !row.id) {
-        throw new Error('Invalid row data');
-      }
-
-      console.log('🔄 Updating cell with:', {
-        id: row.id,
-        column,
-        value: editValue,
-        tableName,
-        rowIndex,
-        originalRow: row
-      });
-
-      // Make the API call first
-      const result = await onCellUpdate(row.id, column, editValue);
+      // Make the API call using the row ID
+      const result = await onCellUpdate(rowId, column, editValue);
       
       // Log the result for debugging
       console.log('✅ Update result:', result);
@@ -774,35 +799,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         throw new Error(result?.message || 'Failed to update cell');
       }
 
-      // Update the UI immediately with the new value
-      const updatedData = filteredData.map((r) => 
-        r.id === row.id ? { ...r, [column]: editValue } : r
-      );
-      setFilteredData(updatedData);
-      setSortedData(prev => prev.map((r) => 
-        r.id === row.id ? { ...r, [column]: editValue } : r
-      ));
-      
       // Show success message first
       toast.success('✅ Celda actualizada correctamente');
       
-      // Close the edit popup immediately - no delay needed
+      // Close the edit popup immediately - DataSection already updated the UI
       setEditingCell(null);
       setEditValue('');
       setShowPdfUpload(false);
       setSelectedCells([]);
       setSelectionStart(null);
       
-      // Notify other components about the edit and force refresh
-      notifyDataEdit(tableName);
-      
-      // Force refresh from parent component to ensure data consistency
-      if (onRefresh) {
-        console.log('🔄 Forcing data refresh after cell update');
-        setTimeout(() => {
-          onRefresh();
-        }, 300);
-      }
+      // NO NOTIFICATION - DataSection already updated UI and no refresh needed
           } catch (error) {
         console.error('Failed to update cell:', error);
         
@@ -897,7 +904,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   };
 
   // Add selection handlers
-  const handleCellSelection = (event, rowIndex, column, value) => {
+  const handleCellSelection = (event, rowIndex, column, value, rowObject) => {
     event.preventDefault();
     
     // If we're currently editing, don't handle selection
@@ -905,9 +912,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return;
     }
     
-    // Handle double click for editing
+    // Handle double click for editing - use the actual row object
     if (event.detail === 2) {
-      handleCellDoubleClick(rowIndex, column, value);
+      handleCellDoubleClickWithRow(rowObject, column, value);
       return;
     }
 
@@ -1539,7 +1546,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 {reorderedColumns.map(column => (
                   <td
                     key={`${rowIndex}-${column}`}
-                    onClick={(e) => handleCellSelection(e, rowIndex, column, row[column])}
+                    onClick={(e) => handleCellSelection(e, rowIndex, column, row[column], row)}
                     className={`editable-cell ${column === 'id' ? 'id-cell' : ''} ${
                       column === 'status' ? 'status-cell' : ''
                     } ${selectedCells.includes(`${rowIndex}-${column}`) ? 'selected-cell' : ''} ${
