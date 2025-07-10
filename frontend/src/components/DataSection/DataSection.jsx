@@ -11,6 +11,7 @@ import { useTeam } from '../../context/TeamContext';
 import { getCleanTeamName } from '../../utils/teamUtils';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
+import localCacheService from '../../services/localCacheService';
 
 const DataSection = () => {
   const { userTeam, currentTeam } = useTeam();
@@ -68,6 +69,39 @@ const DataSection = () => {
       const tableData = result.data || [];
       console.log(`✅ Setting table data with ${tableData.length} rows from Firebase`);
       setTableData(tableData);
+      
+      // Load table structure if we have data and don't have proper structure yet
+      if (tableData.length > 0 && (!selectedTable?.columns || selectedTable.columns.length <= 7)) {
+        try {
+          const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : '/api';
+          const structureResponse = await fetch(`${API_URL}/data/tables/${actualTableName}/structure`);
+          
+          if (structureResponse.ok) {
+            const structureResult = await structureResponse.json();
+            console.log('🔧 Got table structure from loadTableData:', structureResult);
+            
+            if (structureResult.columns) {
+              const columns = structureResult.columns.map(col => ({
+                name: col.name,
+                type: col.type || 'VARCHAR',
+                isPrimary: col.key === 'PRI' || col.name === 'id',
+                required: !col.nullable,
+                isCustom: col.isCustom || false
+              }));
+              
+              setSelectedTable(prev => ({
+                ...prev,
+                columns: columns
+              }));
+              console.log('✅ Updated table structure in loadTableData');
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error loading table structure in loadTableData:', error);
+        }
+      }
       
       // Update the selected table name when tableName is provided
       if (tableName) {
@@ -138,23 +172,71 @@ const DataSection = () => {
       console.log(`✅ Setting table data with ${tableData.length} rows`);
       setTableData(tableData);
       
-      // If we have data, try to infer columns from the actual data
+      // If we have data, get the complete table structure from the API
       if (tableData.length > 0) {
-        const firstRow = tableData[0];
-        const inferredColumns = Object.keys(firstRow).map(key => ({
-          name: key,
-          type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
-          isPrimary: key === 'id' || key === '_id',
-          required: key === 'name' || key === 'title'
-        }));
-        
-        setSelectedTable(prev => ({
-          ...prev,
-          columns: inferredColumns
-        }));
-        
-        // Load column order for this table
-        await loadColumnOrder(table.name);
+        try {
+          // Get complete table structure including custom columns
+          const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : '/api';
+          const structureResponse = await fetch(`${API_URL}/data/tables/${table.name}/structure`);
+          
+          let columns = [];
+          if (structureResponse.ok) {
+            const structureResult = await structureResponse.json();
+            console.log('🔧 Got table structure from API:', structureResult);
+            
+            if (structureResult.columns) {
+              columns = structureResult.columns.map(col => ({
+                name: col.name,
+                type: col.type || 'VARCHAR',
+                isPrimary: col.key === 'PRI' || col.name === 'id',
+                required: !col.nullable,
+                isCustom: col.isCustom || false
+              }));
+              console.log('✅ Parsed columns:', columns);
+            }
+          }
+          
+          // Fallback to inferred columns if API fails
+          if (columns.length === 0) {
+            console.log('⚠️ API structure failed, falling back to inference');
+            const firstRow = tableData[0];
+            columns = Object.keys(firstRow).map(key => ({
+              name: key,
+              type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
+              isPrimary: key === 'id' || key === '_id',
+              required: key === 'name' || key === 'title',
+              isCustom: false
+            }));
+          }
+          
+          setSelectedTable(prev => ({
+            ...prev,
+            columns: columns
+          }));
+          
+          // Load column order for this table
+          await loadColumnOrder(table.name);
+        } catch (error) {
+          console.error('❌ Error loading table structure:', error);
+          // Fallback to simple inference
+          const firstRow = tableData[0];
+          const inferredColumns = Object.keys(firstRow).map(key => ({
+            name: key,
+            type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
+            isPrimary: key === 'id' || key === '_id',
+            required: key === 'name' || key === 'title',
+            isCustom: false
+          }));
+          
+          setSelectedTable(prev => ({
+            ...prev,
+            columns: inferredColumns
+          }));
+          
+          await loadColumnOrder(table.name);
+        }
       }
     } catch (error) {
       console.error('❌ Error loading Firebase table data:', error);
@@ -213,6 +295,10 @@ const DataSection = () => {
       console.log(`✅ Successfully imported ${dataArray.length} records to Firebase`);
       toast.success(`Imported ${dataArray.length} records successfully`);
       
+      // Invalidate cache to ensure fresh data
+      localCacheService.invalidate(`datasection_table_${selectedTable.name}`);
+      localCacheService.invalidateService('reports');
+      
       loadTableData(); // Reload the table data after import
       setShowImportModal(false);
     } catch (error) {
@@ -259,6 +345,11 @@ const DataSection = () => {
     
     try {
       await tableServiceAdapter.insertData(selectedTable.name, formData);
+      
+      // Invalidate cache to ensure fresh data
+      localCacheService.invalidate(`datasection_table_${selectedTable.name}`);
+      localCacheService.invalidateService('reports');
+      
       loadTableData(); // Reload the table data after adding new entry
       setShowAddEntryModal(false);
     } catch (error) {
@@ -325,6 +416,12 @@ const DataSection = () => {
           row.id === id ? { ...row, [column]: value } : row
         )
       );
+
+      // Invalidate cache for this table to ensure fresh data on next load
+      localCacheService.invalidate(`datasection_table_${currentTableName}`);
+      
+      // Also invalidate reports cache if this might affect reports
+      localCacheService.invalidateService('reports');
 
       // Return the result from the server
       return result;

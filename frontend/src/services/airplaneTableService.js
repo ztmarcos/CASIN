@@ -5,22 +5,39 @@
 
 import tableServiceAdapter from './tableServiceAdapter.js';
 import airplaneModeService from './airplaneModeService.js';
+import localCacheService from './localCacheService.js';
 
 class AirplaneTableService {
   // Get tables - either from localStorage or Firebase
-  async getTables() {
+  async getTables(forceRefresh = false) {
     if (airplaneModeService.isEnabled()) {
       console.log('✈️ Getting tables from airplane mode cache...');
       const tables = airplaneModeService.getSavedTables();
       return tables;
     }
     
+    const cacheKey = 'datasection_tables';
+    
+    // Check cache first
+    if (!forceRefresh) {
+      const cachedTables = localCacheService.get(cacheKey);
+      if (cachedTables) {
+        console.log('💾 Using cached tables list');
+        return cachedTables;
+      }
+    }
+    
     // Normal mode - use table service adapter (team system enabled)
-    return await tableServiceAdapter.getTables();
+    const tables = await tableServiceAdapter.getTables();
+    
+    // Cache the result for 3 minutes
+    localCacheService.set(cacheKey, tables, {}, 3 * 60 * 1000);
+    
+    return tables;
   }
 
   // Get table data - either from localStorage or Firebase
-  async getData(tableName, filters = {}) {
+  async getData(tableName, filters = {}, forceRefresh = false) {
     if (airplaneModeService.isEnabled()) {
       console.log(`✈️ Getting ${tableName} data from airplane mode cache...`);
       
@@ -54,8 +71,25 @@ class AirplaneTableService {
       }
     }
     
+    const cacheKey = `datasection_table_${tableName}`;
+    const cacheParams = { filters };
+    
+    // Check cache first
+    if (!forceRefresh) {
+      const cachedData = localCacheService.get(cacheKey, cacheParams);
+      if (cachedData) {
+        console.log(`💾 Using cached data for table ${tableName}`);
+        return cachedData;
+      }
+    }
+    
     // Normal mode - use table service adapter (team system enabled)
-    return await tableServiceAdapter.getData(tableName, filters);
+    const result = await tableServiceAdapter.getData(tableName, filters);
+    
+    // Cache the result for 2 minutes (shorter TTL since table data changes more frequently)
+    localCacheService.set(cacheKey, result, cacheParams, 2 * 60 * 1000);
+    
+    return result;
   }
 
   // For other methods, just pass through to tableServiceAdapter
@@ -66,7 +100,12 @@ class AirplaneTableService {
       throw new Error('Cannot insert data in airplane mode. Disable airplane mode first.');
     }
     
-    return await tableServiceAdapter.insertData(tableName, data);
+    const result = await tableServiceAdapter.insertData(tableName, data);
+    
+    // Invalidate related caches after successful insert
+    this.invalidateTableCache(tableName);
+    
+    return result;
   }
 
   async updateData(tableName, id, data) {
@@ -75,7 +114,12 @@ class AirplaneTableService {
       throw new Error('Cannot update data in airplane mode. Disable airplane mode first.');
     }
     
-    return await tableServiceAdapter.updateData(tableName, id, data);
+    const result = await tableServiceAdapter.updateData(tableName, id, data);
+    
+    // Invalidate related caches after successful update
+    this.invalidateTableCache(tableName);
+    
+    return result;
   }
 
   async deleteData(tableName, id) {
@@ -84,7 +128,12 @@ class AirplaneTableService {
       throw new Error('Cannot delete data in airplane mode. Disable airplane mode first.');
     }
     
-    return await tableServiceAdapter.deleteRow(tableName, id);
+    const result = await tableServiceAdapter.deleteRow(tableName, id);
+    
+    // Invalidate related caches after successful delete
+    this.invalidateTableCache(tableName);
+    
+    return result;
   }
 
   async createTable(tableName, data) {
@@ -93,7 +142,13 @@ class AirplaneTableService {
       throw new Error('Cannot create table in airplane mode. Disable airplane mode first.');
     }
     
-    return await tableServiceAdapter.createTable(tableName, data);
+    const result = await tableServiceAdapter.createTable(tableName, data);
+    
+    // Invalidate tables list and table cache after creating new table
+    localCacheService.invalidate('datasection_tables');
+    this.invalidateTableCache(tableName);
+    
+    return result;
   }
 
   // Pass through formatting methods
@@ -114,6 +169,24 @@ class AirplaneTableService {
   getCurrentTableTitle() {
     // Return empty string if not available
     return '';
+  }
+
+  // Helper method to invalidate all cache related to a table
+  invalidateTableCache(tableName) {
+    // Invalidate the table data cache
+    localCacheService.invalidate(`datasection_table_${tableName}`);
+    
+    // Invalidate reports cache since table changes might affect reports
+    localCacheService.invalidateService('reports');
+    
+    console.log(`💾 Invalidated cache for table: ${tableName}`);
+  }
+
+  // Method to invalidate all DataSection caches
+  invalidateAllCache() {
+    localCacheService.invalidateService('datasection');
+    localCacheService.invalidateService('reports');
+    console.log('💾 Invalidated all DataSection and Reports cache');
   }
 }
 

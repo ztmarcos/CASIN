@@ -1,6 +1,7 @@
 import firebaseService from './firebaseService';
 import firebaseTableService from './firebaseTableService.js';
 import { API_URL } from '../config/api.js';
+import localCacheService from './localCacheService.js';
 
 class FirebaseReportsService {
   constructor() {
@@ -41,7 +42,18 @@ class FirebaseReportsService {
    * Get all policies from all insurance collections
    * @returns {Promise<Array>} Array of all policies
    */
-  async getAllPolicies() {
+  async getAllPolicies(forceRefresh = false) {
+    const cacheKey = 'reports_all_policies';
+    
+    // Check cache first
+    if (!forceRefresh) {
+      const cachedPolicies = localCacheService.get(cacheKey);
+      if (cachedPolicies) {
+        console.log('💾 Using cached policies data');
+        return cachedPolicies;
+      }
+    }
+
     try {
       console.log('📊 Getting all policies from Firebase...');
       
@@ -101,6 +113,10 @@ class FirebaseReportsService {
       }
       
       console.log(`✅ Found ${allPolicies.length} total policies from Firebase`);
+      
+      // Cache the result for 3 minutes
+      localCacheService.set(cacheKey, allPolicies, {}, 3 * 60 * 1000);
+      
       return allPolicies;
       
     } catch (error) {
@@ -145,11 +161,22 @@ class FirebaseReportsService {
    * Get matrix data for analysis (unique clients, companies, ramos, etc.)
    * @returns {Promise<Object>} Matrix data object
    */
-  async getMatrixData() {
+  async getMatrixData(forceRefresh = false) {
+    const cacheKey = 'reports_matrix_data';
+    
+    // Check cache first
+    if (!forceRefresh) {
+      const cachedMatrix = localCacheService.get(cacheKey);
+      if (cachedMatrix) {
+        console.log('💾 Using cached matrix data');
+        return cachedMatrix;
+      }
+    }
+
     try {
       console.log('📊 Getting matrix data from Firebase...');
       
-      const allPolicies = await this.getAllPolicies();
+      const allPolicies = await this.getAllPolicies(forceRefresh);
       
       const uniqueClients = [...new Set(allPolicies.map(p => p.nombre_contratante).filter(Boolean))];
       const uniqueCompanies = [...new Set(allPolicies.map(p => p.aseguradora).filter(Boolean))];
@@ -174,12 +201,17 @@ class FirebaseReportsService {
       
       console.log(`✅ Matrix data: ${uniqueClients.length} clients, ${uniqueCompanies.length} companies, ${uniqueRamos.length} ramos`);
       
-      return {
+      const matrixData = {
         uniqueClients,
         uniqueCompanies,
         uniqueRamos,
         clientMatrix
       };
+      
+      // Cache the result for 3 minutes
+      localCacheService.set(cacheKey, matrixData, {}, 3 * 60 * 1000);
+      
+      return matrixData;
       
     } catch (error) {
       console.error('❌ Error getting matrix data from Firebase:', error);
@@ -196,7 +228,18 @@ class FirebaseReportsService {
    * Get policy payment statuses from all collections
    * @returns {Promise<Object>} Policy payment statuses object
    */
-  async getPolicyStatuses() {
+  async getPolicyStatuses(forceRefresh = false) {
+    const cacheKey = 'reports_policy_statuses';
+    
+    // Check cache first (shorter TTL for statuses as they change more frequently)
+    if (!forceRefresh) {
+      const cachedStatuses = localCacheService.get(cacheKey);
+      if (cachedStatuses) {
+        console.log('💾 Using cached policy statuses');
+        return cachedStatuses;
+      }
+    }
+
     try {
       console.log('📊 Getting policy payment statuses from Firebase...');
       
@@ -227,6 +270,10 @@ class FirebaseReportsService {
       }
       
       console.log(`✅ Payment statuses loaded: ${Object.keys(statuses).length} policies`);
+      
+      // Cache the result for 1 minute (shorter TTL since statuses change frequently)
+      localCacheService.set(cacheKey, statuses, {}, 1 * 60 * 1000);
+      
       return statuses;
       
     } catch (error) {
@@ -263,6 +310,11 @@ class FirebaseReportsService {
 
       const result = await response.json();
       console.log('✅ Payment status updated successfully:', result);
+      
+      // Invalidate related caches when status is updated
+      localCacheService.invalidate('reports_policy_statuses');
+      localCacheService.invalidate('reports_all_policies');
+      
       return true;
       
     } catch (error) {
@@ -480,6 +532,21 @@ class FirebaseReportsService {
         lastUpdated: new Date().toISOString()
       };
     }
+  }
+
+  /**
+   * Invalidate all reports cache
+   */
+  invalidateCache() {
+    console.log('💾 Invalidating all reports cache...');
+    localCacheService.invalidateService('reports');
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats() {
+    return localCacheService.getStats();
   }
 }
 

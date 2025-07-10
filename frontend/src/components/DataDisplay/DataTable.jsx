@@ -103,21 +103,64 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return;
     }
 
-    // Set columns first - ONLY if they actually changed
-    const newColumns = Object.keys(data[0]);
-    console.log('🔧 Checking if table columns changed:', { 
-      newColumns, 
-      currentTableColumns: tableColumns,
-      hasChanged: JSON.stringify(newColumns) !== JSON.stringify(tableColumns)
-    });
+    // Get complete table structure including custom columns from API
+    const updateTableColumns = async () => {
+      try {
+        // First, get columns from data
+        const dataColumns = Object.keys(data[0]);
+        
+        // Then try to get complete structure from API if we have a tableName
+        if (tableName) {
+          console.log('🔧 Getting complete table structure for:', tableName);
+          const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3001/api' 
+            : '/api';
+          
+          const response = await fetch(`${API_URL}/data/tables/${tableName}/structure`);
+          if (response.ok) {
+            const structure = await response.json();
+            if (structure.columns) {
+              const allColumns = structure.columns.map(col => col.name);
+              console.log('🔧 Got complete column structure:', allColumns);
+              console.log('🔧 Data columns:', dataColumns);
+              
+              // Check if columns actually changed
+              if (JSON.stringify(allColumns) !== JSON.stringify(tableColumns)) {
+                console.log('🔧 Setting NEW table columns from API:', allColumns);
+                setTableColumns(allColumns);
+              } else {
+                console.log('🔧 Table columns unchanged, keeping current structure');
+              }
+              return;
+            }
+          }
+        }
+        
+        // Fallback to data columns if API fails
+        console.log('🔧 Checking if data columns changed:', { 
+          dataColumns, 
+          currentTableColumns: tableColumns,
+          hasChanged: JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)
+        });
+        
+        // Only update columns if they actually changed
+        if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
+          console.log('🔧 Setting NEW table columns from data:', dataColumns);
+          setTableColumns(dataColumns);
+        } else {
+          console.log('🔧 Table columns unchanged, keeping current order');
+        }
+      } catch (error) {
+        console.error('❌ Error getting table structure:', error);
+        // Fallback to data columns
+        const dataColumns = Object.keys(data[0]);
+        if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
+          setTableColumns(dataColumns);
+        }
+      }
+    };
     
-    // Only update columns if they actually changed
-    if (JSON.stringify(newColumns) !== JSON.stringify(tableColumns)) {
-      console.log('🔧 Setting NEW table columns:', newColumns);
-      setTableColumns(newColumns);
-    } else {
-      console.log('🔧 Table columns unchanged, keeping current order');
-    }
+    updateTableColumns();
     
     // Then set the data immediately
     setSortedData(data);
@@ -171,7 +214,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
     
     previousDataRef.current = data;
-  }, [data, forceHighlightNext]);
+  }, [data, forceHighlightNext, tableName]);
 
   useEffect(() => {
     if (tableName) {
@@ -429,15 +472,48 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       }
     };
 
+    // Listen for table structure updates (from ColumnManager)
+    const handleTableStructureUpdate = (event) => {
+      console.log('🔧 DataTable: Table structure updated event received:', event.detail);
+      if (event.detail?.tableName === tableName) {
+        console.log('🔧 DataTable: Refreshing column structure for current table');
+        // Force re-fetch of table structure
+        if (data && data.length > 0) {
+          const updateTableColumns = async () => {
+            try {
+              const API_URL = window.location.hostname === 'localhost' 
+                ? 'http://localhost:3001/api' 
+                : '/api';
+              
+              const response = await fetch(`${API_URL}/data/tables/${tableName}/structure`);
+              if (response.ok) {
+                const structure = await response.json();
+                if (structure.columns) {
+                  const allColumns = structure.columns.map(col => col.name);
+                  console.log('🔧 DataTable: Updated column structure:', allColumns);
+                  setTableColumns(allColumns);
+                }
+              }
+            } catch (error) {
+              console.error('❌ DataTable: Error updating table structure:', error);
+            }
+          };
+          updateTableColumns();
+        }
+      }
+    };
+
     // Add event listeners
     window.addEventListener('dataTableUpdate', handleDataUpdate);
     window.addEventListener('policyDataUpdated', handlePolicyDataUpdate);
     window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('tableStructureUpdated', handleTableStructureUpdate);
 
     return () => {
       window.removeEventListener('dataTableUpdate', handleDataUpdate);
       window.removeEventListener('policyDataUpdated', handlePolicyDataUpdate);
       window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('tableStructureUpdated', handleTableStructureUpdate);
     };
   }, [tableName]);
 

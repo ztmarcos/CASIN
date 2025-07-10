@@ -15,6 +15,54 @@ const MONTHS = [
 
 const REPORT_TYPES = ['Vencimientos', 'Pagos Parciales', 'Matriz de Productos'];
 
+// Utility function to get the total amount from a policy, handling multiple field variations
+const getPolicyTotalAmount = (policy) => {
+  // Try different field variations for total amount (prioritized order)
+  const totalFields = [
+    'pago_total_o_prima_total', // Most common field in Firebase data
+    'pago_total',
+    'prima_total', 
+    'importe_total',
+    'importe_total_a_pagar',
+    'prima',
+    'total',
+    'monto_total'
+  ];
+
+  // Debug: Log available payment fields for first policy only
+  if (!getPolicyTotalAmount.debugLogged && policy.numero_poliza) {
+    console.log('🔍 Policy payment fields available:', {
+      numero_poliza: policy.numero_poliza,
+      availableFields: totalFields.filter(field => policy[field] !== undefined),
+      fieldValues: totalFields.reduce((acc, field) => {
+        if (policy[field] !== undefined) {
+          acc[field] = policy[field];
+        }
+        return acc;
+      }, {})
+    });
+    getPolicyTotalAmount.debugLogged = true;
+  }
+
+  for (const field of totalFields) {
+    if (policy[field] !== undefined && policy[field] !== null && policy[field] !== 0 && policy[field] !== '') {
+      const value = policy[field];
+      // Handle string values that might contain commas, dollar signs, etc.
+      if (typeof value === 'string') {
+        const cleanedValue = value.replace(/[\s,$"]/g, ''); // Remove spaces, commas, dollar signs, and quotes
+        const numericValue = parseFloat(cleanedValue);
+        if (!isNaN(numericValue) && numericValue > 0) {
+          return numericValue;
+        }
+      } else if (typeof value === 'number' && value > 0) {
+        return value;
+      }
+    }
+  }
+  
+  return 0;
+};
+
 export default function Reports() {
   const [viewMode, setViewMode] = useState('table');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -81,19 +129,23 @@ export default function Reports() {
   };
 
   // Load all policies and related data from Firebase
-  const loadPolicies = async () => {
+  const loadPolicies = async (forceRefresh = false) => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('📊 Loading policies from Firebase...');
+      if (forceRefresh) {
+        console.log('🔄 Force refreshing policies from Firebase...');
+      } else {
+        console.log('📊 Loading policies (checking cache first)...');
+      }
       
-      // Get all policies from Firebase
-      const allPolicies = await firebaseReportsService.getAllPolicies();
-      console.log(`✅ Loaded ${allPolicies.length} policies from Firebase`);
+      // Get all policies from Firebase (with cache support)
+      const allPolicies = await firebaseReportsService.getAllPolicies(forceRefresh);
+      console.log(`✅ Loaded ${allPolicies.length} policies ${forceRefresh ? 'from Firebase' : '(from cache or Firebase)'}`);
       
-      // Get matrix data for analysis
-      const matrixData = await firebaseReportsService.getMatrixData();
+      // Get matrix data for analysis (with cache support)
+      const matrixData = await firebaseReportsService.getMatrixData(forceRefresh);
       
       // Set state
       setPolicies(allPolicies);
@@ -102,8 +154,8 @@ export default function Reports() {
       setUniqueRamos(matrixData.uniqueRamos);
       setClientMatrix(matrixData.clientMatrix);
       
-      // Load policy statuses
-      await loadPolicyStatuses();
+      // Load policy statuses (with cache support)
+      await loadPolicyStatuses(forceRefresh);
       
       console.log('✅ Reports data loaded successfully from Firebase');
       
@@ -117,15 +169,19 @@ export default function Reports() {
   };
 
   // Load policy statuses from Firebase
-  const loadPolicyStatuses = async () => {
+  const loadPolicyStatuses = async (forceRefresh = false) => {
     try {
       setIsStatusLoading(true);
-      console.log('📊 Loading policy statuses from Firebase...');
+      if (forceRefresh) {
+        console.log('🔄 Force refreshing policy statuses from Firebase...');
+      } else {
+        console.log('📊 Loading policy statuses (checking cache first)...');
+      }
       
-      const statuses = await firebaseReportsService.getPolicyStatuses();
+      const statuses = await firebaseReportsService.getPolicyStatuses(forceRefresh);
       setPolicyStatuses(statuses);
       
-      console.log('✅ Policy statuses loaded from Firebase');
+      console.log(`✅ Policy statuses loaded ${forceRefresh ? 'from Firebase' : '(from cache or Firebase)'}`);
     } catch (err) {
       console.error('❌ Error loading policy statuses:', err);
       toast.error('Error al cargar estados de pólizas');
@@ -267,7 +323,7 @@ export default function Reports() {
         });
       } else if (selectedType === 'Pagos Parciales') {
         filtered = filtered.filter(policy => {
-          const nextPaymentDate = policy.fecha_proximo_pago;
+          const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
           if (!nextPaymentDate) return false;
           return nextPaymentDate.getMonth() === selectedMonth;
         });
@@ -389,7 +445,7 @@ export default function Reports() {
             return false;
           }
 
-          const nextPaymentDate = policy.fecha_proximo_pago;
+          const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
           if (!nextPaymentDate || isNaN(nextPaymentDate.getTime())) {
             console.log('Invalid fecha_proximo_pago for policy:', policy.numero_poliza, policy.fecha_proximo_pago);
             return false;
@@ -791,6 +847,7 @@ export default function Reports() {
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
                     <th>Prima Total</th>
+                    {selectedType === 'Pagos Parciales' && <th>Pago Parcial</th>}
                     <th>Forma de Pago</th>
                     <th>Próximo Pago</th>
                     <th>Status</th>
@@ -806,7 +863,10 @@ export default function Reports() {
                       <td>{policy.aseguradora}</td>
                       <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
                       <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
-                      <td>${policy.prima_total?.toLocaleString() || '0'}</td>
+                      <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
+                      {selectedType === 'Pagos Parciales' && (
+                        <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
+                      )}
                       <td>{policy.forma_pago}</td>
                       <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                       <td>
@@ -854,7 +914,7 @@ export default function Reports() {
                       {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
                         <>
                           <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
-                          <p><span>Prima Total:</span> ${policy.prima_total?.toLocaleString() || '0'}</p>
+                          <p><span>Prima Total:</span> ${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</p>
                           <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
                         </>
                       ) : (
@@ -871,11 +931,11 @@ export default function Reports() {
                             <p><span>Derecho de Póliza:</span> ${policy.derecho_poliza?.toLocaleString() || '0'}</p>
                             <p><span>Recargo por Pago Fraccionado:</span> ${policy.recargo_pago_fraccionado?.toLocaleString() || '0'}</p>
                             <p><span>IVA:</span> ${policy.iva?.toLocaleString() || '0'}</p>
-                            <p className="card-amount"><span>Prima Total:</span> ${policy.pago_total?.toLocaleString() || '0'}</p>
+                            <p className="card-amount"><span>Prima Total:</span> ${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</p>
                             {policy.pagos_fraccionados && (
                               <p><span>Pagos Fraccionados:</span> {policy.pagos_fraccionados}</p>
                             )}
-                            {policy.pago_parcial && (
+                            {selectedType === 'Pagos Parciales' && policy.pago_parcial && (
                               <p><span>Pago Parcial:</span> ${policy.pago_parcial?.toLocaleString()}</p>
                             )}
                             <p><span>Próximo Pago:</span> {policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago) : 'N/A'}</p>
