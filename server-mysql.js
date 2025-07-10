@@ -361,54 +361,103 @@ async function getTableStructure(tableName) {
         ]
       };
       
-      // Return predefined structure if available
+      // Get base structure and apply metadata modifications
+      let baseStructure = [];
+      
       if (firebaseTableStructures[tableName]) {
         console.log(`✅ Firebase structure found for ${tableName}: ${firebaseTableStructures[tableName].length} columns`);
-        return firebaseTableStructures[tableName];
+        baseStructure = [...firebaseTableStructures[tableName]];
+      } else {
+        // Try to get from a sample document if not in predefined structures
+        try {
+          const collectionRef = db.collection(tableName);
+          const snapshot = await collectionRef.limit(1).get();
+          
+          if (!snapshot.empty) {
+            const sampleDoc = snapshot.docs[0].data();
+            baseStructure = [
+              { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null }
+            ];
+            
+            Object.keys(sampleDoc).forEach(field => {
+              const value = sampleDoc[field];
+              let fieldType = 'varchar(255)';
+              
+              if (typeof value === 'number') {
+                fieldType = Number.isInteger(value) ? 'int' : 'decimal(10,2)';
+              } else if (value instanceof Date || (typeof value === 'object' && value && value.toDate)) {
+                fieldType = 'timestamp';
+              } else if (typeof value === 'boolean') {
+                fieldType = 'boolean';
+              }
+              
+              baseStructure.push({
+                name: field,
+                type: fieldType,
+                nullable: true,
+                key: '',
+                default: null
+              });
+            });
+          }
+        } catch (dynamicError) {
+          console.warn(`⚠️ Could not get dynamic Firebase structure for ${tableName}:`, dynamicError.message);
+          return [];
+        }
       }
       
-      // If not in predefined structures, try to get from a sample document
+      // Apply Firebase metadata modifications
       try {
-        const collectionRef = db.collection(tableName);
-        const snapshot = await collectionRef.limit(1).get();
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
         
-        if (!snapshot.empty) {
-          const sampleDoc = snapshot.docs[0].data();
-          const columns = [
-            { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null }
-          ];
-          
-          Object.keys(sampleDoc).forEach(field => {
-            const value = sampleDoc[field];
-            let fieldType = 'varchar(255)';
-            
-            if (typeof value === 'number') {
-              fieldType = Number.isInteger(value) ? 'int' : 'decimal(10,2)';
-            } else if (value instanceof Date || (typeof value === 'object' && value && value.toDate)) {
-              fieldType = 'timestamp';
-            } else if (typeof value === 'boolean') {
-              fieldType = 'boolean';
-            }
-            
-            columns.push({
-              name: field,
-              type: fieldType,
-              nullable: true,
-              key: '',
-              default: null
-            });
+        if (metadataDoc.exists) {
+          const metadata = metadataDoc.data();
+          console.log(`🔧 Applying metadata modifications for ${tableName}:`, {
+            hiddenColumns: metadata.hiddenColumns?.length || 0,
+            columnMappings: Object.keys(metadata.columnMappings || {}).length,
+            customColumns: metadata.customColumns?.length || 0
           });
           
-          console.log(`✅ Firebase dynamic structure for ${tableName}: ${columns.length} columns`);
-          return columns;
+          // Filter out hidden columns
+          if (metadata.hiddenColumns && metadata.hiddenColumns.length > 0) {
+            baseStructure = baseStructure.filter(col => !metadata.hiddenColumns.includes(col.name));
+            console.log(`🔧 Filtered out ${metadata.hiddenColumns.length} hidden columns`);
+          }
+          
+          // Apply column name mappings
+          if (metadata.columnMappings) {
+            baseStructure = baseStructure.map(col => {
+              const mappedName = metadata.columnMappings[col.name];
+              if (mappedName) {
+                console.log(`🔧 Mapping column ${col.name} -> ${mappedName}`);
+                return { ...col, name: mappedName };
+              }
+              return col;
+            });
+          }
+          
+          // Add custom columns
+          if (metadata.customColumns && metadata.customColumns.length > 0) {
+            metadata.customColumns.forEach(customCol => {
+              baseStructure.push({
+                name: customCol.name,
+                type: customCol.type || 'varchar(255)',
+                nullable: true,
+                key: '',
+                default: null,
+                isCustom: true
+              });
+            });
+            console.log(`🔧 Added ${metadata.customColumns.length} custom columns`);
+          }
         }
-      } catch (firebaseError) {
-        console.warn(`⚠️ Could not get Firebase structure for ${tableName}:`, firebaseError.message);
+      } catch (metadataError) {
+        console.warn(`⚠️ Could not apply metadata for ${tableName}:`, metadataError.message);
       }
       
-      // Return empty array if Firebase collection doesn't exist
-      console.log(`⚠️ No Firebase structure found for ${tableName}, returning empty array`);
-      return [];
+             console.log(`✅ Final Firebase structure for ${tableName}: ${baseStructure.length} columns`);
+       return baseStructure;
     }
     
     // Fallback to MySQL if Firebase not available
@@ -1139,43 +1188,94 @@ app.put('/api/data/:tableName/:id', async (req, res) => {
       return res.status(400).json({ error: 'Valid data object is required' });
     }
     
-    console.log(`📝 Updating Firebase document ${id} in collection ${tableName}`);
-    
-    // Use Firebase Admin SDK for updates
-    const docRef = admin.firestore().collection(tableName).doc(id);
-    
-    // Check if document exists
-    const docSnap = await docRef.get();
-    if (!docSnap.exists) {
-      return res.status(404).json({ error: `Document with ID ${id} not found in ${tableName}` });
-    }
-    
-    // Update the document with timestamp
-    const updateData = {
-      ...data,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-    
-    await docRef.update(updateData);
-    
-    console.log(`✅ Successfully updated Firebase document ${id} in ${tableName}`);
-    
-    // Invalidate cache for this table
-    const cacheKeysToDelete = [];
-    for (const key of dataCache.keys()) {
-      if (key.startsWith(`${tableName}_`)) {
-        cacheKeysToDelete.push(key);
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Updating Firebase document ${id} in collection ${tableName}`);
+      
+      try {
+        // Use the existing Firebase Admin SDK connection
+        const docRef = db.collection(tableName).doc(id);
+        
+        // Check if document exists
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) {
+          return res.status(404).json({ error: `Document with ID ${id} not found in ${tableName}` });
+        }
+        
+        // Update the document with timestamp using Admin SDK FieldValue
+        const updateData = {
+          ...data,
+          updatedAt: require('firebase-admin').firestore.FieldValue.serverTimestamp()
+        };
+        
+        await docRef.update(updateData);
+        
+        console.log(`✅ Successfully updated Firebase document ${id} in ${tableName}`);
+        
+        // Invalidate cache for this table
+        const cacheKeysToDelete = [];
+        for (const key of dataCache.keys()) {
+          if (key.startsWith(`${tableName}_`)) {
+            cacheKeysToDelete.push(key);
+          }
+        }
+        cacheKeysToDelete.forEach(key => dataCache.delete(key));
+        console.log(`🗑️ Invalidated ${cacheKeysToDelete.length} cache entries for ${tableName} after UPDATE`);
+        
+        res.json({
+          success: true,
+          message: `Firebase document ${id} updated in ${tableName}`,
+          updatedId: id,
+          data: updateData
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error updating document in Firebase:', firebaseError);
+        return res.status(500).json({ 
+          error: 'Failed to update document in Firebase',
+          details: firebaseError.message
+        });
       }
     }
-    cacheKeysToDelete.forEach(key => dataCache.delete(key));
-    console.log(`🗑️ Invalidated ${cacheKeysToDelete.length} cache entries for ${tableName} after UPDATE`);
     
-    res.json({
-      success: true,
-      message: `Firebase document ${id} updated in ${tableName}`,
-      updatedId: id,
-      data: updateData
-    });
+    // Fallback: MySQL update (for development)
+    console.log(`📁 MySQL update for table: ${tableName}, id: ${id}`);
+    
+    try {
+      // Build the UPDATE SQL query dynamically
+      const columns = Object.keys(data);
+      const values = Object.values(data);
+      
+      if (columns.length === 0) {
+        return res.status(400).json({ error: 'No data provided for update' });
+      }
+      
+      const setClause = columns.map(col => `\`${col}\` = ?`).join(', ');
+      const query = `UPDATE \`${tableName}\` SET ${setClause} WHERE id = ?`;
+      
+      const result = await executeQuery(query, [...values, id]);
+      
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: `Record with ID ${id} not found in ${tableName}` });
+      }
+      
+      console.log(`✅ Successfully updated MySQL record ${id} in ${tableName}`);
+      
+      res.json({
+        success: true,
+        message: `MySQL record ${id} updated in ${tableName}`,
+        updatedId: id,
+        storage: 'mysql'
+      });
+      
+         } catch (mysqlError) {
+       console.error('❌ Error updating record in MySQL:', mysqlError);
+       res.status(500).json({ 
+         error: 'Failed to update record in MySQL',
+         details: mysqlError.message
+       });
+     }
   } catch (error) {
     console.error(`Error updating record in ${req.params.tableName}:`, error);
     res.status(500).json({ error: error.message });
@@ -1353,6 +1453,384 @@ app.get('/api/tables/:tableName/columns/order', async (req, res) => {
     
   } catch (error) {
     console.error(`Error getting column order for ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Delete column from a table
+app.delete('/api/tables/:tableName/columns/:columnName', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    
+    console.log(`🗑️ Deleting column ${columnName} from table ${tableName}`);
+    
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Firebase column deletion for table: ${tableName}, column: ${columnName}`);
+      
+      try {
+        // For Firebase, we can't actually delete columns from documents
+        // Instead, we'll store metadata about hidden columns
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
+        
+        let metadata = {};
+        if (metadataDoc.exists) {
+          metadata = metadataDoc.data();
+        }
+        
+        // Add column to hidden list
+        const hiddenColumns = metadata.hiddenColumns || [];
+        if (!hiddenColumns.includes(columnName)) {
+          hiddenColumns.push(columnName);
+        }
+        
+        await metadataRef.set({
+          ...metadata,
+          hiddenColumns: hiddenColumns,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ Column ${columnName} marked as hidden in Firebase metadata`);
+        
+        res.json({
+          success: true,
+          message: `Column ${columnName} deleted from table ${tableName}`,
+          storage: 'firebase'
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error deleting column in Firebase:', firebaseError);
+        return res.status(500).json({ 
+          error: 'Failed to delete column in Firebase',
+          details: firebaseError.message
+        });
+      }
+    }
+    
+    // Fallback: MySQL column deletion (for development)
+    console.log(`📁 MySQL column deletion for table: ${tableName}, column: ${columnName}`);
+    
+    try {
+      await executeQuery(`ALTER TABLE \`${tableName}\` DROP COLUMN \`${columnName}\``);
+      console.log(`✅ Column ${columnName} deleted from MySQL table ${tableName}`);
+      
+      res.json({
+        success: true,
+        message: `Column ${columnName} deleted from table ${tableName}`,
+        storage: 'mysql'
+      });
+      
+    } catch (mysqlError) {
+      console.error('❌ Error deleting column in MySQL:', mysqlError);
+      res.status(500).json({ 
+        error: 'Failed to delete column in MySQL',
+        details: mysqlError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error(`Error deleting column ${req.params.columnName} from ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Rename column in a table
+app.patch('/api/data/tables/:tableName/columns/:columnName/rename', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    const { newName } = req.body;
+    
+    if (!newName || !newName.trim()) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid newName' 
+      });
+    }
+    
+    console.log(`✏️ Renaming column ${columnName} to ${newName} in table ${tableName}`);
+    
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Firebase column rename for table: ${tableName}`);
+      
+      try {
+        // For Firebase, store column mappings in metadata
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
+        
+        let metadata = {};
+        if (metadataDoc.exists) {
+          metadata = metadataDoc.data();
+        }
+        
+        // Add to column mappings
+        const columnMappings = metadata.columnMappings || {};
+        columnMappings[columnName] = newName.trim();
+        
+        await metadataRef.set({
+          ...metadata,
+          columnMappings: columnMappings,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ Column mapping ${columnName} -> ${newName} saved in Firebase metadata`);
+        
+        res.json({
+          success: true,
+          message: `Column ${columnName} renamed to ${newName} in table ${tableName}`,
+          storage: 'firebase'
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error renaming column in Firebase:', firebaseError);
+        return res.status(500).json({ 
+          error: 'Failed to rename column in Firebase',
+          details: firebaseError.message
+        });
+      }
+    }
+    
+    // Fallback: MySQL column rename (for development)
+    console.log(`📁 MySQL column rename for table: ${tableName}`);
+    
+    try {
+      // Get current column definition
+      const columns = await executeQuery(`DESCRIBE \`${tableName}\``);
+      const currentColumn = columns.find(col => col.Field === columnName);
+      
+      if (!currentColumn) {
+        return res.status(404).json({ 
+          error: `Column ${columnName} not found in table ${tableName}` 
+        });
+      }
+      
+      // Rename column in MySQL
+      await executeQuery(
+        `ALTER TABLE \`${tableName}\` CHANGE \`${columnName}\` \`${newName.trim()}\` ${currentColumn.Type}`
+      );
+      
+      console.log(`✅ Column ${columnName} renamed to ${newName} in MySQL table ${tableName}`);
+      
+      res.json({
+        success: true,
+        message: `Column ${columnName} renamed to ${newName} in table ${tableName}`,
+        storage: 'mysql'
+      });
+      
+    } catch (mysqlError) {
+      console.error('❌ Error renaming column in MySQL:', mysqlError);
+      res.status(500).json({ 
+        error: 'Failed to rename column in MySQL',
+        details: mysqlError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error(`Error renaming column ${req.params.columnName} in ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Add column to a table
+app.post('/api/tables/:tableName/columns/add', async (req, res) => {
+  try {
+    const { tableName } = req.params;
+    const { name, type } = req.body;
+    
+    if (!name || !name.trim()) {
+      return res.status(400).json({ 
+        error: 'Missing or invalid column name' 
+      });
+    }
+    
+    const columnType = type || 'TEXT';
+    console.log(`➕ Adding column ${name} (${columnType}) to table ${tableName}`);
+    
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Firebase column addition for table: ${tableName}`);
+      
+      try {
+        // For Firebase, store new column definition in metadata
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
+        
+        let metadata = {};
+        if (metadataDoc.exists) {
+          metadata = metadataDoc.data();
+        }
+        
+        // Add to custom columns
+        const customColumns = metadata.customColumns || [];
+        const newColumn = {
+          name: name.trim(),
+          type: columnType,
+          addedAt: new Date().toISOString()
+        };
+        
+        // Check if column already exists
+        if (customColumns.some(col => col.name === name.trim())) {
+          return res.status(400).json({ 
+            error: `Column ${name} already exists in table ${tableName}` 
+          });
+        }
+        
+        customColumns.push(newColumn);
+        
+        await metadataRef.set({
+          ...metadata,
+          customColumns: customColumns,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ Column ${name} added to Firebase metadata`);
+        
+        res.json({
+          success: true,
+          message: `Column ${name} added to table ${tableName}`,
+          column: newColumn,
+          storage: 'firebase'
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error adding column in Firebase:', firebaseError);
+        return res.status(500).json({ 
+          error: 'Failed to add column in Firebase',
+          details: firebaseError.message
+        });
+      }
+    }
+    
+    // Fallback: MySQL column addition (for development)
+    console.log(`📁 MySQL column addition for table: ${tableName}`);
+    
+    try {
+      // Map frontend types to MySQL types
+      const mysqlType = {
+        'TEXT': 'VARCHAR(255)',
+        'INT': 'INT',
+        'INTEGER': 'INT',
+        'DECIMAL': 'DECIMAL(10,2)',
+        'DATE': 'DATE',
+        'BOOLEAN': 'BOOLEAN'
+      }[columnType.toUpperCase()] || 'VARCHAR(255)';
+      
+      await executeQuery(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${name.trim()}\` ${mysqlType}`);
+      console.log(`✅ Column ${name} added to MySQL table ${tableName}`);
+      
+      res.json({
+        success: true,
+        message: `Column ${name} added to table ${tableName}`,
+        storage: 'mysql'
+      });
+      
+    } catch (mysqlError) {
+      console.error('❌ Error adding column in MySQL:', mysqlError);
+      res.status(500).json({ 
+        error: 'Failed to add column in MySQL',
+        details: mysqlError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error(`Error adding column to ${req.params.tableName}:`, error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Set column tag
+app.put('/api/tables/:tableName/columns/:columnName/tag', async (req, res) => {
+  try {
+    const { tableName, columnName } = req.params;
+    const { tag } = req.body;
+    
+    console.log(`🏷️ Setting tag for column ${columnName} in table ${tableName}: ${tag}`);
+    
+    // Use Firebase if available (production), fallback to file system (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Firebase column tag for table: ${tableName}`);
+      
+      try {
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
+        
+        let metadata = {};
+        if (metadataDoc.exists) {
+          metadata = metadataDoc.data();
+        }
+        
+        // Add to column tags
+        const columnTags = metadata.columnTags || {};
+        columnTags[columnName] = tag;
+        
+        await metadataRef.set({
+          ...metadata,
+          columnTags: columnTags,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ Column tag saved in Firebase metadata`);
+        
+        res.json({
+          success: true,
+          message: `Tag set for column ${columnName} in table ${tableName}`,
+          storage: 'firebase'
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error setting column tag in Firebase:', firebaseError);
+        return res.status(500).json({ 
+          error: 'Failed to set column tag in Firebase',
+          details: firebaseError.message
+        });
+      }
+    }
+    
+    // Fallback: Store in JSON file (for development)
+    console.log(`📁 File system column tag for table: ${tableName}`);
+    
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const tagsFile = path.join(__dirname, 'column-tags.json');
+      
+      let tags = {};
+      try {
+        if (fs.existsSync(tagsFile)) {
+          tags = JSON.parse(fs.readFileSync(tagsFile, 'utf8'));
+        }
+      } catch (error) {
+        console.warn('Could not read existing column tags:', error.message);
+      }
+      
+      if (!tags[tableName]) {
+        tags[tableName] = {};
+      }
+      tags[tableName][columnName] = tag;
+      
+      fs.writeFileSync(tagsFile, JSON.stringify(tags, null, 2));
+      console.log(`✅ Column tag saved to file system`);
+      
+      res.json({
+        success: true,
+        message: `Tag set for column ${columnName} in table ${tableName}`,
+        storage: 'filesystem'
+      });
+      
+    } catch (fileError) {
+      console.error('❌ Error setting column tag in file system:', fileError);
+      res.status(500).json({ 
+        error: 'Failed to set column tag',
+        details: fileError.message
+      });
+    }
+    
+  } catch (error) {
+    console.error(`Error setting tag for column ${req.params.columnName} in ${req.params.tableName}:`, error);
     res.status(500).json({ error: error.message });
   }
 });
