@@ -417,10 +417,21 @@ const DataSection = () => {
       // SECOND: Update data on server
       const result = await tableServiceAdapter.updateData(currentTableName, id, column, value);
       
-      // THIRD: Wait for Firebase sync then reload fresh data
-      console.log('🔄 Waiting for Firebase sync then reloading data...');
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay for Firebase sync
-      await loadTableData(currentTableName, true); // Force fresh data load
+      // THIRD: Force immediate UI update then reload from server
+      console.log('🔄 Force updating UI state immediately...');
+      
+      // Update local state immediately for instant UI feedback
+      setTableData(prevData => 
+        prevData.map(row => 
+          row.id === id ? { ...row, [column]: value } : row
+        )
+      );
+      
+      // Then reload fresh data from server (with small delay for Firebase sync)
+      setTimeout(async () => {
+        console.log('🔄 Reloading fresh data from server...');
+        await loadTableData(currentTableName, true);
+      }, 500); // 500ms delay
       
       // Return the result from the server
       return result;
