@@ -417,8 +417,9 @@ const DataSection = () => {
       // SECOND: Update data on server
       const result = await tableServiceAdapter.updateData(currentTableName, id, column, value);
       
-      // THIRD: Force immediate reload of fresh data from server
-      console.log('🔄 Forcing immediate data reload after cell update');
+      // THIRD: Wait for Firebase sync then reload fresh data
+      console.log('🔄 Waiting for Firebase sync then reloading data...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay for Firebase sync
       await loadTableData(currentTableName, true); // Force fresh data load
       
       // Return the result from the server
