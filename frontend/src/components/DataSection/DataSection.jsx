@@ -39,7 +39,7 @@ const DataSection = () => {
   // Column order state
   const [columnOrder, setColumnOrder] = useState([]);
 
-  const loadTableData = useCallback(async (tableName = null) => {
+  const loadTableData = useCallback(async (tableName = null, forceRefresh = false) => {
     const targetTableName = tableName || selectedTable?.name;
     if (!targetTableName) return;
     
@@ -55,7 +55,8 @@ const DataSection = () => {
         console.log('🔄 Combined table detected, using child table:', actualTableName);
       }
       
-      const result = await airplaneTableService.getData(actualTableName, filters);
+      // Add force refresh parameter to bypass cache
+      const result = await airplaneTableService.getData(actualTableName, filters, forceRefresh);
       console.log('🔥 Received data:', result);
       
       if (!result) {
@@ -408,21 +409,18 @@ const DataSection = () => {
       const currentTableName = selectedTable.name;
       console.log('Updating cell:', { id, column, value, table: currentTableName });
       
+      // FIRST: Invalidate cache BEFORE updating to prevent stale data
+      localCacheService.invalidate(`datasection_table_${currentTableName}`);
+      localCacheService.invalidateService('reports');
+      console.log('🗑️ Pre-invalidated cache before cell update');
+      
+      // SECOND: Update data on server
       const result = await tableServiceAdapter.updateData(currentTableName, id, column, value);
       
-      // Update the local data to reflect the change
-      setTableData(prevData => 
-        prevData.map(row => 
-          row.id === id ? { ...row, [column]: value } : row
-        )
-      );
-
-      // Invalidate cache for this table to ensure fresh data on next load
-      localCacheService.invalidate(`datasection_table_${currentTableName}`);
+      // THIRD: Force immediate reload of fresh data from server
+      console.log('🔄 Forcing immediate data reload after cell update');
+      await loadTableData(currentTableName, true); // Force fresh data load
       
-      // Also invalidate reports cache if this might affect reports
-      localCacheService.invalidateService('reports');
-
       // Return the result from the server
       return result;
     } catch (error) {
