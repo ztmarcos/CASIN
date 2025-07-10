@@ -1212,10 +1212,37 @@ app.put('/api/tables/:tableName/columns/order', async (req, res) => {
       });
     }
     
-    // For now, we'll store this in memory or you can implement database storage
-    // Since column order is UI-specific, we can handle it differently
+    // Use Firebase if available (production), fallback to file system (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Saving column order to Firebase for table: ${tableName}`);
+      
+      try {
+        // Save to Firebase in a special metadata collection using Admin SDK
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        await metadataRef.set({
+          columnOrder: columnOrder,
+          tableName: tableName,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        
+        console.log(`✅ Column order saved to Firebase for table ${tableName}`);
+        
+        res.json({
+          success: true,
+          message: `Column order updated for table ${tableName}`,
+          columnOrder: columnOrder,
+          storage: 'firebase'
+        });
+        return;
+        
+      } catch (firebaseError) {
+        console.error('❌ Error saving to Firebase, falling back to file system:', firebaseError);
+        // Fall through to file system backup
+      }
+    }
     
-    // Option 1: Store in a JSON file (simple solution)
+    // Fallback: Store in a JSON file (for development/local)
+    console.log(`📁 Saving column order to file system for table: ${tableName}`);
     const fs = require('fs');
     const path = require('path');
     const ordersFile = path.join(__dirname, 'column-orders.json');
@@ -1233,9 +1260,9 @@ app.put('/api/tables/:tableName/columns/order', async (req, res) => {
     
     try {
       fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2));
-      console.log(`✅ Column order saved for table ${tableName}`);
+      console.log(`✅ Column order saved to file system for table ${tableName}`);
     } catch (error) {
-      console.error('Error saving column order:', error);
+      console.error('Error saving column order to file:', error);
       return res.status(500).json({ 
         error: 'Failed to save column order' 
       });
@@ -1244,7 +1271,8 @@ app.put('/api/tables/:tableName/columns/order', async (req, res) => {
     res.json({
       success: true,
       message: `Column order updated for table ${tableName}`,
-      columnOrder: columnOrder
+      columnOrder: columnOrder,
+      storage: 'filesystem'
     });
     
   } catch (error) {
@@ -1258,6 +1286,47 @@ app.get('/api/tables/:tableName/columns/order', async (req, res) => {
   try {
     const { tableName } = req.params;
     
+    // Use Firebase if available (production), fallback to file system (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Loading column order from Firebase for table: ${tableName}`);
+      
+      try {
+        // Load from Firebase metadata collection using Admin SDK
+        const metadataRef = db.collection('table_metadata').doc(tableName);
+        const metadataDoc = await metadataRef.get();
+        
+        if (metadataDoc.exists) {
+          const data = metadataDoc.data();
+          const columnOrder = data.columnOrder || null;
+          
+          console.log(`✅ Column order loaded from Firebase for table ${tableName}:`, columnOrder);
+          
+          res.json({
+            success: true,
+            tableName: tableName,
+            columnOrder: columnOrder,
+            storage: 'firebase'
+          });
+          return;
+        } else {
+          console.log(`ℹ️ No column order found in Firebase for table ${tableName}`);
+          res.json({
+            success: true,
+            tableName: tableName,
+            columnOrder: null,
+            storage: 'firebase'
+          });
+          return;
+        }
+        
+      } catch (firebaseError) {
+        console.error('❌ Error loading from Firebase, falling back to file system:', firebaseError);
+        // Fall through to file system backup
+      }
+    }
+    
+    // Fallback: Load from JSON file (for development/local)
+    console.log(`📁 Loading column order from file system for table: ${tableName}`);
     const fs = require('fs');
     const path = require('path');
     const ordersFile = path.join(__dirname, 'column-orders.json');
@@ -1268,15 +1337,18 @@ app.get('/api/tables/:tableName/columns/order', async (req, res) => {
         orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8'));
       }
     } catch (error) {
-      console.warn('Could not read column orders:', error.message);
+      console.warn('Could not read column orders from file:', error.message);
     }
     
     const columnOrder = orders[tableName] || null;
     
+    console.log(`✅ Column order loaded from file system for table ${tableName}:`, columnOrder);
+    
     res.json({
       success: true,
       tableName: tableName,
-      columnOrder: columnOrder
+      columnOrder: columnOrder,
+      storage: 'filesystem'
     });
     
   } catch (error) {

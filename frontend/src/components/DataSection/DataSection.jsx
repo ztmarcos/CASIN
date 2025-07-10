@@ -271,7 +271,10 @@ const DataSection = () => {
   const loadColumnOrder = async (tableName) => {
     try {
       console.log('🔄 Loading column order for table:', tableName);
-      const response = await fetch(`http://localhost:3001/api/tables/${tableName}/columns/order`);
+      const API_URL = window.location.hostname === 'localhost' 
+        ? 'http://localhost:3001/api' 
+        : '/api';
+      const response = await fetch(`${API_URL}/tables/${tableName}/columns/order`);
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.columnOrder) {
