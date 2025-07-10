@@ -241,6 +241,178 @@ async function executeQuery(query, params = []) {
 // Helper function to get table structure
 async function getTableStructure(tableName) {
   try {
+    // Use Firebase if available (production), fallback to MySQL (development)
+    if (isFirebaseEnabled && db) {
+      console.log(`🔥 Getting Firebase structure for collection: ${tableName}`);
+      
+      // Firebase collections predefined structure based on table types
+      const firebaseTableStructures = {
+        'autos': [
+          { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+          { name: 'nombre_contratante', type: 'varchar(56)', nullable: true, key: '', default: null },
+          { name: 'numero_poliza', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'aseguradora', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'vigencia_inicio', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'vigencia_fin', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'forma_de_pago', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'pago_total_o_prima_total', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'prima_neta', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'derecho_de_poliza', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'recargo_por_pago_fraccionado', type: 'decimal(10,2)', nullable: true, key: '', default: null },
+          { name: 'i_v_a', type: 'decimal(10,2)', nullable: true, key: '', default: null },
+          { name: 'e_mail', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'tipo_de_vehiculo', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'duracion', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'rfc', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'domicilio_o_direccion', type: 'varchar(200)', nullable: true, key: '', default: null },
+          { name: 'descripcion_del_vehiculo', type: 'varchar(150)', nullable: true, key: '', default: null },
+          { name: 'serie', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'modelo', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'placas', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'motor', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'uso', type: 'varchar(50)', nullable: true, key: '', default: null },
+          { name: 'pdf', type: 'varchar(200)', nullable: true, key: '', default: null },
+          { name: 'ramo', type: 'varchar(50)', nullable: true, key: '', default: null }
+        ],
+        'vida': [
+          { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'numero_poliza', type: 'int', nullable: true, key: '', default: null },
+          { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'forma_pago', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'importe_a_pagar_mxn', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'prima_neta_mxn', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'derecho_poliza', type: 'int', nullable: true, key: '', default: null },
+          { name: 'recargo_pago_fraccionado', type: 'int', nullable: true, key: '', default: null },
+          { name: 'iva', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'email', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'tipo_de_poliza', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'tipo_de_plan', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'rfc', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'direccion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_expedicion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'beneficiarios', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'edad_de_contratacion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'tipo_de_riesgo', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fumador', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'coberturas', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'pdf', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'responsable', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'cobrar_a', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'ramo', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_inicio', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_fin', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'estado_pago', type: 'varchar(255)', nullable: true, key: '', default: null }
+        ],
+        'gmm': [
+          { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'numero_poliza', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_inicio', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_fin', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'forma_pago', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'importe_total', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'prima_neta', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'derecho_poliza', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'recargo_pago_fraccionado', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'iva_16', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'email', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_del_asegurado', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'rfc', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'direccion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'codigo_cliente', type: 'int', nullable: true, key: '', default: null },
+          { name: 'duracion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_expedicion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'fecha_nacimiento_asegurado', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'version', type: 'int', nullable: true, key: '', default: null },
+          { name: 'renovacion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'pdf', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'responsable', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'ramo', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'estado_pago', type: 'varchar(255)', nullable: true, key: '', default: null }
+        ],
+        'directorio_contactos': [
+          { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
+          { name: 'origen', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'comentario', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_completo', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_completo_oficial', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nickname', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'apellido', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'display_name', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'empresa', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono_oficina', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono_casa', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono_asistente', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefono_movil', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'telefonos_corregidos', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'email', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'entidad', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'genero', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'status_social', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'ocupacion', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'pais', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'status', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'created_at', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'updated_at', type: 'varchar(255)', nullable: true, key: '', default: null }
+        ]
+      };
+      
+      // Return predefined structure if available
+      if (firebaseTableStructures[tableName]) {
+        console.log(`✅ Firebase structure found for ${tableName}: ${firebaseTableStructures[tableName].length} columns`);
+        return firebaseTableStructures[tableName];
+      }
+      
+      // If not in predefined structures, try to get from a sample document
+      try {
+        const collectionRef = db.collection(tableName);
+        const snapshot = await collectionRef.limit(1).get();
+        
+        if (!snapshot.empty) {
+          const sampleDoc = snapshot.docs[0].data();
+          const columns = [
+            { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null }
+          ];
+          
+          Object.keys(sampleDoc).forEach(field => {
+            const value = sampleDoc[field];
+            let fieldType = 'varchar(255)';
+            
+            if (typeof value === 'number') {
+              fieldType = Number.isInteger(value) ? 'int' : 'decimal(10,2)';
+            } else if (value instanceof Date || (typeof value === 'object' && value && value.toDate)) {
+              fieldType = 'timestamp';
+            } else if (typeof value === 'boolean') {
+              fieldType = 'boolean';
+            }
+            
+            columns.push({
+              name: field,
+              type: fieldType,
+              nullable: true,
+              key: '',
+              default: null
+            });
+          });
+          
+          console.log(`✅ Firebase dynamic structure for ${tableName}: ${columns.length} columns`);
+          return columns;
+        }
+      } catch (firebaseError) {
+        console.warn(`⚠️ Could not get Firebase structure for ${tableName}:`, firebaseError.message);
+      }
+      
+      // Return empty array if Firebase collection doesn't exist
+      console.log(`⚠️ No Firebase structure found for ${tableName}, returning empty array`);
+      return [];
+    }
+    
+    // Fallback to MySQL if Firebase not available
+    console.log(`📋 Using MySQL for table structure: ${tableName}`);
     const columns = await executeQuery(`DESCRIBE \`${tableName}\``);
     return columns.map(col => ({
       name: col.Field,
