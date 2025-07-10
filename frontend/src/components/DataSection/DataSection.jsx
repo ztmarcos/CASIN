@@ -56,8 +56,11 @@ const DataSection = () => {
       }
       
       // Add force refresh parameter to bypass cache
+      console.log('📡 Calling airplaneTableService.getData with:', { actualTableName, filters, forceRefresh });
       const result = await airplaneTableService.getData(actualTableName, filters, forceRefresh);
-      console.log('🔥 Received data:', result);
+      console.log('🔥 Received data from airplaneTableService:', result);
+      console.log('🔍 Result data length:', result?.data?.length || 0);
+      console.log('🔍 First item aseguradora:', result?.data?.[0]?.aseguradora);
       
       if (!result) {
         console.error('❌ No response from Firebase');
@@ -69,7 +72,9 @@ const DataSection = () => {
       // We need to use result.data for the table data
       const tableData = result.data || [];
       console.log(`✅ Setting table data with ${tableData.length} rows from Firebase`);
+      console.log('🔍 First row aseguradora before setState:', tableData[0]?.aseguradora);
       setTableData(tableData);
+      console.log('📝 setTableData called with new data');
       
       // Load table structure if we have data and don't have proper structure yet
       if (tableData.length > 0 && (!selectedTable?.columns || selectedTable.columns.length <= 7)) {
@@ -430,7 +435,10 @@ const DataSection = () => {
       // Then reload fresh data from server (with small delay for Firebase sync)
       setTimeout(async () => {
         console.log('🔄 Reloading fresh data from server...');
-        await loadTableData(currentTableName, true);
+        console.log('🔍 BEFORE loadTableData - current tableData length:', tableData.length);
+        const result = await loadTableData(currentTableName, true);
+        console.log('🔍 AFTER loadTableData - result:', result);
+        console.log('🔍 AFTER loadTableData - current tableData length:', tableData.length);
       }, 500); // 500ms delay
       
       // Return the result from the server
