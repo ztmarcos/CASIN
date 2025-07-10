@@ -357,23 +357,29 @@ class TableServiceAdapter {
    */
   async insertData(tableName, data) {
     try {
+      let result;
       if (this.isTeamSystemAvailable()) {
         if (Array.isArray(data)) {
           // Insertar múltiples documentos
           const results = [];
           for (const item of data) {
-            const result = await teamDataService.createDocument(tableName, item);
-            results.push(result);
+            const itemResult = await teamDataService.createDocument(tableName, item);
+            results.push(itemResult);
           }
-          return { success: true, inserted: results.length, ids: results.map(r => r.id) };
+          result = { success: true, inserted: results.length, ids: results.map(r => r.id) };
         } else {
           // Insertar un solo documento
-          const result = await teamDataService.createDocument(tableName, data);
-          return { success: true, inserted: 1, id: result.id };
+          const itemResult = await teamDataService.createDocument(tableName, data);
+          result = { success: true, inserted: 1, id: itemResult.id };
         }
       } else {
-        return await firebaseTableService.insertData(tableName, data);
+        result = await firebaseTableService.insertData(tableName, data);
       }
+      
+      // Invalidate cache after successful insert
+      this.invalidateCache(tableName);
+      
+      return result;
     } catch (error) {
       console.error(`❌ Error inserting data into ${tableName}:`, error);
       throw error;
@@ -388,9 +394,18 @@ class TableServiceAdapter {
       if (this.isTeamSystemAvailable()) {
         const updateData = { [column]: value };
         const result = await teamDataService.updateDocument(tableName, id, updateData);
+        
+        // Invalidate cache after successful update
+        this.invalidateCache(tableName);
+        
         return { success: true, updated: result };
       } else {
-        return await firebaseTableService.updateData(tableName, id, column, value);
+        const result = await firebaseTableService.updateData(tableName, id, column, value);
+        
+        // Invalidate cache after successful update
+        this.invalidateCache(tableName);
+        
+        return result;
       }
     } catch (error) {
       console.error(`❌ Error updating data in ${tableName}:`, error);
@@ -403,12 +418,18 @@ class TableServiceAdapter {
    */
   async deleteRow(tableName, id) {
     try {
+      let result;
       if (this.isTeamSystemAvailable()) {
         await teamDataService.deleteDocument(tableName, id);
-        return { success: true };
+        result = { success: true };
       } else {
-        return await firebaseTableService.deleteRow(tableName, id);
+        result = await firebaseTableService.deleteRow(tableName, id);
       }
+      
+      // Invalidate cache after successful delete
+      this.invalidateCache(tableName);
+      
+      return result;
     } catch (error) {
       console.error(`❌ Error deleting row from ${tableName}:`, error);
       throw error;
@@ -462,6 +483,30 @@ class TableServiceAdapter {
       );
     } else {
       return await firebaseTableService.getChildTables(parentTableName);
+    }
+  }
+
+  // ===== MÉTODOS DE CACHE =====
+
+  /**
+   * Invalida el cache para una tabla específica
+   */
+  invalidateCache(tableName) {
+    try {
+      // Importar localCacheService dinámicamente para evitar dependencias circulares
+      import('./localCacheService.js').then(({ default: localCacheService }) => {
+        localCacheService.invalidate(`datasection_table_${tableName}`);
+        localCacheService.invalidateService('reports');
+        console.log(`🗑️ TableServiceAdapter: Invalidated cache for table: ${tableName}`);
+      });
+
+      // También invalidar el cache de airplaneTableService si está disponible
+      import('./airplaneTableService.js').then(({ default: airplaneTableService }) => {
+        airplaneTableService.invalidateTableCache(tableName);
+        console.log(`🗑️ TableServiceAdapter: Invalidated airplane cache for table: ${tableName}`);
+      });
+    } catch (error) {
+      console.warn('⚠️ Error invalidating cache:', error);
     }
   }
 
