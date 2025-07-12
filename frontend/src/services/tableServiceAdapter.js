@@ -88,7 +88,8 @@ class TableServiceAdapter {
         'z.t.marcos@gmail.com',
         'ztmarcos@gmail.com',
         'marcos@casin.com',
-        '2012solitario@gmail.com'
+        '2012solitario@gmail.com',
+        'marcoszavala09@gmail.com'  // ✅ Agregado para que acceda a colecciones directas
         // bumtekateam@gmail.com removido - debe usar sistema de equipos
       ];
       
@@ -110,7 +111,7 @@ class TableServiceAdapter {
     try {
       // FORZAR: Si encontramos usuarios CASIN en cualquier lugar, usar sistema CASIN
       const allLocalStorageData = [];
-      const casinEmails = ['z.t.marcos@gmail.com', '2012solitario@gmail.com'];
+      const casinEmails = ['z.t.marcos@gmail.com', '2012solitario@gmail.com', 'marcoszavala09@gmail.com'];
       
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
