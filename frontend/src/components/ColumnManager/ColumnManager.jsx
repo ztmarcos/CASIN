@@ -197,20 +197,47 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       setIsLoading(true);
       setError(null);
       
+      // NEW APPROACH: Get actual data and extract columns (same as DataTable)
+      try {
+        const tableData = await tableService.getData(selectedTable.name);
+        console.log('Received table data:', tableData);
+        
+        if (tableData && tableData.data && Array.isArray(tableData.data) && tableData.data.length > 0) {
+          // Get columns from actual data (same approach as DataTable)
+          const dataColumns = Object.keys(tableData.data[0]);
+          console.log('Columns from actual data:', dataColumns);
+          
+          // Filter out system columns and format as column objects
+          const filteredColumns = dataColumns
+            .filter(col => col !== 'firebase_doc_id') // Remove Firebase system columns
+            .map(col => ({
+              name: col,
+              type: 'TEXT' // Default type, can be enhanced later
+            }));
+          
+          console.log('Setting columns from actual data:', filteredColumns);
+          setColumns(filteredColumns);
+          return;
+        }
+      } catch (dataError) {
+        console.warn('Could not get data for column extraction:', dataError);
+      }
+      
+      // FALLBACK: Try the old structure approach
       const structure = await tableService.getTableStructure(selectedTable.name);
-      console.log('Received table structure:', structure);
+      console.log('Received table structure (fallback):', structure);
       
       if (structure && Array.isArray(structure.columns)) {
         const newColumns = structure.columns.map(col => ({
           name: col.name,
           type: col.type || 'TEXT'
         }));
-        console.log('Setting columns state:', newColumns);
+        console.log('Setting columns from structure (fallback):', newColumns);
         setColumns(newColumns);
       } else {
         console.warn('Invalid structure received:', structure);
         setColumns([]);
-        setError('Invalid table structure received');
+        setError('Could not load column structure');
       }
     } catch (error) {
       console.error('Error loading columns:', error);
@@ -273,6 +300,16 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         console.log('🔧 ColumnManager: Calling onOrderChange callback');
         onOrderChange();
       }
+
+      // Dispatch custom event for DataTable to pick up
+      const event = new CustomEvent('columnOrderUpdated', {
+        detail: { 
+          tableName: selectedTable.name, 
+          columnOrder: columnNames 
+        }
+      });
+      window.dispatchEvent(event);
+      console.log('🔧 ColumnManager: Dispatched columnOrderUpdated event');
     } catch (error) {
       console.error('❌ ColumnManager: Failed to update column order:', error);
       // Revert on error
