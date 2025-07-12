@@ -121,16 +121,37 @@ console.log("¿Usa sistema de equipos?", tableServiceAdapter.isTeamSystemAvailab
 ¿Usa sistema de equipos? false
 ```
 
-## 📋 **Resumen**
+## 🔍 **ACTUALIZACIÓN: Problema Real Identificado**
 
-| Aspecto | Antes | Después |
-|---------|-------|---------|
-| **z.t.marcos** | ✅ Datos CASIN | ✅ Datos CASIN |
-| **marcoszavala09** | ❌ Datos vacíos | ✅ Datos CASIN |
-| **Equipo compartido** | ✅ Mismo equipo | ✅ Mismo equipo |
-| **Colecciones accedidas** | Diferentes | ✅ Mismas |
-| **Sincronización** | ❌ Desincronizados | ✅ Sincronizados |
+### **Hallazgo Posterior:**
+- **Firebase real**: 34 documentos en autos ✅
+- **marcoszavala09**: Ve 34 documentos ✅ (datos actuales)
+- **z.t.marcos**: Ve 33 documentos ❌ (datos cacheados)
+
+### **Causa Real: Airplane Mode o Cache Desactualizado**
+El problema NO era de configuración de usuarios, sino de **cache local**:
+- `z.t.marcos` tiene **airplane mode activado** o **cache desactualizado**
+- `marcoszavala09` ve los **datos reales de Firebase**
+
+### **Solución para z.t.marcos:**
+```javascript
+// En consola del navegador:
+localStorage.removeItem("airplaneMode");
+localStorage.removeItem("airplane_table_autos");
+localStorage.clear(); // O limpiar todo
+window.location.reload();
+```
+
+## 📋 **Resumen Actualizado**
+
+| Aspecto | Estado Real | Solución |
+|---------|-------------|----------|
+| **Base de datos** | ✅ Misma (34 docs) | ✅ Confirmado |
+| **marcoszavala09** | ✅ Ve datos actuales | ✅ Funcionando |
+| **z.t.marcos** | ❌ Ve cache viejo | 🧹 Limpiar cache |
+| **Configuración** | ✅ Correcta | ✅ No requiere cambios |
+| **Airplane mode** | ⚠️ Posiblemente activo | 🔄 Desactivar |
 
 ---
 
-**✅ Problema resuelto: Ambos usuarios ahora acceden a la misma base de datos CASIN con todos los datos disponibles.** 
+**✅ Problema identificado: Cache desactualizado en cuenta admin. Solución: Limpiar localStorage.** 
