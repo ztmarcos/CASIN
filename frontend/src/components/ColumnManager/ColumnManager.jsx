@@ -235,31 +235,46 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     const { active, over } = event;
     
     if (!over || active.id === over.id) {
+      console.log('🔧 ColumnManager: No change in column order');
       return;
     }
+
+    console.log('🔧 ColumnManager: Column order change detected:', {
+      activeId: active.id,
+      overId: over.id,
+      tableName: selectedTable?.name
+    });
 
     // Remove 'col-' prefix to get actual column names
     const oldIndex = columns.findIndex(col => `col-${col.name}` === active.id);
     const newIndex = columns.findIndex(col => `col-${col.name}` === over.id);
+
+    console.log('🔧 ColumnManager: Moving column from index', oldIndex, 'to index', newIndex);
 
     const newColumns = arrayMove(columns, oldIndex, newIndex);
     
     try {
       // Update local state first for immediate feedback
       setColumns(newColumns);
+      console.log('🔧 ColumnManager: Updated local state with new order');
       
       // Update in the database
-      await tableService.updateColumnOrder(selectedTable.name, newColumns.map(col => col.name));
+      const columnNames = newColumns.map(col => col.name);
+      console.log('🔧 ColumnManager: Updating database with order:', columnNames);
+      await tableService.updateColumnOrder(selectedTable.name, columnNames);
+      console.log('✅ ColumnManager: Database updated successfully');
       
       // Refresh to ensure we're showing the current database state
       await loadColumns();
+      console.log('✅ ColumnManager: Columns reloaded from database');
 
       // Notify parent to refresh data
       if (onOrderChange) {
+        console.log('🔧 ColumnManager: Calling onOrderChange callback');
         onOrderChange();
       }
     } catch (error) {
-      console.error('Failed to update column order:', error);
+      console.error('❌ ColumnManager: Failed to update column order:', error);
       // Revert on error
       setColumns(columns);
     }

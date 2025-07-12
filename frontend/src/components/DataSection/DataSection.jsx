@@ -409,16 +409,34 @@ const DataSection = () => {
   };
 
   const handleColumnOrderChange = async () => {
+    console.log('🔄 DataSection: handleColumnOrderChange called');
+    
     // Reload both table data and column order
     setIsLoading(true);
     try {
+      // Add a small delay to ensure database has been updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Reload table data
       const result = await tableServiceAdapter.getData(selectedTable.name, filters);
       setTableData(result.data || []);
       
-      // Also reload column order
-      await loadColumnOrder(selectedTable.name);
+      // Also reload column order from server
+      console.log('🔄 DataSection: Reloading column order from server');
+      const newColumnOrder = await loadColumnOrder(selectedTable.name);
+      
+      // Force DataTable to refresh by dispatching a custom event
+      console.log('🔄 DataSection: Dispatching columnOrderUpdated event');
+      window.dispatchEvent(new CustomEvent('columnOrderUpdated', {
+        detail: { 
+          tableName: selectedTable.name, 
+          columnOrder: newColumnOrder 
+        }
+      }));
+      
+      console.log('✅ DataSection: Column order change completed');
     } catch (error) {
-      console.error('Error refreshing table data:', error);
+      console.error('❌ DataSection: Error refreshing table data:', error);
     } finally {
       setIsLoading(false);
     }
