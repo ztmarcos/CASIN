@@ -44,6 +44,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [forceHighlightNext, setForceHighlightNext] = useState(false);
   const [tableColumns, setTableColumns] = useState([]);
   const [isEditingFlag, setIsEditingFlag] = useState(false);
+  const [forceRender, setForceRender] = useState(0); // State to force re-render on column order change
 
   // Reference to track previous data
   const previousDataRef = useRef([]);
@@ -55,7 +56,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     console.log('🔧 Column order calculation:', {
       tableColumns,
       columnOrder,
-      hasColumnOrder: columnOrder && columnOrder.length > 0
+      hasColumnOrder: columnOrder && columnOrder.length > 0,
+      forceRender
     });
     
     // Filter out action columns first
@@ -83,7 +85,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     // Otherwise, use original order
     console.log('✅ Using original column order:', filteredColumns);
     return filteredColumns;
-  }, [tableColumns, columnOrder, tableName]);
+  }, [tableColumns, columnOrder, tableName, forceRender]);
 
   // Simple effect just to set the data - NO SORTING HERE
   useEffect(() => {
@@ -511,17 +513,29 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       }
     };
 
+    // Listen for column order updates (from ColumnManager)
+    const handleColumnOrderUpdate = (event) => {
+      console.log('🔧 DataTable: Column order updated event received:', event.detail);
+      if (event.detail?.tableName === tableName) {
+        console.log('🔧 DataTable: Updating column order for current table');
+        // Force re-render by updating a dummy state
+        setForceRender(prev => prev + 1);
+      }
+    };
+
     // Add event listeners
     window.addEventListener('dataTableUpdate', handleDataUpdate);
     window.addEventListener('policyDataUpdated', handlePolicyDataUpdate);
     window.addEventListener('storage', handleStorageChange);
     window.addEventListener('tableStructureUpdated', handleTableStructureUpdate);
+    window.addEventListener('columnOrderUpdated', handleColumnOrderUpdate);
 
     return () => {
       window.removeEventListener('dataTableUpdate', handleDataUpdate);
       window.removeEventListener('policyDataUpdated', handlePolicyDataUpdate);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tableStructureUpdated', handleTableStructureUpdate);
+      window.removeEventListener('columnOrderUpdated', handleColumnOrderUpdate);
     };
   }, [tableName]);
 
