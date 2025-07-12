@@ -15,6 +15,12 @@ const GoogleLogin = () => {
     
     try {
       const provider = new GoogleAuthProvider();
+      
+      // 🔑 FORZAR SELECCIÓN DE CUENTA - Esto resuelve el problema
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const result = await signInWithPopup(auth, provider);
       
       const userData = {

@@ -138,7 +138,7 @@ export const AuthProvider = ({ children }) => {
       await signOut(auth);
       console.log('✅ Firebase logout successful');
       
-      // Limpiar localStorage
+      // Limpiar localStorage completamente
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('userEmail');
@@ -146,12 +146,21 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('userPhoto');
       localStorage.removeItem('userUid');
       
+      // Limpiar cualquier estado de equipo
+      localStorage.removeItem('teamState');
+      localStorage.removeItem('userTeam');
+      localStorage.removeItem('teamSetupComplete');
+      
+      // Limpiar sessionStorage también
+      sessionStorage.clear();
+      
       // Limpiar estado de usuario
       setUser(null);
       
       toast.success('Sesión cerrada correctamente');
       
-      // Opcional: redirigir a login o recargar página
+      // 🔑 FORZAR RECARGA PARA LIMPIAR ESTADO DE GOOGLE AUTH
+      // Esto asegura que el próximo login muestre el selector de cuenta
       setTimeout(() => {
         window.location.reload();
       }, 1000);
@@ -166,9 +175,18 @@ export const AuthProvider = ({ children }) => {
       localStorage.removeItem('userName');
       localStorage.removeItem('userPhoto');
       localStorage.removeItem('userUid');
+      localStorage.removeItem('teamState');
+      localStorage.removeItem('userTeam');
+      localStorage.removeItem('teamSetupComplete');
+      sessionStorage.clear();
       setUser(null);
       
       toast.error('Error al cerrar sesión, pero datos locales limpiados');
+      
+      // Forzar recarga como fallback
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     }
   };
 

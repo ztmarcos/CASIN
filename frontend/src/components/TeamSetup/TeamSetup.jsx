@@ -155,9 +155,9 @@ const TeamSetup = () => {
 
   const handleLogout = async () => {
     try {
-      console.log('🚪 User logging out...');
+      console.log('🚪 User logging out from team setup...');
       
-      // Limpiar localStorage problemático
+      // Limpiar localStorage problemático de forma más completa
       const keysToRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -171,16 +171,18 @@ const TeamSetup = () => {
         console.log(`🗑️ Removed: ${key}`);
       });
       
+      // Limpiar sessionStorage también
       sessionStorage.clear();
       
-      // Hacer logout
+      // Hacer logout de Firebase
       await logout();
       
-      console.log('✅ Logout completed');
+      console.log('✅ Logout completed - account selection will be shown on next login');
       
     } catch (error) {
       console.error('❌ Error during logout:', error);
       // Forzar recarga de página como fallback
+      console.log('🔄 Forcing page reload as fallback');
       window.location.reload();
     }
   };
