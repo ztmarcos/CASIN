@@ -547,12 +547,11 @@ export default function Reports() {
     return policyStatuses[policyKey] || 'No Pagado';
   };
 
-  // Validate and clean policy data
+  // Validate and clean policy data - simplified for matrix
   const validatePolicy = (policy) => {
     return policy && 
            (policy.id || policy.firebase_doc_id) && 
-           policy.numero_poliza &&
-           (policy.sourceTable || policy.table || policy.ramo); // El ramo es el nombre de la tabla
+           policy.numero_poliza;
   };
 
   // Normaliza nombres de aseguradoras
