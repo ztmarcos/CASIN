@@ -137,15 +137,8 @@ export default function Reports() {
       const allPolicies = await firebaseReportsService.getAllPolicies(forceRefresh);
       console.log(`✅ Loaded ${allPolicies.length} policies ${forceRefresh ? 'from Firebase' : '(from cache or Firebase)'}`);
       
-      // Get matrix data for analysis (with cache support)
-      const matrixData = await firebaseReportsService.getMatrixData(forceRefresh);
-      
       // Set state
       setPolicies(allPolicies);
-      setUniqueClients(matrixData.uniqueClients);
-      setUniqueCompanies(matrixData.uniqueCompanies);
-      setUniqueRamos(matrixData.uniqueRamos);
-      setClientMatrix(matrixData.clientMatrix);
       
       // Load policy statuses (with cache support)
       await loadPolicyStatuses(forceRefresh);
