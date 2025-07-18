@@ -345,12 +345,12 @@ export default function Reports() {
 
   useEffect(() => {
     const fetchAndFilterPolicies = async () => {
-      // 1. Obtener las tablas válidas igual que TableManager
+      // 1. Obtener las tablas válidas - incluir todas las tablas primarias y parent tables, excluir solo child tables
       const allTables = await airplaneTableService.getTables();
       const allowedTableNames = allTables
-        .filter(t => t.isParentTable || (!t.isParentTable && !t.isChildTable))
+        .filter(t => !t.isChildTable) // Solo excluir tablas child (listados)
         .map(t => t.name);
-      console.log('🔍 Tablas válidas (TableManager):', allowedTableNames);
+      console.log('🔍 Tablas válidas (incluye mascotas, rc, etc.):', allowedTableNames);
       // 2. Log de policies para depuración
       console.log('🔍 Ejemplo de policies:', policies.slice(0, 10).map(p => ({
         id: p.id,
