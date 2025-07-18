@@ -6,19 +6,19 @@ import './TableMail.css';
 const SENDER_OPTIONS = [
   {
     label: 'CASIN (casindb46@gmail.com)',
-    value: 'casindb46@gmail.com',
+    value: import.meta.env.VITE_SMTP_USER_CASIN || 'casindb46@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_CASIN || 'qlqvjpccsgfihszj',
     name: 'CASIN Seguros'
   },
   {
-    label: 'Lore (casindb46@gmail.com)',
-    value: 'casindb46@gmail.com',
+    label: 'Lore (lorenacasin5@gmail.com)',
+    value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_LORE || 'yxeyswjxsicwgoow',
     name: 'Lore Seguros'
   },
   {
-    label: 'Mich (casindb46@gmail.com)',
-    value: 'casindb46@gmail.com',
+    label: 'Mich (michelldiaz.casinseguros@gmail.com)',
+    value: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_MICH || 'klejsbcgpjmwoogg',
     name: 'Mich Seguros'
   }
