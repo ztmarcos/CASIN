@@ -397,7 +397,14 @@ export default function Reports() {
       const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
       const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
       // RAMOS = nombres de las tablas (sourceTable/table)
+      console.log('🔍 DEBUG - Sample policies for ramos:', filtered.slice(0, 3).map(p => ({
+        sourceTable: p.sourceTable,
+        table: p.table,
+        ramo: p.ramo,
+        allKeys: Object.keys(p)
+      })));
       const ramos = [...new Set(filtered.map(p => (p.sourceTable || p.table || '').toUpperCase()).filter(Boolean))].sort();
+      console.log('🔍 DEBUG - Extracted ramos:', ramos);
       // Log unique values
       console.log('Unique values found:', {
         clients: clients.length + ' clients',
