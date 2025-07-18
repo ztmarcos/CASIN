@@ -3,6 +3,27 @@ import { API_URL } from '../../config/api.js';
 import DriveSelector from '../Drive/DriveSelector.jsx';
 import './TableMail.css';
 
+const SENDER_OPTIONS = [
+  {
+    label: 'CASIN (casindb46@gmail.com)',
+    value: 'casindb46@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_CASIN || 'qlqvjpccsgfihszj',
+    name: 'CASIN Seguros'
+  },
+  {
+    label: 'Lore (casindb46@gmail.com)',
+    value: 'casindb46@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'yxeyswjxsicwgoow',
+    name: 'Lore Seguros'
+  },
+  {
+    label: 'Mich (casindb46@gmail.com)',
+    value: 'casindb46@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_MICH || 'klejsbcgpjmwoogg',
+    name: 'Mich Seguros'
+  }
+];
+
 const TableMail = ({ isOpen, onClose, rowData }) => {
   const [emailContent, setEmailContent] = useState({ subject: '', message: '' });
   const [isGenerating, setIsGenerating] = useState(false);
@@ -14,6 +35,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [emailType, setEmailType] = useState('welcome_email');
   const fileInputRef = useRef(null);
+  const [sender, setSender] = useState(SENDER_OPTIONS[0]);
 
   // Reset states when modal closes
   useEffect(() => {
@@ -24,6 +46,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
       setAttachments([]);
       setSelectedFolder(null);
       setEmailType('welcome_email');
+      setSender(SENDER_OPTIONS[0]); // Reset sender on close
     }
   }, [isOpen]);
 
@@ -239,6 +262,9 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         formData.append('to', emailAddress);
         formData.append('subject', emailContent.subject);
         formData.append('htmlContent', emailContent.message);
+        formData.append('from', sender.value);
+        formData.append('fromName', sender.name);
+        formData.append('fromPass', sender.pass);
         
         // Add drive links if any
         if (uploadedFiles.length > 0) {
@@ -278,6 +304,9 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
           to: emailAddress,
           htmlContent: emailContent.message,
           subject: emailContent.subject,
+          from: sender.value,
+          fromName: sender.name,
+          fromPass: sender.pass,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,
             link: file.driveLink
@@ -337,6 +366,24 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
               {success}
             </div>
           )}
+          <div className="mail-field">
+            <label>Remitente:</label>
+            <select
+              className="mail-input"
+              value={sender.value + '-' + sender.pass}
+              onChange={e => {
+                const [value, pass] = e.target.value.split('-');
+                const found = SENDER_OPTIONS.find(opt => opt.value === value && opt.pass === pass);
+                setSender(found || SENDER_OPTIONS[0]);
+              }}
+              disabled={isGenerating}
+            >
+              {SENDER_OPTIONS.map(opt => (
+                <option key={opt.value + '-' + opt.pass} value={opt.value + '-' + opt.pass}>{opt.label}</option>
+              ))}
+            </select>
+            <small className="email-type-help">Elige el remitente del correo</small>
+          </div>
           <div className="mail-field">
             <label>Para:</label>
             <input 
