@@ -550,11 +550,9 @@ export default function Reports() {
   // Validate and clean policy data
   const validatePolicy = (policy) => {
     return policy && 
-           policy.ramo && 
            (policy.id || policy.firebase_doc_id) && 
            policy.numero_poliza &&
-           typeof policy.ramo === 'string' &&
-           policy.ramo.trim().length > 0;
+           (policy.sourceTable || policy.table || policy.ramo); // El ramo es el nombre de la tabla
   };
 
   // Normaliza nombres de aseguradoras
