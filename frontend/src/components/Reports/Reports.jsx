@@ -362,11 +362,30 @@ export default function Reports() {
         table: p.table,
         firebase_doc_id: p.firebase_doc_id
       })));
-      // 3. NO filtrar policies - mostrar TODAS para debugging
-      const filtered = policies; // Usar todas las policies sin filtro
-      console.log('🔍 Total policies sin filtro:', filtered.length);
-      console.log('🔍 Ramos únicos sin filtro:', [...new Set(filtered.map(p => p.ramo).filter(Boolean))]);
-      console.log('🔍 Aseguradoras únicas sin filtro:', [...new Set(filtered.map(p => p.aseguradora).filter(Boolean))]);
+      // 3. Filtrar policies usando las tablas válidas exactas
+      const filtered = policies.filter(p => {
+        // Obtener el nombre de la tabla de origen de la policy
+        const policyTableName = (p.sourceTable || p.table || p.ramo || '').toLowerCase();
+        const belongsToValidTable = allowedTableNames.includes(policyTableName);
+        
+        // Debug para las primeras 5 policies
+        if (policies.indexOf(p) < 5) {
+          console.log('🔍 Policy debug:', {
+            index: policies.indexOf(p),
+            sourceTable: p.sourceTable,
+            table: p.table, 
+            ramo: p.ramo,
+            computed: policyTableName,
+            belongs: belongsToValidTable,
+            allowedTables: allowedTableNames
+          });
+        }
+        
+        return belongsToValidTable;
+      });
+      
+      console.log('🔍 Policies filtradas:', filtered.length, 'de', policies.length, 'total');
+      console.log('🔍 Ramos en filtered:', [...new Set(filtered.map(p => p.ramo).filter(Boolean))]);
       // Extract unique values with normalization
       const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
       const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
