@@ -83,6 +83,7 @@ export default function Reports() {
   const [uniqueCompanies, setUniqueCompanies] = useState([]);
   const [uniqueRamos, setUniqueRamos] = useState([]);
   const [clientMatrix, setClientMatrix] = useState({});
+  const [validatedPolicies, setValidatedPolicies] = useState([]);
   
   // Matrix filters
   const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
@@ -362,14 +363,20 @@ export default function Reports() {
         table: p.table,
         firebase_doc_id: p.firebase_doc_id
       })));
-      // 3. Filtrar policies usando las tablas válidas exactas
+      // 3. Filtrar policies usando validación Y tablas válidas exactas
       const filtered = policies.filter(p => {
-        // Obtener el nombre de la tabla de origen de la policy
+        // Primero validar que la póliza sea válida
+        const isValid = validatePolicy(p);
+        if (!isValid) {
+          return false;
+        }
+        
+        // Luego verificar que pertenezca a una tabla válida
         const policyTableName = (p.sourceTable || p.table || p.ramo || '').toLowerCase();
         const belongsToValidTable = allowedTableNames.includes(policyTableName);
         
-        // Debug para las primeras 5 policies
-        if (policies.indexOf(p) < 5) {
+        // Debug para las primeras 5 policies válidas
+        if (policies.indexOf(p) < 5 && isValid) {
           console.log('🔍 Policy debug:', {
             index: policies.indexOf(p),
             sourceTable: p.sourceTable,
@@ -389,7 +396,8 @@ export default function Reports() {
       // Extract unique values with normalization
       const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
       const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
-      const ramos = [...new Set(filtered.map(p => normalizeRamo(p.ramo)).filter(Boolean))].sort();
+      // RAMOS = nombres de las tablas (sourceTable/table)
+      const ramos = [...new Set(filtered.map(p => (p.sourceTable || p.table || '').toUpperCase()).filter(Boolean))].sort();
       // Log unique values
       console.log('Unique values found:', {
         clients: clients.length + ' clients',
@@ -414,7 +422,7 @@ export default function Reports() {
         filtered.forEach(policy => {
           if ((policy.nombre_contratante || policy.contratante) === client) {
             matrix[client].companies[normalizeCompany(policy.aseguradora)] = true;
-            matrix[client].ramos[normalizeRamo(policy.ramo)] = true;
+            matrix[client].ramos[(policy.sourceTable || policy.table || '').toUpperCase()] = true;
           }
         });
       });
@@ -424,6 +432,7 @@ export default function Reports() {
       setUniqueCompanies(companies);
       setUniqueRamos(ramos);
       setClientMatrix(matrix);
+      setValidatedPolicies(filtered); // Guardar las pólizas validadas para usar en la matriz
     };
     fetchAndFilterPolicies();
   }, [policies]);
@@ -723,8 +732,8 @@ export default function Reports() {
                       .filter(client => {
                         // Apply ramo filter
                         if (selectedRamoFilter) {
-                          const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                          const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.ramo)))];
+                          const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
+                          const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || '').toUpperCase()))];
                           return clientRamos.includes(selectedRamoFilter);
                         }
                         return true;
@@ -732,7 +741,7 @@ export default function Reports() {
                       .filter(client => {
                         // Apply aseguradora filter
                         if (selectedAseguradoraFilter) {
-                          const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
+                          const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
                           const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                           return clientCompanies.includes(selectedAseguradoraFilter);
                         }
@@ -767,8 +776,8 @@ export default function Reports() {
                         </thead>
                         <tbody>
                           {filteredClients.map(client => {
-                            const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                            const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.ramo)))];
+                            const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
+                            const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || '').toUpperCase()))];
                             const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                             
                             return (
@@ -779,7 +788,7 @@ export default function Reports() {
                                 {uniqueRamos.map(ramo => {
                                   const hasRamo = clientRamos.includes(ramo);
                                   const ramoCompanies = clientPolicies
-                                    .filter(p => normalizeRamo(p.ramo) === ramo)
+                                    .filter(p => (p.sourceTable || p.table || '').toUpperCase() === ramo)
                                     .map(p => normalizeCompany(p.aseguradora));
                                   
                                   return (
@@ -801,7 +810,7 @@ export default function Reports() {
                                   const hasCompany = clientCompanies.includes(company);
                                   const companyRamos = clientPolicies
                                     .filter(p => normalizeCompany(p.aseguradora) === company)
-                                    .map(p => normalizeRamo(p.ramo));
+                                    .map(p => (p.sourceTable || p.table || '').toUpperCase());
                                   
                                   return (
                                     <td 
@@ -829,7 +838,7 @@ export default function Reports() {
                             
                             {/* Ramo totals */}
                             {uniqueRamos.map(ramo => {
-                              const ramoCount = policies.filter(p => normalizeRamo(p.ramo) === ramo).length;
+                              const ramoCount = validatedPolicies.filter(p => (p.sourceTable || p.table || '').toUpperCase() === ramo).length;
                               return (
                                 <td key={ramo} className="ramo-total">
                                   <strong>{ramoCount}</strong>
@@ -839,7 +848,7 @@ export default function Reports() {
                             
                             {/* Company totals */}
                             {uniqueCompanies.map(company => {
-                              const companyCount = policies.filter(p => normalizeCompany(p.aseguradora) === company).length;
+                              const companyCount = validatedPolicies.filter(p => normalizeCompany(p.aseguradora) === company).length;
                               return (
                                 <td key={company} className="company-total">
                                   <strong>{companyCount}</strong>
@@ -849,7 +858,7 @@ export default function Reports() {
                             
                             {/* Grand total */}
                             <td className="grand-total">
-                              <strong>{policies.length}</strong>
+                              <strong>{validatedPolicies.length}</strong>
                             </td>
                           </tr>
                         </tfoot>
