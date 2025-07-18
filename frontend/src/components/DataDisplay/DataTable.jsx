@@ -52,39 +52,29 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   // Use column order from ColumnManager if available, otherwise use original order
   const reorderedColumns = useMemo(() => {
     if (!tableColumns || tableColumns.length === 0) return [];
-    
-    console.log('🔧 Column order calculation:', {
-      tableColumns,
-      columnOrder,
-      hasColumnOrder: columnOrder && columnOrder.length > 0,
-      forceRender
-    });
-    
-    // Filter out action columns first
-    const filteredColumns = tableColumns.filter(col => 
+
+    // Filtrar columnas especiales
+    let filteredColumns = tableColumns.filter(col => 
       col !== 'estado_pago' && 
-      col !== 'id' && 
       col !== 'firebase_doc_id'
     );
-    
-    // If we have a saved column order, use it
-    if (columnOrder && columnOrder.length > 0) {
-      console.log('✅ Using saved column order:', columnOrder);
-      
-      // Reorder columns according to saved order, but only include columns that exist in data
-      const orderedColumns = columnOrder.filter(col => filteredColumns.includes(col));
-      
-      // Add any new columns that aren't in the saved order to the end
-      const newColumns = filteredColumns.filter(col => !columnOrder.includes(col));
-      
-      const finalOrder = [...orderedColumns, ...newColumns];
-      console.log('✅ Final ordered columns:', finalOrder);
-      return finalOrder;
-    }
-    
-    // Otherwise, use original order
-    console.log('✅ Using original column order:', filteredColumns);
-    return filteredColumns;
+
+    // Forzar numero_poliza y contratante al inicio, id al final
+    const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
+    const hasContratante = filteredColumns.includes('contratante');
+    const hasId = filteredColumns.includes('id');
+
+    // Quitar los que vamos a reordenar
+    filteredColumns = filteredColumns.filter(col => col !== 'numero_poliza' && col !== 'contratante' && col !== 'id');
+
+    // Orden final: numero_poliza, contratante, ...resto..., id
+    const finalOrder = [
+      ...(hasNumeroPoliza ? ['numero_poliza'] : []),
+      ...(hasContratante ? ['contratante'] : []),
+      ...filteredColumns,
+      ...(hasId ? ['id'] : [])
+    ];
+    return finalOrder;
   }, [tableColumns, columnOrder, tableName, forceRender]);
 
   // Simple effect just to set the data - NO SORTING HERE
