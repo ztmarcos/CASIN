@@ -533,13 +533,17 @@ const DataSection = () => {
         const response = await fetch(`${API_URL}/data/tables`);
         if (response.ok) {
           const tablesArr = await response.json(); // <-- Es un array directo
-          setTables(tablesArr);
+          // Filtrar igual que TableManager
+          const filteredTables = tablesArr.filter(
+            t => t.isParentTable || (!t.isParentTable && !t.isChildTable)
+          );
+          setTables(filteredTables);
           // Si hay una tabla seleccionada, mantenerla
-          if (selectedTable && tablesArr.find(t => t.name === selectedTable.name)) {
-            handleTableSelect(tablesArr.find(t => t.name === selectedTable.name));
-          } else if (tablesArr.length > 0 && !selectedTable) {
+          if (selectedTable && filteredTables.find(t => t.name === selectedTable.name)) {
+            handleTableSelect(filteredTables.find(t => t.name === selectedTable.name));
+          } else if (filteredTables.length > 0 && !selectedTable) {
             // Si no hay tabla seleccionada, selecciona la primera
-            handleTableSelect(tablesArr[0]);
+            handleTableSelect(filteredTables[0]);
           }
         }
       } catch (error) {
