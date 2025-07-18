@@ -7,6 +7,7 @@ import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUti
 import { toast } from 'react-hot-toast';
 import VencimientosGraphics from './VencimientosGraphics';
 import MatrixGraphics from './MatrixGraphics';
+import airplaneTableService from '../../services/airplaneTableService';
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -343,65 +344,55 @@ export default function Reports() {
   }, [selectedMonth, selectedType, policies, searchTerm]);
 
   useEffect(() => {
-    if (!policies.length) return;
-
-    // Add debugging logs
-    console.log('Building matrix with policies:', policies.length, 'total policies');
-    console.log('Policy sources and ramos:', policies.map(p => ({
-      id: p.id,
-      numero_poliza: p.numero_poliza,
-              contratante: p.nombre_contratante || p.contratante,
-      aseguradora: p.aseguradora,
-      ramo: p.ramo,
-      sourceTable: p.sourceTable
-    })));
-
-    // Extract unique values with normalization
-          const clients = [...new Set(policies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
-    
-    const companies = [...new Set(policies.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
-    
-    const ramos = [...new Set(policies.map(p => normalizeRamo(p.ramo)).filter(Boolean))].sort();
-
-    // Log unique values
-    console.log('Unique values found:', {
-      clients: clients.length + ' clients',
-      companies: companies.length + ' companies: ' + companies.join(', '),
-      ramos: ramos.length + ' ramos: ' + ramos.join(', ')
-    });
-
-    // Create client matrix
-    const matrix = {};
-    clients.forEach(client => {
-      matrix[client] = {
-        companies: {},
-        ramos: {}
-      };
-      
-      // Initialize all to false
-      companies.forEach(company => {
-        matrix[client].companies[company] = false;
+    const fetchAndFilterPolicies = async () => {
+      // 1. Obtener las tablas válidas igual que TableManager
+      const allTables = await airplaneTableService.getTables();
+      const allowedTableNames = allTables
+        .filter(t => t.isParentTable || (!t.isParentTable && !t.isChildTable))
+        .map(t => t.name);
+      // 2. Filtrar policies para solo incluir las de esas tablas
+      const filtered = policies.filter(p => allowedTableNames.includes(p.sourceTable || p.ramo?.toLowerCase() || ''));
+      // 3. El resto del código de matriz usa 'filtered' en vez de 'policies'
+      // Extract unique values with normalization
+      const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
+      const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
+      const ramos = [...new Set(filtered.map(p => normalizeRamo(p.ramo)).filter(Boolean))].sort();
+      // Log unique values
+      console.log('Unique values found:', {
+        clients: clients.length + ' clients',
+        companies: companies.length + ' companies: ' + companies.join(', '),
+        ramos: ramos.length + ' ramos: ' + ramos.join(', ')
       });
-      ramos.forEach(ramo => {
-        matrix[client].ramos[ramo] = false;
+      // Create client matrix
+      const matrix = {};
+      clients.forEach(client => {
+        matrix[client] = {
+          companies: {},
+          ramos: {}
+        };
+        // Initialize all to false
+        companies.forEach(company => {
+          matrix[client].companies[company] = false;
+        });
+        ramos.forEach(ramo => {
+          matrix[client].ramos[ramo] = false;
+        });
+        // Mark existing relationships
+        filtered.forEach(policy => {
+          if ((policy.nombre_contratante || policy.contratante) === client) {
+            matrix[client].companies[normalizeCompany(policy.aseguradora)] = true;
+            matrix[client].ramos[normalizeRamo(policy.ramo)] = true;
+          }
+        });
       });
-
-      // Mark existing relationships
-      policies.forEach(policy => {
-                    if ((policy.nombre_contratante || policy.contratante) === client) {
-          matrix[client].companies[normalizeCompany(policy.aseguradora)] = true;
-          matrix[client].ramos[normalizeRamo(policy.ramo)] = true;
-        }
-      });
-    });
-
-    // Log final matrix
-    console.log('Final matrix structure:', matrix);
-
-    setUniqueClients(clients);
-    setUniqueCompanies(companies);
-    setUniqueRamos(ramos);
-    setClientMatrix(matrix);
+      // Log final matrix
+      console.log('Final matrix structure:', matrix);
+      setUniqueClients(clients);
+      setUniqueCompanies(companies);
+      setUniqueRamos(ramos);
+      setClientMatrix(matrix);
+    };
+    fetchAndFilterPolicies();
   }, [policies]);
 
   const handleSendEmail = async () => {
