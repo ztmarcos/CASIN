@@ -527,34 +527,40 @@ const DataSection = () => {
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const API_URL = window.location.hostname === 'localhost' 
-          ? 'http://localhost:3001/api' 
-          : '/api';
-        const response = await fetch(`${API_URL}/data/tables`);
-        if (response.ok) {
-          const tablesArr = await response.json(); // <-- Es un array directo
-          // Filtrar igual que TableManager
-          const filteredTables = tablesArr.filter(
-            t => t.isParentTable || (!t.isParentTable && !t.isChildTable)
-          );
-          setTables(filteredTables);
-          // Si hay una tabla seleccionada, mantenerla
-          if (selectedTable && filteredTables.find(t => t.name === selectedTable.name)) {
-            handleTableSelect(filteredTables.find(t => t.name === selectedTable.name));
-          } else if (filteredTables.length > 0 && !selectedTable) {
-            // Si no hay tabla seleccionada, selecciona la primera
-            handleTableSelect(filteredTables[0]);
-          }
+        // Usar airplaneTableService igual que TableManager
+        console.log('🔥 Loading Firebase collections for dropdown...');
+        const tablesFromFirebase = await airplaneTableService.getTables();
+        console.log('🔥 Received Firebase collections:', tablesFromFirebase);
+        
+        // Filtrar EXACTAMENTE como TableManager: organizeTables()
+        const simpleTables = tablesFromFirebase.filter(t => !t.isParentTable && !t.isChildTable);
+        const parentTables = tablesFromFirebase.filter(t => t.isParentTable);
+        
+        // Combinar: primero simples, luego parent (igual que TableManager)
+        const filteredTables = [...simpleTables, ...parentTables];
+        
+        console.log('🔧 Filtered tables for dropdown:', filteredTables);
+        setTables(filteredTables);
+        
+        // Si hay una tabla seleccionada, mantenerla SOLO si está en las filtradas
+        if (selectedTable && filteredTables.find(t => t.name === selectedTable.name)) {
+          // No llamar handleTableSelect aquí para evitar loop
+          console.log('✅ Manteniendo tabla seleccionada:', selectedTable.name);
+        } else if (filteredTables.length > 0 && !selectedTable) {
+          // Solo auto-seleccionar si NO hay tabla seleccionada
+          console.log('📋 Auto-seleccionando primera tabla:', filteredTables[0].name);
+          handleTableSelect(filteredTables[0]);
         }
       } catch (error) {
-        console.error('Error fetching tables:', error);
+        console.error('❌ Error loading Firebase tables:', error);
       }
     };
-    fetchTables();
-    // Puedes quitar el setInterval si no quieres refrescar cada segundo
-    // const interval = setInterval(fetchTables, 1000); 
-    // return () => clearInterval(interval);
-  }, [selectedTable, handleTableSelect]);
+
+    // Solo ejecutar si no hay tablas cargadas aún
+    if (tables.length === 0) {
+      fetchTables();
+    }
+  }, []); // Dependencias vacías para evitar loop
 
     return (
     <div className="data-section excel-layout">
