@@ -532,16 +532,14 @@ const DataSection = () => {
           : '/api';
         const response = await fetch(`${API_URL}/data/tables`);
         if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.tables) {
-            setTables(result.tables);
-            // If a table is already selected, find it in the list and select it
-            if (selectedTable && result.tables.find(t => t.name === selectedTable.name)) {
-              handleTableSelect(result.tables.find(t => t.name === selectedTable.name));
-            } else if (result.tables.length > 0) {
-              // If no table is selected, select the first one
-              handleTableSelect(result.tables[0]);
-            }
+          const tablesArr = await response.json(); // <-- Es un array directo
+          setTables(tablesArr);
+          // Si hay una tabla seleccionada, mantenerla
+          if (selectedTable && tablesArr.find(t => t.name === selectedTable.name)) {
+            handleTableSelect(tablesArr.find(t => t.name === selectedTable.name));
+          } else if (tablesArr.length > 0 && !selectedTable) {
+            // Si no hay tabla seleccionada, selecciona la primera
+            handleTableSelect(tablesArr[0]);
           }
         }
       } catch (error) {
@@ -549,9 +547,9 @@ const DataSection = () => {
       }
     };
     fetchTables();
-    // Fetch tables on every filter change to ensure dropdown is updated
-    const interval = setInterval(fetchTables, 1000); 
-    return () => clearInterval(interval);
+    // Puedes quitar el setInterval si no quieres refrescar cada segundo
+    // const interval = setInterval(fetchTables, 1000); 
+    // return () => clearInterval(interval);
   }, [selectedTable, handleTableSelect]);
 
     return (
