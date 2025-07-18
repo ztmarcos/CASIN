@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Función para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función para verificar si el usuario es admin CASIN
+    function isCASINAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email in [
+               'z.t.marcos@gmail.com', 
+               'ztmarcos@gmail.com', 
+               'marcos@casin.com',
+               '2012solitario@gmail.com',
+               'marcoszavala09@gmail.com',
+               'michelldiaz.casinseguros@gmail.com',
+               'lorenacasin5@gmail.com'
+             ];
+    }
+    
+    // Función para verificar si el usuario pertenece a un equipo
+    function isTeamMember(teamId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/team_members/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/team_members/$(request.auth.uid)).data.teamId == teamId;
+    }
+    
+    // Colecciones globales - Solo administradores CASIN
+    match /{collection}/{document} {
+      allow read, write: if isCASINAdmin() && 
+                           collection in [
+                             'autos', 
+                             'directorio_contactos', 
+                             'vida', 
+                             'gmm', 
+                             'rc', 
+                             'transporte', 
+                             'mascotas', 
+                             'diversos', 
+                             'negocio', 
+                             'gruposgmm'
+                           ];
+    }
+    
+    // Metadatos de tablas - Solo administradores CASIN
+    match /table_metadata/{document} {
+      allow read, write: if isCASINAdmin();
+    }
+    
+    // Equipos - Solo administradores CASIN pueden crear/modificar
+    match /teams/{teamId} {
+      allow read, write: if isCASINAdmin();
+      allow read: if isTeamMember(teamId);
+    }
+    
+    // Miembros de equipos
+    match /team_members/{memberId} {
+      allow read, write: if isCASINAdmin();
+      allow read: if isAuthenticated() && request.auth.uid == memberId;
+    }
+    
+    // Datos de equipos con prefijo team_
+    match /team_{teamId}_{collection}/{document} {
+      allow read, write: if isCASINAdmin() || isTeamMember(teamId);
+    }
+    
+    // Configuraciones específicas por equipo
+    match /team_configs/{teamId} {
+      allow read, write: if isCASINAdmin() || isTeamMember(teamId);
+    }
+    
+    // Tareas y notificaciones por equipo
+    match /team_tasks/{taskId} {
+      allow read, write: if isAuthenticated(); // Las tareas pueden ser accedidas por usuarios autenticados
+    }
+    
+    // Reportes y analytics - Solo admins
+    match /analytics/{document} {
+      allow read, write: if isCASINAdmin();
+    }
+    
+    // Logs del sistema - Solo admins
+    match /system_logs/{document} {
+      allow read, write: if isCASINAdmin();
+    }
+    
+    // Configuración general - Solo admins
+    match /app_config/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isCASINAdmin();
+    }
+    
+    // Bloquear cualquier otra ruta no especificada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
