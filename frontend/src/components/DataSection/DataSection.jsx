@@ -522,6 +522,38 @@ const DataSection = () => {
     }
   };
 
+  // Fetch all tables for the dropdown
+  const [tables, setTables] = useState([]);
+  useEffect(() => {
+    const fetchTables = async () => {
+      try {
+        const API_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:3001/api' 
+          : '/api';
+        const response = await fetch(`${API_URL}/data/tables`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.tables) {
+            setTables(result.tables);
+            // If a table is already selected, find it in the list and select it
+            if (selectedTable && result.tables.find(t => t.name === selectedTable.name)) {
+              handleTableSelect(result.tables.find(t => t.name === selectedTable.name));
+            } else if (result.tables.length > 0) {
+              // If no table is selected, select the first one
+              handleTableSelect(result.tables[0]);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching tables:', error);
+      }
+    };
+    fetchTables();
+    // Fetch tables on every filter change to ensure dropdown is updated
+    const interval = setInterval(fetchTables, 1000); 
+    return () => clearInterval(interval);
+  }, [selectedTable, handleTableSelect]);
+
     return (
     <div className="data-section excel-layout">
       {/* Excel-like Toolbar Header */}
@@ -539,14 +571,24 @@ const DataSection = () => {
         {/* Center Section - Table Management */}
         <div className="toolbar-center">
           <div className="table-selector-compact">
-            <button 
-              className="table-select-btn"
-              onClick={() => setIsTableManagerCollapsed(!isTableManagerCollapsed)}
+            {/* Dropdown de tablas */}
+            <select
+              className="table-select-dropdown"
+              value={selectedTable ? selectedTable.name : ''}
+              onChange={e => {
+                const tableName = e.target.value;
+                const found = tables.find(t => t.name === tableName);
+                if (found) handleTableSelect(found);
+              }}
+              style={{ minWidth: 200, padding: '0.5rem', borderRadius: 6, border: '1px solid #d1d5db', fontSize: '0.95rem' }}
             >
-              📊 {selectedTable ? selectedTable.name : 'Seleccionar Tabla'}
-              <span className="dropdown-arrow">{isTableManagerCollapsed ? '▼' : '▲'}</span>
-            </button>
-            
+              <option value="" disabled>Selecciona una tabla</option>
+              {tables && tables.map(table => (
+                <option key={table.name} value={table.name}>{table.title || table.name}</option>
+              ))}
+            </select>
+
+            {/* Botón de columnas y crear tabla */}
             {selectedTable && (
               <button 
                 className="column-config-btn"
@@ -556,7 +598,6 @@ const DataSection = () => {
                 ⚙️
               </button>
             )}
-            
             <button 
               className="create-table-btn-compact"
               onClick={() => setShowCreateTableModal(true)}
@@ -612,6 +653,7 @@ const DataSection = () => {
       </div>
 
       {/* Collapsible Panels - Minimized by default */}
+      {/*
       {!isTableManagerCollapsed && (
         <div className="panel-dropdown table-manager-dropdown">
           <TableManager onTableSelect={(table) => {
@@ -620,6 +662,7 @@ const DataSection = () => {
           }} />
         </div>
       )}
+      */}
 
       {!isColumnManagerCollapsed && selectedTable && (
         <div className="panel-dropdown column-manager-dropdown">
