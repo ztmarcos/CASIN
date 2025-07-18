@@ -108,10 +108,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     // Get complete table structure including custom columns from API
     const updateTableColumns = async () => {
       try {
-        // First, get columns from data
-        const dataColumns = Object.keys(data[0]);
-        
-        // Then try to get complete structure from API if we have a tableName
+        // ALWAYS try to get structure from API first if we have a tableName
         if (tableName) {
           console.log('🔧 Getting complete table structure for:', tableName);
           const API_URL = window.location.hostname === 'localhost' 
@@ -123,22 +120,23 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             const structure = await response.json();
             if (structure.columns) {
               const allColumns = structure.columns.map(col => col.name);
-              console.log('🔧 Got complete column structure:', allColumns);
-              console.log('🔧 Data columns:', dataColumns);
+              console.log('🔧 Got complete column structure from API:', allColumns);
               
               // Check if columns actually changed
               if (JSON.stringify(allColumns) !== JSON.stringify(tableColumns)) {
-                console.log('🔧 Setting NEW table columns from API:', allColumns);
+                console.log('🔧 Setting NEW table columns from API structure:', allColumns);
                 setTableColumns(allColumns);
               } else {
-                console.log('🔧 Table columns unchanged, keeping current structure');
+                console.log('🔧 Table columns unchanged, keeping API structure');
               }
-              return;
+              return; // Exit early - we successfully used API structure
             }
           }
         }
         
-        // Fallback to data columns if API fails
+        // Fallback to data columns ONLY if API fails
+        console.log('⚠️ API structure failed or unavailable, falling back to data columns');
+        const dataColumns = Object.keys(data[0]);
         console.log('🔧 Checking if data columns changed:', { 
           dataColumns, 
           currentTableColumns: tableColumns,
@@ -147,16 +145,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         
         // Only update columns if they actually changed
         if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
-          console.log('🔧 Setting NEW table columns from data:', dataColumns);
+          console.log('🔧 Setting NEW table columns from data (fallback):', dataColumns);
           setTableColumns(dataColumns);
         } else {
           console.log('🔧 Table columns unchanged, keeping current order');
         }
       } catch (error) {
         console.error('❌ Error getting table structure:', error);
-        // Fallback to data columns
+        // Final fallback to data columns
         const dataColumns = Object.keys(data[0]);
         if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
+          console.log('🔧 Setting table columns from data (error fallback):', dataColumns);
           setTableColumns(dataColumns);
         }
       }
