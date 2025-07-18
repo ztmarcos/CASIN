@@ -444,8 +444,8 @@ export default function Reports() {
   const normalizeCompany = (name) => {
     if (!name) return '';
     const n = name.toString().toLowerCase();
-    if (n.includes('qualitas') || n.includes('quálitas')) return 'Qualitas';
-    if (n.includes('gnp') || n.includes('grupo nacional provincial')) return 'GNP';
+    if (n.includes('qualitas') || n.includes('quálitas') || n.includes('quálitas compañía de seguros')) return 'Qualitas';
+    if (n.includes('gnp') || n.includes('grupo nacional provincial') || n.includes('grupo nacional provincial s.a.b')) return 'GNP';
     if (n.includes('hdi')) return 'HDI';
     if (n.includes('plan seguro')) return 'Plan Seguro';
     if (n.includes('sura')) return 'SURA';
@@ -568,16 +568,16 @@ export default function Reports() {
                   </div>
                 ) : (
                   (() => {
-                    // Extraer datos únicos de las pólizas filtradas
+                    // Extraer datos únicos de las pólizas filtradas usando nombres normalizados
                     const clients = [...new Set(filteredPolicies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
-                    const ramos = [...new Set(filteredPolicies.map(p => (p.sourceTable || p.table || p.ramo || '').toUpperCase()).filter(Boolean))].sort();
-                    const companies = [...new Set(filteredPolicies.map(p => p.aseguradora).filter(Boolean))].sort();
+                    const ramos = [...new Set(filteredPolicies.map(p => normalizeRamo(p.sourceTable || p.table || p.ramo || '')).filter(Boolean))].sort();
+                    const companies = [...new Set(filteredPolicies.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
                     
                     return (
-                      <table className="reports-table">
+                      <table className="reports-table matrix-table">
                         <thead>
                           <tr>
-                            <th>Cliente</th>
+                            <th className="client-header">Cliente</th>
                             {ramos.map(ramo => (
                               <th key={ramo} className="ramo-header">{ramo}</th>
                             ))}
@@ -589,8 +589,8 @@ export default function Reports() {
                         <tbody>
                           {clients.map(client => {
                             const clientPolicies = filteredPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                            const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || p.ramo || '').toUpperCase()))];
-                            const clientCompanies = [...new Set(clientPolicies.map(p => p.aseguradora))];
+                            const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.sourceTable || p.table || p.ramo || '')))];
+                            const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                             
                             return (
                               <tr key={client}>
@@ -600,7 +600,7 @@ export default function Reports() {
                                 {ramos.map(ramo => {
                                   const hasRamo = clientRamos.includes(ramo);
                                   return (
-                                    <td key={`${client}-ramo-${ramo}`} className={hasRamo ? 'has-policy' : 'no-policy'}>
+                                    <td key={`${client}-ramo-${ramo}`} className={`${hasRamo ? 'has-policy' : 'no-policy'} ramo-cell`}>
                                       {hasRamo ? '✓' : '×'}
                                     </td>
                                   );
@@ -610,7 +610,7 @@ export default function Reports() {
                                 {companies.map(company => {
                                   const hasCompany = clientCompanies.includes(company);
                                   return (
-                                    <td key={`${client}-company-${company}`} className={hasCompany ? 'has-policy' : 'no-policy'}>
+                                    <td key={`${client}-company-${company}`} className={`${hasCompany ? 'has-policy' : 'no-policy'} company-cell`}>
                                       {hasCompany ? '✓' : '×'}
                                     </td>
                                   );
