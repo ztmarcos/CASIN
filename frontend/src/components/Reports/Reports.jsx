@@ -359,12 +359,9 @@ export default function Reports() {
     // Extract unique values with normalization
           const clients = [...new Set(policies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
     
-    const companies = [...new Set(policies
-      .map(p => normalizeCompanyName(p.aseguradora))
-      .filter(Boolean)
-    )].sort();
+    const companies = [...new Set(policies.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
     
-    const ramos = [...new Set(policies.map(p => p.ramo).filter(Boolean))].sort();
+    const ramos = [...new Set(policies.map(p => normalizeRamo(p.ramo)).filter(Boolean))].sort();
 
     // Log unique values
     console.log('Unique values found:', {
@@ -392,8 +389,8 @@ export default function Reports() {
       // Mark existing relationships
       policies.forEach(policy => {
                     if ((policy.nombre_contratante || policy.contratante) === client) {
-          matrix[client].companies[policy.aseguradora] = true;
-          matrix[client].ramos[policy.ramo] = true;
+          matrix[client].companies[normalizeCompany(policy.aseguradora)] = true;
+          matrix[client].ramos[normalizeRamo(policy.ramo)] = true;
         }
       });
     });
@@ -520,17 +517,25 @@ export default function Reports() {
            policy.ramo.trim().length > 0;
   };
 
-  // Normalize company names
-  const normalizeCompanyName = (name) => {
+  // Normaliza nombres de aseguradoras
+  const normalizeCompany = (name) => {
     if (!name) return '';
-    const normalized = name.toString().trim().toLowerCase();
-    // Fix common duplicates
-    if (normalized.includes('plan seguro')) return 'Plan Seguro';
-    if (normalized.includes('gnp')) return 'GNP';
-    if (normalized.includes('axa')) return 'AXA';
-    if (normalized.includes('seguros monterrey')) return 'Seguros Monterrey';
-    // Return original with proper capitalization
-    return name.toString().trim();
+    const n = name.toString().toLowerCase();
+    if (n.includes('qualitas') || n.includes('quálitas')) return 'Qualitas';
+    if (n.includes('gnp') || n.includes('grupo nacional provincial')) return 'GNP';
+    if (n.includes('hdi')) return 'HDI';
+    if (n.includes('plan seguro')) return 'Plan Seguro';
+    if (n.includes('sura')) return 'SURA';
+    return name.trim();
+  };
+  // Normaliza nombres de ramos
+  const normalizeRamo = (ramo) => {
+    if (!ramo) return '';
+    const n = ramo.toString().toLowerCase();
+    if (n.includes('hogar') || n.includes('daños')) return 'Hogar';
+    if (n.includes('gmm') || n.includes('gastos médicos')) return 'GMM';
+    if (n.includes('automóvil') || n.includes('auto') || n.includes('motor') || n.includes('amplia póliza')) return 'Autos';
+    return ramo.trim();
   };
 
   return (
@@ -695,7 +700,7 @@ export default function Reports() {
                         // Apply ramo filter
                         if (selectedRamoFilter) {
                           const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                          const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
+                          const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.ramo)))];
                           return clientRamos.includes(selectedRamoFilter);
                         }
                         return true;
@@ -704,7 +709,7 @@ export default function Reports() {
                         // Apply aseguradora filter
                         if (selectedAseguradoraFilter) {
                           const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                          const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
+                          const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                           return clientCompanies.includes(selectedAseguradoraFilter);
                         }
                         return true;
@@ -739,8 +744,8 @@ export default function Reports() {
                         <tbody>
                           {filteredClients.map(client => {
                             const clientPolicies = policies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                            const clientRamos = [...new Set(clientPolicies.map(p => p.ramo))];
-                            const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompanyName(p.aseguradora)))];
+                            const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.ramo)))];
+                            const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                             
                             return (
                               <tr key={client}>
@@ -750,8 +755,8 @@ export default function Reports() {
                                 {uniqueRamos.map(ramo => {
                                   const hasRamo = clientRamos.includes(ramo);
                                   const ramoCompanies = clientPolicies
-                                    .filter(p => p.ramo === ramo)
-                                    .map(p => p.aseguradora);
+                                    .filter(p => normalizeRamo(p.ramo) === ramo)
+                                    .map(p => normalizeCompany(p.aseguradora));
                                   
                                   return (
                                     <td 
@@ -771,8 +776,8 @@ export default function Reports() {
                                 {uniqueCompanies.map(company => {
                                   const hasCompany = clientCompanies.includes(company);
                                   const companyRamos = clientPolicies
-                                    .filter(p => normalizeCompanyName(p.aseguradora) === company)
-                                    .map(p => p.ramo);
+                                    .filter(p => normalizeCompany(p.aseguradora) === company)
+                                    .map(p => normalizeRamo(p.ramo));
                                   
                                   return (
                                     <td 
@@ -800,7 +805,7 @@ export default function Reports() {
                             
                             {/* Ramo totals */}
                             {uniqueRamos.map(ramo => {
-                              const ramoCount = policies.filter(p => p.ramo === ramo).length;
+                              const ramoCount = policies.filter(p => normalizeRamo(p.ramo) === ramo).length;
                               return (
                                 <td key={ramo} className="ramo-total">
                                   <strong>{ramoCount}</strong>
@@ -810,7 +815,7 @@ export default function Reports() {
                             
                             {/* Company totals */}
                             {uniqueCompanies.map(company => {
-                              const companyCount = policies.filter(p => normalizeCompanyName(p.aseguradora) === company).length;
+                              const companyCount = policies.filter(p => normalizeCompany(p.aseguradora) === company).length;
                               return (
                                 <td key={company} className="company-total">
                                   <strong>{companyCount}</strong>
