@@ -77,6 +77,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return finalOrder;
   }, [tableColumns, columnOrder, tableName, forceRender]);
 
+  // Filtrar columnas PDF/pdf
+  const filteredColumns = useMemo(() => {
+    if (!tableColumns) return [];
+    return tableColumns.filter(col => col.toLowerCase() !== 'pdf');
+  }, [tableColumns]);
+
   // Simple effect just to set the data - NO SORTING HERE
   useEffect(() => {
     console.log('🔥 Setting data:', data);
