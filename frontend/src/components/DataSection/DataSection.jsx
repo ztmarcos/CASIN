@@ -14,6 +14,28 @@ import { toast } from 'react-hot-toast';
 import localCacheService from '../../services/localCacheService';
 import airplaneModeService from '../../services/airplaneModeService';
 
+// Helper para forzar columnas
+function forceColumnOrder(columns) {
+  // Asegura que contratante esté presente
+  let cols = columns.map(col => col.name);
+  if (!cols.includes('contratante')) {
+    cols = ['contratante', ...cols];
+  }
+  // Asegura que numero_poliza esté presente
+  if (!cols.includes('numero_poliza')) {
+    cols = ['numero_poliza', ...cols];
+  }
+  // Quita duplicados y fuerza orden
+  const uniqueCols = Array.from(new Set(cols));
+  // Siempre primero numero_poliza, luego contratante
+  const ordered = ['numero_poliza', 'contratante', ...uniqueCols.filter(c => c !== 'numero_poliza' && c !== 'contratante')];
+  // Devuelve como objetos columna
+  return ordered.map(name => {
+    const found = columns.find(col => col.name === name);
+    return found || { name, type: 'VARCHAR', isPrimary: false, required: false, isCustom: true };
+  });
+}
+
 const DataSection = () => {
   const { userTeam, currentTeam } = useTeam();
   const team = currentTeam || userTeam;
@@ -98,13 +120,13 @@ const DataSection = () => {
             console.log('🔧 Got table structure from loadTableData:', structureResult);
             
             if (structureResult.columns) {
-              const columns = structureResult.columns.map(col => ({
+              const columns = forceColumnOrder(structureResult.columns.map(col => ({
                 name: col.name,
                 type: col.type || 'VARCHAR',
                 isPrimary: col.key === 'PRI' || col.name === 'id',
                 required: !col.nullable,
                 isCustom: col.isCustom || false
-              }));
+              })));
               
               setSelectedTable(prev => ({
                 ...prev,
@@ -211,13 +233,13 @@ const DataSection = () => {
             console.log('🔧 Got table structure from API:', structureResult);
             
             if (structureResult.columns) {
-              columns = structureResult.columns.map(col => ({
+              columns = forceColumnOrder(structureResult.columns.map(col => ({
                 name: col.name,
                 type: col.type || 'VARCHAR',
                 isPrimary: col.key === 'PRI' || col.name === 'id',
                 required: !col.nullable,
                 isCustom: col.isCustom || false
-              }));
+              })));
               console.log('✅ Parsed columns:', columns);
             }
           }
@@ -226,13 +248,13 @@ const DataSection = () => {
           if (columns.length === 0) {
             console.log('⚠️ API structure failed, falling back to inference');
             const firstRow = tableData[0];
-            columns = Object.keys(firstRow).map(key => ({
+            columns = forceColumnOrder(Object.keys(firstRow).map(key => ({
               name: key,
               type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
               isPrimary: key === 'id' || key === '_id',
               required: key === 'name' || key === 'title',
               isCustom: false
-            }));
+            })));
           }
           
           setSelectedTable(prev => ({
@@ -246,13 +268,13 @@ const DataSection = () => {
           console.error('❌ Error loading table structure:', error);
           // Fallback to simple inference
           const firstRow = tableData[0];
-          const inferredColumns = Object.keys(firstRow).map(key => ({
+          const inferredColumns = forceColumnOrder(Object.keys(firstRow).map(key => ({
             name: key,
             type: typeof firstRow[key] === 'number' ? 'INTEGER' : 'VARCHAR',
             isPrimary: key === 'id' || key === '_id',
             required: key === 'name' || key === 'title',
             isCustom: false
-          }));
+          })));
           
           setSelectedTable(prev => ({
             ...prev,
