@@ -4533,7 +4533,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -4541,19 +4541,22 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       to = req.body.to;
       subject = req.body.subject;
       htmlContent = req.body.htmlContent;
+      from = req.body.from;
+      fromName = req.body.fromName;
+      fromPass = req.body.fromPass;
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -4564,19 +4567,26 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       });
     }
 
-    // Configurar transporter de nodemailer
+    // Configurar transporter de nodemailer con remitente dinámico
     console.log('📧 Configurando transporter...');
     console.log('📧 SMTP_HOST:', process.env.SMTP_HOST);
-    console.log('📧 SMTP_USER:', process.env.SMTP_USER);
-    console.log('📧 SMTP_PASS configurado:', !!(process.env.SMTP_PASSWORD || process.env.SMTP_PASS));
+    
+    // Usar remitente dinámico o fallback a variables por defecto
+    const smtpUser = from || process.env.SMTP_USER_CASIN || process.env.SMTP_USER;
+    const smtpPass = fromPass || process.env.SMTP_PASS_CASIN || process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
+    const senderName = fromName || 'CASIN Seguros';
+    
+    console.log('📧 SMTP_USER (dinámico):', smtpUser);
+    console.log('📧 SMTP_PASS configurado:', !!smtpPass);
+    console.log('📧 Sender Name:', senderName);
     
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: 587,
       secure: false,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD || process.env.SMTP_PASS
+        user: smtpUser,
+        pass: smtpPass
       }
     });
 
@@ -4596,7 +4606,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     }
     
     const mailOptions = {
-      from: `"CASIN Seguros" <${process.env.SMTP_USER}>`,
+      from: `"${senderName}" <${smtpUser}>`,
       to: to,
       subject: subject,
       html: emailBody,
