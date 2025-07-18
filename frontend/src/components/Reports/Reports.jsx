@@ -350,9 +350,20 @@ export default function Reports() {
       const allowedTableNames = allTables
         .filter(t => t.isParentTable || (!t.isParentTable && !t.isChildTable))
         .map(t => t.name);
-      // 2. Filtrar policies para solo incluir las de esas tablas
+      console.log('🔍 Tablas válidas (TableManager):', allowedTableNames);
+      // 2. Log de policies para depuración
+      console.log('🔍 Ejemplo de policies:', policies.slice(0, 10).map(p => ({
+        id: p.id,
+        ramo: p.ramo,
+        sourceTable: p.sourceTable,
+        nombre_contratante: p.nombre_contratante,
+        contratante: p.contratante,
+        aseguradora: p.aseguradora,
+        table: p.table,
+        firebase_doc_id: p.firebase_doc_id
+      })));
+      // 3. Filtrar policies para solo incluir las de esas tablas (lógica actual)
       const filtered = policies.filter(p => allowedTableNames.includes(p.sourceTable || p.ramo?.toLowerCase() || ''));
-      // 3. El resto del código de matriz usa 'filtered' en vez de 'policies'
       // Extract unique values with normalization
       const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
       const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
