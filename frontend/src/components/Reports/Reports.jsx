@@ -567,28 +567,61 @@ export default function Reports() {
                     </div>
                   </div>
                 ) : (
-                  <table className="reports-table">
-                    <thead>
-                      <tr>
-                        <th>Tabla/Ramo</th>
-                        <th>Póliza</th>
-                        <th>Contratante</th>
-                        <th>Aseguradora</th>
-                        <th>Prima Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredPolicies.map(policy => (
-                        <tr key={`${policy.id}-${policy.numero_poliza}`}>
-                          <td>{(policy.sourceTable || policy.table || policy.ramo || 'Sin tabla').toUpperCase()}</td>
-                          <td>{policy.numero_poliza}</td>
-                          <td>{policy.nombre_contratante || policy.contratante}</td>
-                          <td>{policy.aseguradora}</td>
-                          <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  (() => {
+                    // Extraer datos únicos de las pólizas filtradas
+                    const clients = [...new Set(filteredPolicies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
+                    const ramos = [...new Set(filteredPolicies.map(p => (p.sourceTable || p.table || p.ramo || '').toUpperCase()).filter(Boolean))].sort();
+                    const companies = [...new Set(filteredPolicies.map(p => p.aseguradora).filter(Boolean))].sort();
+                    
+                    return (
+                      <table className="reports-table">
+                        <thead>
+                          <tr>
+                            <th>Cliente</th>
+                            {ramos.map(ramo => (
+                              <th key={ramo} className="ramo-header">{ramo}</th>
+                            ))}
+                            {companies.map(company => (
+                              <th key={company} className="company-header">{company}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {clients.map(client => {
+                            const clientPolicies = filteredPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
+                            const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || p.ramo || '').toUpperCase()))];
+                            const clientCompanies = [...new Set(clientPolicies.map(p => p.aseguradora))];
+                            
+                            return (
+                              <tr key={client}>
+                                <td className="client-name">{client}</td>
+                                
+                                {/* Columnas de Ramos */}
+                                {ramos.map(ramo => {
+                                  const hasRamo = clientRamos.includes(ramo);
+                                  return (
+                                    <td key={`${client}-ramo-${ramo}`} className={hasRamo ? 'has-policy' : 'no-policy'}>
+                                      {hasRamo ? '✓' : '×'}
+                                    </td>
+                                  );
+                                })}
+                                
+                                {/* Columnas de Aseguradoras */}
+                                {companies.map(company => {
+                                  const hasCompany = clientCompanies.includes(company);
+                                  return (
+                                    <td key={`${client}-company-${company}`} className={hasCompany ? 'has-policy' : 'no-policy'}>
+                                      {hasCompany ? '✓' : '×'}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  })()
                 )}
               </div>
             </div>
