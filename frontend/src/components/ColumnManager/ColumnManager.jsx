@@ -501,6 +501,9 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
   };
 
+  // Filtrar columnas PDF/pdf
+  const filteredColumns = columns.filter(colObj => colObj.name.toLowerCase() !== 'pdf');
+
   return (
     <div className="column-manager">
       <div className="section-header">
@@ -577,11 +580,11 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
             onDragEnd={handleDragEnd}
           >
             <SortableContext
-              items={columns.map(col => `col-${col.name}`)}
+              items={filteredColumns.map(col => `col-${col.name}`)}
               strategy={horizontalListSortingStrategy}
             >
               <div className="columns-tags">
-                {columns.map((column) => (
+                {filteredColumns.map((column) => (
                   <SortableItem 
                     key={`col-${column.name}`}
                     id={`col-${column.name}`}
