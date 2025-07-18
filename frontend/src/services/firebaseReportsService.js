@@ -89,6 +89,8 @@ class FirebaseReportsService {
               tipo_seguro: this.getInsuranceType(collectionName),
               ramo: this.getInsuranceType(collectionName),
               source: collectionName,
+              sourceTable: collectionName, // Agregar sourceTable para compatibilidad
+              table: collectionName, // Agregar table para compatibilidad
               rfc: doc.rfc || '',
               email: doc.email || doc.e_mail || '',
               telefono: doc.telefono || doc.telefono_movil || '',
