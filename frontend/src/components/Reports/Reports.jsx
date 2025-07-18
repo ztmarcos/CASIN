@@ -79,16 +79,7 @@ export default function Reports() {
   const [expandedCards, setExpandedCards] = useState({});
   const [policyStatuses, setPolicyStatuses] = useState({});
   const [isStatusLoading, setIsStatusLoading] = useState(true);
-  const [uniqueClients, setUniqueClients] = useState([]);
-  const [uniqueCompanies, setUniqueCompanies] = useState([]);
-  const [uniqueRamos, setUniqueRamos] = useState([]);
-  const [clientMatrix, setClientMatrix] = useState({});
-  const [validatedPolicies, setValidatedPolicies] = useState([]);
-  
-  // Matrix filters
-  const [matrixSearchTerm, setMatrixSearchTerm] = useState('');
-  const [selectedRamoFilter, setSelectedRamoFilter] = useState('');
-  const [selectedAseguradoraFilter, setSelectedAseguradoraFilter] = useState('');
+
 
   // New state for collapsible layout and graphics
   const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(false);
@@ -344,105 +335,7 @@ export default function Reports() {
     setFilteredPolicies(filtered);
   }, [selectedMonth, selectedType, policies, searchTerm]);
 
-  useEffect(() => {
-    const fetchAndFilterPolicies = async () => {
-      // 1. Obtener las tablas válidas - incluir todas las tablas primarias y parent tables, excluir solo child tables
-      const allTables = await airplaneTableService.getTables();
-      const allowedTableNames = allTables
-        .filter(t => !t.isChildTable) // Solo excluir tablas child (listados)
-        .map(t => t.name);
-      console.log('🔍 Tablas válidas (incluye mascotas, rc, etc.):', allowedTableNames);
-      // 2. Log de policies para depuración
-      console.log('🔍 Ejemplo de policies:', policies.slice(0, 10).map(p => ({
-        id: p.id,
-        ramo: p.ramo,
-        sourceTable: p.sourceTable,
-        nombre_contratante: p.nombre_contratante,
-        contratante: p.contratante,
-        aseguradora: p.aseguradora,
-        table: p.table,
-        firebase_doc_id: p.firebase_doc_id
-      })));
-      // 3. Filtrar policies usando validación Y tablas válidas exactas
-      const filtered = policies.filter(p => {
-        // Primero validar que la póliza sea válida
-        const isValid = validatePolicy(p);
-        if (!isValid) {
-          return false;
-        }
-        
-        // Luego verificar que pertenezca a una tabla válida
-        const policyTableName = (p.sourceTable || p.table || p.ramo || '').toLowerCase();
-        const belongsToValidTable = allowedTableNames.includes(policyTableName);
-        
-        // Debug para las primeras 5 policies válidas
-        if (policies.indexOf(p) < 5 && isValid) {
-          console.log('🔍 Policy debug:', {
-            index: policies.indexOf(p),
-            sourceTable: p.sourceTable,
-            table: p.table, 
-            ramo: p.ramo,
-            computed: policyTableName,
-            belongs: belongsToValidTable,
-            allowedTables: allowedTableNames
-          });
-        }
-        
-        return belongsToValidTable;
-      });
-      
-      console.log('🔍 Policies filtradas:', filtered.length, 'de', policies.length, 'total');
-      console.log('🔍 Ramos en filtered:', [...new Set(filtered.map(p => p.ramo).filter(Boolean))]);
-      // Extract unique values with normalization
-      const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
-      const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
-      // RAMOS = nombres de las tablas (sourceTable/table)
-      console.log('🔍 DEBUG - Sample policies for ramos:', filtered.slice(0, 3).map(p => ({
-        sourceTable: p.sourceTable,
-        table: p.table,
-        ramo: p.ramo,
-        allKeys: Object.keys(p)
-      })));
-      const ramos = [...new Set(filtered.map(p => (p.sourceTable || p.table || '').toUpperCase()).filter(Boolean))].sort();
-      console.log('🔍 DEBUG - Extracted ramos:', ramos);
-      // Log unique values
-      console.log('Unique values found:', {
-        clients: clients.length + ' clients',
-        companies: companies.length + ' companies: ' + companies.join(', '),
-        ramos: ramos.length + ' ramos: ' + ramos.join(', ')
-      });
-      // Create client matrix
-      const matrix = {};
-      clients.forEach(client => {
-        matrix[client] = {
-          companies: {},
-          ramos: {}
-        };
-        // Initialize all to false
-        companies.forEach(company => {
-          matrix[client].companies[company] = false;
-        });
-        ramos.forEach(ramo => {
-          matrix[client].ramos[ramo] = false;
-        });
-        // Mark existing relationships
-        filtered.forEach(policy => {
-          if ((policy.nombre_contratante || policy.contratante) === client) {
-            matrix[client].companies[normalizeCompany(policy.aseguradora)] = true;
-            matrix[client].ramos[(policy.sourceTable || policy.table || '').toUpperCase()] = true;
-          }
-        });
-      });
-      // Log final matrix
-      console.log('Final matrix structure:', matrix);
-      setUniqueClients(clients);
-      setUniqueCompanies(companies);
-      setUniqueRamos(ramos);
-      setClientMatrix(matrix);
-      setValidatedPolicies(filtered); // Guardar las pólizas validadas para usar en la matriz
-    };
-    fetchAndFilterPolicies();
-  }, [policies]);
+
 
   const handleSendEmail = async () => {
     const today = new Date();
@@ -672,203 +565,37 @@ export default function Reports() {
           {selectedType === 'Matriz de Productos' ? (
             <div className="matrix-container">
               <div className="matrix-section">
-                <h3 className="matrix-title">Matriz Comparativa de Clientes por Ramo y Aseguradora</h3>
+                <h3 className="matrix-title">Matriz de Productos</h3>
                 
-                {/* Matrix filters */}
-                <div className="matrix-filters">
-                  <div className="matrix-search-bar">
-                    <input
-                      type="text"
-                      placeholder="Buscar cliente..."
-                      value={matrixSearchTerm}
-                      onChange={(e) => setMatrixSearchTerm(e.target.value)}
-                      className="matrix-search-input"
-                    />
-                  </div>
-                  <div className="matrix-filter-selects">
-                    <select
-                      className="matrix-filter-select"
-                      value={selectedRamoFilter}
-                      onChange={(e) => setSelectedRamoFilter(e.target.value)}
-                    >
-                      <option value="">Todos los Ramos</option>
-                      {uniqueRamos.map(ramo => (
-                        <option key={ramo} value={ramo}>{ramo}</option>
-                      ))}
-                    </select>
-                    <select
-                      className="matrix-filter-select"
-                      value={selectedAseguradoraFilter}
-                      onChange={(e) => setSelectedAseguradoraFilter(e.target.value)}
-                    >
-                      <option value="">Todas las Aseguradoras</option>
-                      {uniqueCompanies.map(company => (
-                        <option key={company} value={company}>{company}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                
-{/* Check if we have data to display */}
-                {uniqueClients.length === 0 || uniqueRamos.length === 0 || uniqueCompanies.length === 0 ? (
+                {filteredPolicies.length === 0 ? (
                   <div className="matrix-no-data">
                     <div className="no-data-message">
-                      <h4>No hay datos disponibles para mostrar la matriz</h4>
-                      <p>
-                        {uniqueClients.length === 0 && "No se encontraron clientes. "}
-                        {uniqueRamos.length === 0 && "No se encontraron ramos de seguros. "}
-                        {uniqueCompanies.length === 0 && "No se encontraron aseguradoras. "}
-                      </p>
-                      <p>Verifique que las pólizas tengan datos completos de contratante, ramo y aseguradora.</p>
+                      <h4>No hay pólizas disponibles</h4>
                     </div>
                   </div>
                 ) : (
-                  (() => {
-                    // Filter clients based on search and filter criteria
-                    const filteredClients = uniqueClients
-                      .filter(client => {
-                        // Apply search filter
-                        if (matrixSearchTerm.trim()) {
-                          return client.toLowerCase().includes(matrixSearchTerm.toLowerCase());
-                        }
-                        return true;
-                      })
-                      .filter(client => {
-                        // Apply ramo filter
-                        if (selectedRamoFilter) {
-                          const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                          const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || '').toUpperCase()))];
-                          return clientRamos.includes(selectedRamoFilter);
-                        }
-                        return true;
-                      })
-                      .filter(client => {
-                        // Apply aseguradora filter
-                        if (selectedAseguradoraFilter) {
-                          const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                          const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
-                          return clientCompanies.includes(selectedAseguradoraFilter);
-                        }
-                        return true;
-                      });
-
-                    return filteredClients.length === 0 ? (
-                      <div className="matrix-no-results">
-                        <div className="no-data-message">
-                          <h4>No se encontraron resultados</h4>
-                          <p>No hay clientes que coincidan con los filtros aplicados.</p>
-                          <p>Intente ajustar los criterios de búsqueda o filtros.</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <table className="matrix-table">
-                        <thead>
-                          <tr>
-                            <th rowSpan="2">Cliente</th>
-                            <th colSpan={uniqueRamos.length}>Ramos de Seguros</th>
-                            <th colSpan={uniqueCompanies.length}>Aseguradoras</th>
-                            <th rowSpan="2">Total Pólizas</th>
-                          </tr>
-                          <tr>
-                            {uniqueRamos.map(ramo => (
-                              <th key={ramo} className="ramo-header">{ramo}</th>
-                            ))}
-                            {uniqueCompanies.map(company => (
-                              <th key={company} className="company-header">{company}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredClients.map(client => {
-                            const clientPolicies = validatedPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
-                            const clientRamos = [...new Set(clientPolicies.map(p => (p.sourceTable || p.table || '').toUpperCase()))];
-                            const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
-                            
-                            return (
-                              <tr key={client}>
-                                <td className="client-name">{client}</td>
-                                
-                                {/* Ramo columns */}
-                                {uniqueRamos.map(ramo => {
-                                  const hasRamo = clientRamos.includes(ramo);
-                                  const ramoCompanies = clientPolicies
-                                    .filter(p => (p.sourceTable || p.table || '').toUpperCase() === ramo)
-                                    .map(p => normalizeCompany(p.aseguradora));
-                                  
-                                  return (
-                                    <td 
-                                      key={`${client}-ramo-${ramo}`}
-                                      className={hasRamo ? 'has-policy' : 'no-policy'}
-                                      title={hasRamo ? 
-                                        `${client} tiene ${ramo} con: ${[...new Set(ramoCompanies)].join(', ')}` : 
-                                        `${client} no tiene póliza de ${ramo}`
-                                      }
-                                    >
-                                      {hasRamo ? '✓' : '×'}
-                                    </td>
-                                  );
-                                })}
-                                
-                                {/* Company columns */}
-                                {uniqueCompanies.map(company => {
-                                  const hasCompany = clientCompanies.includes(company);
-                                  const companyRamos = clientPolicies
-                                    .filter(p => normalizeCompany(p.aseguradora) === company)
-                                    .map(p => (p.sourceTable || p.table || '').toUpperCase());
-                                  
-                                  return (
-                                    <td 
-                                      key={`${client}-company-${company}`}
-                                      className={hasCompany ? 'has-policy' : 'no-policy'}
-                                      title={hasCompany ? 
-                                        `${client} tiene con ${company}: ${[...new Set(companyRamos)].join(', ')}` : 
-                                        `${client} no tiene póliza con ${company}`
-                                      }
-                                    >
-                                      {hasCompany ? '✓' : '×'}
-                                    </td>
-                                  );
-                                })}
-                                
-                                {/* Total policies */}
-                                <td className="policy-count">{clientPolicies.length}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot>
-                          <tr className="summary-row">
-                            <td><strong>Total por Categoría</strong></td>
-                            
-                            {/* Ramo totals */}
-                            {uniqueRamos.map(ramo => {
-                              const ramoCount = validatedPolicies.filter(p => (p.sourceTable || p.table || '').toUpperCase() === ramo).length;
-                              return (
-                                <td key={ramo} className="ramo-total">
-                                  <strong>{ramoCount}</strong>
-                                </td>
-                              );
-                            })}
-                            
-                            {/* Company totals */}
-                            {uniqueCompanies.map(company => {
-                              const companyCount = validatedPolicies.filter(p => normalizeCompany(p.aseguradora) === company).length;
-                              return (
-                                <td key={company} className="company-total">
-                                  <strong>{companyCount}</strong>
-                                </td>
-                              );
-                            })}
-                            
-                            {/* Grand total */}
-                            <td className="grand-total">
-                              <strong>{validatedPolicies.length}</strong>
-                            </td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    );
-                  })()
+                  <table className="reports-table">
+                    <thead>
+                      <tr>
+                        <th>Tabla/Ramo</th>
+                        <th>Póliza</th>
+                        <th>Contratante</th>
+                        <th>Aseguradora</th>
+                        <th>Prima Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPolicies.map(policy => (
+                        <tr key={`${policy.id}-${policy.numero_poliza}`}>
+                          <td>{(policy.sourceTable || policy.table || policy.ramo || 'Sin tabla').toUpperCase()}</td>
+                          <td>{policy.numero_poliza}</td>
+                          <td>{policy.nombre_contratante || policy.contratante}</td>
+                          <td>{policy.aseguradora}</td>
+                          <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
