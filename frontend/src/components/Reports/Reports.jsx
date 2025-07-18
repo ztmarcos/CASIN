@@ -362,8 +362,12 @@ export default function Reports() {
         table: p.table,
         firebase_doc_id: p.firebase_doc_id
       })));
-      // 3. Filtrar policies para solo incluir las de esas tablas (lógica actual)
-      const filtered = policies.filter(p => allowedTableNames.includes(p.sourceTable || p.ramo?.toLowerCase() || ''));
+      // 3. Filtrar policies para solo incluir las de esas tablas (lógica robusta)
+      const filtered = policies.filter(p =>
+        allowedTableNames.includes(
+          (p.table || p.sourceTable || p.ramo || '').toLowerCase()
+        )
+      );
       // Extract unique values with normalization
       const clients = [...new Set(filtered.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
       const companies = [...new Set(filtered.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
