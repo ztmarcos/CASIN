@@ -79,6 +79,8 @@ export default function Reports() {
   const [expandedCards, setExpandedCards] = useState({});
   const [policyStatuses, setPolicyStatuses] = useState({});
   const [isStatusLoading, setIsStatusLoading] = useState(true);
+  const [selectedPolicy, setSelectedPolicy] = useState(null);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
 
 
   // New state for collapsible layout and graphics
@@ -113,12 +115,19 @@ export default function Reports() {
 
   // Function to get policy status key
   const getPolicyKey = (policy) => {
-    if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
-      console.warn('⚠️ Invalid policy data for getPolicyKey:', policy);
+    if (!policy) {
       return 'unknown_unknown';
     }
-    const policyId = policy.id || policy.firebase_doc_id;
-    return `${policy.ramo.toLowerCase()}_${policyId}`;
+    
+    const policyId = policy.id || policy.firebase_doc_id || policy.docId || 'unknown_id';
+    const ramo = policy.ramo || policy.sourceTable || policy.table || 'unknown_ramo';
+    
+    // Only warn if we really can't identify the policy
+    if (policyId === 'unknown_id') {
+      console.warn('⚠️ Policy without valid ID:', policy.numero_poliza || 'Unknown Policy');
+    }
+    
+    return `${ramo.toLowerCase()}_${policyId}`;
   };
 
   // Load all policies and related data from Firebase
@@ -427,6 +436,21 @@ export default function Reports() {
     }));
   };
 
+  const handlePolicyClick = (policy) => {
+    console.log('📋 POLICY CLICK HANDLER CALLED!');
+    console.log('📋 Policy clicked! Opening preview for:', policy.numero_poliza || policy.policy_number);
+    console.log('📋 Policy data:', policy);
+    console.log('📋 Setting selectedPolicy and showPolicyModal to true');
+    setSelectedPolicy(policy);
+    setShowPolicyModal(true);
+    console.log('📋 Modal state should now be open');
+  };
+
+  const handleClosePolicyModal = () => {
+    setShowPolicyModal(false);
+    setSelectedPolicy(null);
+  };
+
   // Get payment status for a policy
   const getPolicyStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
@@ -436,8 +460,8 @@ export default function Reports() {
   // Validate and clean policy data - simplified for matrix
   const validatePolicy = (policy) => {
     return policy && 
-           (policy.id || policy.firebase_doc_id) && 
-           policy.numero_poliza;
+           (policy.id || policy.firebase_doc_id || policy.docId) && 
+           (policy.numero_poliza || policy.policy_number);
   };
 
   // Normaliza nombres de aseguradoras
@@ -526,6 +550,20 @@ export default function Reports() {
               disabled={isSendingEmail || filteredPolicies.length === 0}
             >
               {isSendingEmail ? 'Enviando...' : 'Enviar por Email'}
+            </button>
+          )}
+          
+          {/* Debug button to test modal */}
+          {filteredPolicies.length > 0 && (
+            <button
+              className="send-email-btn"
+              onClick={() => {
+                console.log('🧪 TEST: Opening modal for first policy');
+                handlePolicyClick(filteredPolicies[0]);
+              }}
+              style={{ backgroundColor: '#10b981', marginLeft: '10px' }}
+            >
+              🧪 Test Modal
             </button>
           )}
 
@@ -649,30 +687,48 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPolicies.map(policy => (
-                    <tr key={`${policy.id}-${policy.numero_poliza}`}>
-                      <td>{policy.ramo}</td>
-                      <td>{policy.numero_poliza}</td>
-                      <td>{policy.nombre_contratante || policy.contratante}</td>
-                      <td>{policy.email || 'No disponible'}</td>
-                      <td>{policy.aseguradora}</td>
-                      <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
-                      <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
-                      <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
-                      {selectedType === 'Pagos Parciales' && (
-                        <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
-                      )}
-                      <td>{policy.forma_pago}</td>
-                      <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
-                      <td>
-                        <button 
-                          onClick={() => handleToggleStatus(policy)}
-                          className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
-                        >
-                          {getPolicyStatus(policy)}
-                        </button>
-                      </td>
-                    </tr>
+                  {filteredPolicies.map((policy, index) => (
+                      <tr 
+                        key={`${policy.id || policy.firebase_doc_id || index}-${policy.numero_poliza}`}
+                        className="clickable-row"
+                        onClick={(e) => {
+                          console.log('📋 CLICK DETECTED! Row clicked for policy:', policy.numero_poliza);
+                          e.preventDefault();
+                          handlePolicyClick(policy);
+                        }}
+                        onMouseEnter={() => console.log('📋 Mouse entered row:', policy.numero_poliza)}
+                        title="CLICK AQUÍ para ver detalles completos de la póliza"
+                        style={{ 
+                          cursor: 'pointer',
+                          backgroundColor: '#f8fafc',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        <td>{policy.ramo}</td>
+                        <td>{policy.numero_poliza}</td>
+                        <td>{policy.nombre_contratante || policy.contratante}</td>
+                        <td>{policy.email || 'No disponible'}</td>
+                        <td>{policy.aseguradora}</td>
+                        <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
+                        <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
+                        <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
+                        {selectedType === 'Pagos Parciales' && (
+                          <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
+                        )}
+                        <td>{policy.forma_pago}</td>
+                        <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
+                        <td>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleStatus(policy);
+                            }}
+                            className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                          >
+                            {getPolicyStatus(policy)}
+                          </button>
+                        </td>
+                      </tr>
                   ))}
                 </tbody>
               </table>
@@ -683,6 +739,18 @@ export default function Reports() {
                   className={`report-card ${expandedCards[`${policy.id}-${policy.numero_poliza}`] ? 'expanded' : ''}`}
                   onClick={() => toggleCardExpansion(`${policy.id}-${policy.numero_poliza}`)}
                 >
+                  <div className="card-actions">
+                    <button 
+                      className="view-details-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePolicyClick(policy);
+                      }}
+                      title="Ver todos los detalles de la póliza"
+                    >
+                      👁️ Ver Detalles
+                    </button>
+                  </div>
                   <div className="card-header">
                     <div className="card-header-content">
                       <div className="card-header-details">
@@ -802,6 +870,142 @@ export default function Reports() {
               />
             </div>
           )}
+        </div>
+      )}
+
+      {/* Policy Details Modal */}
+      {console.log('📋 MODAL RENDER CHECK:', { showPolicyModal, selectedPolicy: !!selectedPolicy })}
+      {showPolicyModal && selectedPolicy && (
+        <div className="policy-modal-overlay" onClick={handleClosePolicyModal}>
+          <div className="policy-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="policy-modal-header">
+              <h3>Detalles Completos de la Póliza</h3>
+              <div className="policy-modal-title">
+                <span className="policy-number">{selectedPolicy.numero_poliza}</span>
+                <span className="policy-ramo">{selectedPolicy.ramo}</span>
+              </div>
+              <button 
+                className="close-policy-modal-btn"
+                onClick={handleClosePolicyModal}
+              >
+                ×
+              </button>
+            </div>
+            <div className="policy-modal-body">
+              <div className="policy-details-grid">
+                {Object.entries(selectedPolicy)
+                  .filter(([key, value]) => 
+                    value !== null && 
+                    value !== undefined && 
+                    value !== '' && 
+                    typeof value !== 'function' &&
+                    !['id', 'firebase_doc_id'].includes(key)
+                  )
+                  .sort(([a], [b]) => {
+                    // Priority order for important fields
+                    const priority = [
+                      'numero_poliza', 'ramo', 'aseguradora', 
+                      'nombre_contratante', 'contratante', 'asegurado',
+                      'email', 'rfc', 'telefono',
+                      'fecha_inicio', 'fecha_fin', 'fecha_expedicion',
+                      'forma_pago', 'fecha_proximo_pago',
+                      'prima_neta', 'derecho_poliza', 'iva', 'pago_total_o_prima_total',
+                      'status', 'estado_pago'
+                    ];
+                    const aIndex = priority.indexOf(a);
+                    const bIndex = priority.indexOf(b);
+                    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                    if (aIndex !== -1) return -1;
+                    if (bIndex !== -1) return 1;
+                    return a.localeCompare(b);
+                  })
+                  .map(([key, value]) => {
+                    // Format field names for display
+                    const formatFieldName = (fieldName) => {
+                      return fieldName
+                        .replace(/_/g, ' ')
+                        .replace(/\b\w/g, l => l.toUpperCase())
+                        .replace(/Rfc/g, 'RFC')
+                        .replace(/Iva/g, 'IVA')
+                        .replace(/Gmm/g, 'GMM');
+                    };
+
+                    // Format values for display
+                    const formatValue = (val) => {
+                      if (val === null || val === undefined) return 'N/A';
+                      
+                      // Handle dates
+                      if (key.includes('fecha') || key.includes('date')) {
+                        try {
+                          const date = parseDate(val);
+                          return date ? formatDate(date, dateFormat) : val.toString();
+                        } catch {
+                          return val.toString();
+                        }
+                      }
+                      
+                      // Handle monetary values
+                      if (key.includes('prima') || key.includes('pago') || key.includes('derecho') || 
+                          key.includes('total') || key.includes('iva') || key.includes('recargo')) {
+                        const numValue = typeof val === 'string' ? 
+                          parseFloat(val.replace(/[\s,$"]/g, '')) : 
+                          parseFloat(val);
+                        if (!isNaN(numValue) && numValue > 0) {
+                          return `$${numValue.toLocaleString()}`;
+                        }
+                      }
+                      
+                      // Handle boolean values
+                      if (typeof val === 'boolean') {
+                        return val ? 'Sí' : 'No';
+                      }
+                      
+                      // Handle objects
+                      if (typeof val === 'object') {
+                        try {
+                          return JSON.stringify(val, null, 2);
+                        } catch {
+                          return val.toString();
+                        }
+                      }
+                      
+                      return val.toString();
+                    };
+
+                    const isImportantField = [
+                      'numero_poliza', 'ramo', 'aseguradora', 'nombre_contratante', 
+                      'contratante', 'email', 'pago_total_o_prima_total', 'status'
+                    ].includes(key);
+
+                    return (
+                      <div 
+                        key={key} 
+                        className={`policy-detail-item ${isImportantField ? 'important' : ''}`}
+                      >
+                        <div className="policy-field-name">
+                          {formatFieldName(key)}
+                        </div>
+                        <div className="policy-field-value">
+                          {formatValue(value)}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+            <div className="policy-modal-footer">
+              <div className="policy-modal-info">
+                <span>Total de campos: {Object.keys(selectedPolicy).length}</span>
+                <span>Origen: {selectedPolicy.sourceTable || selectedPolicy.table || 'Firebase'}</span>
+              </div>
+              <button 
+                className="close-policy-modal-btn-footer"
+                onClick={handleClosePolicyModal}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

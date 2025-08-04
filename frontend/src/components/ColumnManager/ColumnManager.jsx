@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -197,15 +197,43 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       setIsLoading(true);
       setError(null);
       
-      // NEW APPROACH: Get actual data and extract columns (same as DataTable)
+      // UNIFIED APPROACH: Use same API as DataTable for consistency
+      try {
+        const API_URL = window.location.hostname === 'localhost' 
+          ? 'http://localhost:3001/api' 
+          : '/api';
+        
+        const response = await fetch(`${API_URL}/data/tables/${selectedTable.name}/structure`);
+        console.log('Received structure response status:', response.status);
+        
+        if (response.ok) {
+          const structure = await response.json();
+          console.log('Received complete table structure from API:', structure);
+          
+          if (structure.columns) {
+            const newColumns = structure.columns.map(col => ({
+              name: col.name,
+              type: col.type || 'TEXT'
+            }));
+            console.log('🔧 ColumnManager: Raw columns from API:', newColumns.map(c => c.name));
+            console.log('🔧 ColumnManager: Setting columns from API structure (unified):', newColumns);
+            setColumns(newColumns);
+            return;
+          }
+        }
+      } catch (apiError) {
+        console.warn('Could not get structure from API:', apiError);
+      }
+      
+      // FALLBACK: Try tableService approach
       try {
         const tableData = await tableService.getData(selectedTable.name);
-        console.log('Received table data:', tableData);
+        console.log('Received table data (fallback):', tableData);
         
         if (tableData && tableData.data && Array.isArray(tableData.data) && tableData.data.length > 0) {
-          // Get columns from actual data (same approach as DataTable)
+          // Get columns from actual data
           const dataColumns = Object.keys(tableData.data[0]);
-          console.log('Columns from actual data:', dataColumns);
+          console.log('Columns from actual data (fallback):', dataColumns);
           
           // Filter out system columns and format as column objects
           const filteredColumns = dataColumns
@@ -215,7 +243,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
               type: 'TEXT' // Default type, can be enhanced later
             }));
           
-          console.log('Setting columns from actual data:', filteredColumns);
+          console.log('Setting columns from actual data (fallback):', filteredColumns);
           setColumns(filteredColumns);
           return;
         }
@@ -223,9 +251,9 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
         console.warn('Could not get data for column extraction:', dataError);
       }
       
-      // FALLBACK: Try the old structure approach
+      // FINAL FALLBACK: Try the old structure approach
       const structure = await tableService.getTableStructure(selectedTable.name);
-      console.log('Received table structure (fallback):', structure);
+      console.log('Received table structure (final fallback):', structure);
       
       if (structure && Array.isArray(structure.columns)) {
         const newColumns = structure.columns.map(col => ({
@@ -501,8 +529,32 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
     }
   };
 
-  // Filtrar columnas PDF/pdf
-  const filteredColumns = columns.filter(colObj => colObj.name.toLowerCase() !== 'pdf');
+  // Filtrar columnas especiales (igual que DataTable)
+  const filteredColumns = useMemo(() => {
+    return columns.filter(colObj => {
+      const columnName = colObj.name.toLowerCase();
+      // Lista completa de columnas a filtrar
+      const excludeColumns = [
+        'pdf',
+        'firebase_doc_id', 
+        'estado_pago',
+        'created_at',
+        'updated_at',
+        'createdat',
+        'updatedat'
+      ];
+      
+      return !excludeColumns.includes(columnName);
+    });
+  }, [columns]);
+
+  // Log para debugging
+  useEffect(() => {
+    if (columns.length > 0) {
+      console.log('🔧 ColumnManager: All columns received:', columns.map(c => c.name));
+      console.log('🔧 ColumnManager: Filtered columns:', filteredColumns.map(c => c.name));
+    }
+  }, [columns, filteredColumns]);
 
   return (
     <div className="column-manager">
