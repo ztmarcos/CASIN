@@ -16,6 +16,19 @@ const MONTHS = [
 
 const REPORT_TYPES = ['Vencimientos', 'Pagos Parciales', 'Matriz de Productos'];
 
+// Utility function to check if a policy is expired
+const isPolicyExpired = (policy) => {
+  if (!policy.fecha_fin) return false;
+  
+  const policyEndDate = parseDate(policy.fecha_fin);
+  if (!policyEndDate || isNaN(policyEndDate.getTime())) return false;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+  
+  return policyEndDate < today;
+};
+
 // Utility function to get the total amount from a policy, handling multiple field variations
 const getPolicyTotalAmount = (policy) => {
   // Try different field variations for total amount (prioritized order)
@@ -368,8 +381,8 @@ export default function Reports() {
             return false;
           }
 
-          // Check if policy expires within the next 30 days
-          return policyEndDate >= today && policyEndDate <= thirtyDaysFromNow;
+          // Include expired policies (past dates) AND policies expiring within the next 30 days
+          return policyEndDate <= thirtyDaysFromNow;
         } else {
           // Pagos Parciales
           if (!policy.fecha_proximo_pago) {
@@ -678,7 +691,7 @@ export default function Reports() {
                   {filteredPolicies.map((policy, index) => (
                       <tr 
                         key={`${policy.id || policy.firebase_doc_id || index}-${policy.numero_poliza}`}
-                        className="clickable-row"
+                        className={`clickable-row ${isPolicyExpired(policy) ? 'expired-policy' : ''}`}
                         onClick={(e) => {
                           console.log('📋 CLICK DETECTED! Row clicked for policy:', policy.numero_poliza);
                           e.preventDefault();
@@ -698,7 +711,14 @@ export default function Reports() {
                         <td>{policy.email || 'No disponible'}</td>
                         <td>{policy.aseguradora}</td>
                         <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
-                        <td>{formatDate(policy.fecha_fin, dateFormat)}</td>
+                        <td>
+                          {formatDate(policy.fecha_fin, dateFormat)}
+                          {isPolicyExpired(policy) && (
+                            <span className="expired-indicator" title="Póliza Vencida">
+                              ⚠️ VENCIDA
+                            </span>
+                          )}
+                        </td>
                         <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
                         {selectedType === 'Pagos Parciales' && (
                           <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
@@ -724,7 +744,7 @@ export default function Reports() {
               filteredPolicies.map(policy => (
                 <div 
                   key={`${policy.id}-${policy.numero_poliza}`} 
-                  className={`report-card ${expandedCards[`${policy.id}-${policy.numero_poliza}`] ? 'expanded' : ''}`}
+                  className={`report-card ${expandedCards[`${policy.id}-${policy.numero_poliza}`] ? 'expanded' : ''} ${isPolicyExpired(policy) ? 'expired-policy' : ''}`}
                   onClick={() => toggleCardExpansion(`${policy.id}-${policy.numero_poliza}`)}
                 >
                   <div className="card-actions">
@@ -764,7 +784,14 @@ export default function Reports() {
                     <div className="card-details">
                       {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
                         <>
-                          <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
+                          <p>
+                            <span>Vencimiento:</span> {formatDate(policy.fecha_fin)}
+                            {isPolicyExpired(policy) && (
+                              <span className="expired-indicator" title="Póliza Vencida">
+                                ⚠️ VENCIDA
+                              </span>
+                            )}
+                          </p>
                           <p><span>Prima Total:</span> ${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</p>
                           <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
                         </>
@@ -774,7 +801,14 @@ export default function Reports() {
                           <p><span>RFC:</span> {policy.rfc || 'No disponible'}</p>
                           <p><span>Asegurado:</span> {policy.asegurado || 'No disponible'}</p>
                           <p><span>Inicio:</span> {formatDate(policy.fecha_inicio)}</p>
-                          <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}</p>
+                          <p>
+                            <span>Vencimiento:</span> {formatDate(policy.fecha_fin)}
+                            {isPolicyExpired(policy) && (
+                              <span className="expired-indicator" title="Póliza Vencida">
+                                ⚠️ VENCIDA
+                              </span>
+                            )}
+                          </p>
                           <p><span>Forma de Pago:</span> {policy.forma_pago}</p>
                           <div className="card-section">
                             <h4>Información de Pagos</h4>
