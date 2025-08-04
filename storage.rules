@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Función para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Función para verificar si el usuario es admin CASIN
+    function isCASINAdmin() {
+      return isAuthenticated() && 
+             request.auth.token.email in [
+               'z.t.marcos@gmail.com', 
+               'ztmarcos@gmail.com', 
+               'marcos@casin.com',
+               '2012solitario@gmail.com',
+               'marcoszavala09@gmail.com',
+               'michelldiaz.casinseguros@gmail.com',
+               'lorenacasin5@gmail.com'
+             ];
+    }
+    
+    // Permitir acceso completo a archivos de equipos para usuarios autenticados
+    match /teams/{teamId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+      allow read, write: if isCASINAdmin();
+    }
+    
+    // Permitir acceso a archivos públicos
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+    
+    // Permitir acceso a uploads generales para usuarios autenticados
+    match /uploads/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Permitir acceso a archivos temporales
+    match /temp/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Permitir acceso a backups solo para admins
+    match /backups/{allPaths=**} {
+      allow read, write: if isCASINAdmin();
+    }
+    
+    // Denegar cualquier otro acceso no especificado
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
