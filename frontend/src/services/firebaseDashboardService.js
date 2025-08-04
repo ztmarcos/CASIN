@@ -63,13 +63,34 @@ class FirebaseDashboardService {
       
       // Filter by period
       const filteredExpirations = expirations.filter(policy => {
-        if (!policy.fecha_fin) return false;
+        if (!policy.fecha_fin) {
+          console.log('⚠️ Policy without fecha_fin:', policy);
+          return false;
+        }
         
         const expirationDate = new Date(policy.fecha_fin);
-        return expirationDate >= today && expirationDate <= endDate;
+        const isValidDate = !isNaN(expirationDate.getTime());
+        
+        if (!isValidDate) {
+          console.log('⚠️ Invalid fecha_fin:', policy.fecha_fin, 'for policy:', policy);
+          return false;
+        }
+        
+        const isInPeriod = expirationDate >= today && expirationDate <= endDate;
+        
+        if (isInPeriod) {
+          console.log('✅ Valid expiration found:', {
+            policy: policy.numero_poliza,
+            date: policy.fecha_fin,
+            name: policy.nombre_contratante
+          });
+        }
+        
+        return isInPeriod;
       });
 
       console.log(`📊 Dashboard: Found ${filteredExpirations.length} expirations for ${period}`);
+      console.log('📅 Date range:', { today: today.toISOString(), endDate: endDate.toISOString() });
       return filteredExpirations;
       
     } catch (error) {
