@@ -69,9 +69,15 @@ const Dashboard = () => {
       console.log('🔄 Firebase Dashboard: Vencimientos encontrados:', sortedExpirations.map(p => ({
         poliza: p.numero_poliza,
         fecha: p.fecha_fin,
-        contratante: p.contratante,
-        tipo: p.tipo
+        contratante: p.nombre_contratante,
+        tipo: p.tipo_seguro,
+        source: p.source
       })));
+      
+      // Debug: Log raw data for first few items
+      if (sortedExpirations.length > 0) {
+        console.log('🔍 Debug - First expiration item raw data:', sortedExpirations[0]);
+      }
 
       setExpirations(sortedExpirations);
       setError(prev => ({ ...prev, expirations: null }));
@@ -228,13 +234,13 @@ const Dashboard = () => {
             ) : (
               <div className="expiration-list">
                 {(showAllExpirations ? expirations : expirations.slice(0, 2)).map((policy) => (
-                  <div key={`${policy.tipo}-${policy.numero_poliza}`} className="expiration-item">
+                  <div key={`${policy.tipo_seguro}-${policy.numero_poliza}`} className="expiration-item">
                     <div className="expiration-info">
-                      <span className="expiration-type">{policy.tipo}</span>
+                      <span className="expiration-type">{policy.tipo_seguro}</span>
                       <span className="expiration-policy">{policy.numero_poliza}</span>
                     </div>
                     <div className="expiration-details">
-                      <span className="expiration-name">{policy.contratante}</span>
+                      <span className="expiration-name">{policy.nombre_contratante}</span>
                       <span className="expiration-date">
                         Vence: {formatDate(policy.fecha_fin, 'long-es')}
                       </span>
