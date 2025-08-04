@@ -553,19 +553,7 @@ export default function Reports() {
             </button>
           )}
           
-          {/* Debug button to test modal */}
-          {filteredPolicies.length > 0 && (
-            <button
-              className="send-email-btn"
-              onClick={() => {
-                console.log('🧪 TEST: Opening modal for first policy');
-                handlePolicyClick(filteredPolicies[0]);
-              }}
-              style={{ backgroundColor: '#10b981', marginLeft: '10px' }}
-            >
-              🧪 Test Modal
-            </button>
-          )}
+
 
         </div>
       </div>
