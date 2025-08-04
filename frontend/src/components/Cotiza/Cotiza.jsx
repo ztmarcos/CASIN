@@ -729,61 +729,191 @@ Genera un correo completo y profesional listo para enviar.
         });
       }
 
-      // Crear tabla HTML para Excel
-      let htmlTable = '<table border="1">';
-      
-      // Agregar información del vehículo
+      // Crear contenido Excel válido con estructura XML
+      let xmlContent = `<?xml version="1.0"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="HeaderStyle">
+   <Interior ss:Color="#4a5568" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="GNPStyle">
+   <Interior ss:Color="#2563eb" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="QualitasStyle">
+   <Interior ss:Color="#dc2626" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="HDIStyle">
+   <Interior ss:Color="#16a34a" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="OtherStyle">
+   <Interior ss:Color="#6b7280" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="CoberturaStyle">
+   <Interior ss:Color="#e2e8f0" ss:Pattern="Solid"/>
+   <Font ss:Bold="1"/>
+  </Style>
+  <Style ss:ID="CostoStyle">
+   <Interior ss:Color="#fff3cd" ss:Pattern="Solid"/>
+   <Font ss:Bold="1"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+  <Style ss:ID="VehiculoHeaderStyle">
+   <Interior ss:Color="#2c3e50" ss:Pattern="Solid"/>
+   <Font ss:Bold="1" ss:Color="#ffffff"/>
+   <Alignment ss:Horizontal="Center"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Cotización de Seguros">
+  <Table>`;
+
+      let rowIndex = 1;
+
+      // Título principal
+      xmlContent += `
+   <Row ss:Index="${rowIndex}">
+    <Cell ss:MergeAcross="${aseguradoras.length}" ss:StyleID="VehiculoHeaderStyle">
+     <Data ss:Type="String">COTIZACIÓN DE SEGUROS AUTOMÓVILES - ${new Date().toLocaleDateString('es-MX')}</Data>
+    </Cell>
+   </Row>`;
+      rowIndex++;
+
+      // Espacio
+      xmlContent += `<Row ss:Index="${rowIndex}"></Row>`;
+      rowIndex++;
+
+      // Información del vehículo
       if (cotizaciones.vehiculo) {
-        htmlTable += '<tr><td colspan="' + (aseguradoras.length + 1) + '" style="background-color: #4a5568; color: white; font-weight: bold; text-align: center;">INFORMACIÓN DEL VEHÍCULO</td></tr>';
-        htmlTable += `<tr><td style="font-weight: bold;">Marca</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.marca || 'N/A'}</td></tr>`;
-        htmlTable += `<tr><td style="font-weight: bold;">Modelo</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.modelo || 'N/A'}</td></tr>`;
-        htmlTable += `<tr><td style="font-weight: bold;">Año</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.anio || 'N/A'}</td></tr>`;
-        htmlTable += `<tr><td style="font-weight: bold;">C.P.</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.cp || 'N/A'}</td></tr>`;
-        htmlTable += '<tr><td colspan="' + (aseguradoras.length + 1) + '"></td></tr>';
+        xmlContent += `
+   <Row ss:Index="${rowIndex}">
+    <Cell ss:MergeAcross="${aseguradoras.length}" ss:StyleID="VehiculoHeaderStyle">
+     <Data ss:Type="String">INFORMACIÓN DEL VEHÍCULO</Data>
+    </Cell>
+   </Row>`;
+        rowIndex++;
+
+        const vehiculoData = [
+          ['Marca', cotizaciones.vehiculo.marca || 'N/A'],
+          ['Modelo', cotizaciones.vehiculo.modelo || 'N/A'],
+          ['Año', cotizaciones.vehiculo.anio || 'N/A'],
+          ['C.P.', cotizaciones.vehiculo.cp || 'N/A']
+        ];
+
+        vehiculoData.forEach(([label, value]) => {
+          xmlContent += `
+   <Row ss:Index="${rowIndex}">
+    <Cell ss:StyleID="CoberturaStyle">
+     <Data ss:Type="String">${label}</Data>
+    </Cell>
+    <Cell ss:MergeAcross="${aseguradoras.length - 1}">
+     <Data ss:Type="String">${value}</Data>
+    </Cell>
+   </Row>`;
+          rowIndex++;
+        });
+
+        // Espacio
+        xmlContent += `<Row ss:Index="${rowIndex}"></Row>`;
+        rowIndex++;
       }
-      
-      // Agregar encabezados de la tabla de cotización
-      htmlTable += '<tr><td style="background-color: #4a5568; color: white; font-weight: bold;">COBERTURAS</td>';
+
+      // Encabezados de la tabla de cotización
+      xmlContent += `
+   <Row ss:Index="${rowIndex}">
+    <Cell ss:StyleID="HeaderStyle">
+     <Data ss:Type="String">COBERTURAS</Data>
+    </Cell>`;
+
       aseguradoras.forEach(aseg => {
-        const className = aseg.toUpperCase().includes('GNP') ? '#2563eb' : 
-                         aseg.toUpperCase().includes('QUALITAS') ? '#dc2626' :
-                         aseg.toUpperCase().includes('HDI') ? '#16a34a' : '#6b7280';
-        htmlTable += `<td style="background-color: ${className}; color: white; font-weight: bold; text-align: center;">${aseg.replace(/_/g, ' ')}</td>`;
+        let styleID = 'OtherStyle';
+        if (aseg.toUpperCase().includes('GNP')) styleID = 'GNPStyle';
+        else if (aseg.toUpperCase().includes('QUALITAS')) styleID = 'QualitasStyle';
+        else if (aseg.toUpperCase().includes('HDI')) styleID = 'HDIStyle';
+
+        xmlContent += `
+    <Cell ss:StyleID="${styleID}">
+     <Data ss:Type="String">${aseg.replace(/_/g, ' ').toUpperCase()}</Data>
+    </Cell>`;
       });
-      htmlTable += '</tr>';
-      
-      // Agregar filas de datos
+
+      xmlContent += `
+   </Row>`;
+      rowIndex++;
+
+      // Filas de datos
       coberturas.forEach(fila => {
         const isCostoRow = fila.cobertura && fila.cobertura.toLowerCase().includes('costo');
-        htmlTable += '<tr>';
-        htmlTable += `<td style="background-color: #e2e8f0; font-weight: bold;">${fila.cobertura || ''}</td>`;
+        
+        xmlContent += `
+   <Row ss:Index="${rowIndex}">
+    <Cell ss:StyleID="${isCostoRow ? 'CostoStyle' : 'CoberturaStyle'}">
+     <Data ss:Type="String">${fila.cobertura || 'N/A'}</Data>
+    </Cell>`;
+
         aseguradoras.forEach(aseg => {
           const value = fila[aseg] || 'N/A';
-          const style = isCostoRow ? 'font-weight: bold; font-size: 14px;' : '';
-          htmlTable += `<td style="text-align: center; ${style}">${value}</td>`;
+          const isNumeric = !isNaN(value.replace(/[,$]/g, '')) && value !== 'N/A';
+          
+          xmlContent += `
+    <Cell${isCostoRow ? ' ss:StyleID="CostoStyle"' : ''}>
+     <Data ss:Type="${isNumeric ? 'Number' : 'String'}">${isNumeric ? value.replace(/[,$]/g, '') : value}</Data>
+    </Cell>`;
         });
-        htmlTable += '</tr>';
+
+        xmlContent += `
+   </Row>`;
+        rowIndex++;
       });
-      
-      htmlTable += '</table>';
+
+      // Pie de página
+      xmlContent += `
+   <Row ss:Index="${rowIndex + 1}">
+    <Cell ss:MergeAcross="${aseguradoras.length}">
+     <Data ss:Type="String">Documento generado automáticamente por CASIN - Sistema de Cotización</Data>
+    </Cell>
+   </Row>`;
+
+      xmlContent += `
+  </Table>
+ </Worksheet>
+</Workbook>`;
 
       // Crear archivo Excel
-      const blob = new Blob(['\ufeff' + htmlTable], { 
+      const blob = new Blob([xmlContent], { 
         type: 'application/vnd.ms-excel;charset=utf-8;' 
       });
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `Cotizacion_Seguros_${new Date().toISOString().split('T')[0]}.xls`;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
       
-      toast.success('📈 Tabla exportada como Excel');
+      // Limpiar después de un momento
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
+      
+      toast.success('📈 Tabla exportada como Excel (.xls)');
     } catch (error) {
       console.error('Error exporting XLS:', error);
-      toast.error('❌ Error al exportar Excel');
+      toast.error('❌ Error al exportar Excel: ' + error.message);
     }
   };
 
@@ -794,7 +924,20 @@ Genera un correo completo y profesional listo para enviar.
     }
 
     try {
-      // Crear contenido HTML de la tabla
+      // Usar jsPDF para generar PDF real en el frontend
+      const { jsPDF } = window.jspdf;
+      
+      if (!jsPDF) {
+        // Si jsPDF no está disponible, usar html2pdf como alternativa
+        if (window.html2pdf) {
+          generatePDFWithHtml2pdf();
+        } else {
+          // Fallback simple: generar CSV con extensión .pdf (no ideal pero funcional)
+          generateCSVAsPDF();
+        }
+        return;
+      }
+
       const coberturas = cotizaciones.tabla_comparativa.coberturas;
       const aseguradoras = [];
       
@@ -807,92 +950,285 @@ Genera un correo completo y profesional listo para enviar.
         });
       }
 
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Cotización de Seguros</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .vehiculo-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-            .vehiculo-info h3 { margin: 0 0 10px 0; color: #2c3e50; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: center; }
-            .cobertura-header { background: #4a5568; color: white; font-weight: bold; }
-            .cobertura-name { background: #e2e8f0; font-weight: bold; text-align: left; }
-            .gnp-header { background: #2563eb; color: white; }
-            .qualitas-header { background: #dc2626; color: white; }
-            .hdi-header { background: #16a34a; color: white; }
-            .other-header { background: #6b7280; color: white; }
-            .costo-row { font-weight: bold; background: #fff3cd; }
-            @media print {
-              body { margin: 0; }
-              table { page-break-inside: avoid; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>COTIZACIÓN DE SEGUROS AUTOMÓVILES</h1>
-            <p>Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
-          </div>
-      `;
+      // Crear documento PDF
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
 
-      // Agregar información del vehículo
+      // Título
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COTIZACIÓN DE SEGUROS AUTOMÓVILES', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 10;
+
+      // Fecha
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Fecha: ${new Date().toLocaleDateString('es-MX')}`, pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += 15;
+
+      // Información del vehículo
       if (cotizaciones.vehiculo) {
-        htmlContent += `
-          <div class="vehiculo-info">
-            <h3>${cotizaciones.vehiculo.marca} ${cotizaciones.vehiculo.modelo} ${cotizaciones.vehiculo.anio}</h3>
-            <p>C.P. ${cotizaciones.vehiculo.cp} | COBERTURA AMPLIA</p>
-          </div>
-        `;
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('INFORMACIÓN DEL VEHÍCULO', 20, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        const vehiculoText = `${cotizaciones.vehiculo.marca || 'N/A'} ${cotizaciones.vehiculo.modelo || 'N/A'} ${cotizaciones.vehiculo.anio || 'N/A'}`;
+        doc.text(vehiculoText, 20, yPosition);
+        yPosition += 6;
+        doc.text(`C.P. ${cotizaciones.vehiculo.cp || 'N/A'} | COBERTURA AMPLIA`, 20, yPosition);
+        yPosition += 15;
       }
 
       // Crear tabla
-      htmlContent += '<table><thead><tr>';
-      htmlContent += '<th class="cobertura-header">COBERTURAS</th>';
+      const tableData = [];
       
-      aseguradoras.forEach(aseg => {
-        let headerClass = 'other-header';
-        if (aseg.toUpperCase().includes('GNP')) headerClass = 'gnp-header';
-        else if (aseg.toUpperCase().includes('QUALITAS')) headerClass = 'qualitas-header';
-        else if (aseg.toUpperCase().includes('HDI')) headerClass = 'hdi-header';
-        
-        htmlContent += `<th class="${headerClass}">${aseg.replace(/_/g, ' ')}</th>`;
-      });
-      
-      htmlContent += '</tr></thead><tbody>';
-      
-      // Agregar filas de datos
-      coberturas.forEach(fila => {
-        const isCostoRow = fila.cobertura && fila.cobertura.toLowerCase().includes('costo');
-        htmlContent += `<tr ${isCostoRow ? 'class="costo-row"' : ''}>`;
-        htmlContent += `<td class="cobertura-name">${fila.cobertura || ''}</td>`;
-        aseguradoras.forEach(aseg => {
-          htmlContent += `<td>${fila[aseg] || 'N/A'}</td>`;
-        });
-        htmlContent += '</tr>';
-      });
-      
-      htmlContent += '</tbody></table></body></html>';
+      // Headers
+      const headers = ['COBERTURAS', ...aseguradoras.map(aseg => aseg.replace(/_/g, ' ').toUpperCase())];
+      tableData.push(headers);
 
-      // Crear y descargar archivo PDF
-      const blob = new Blob([htmlContent], { type: 'text/html' });
+      // Datos
+      coberturas.forEach(fila => {
+        const row = [fila.cobertura || 'N/A'];
+        aseguradoras.forEach(aseg => {
+          row.push(fila[aseg] || 'N/A');
+        });
+        tableData.push(row);
+      });
+
+      // Usar autoTable plugin si está disponible
+      if (doc.autoTable) {
+        doc.autoTable({
+          head: [headers],
+          body: tableData.slice(1),
+          startY: yPosition,
+          theme: 'grid',
+          headStyles: {
+            fillColor: [74, 85, 104],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          bodyStyles: {
+            fontSize: 10
+          },
+          columnStyles: {
+            0: { fontStyle: 'bold', fillColor: [226, 232, 240] }
+          },
+          didParseCell: function(data) {
+            // Colorear headers de aseguradoras
+            if (data.section === 'head' && data.column.index > 0) {
+              const aseguradora = headers[data.column.index].toUpperCase();
+              if (aseguradora.includes('GNP')) {
+                data.cell.styles.fillColor = [37, 99, 235];
+              } else if (aseguradora.includes('QUALITAS')) {
+                data.cell.styles.fillColor = [220, 38, 38];
+              } else if (aseguradora.includes('HDI')) {
+                data.cell.styles.fillColor = [22, 163, 74];
+              }
+            }
+            
+            // Resaltar filas de costo
+            if (data.section === 'body' && data.row.raw[0] && 
+                data.row.raw[0].toLowerCase().includes('costo')) {
+              data.cell.styles.fillColor = [255, 243, 205];
+              data.cell.styles.fontStyle = 'bold';
+            }
+          }
+        });
+      } else {
+        // Tabla simple sin autoTable
+        let tableY = yPosition;
+        const cellHeight = 8;
+        const cellWidth = (pageWidth - 40) / headers.length;
+
+        tableData.forEach((row, rowIndex) => {
+          row.forEach((cell, colIndex) => {
+            const x = 20 + (colIndex * cellWidth);
+            const y = tableY + (rowIndex * cellHeight);
+            
+            // Background para headers
+            if (rowIndex === 0) {
+              doc.setFillColor(74, 85, 104);
+              doc.rect(x, y - cellHeight + 2, cellWidth, cellHeight, 'F');
+              doc.setTextColor(255);
+              doc.setFont('helvetica', 'bold');
+            } else {
+              doc.setTextColor(0);
+              doc.setFont('helvetica', 'normal');
+            }
+            
+            // Texto
+            doc.setFontSize(9);
+            doc.text(String(cell).substring(0, 15), x + 2, y, { maxWidth: cellWidth - 4 });
+            
+            // Bordes
+            doc.setDrawColor(0);
+            doc.rect(x, y - cellHeight + 2, cellWidth, cellHeight);
+          });
+        });
+      }
+
+      // Pie de página
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100);
+      doc.text('Documento generado automáticamente por CASIN - Sistema de Cotización', 
+               pageWidth / 2, pageHeight - 10, { align: 'center' });
+
+      // Descargar PDF
+      const fileName = `Cotizacion_Tabla_${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      toast.success('📄 PDF descargado exitosamente');
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      
+      // Fallback: usar CSV con extensión PDF
+      generateCSVAsPDF();
+    }
+  };
+
+  // Función helper para generar con html2pdf
+  const generatePDFWithHtml2pdf = () => {
+    try {
+      const coberturas = cotizaciones.tabla_comparativa.coberturas;
+      const aseguradoras = [];
+      
+      if (coberturas.length > 0) {
+        Object.keys(coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      // Crear elemento temporal para html2pdf
+      const element = document.createElement('div');
+      element.innerHTML = `
+        <div style="font-family: Arial, sans-serif; padding: 20px;">
+          <h1 style="text-align: center; color: #2c3e50;">COTIZACIÓN DE SEGUROS AUTOMÓVILES</h1>
+          <p style="text-align: center;">Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
+          
+          ${cotizaciones.vehiculo ? `
+            <div style="background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px;">
+              <h3 style="margin: 0; color: #2c3e50;">${cotizaciones.vehiculo.marca || 'N/A'} ${cotizaciones.vehiculo.modelo || 'N/A'} ${cotizaciones.vehiculo.anio || 'N/A'}</h3>
+              <p>C.P. ${cotizaciones.vehiculo.cp || 'N/A'} | COBERTURA AMPLIA</p>
+            </div>
+          ` : ''}
+          
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <thead>
+              <tr>
+                <th style="background: #4a5568; color: white; padding: 10px; border: 1px solid #ddd;">COBERTURAS</th>
+                ${aseguradoras.map(aseg => {
+                  let bgColor = '#6b7280';
+                  if (aseg.toUpperCase().includes('GNP')) bgColor = '#2563eb';
+                  else if (aseg.toUpperCase().includes('QUALITAS')) bgColor = '#dc2626';
+                  else if (aseg.toUpperCase().includes('HDI')) bgColor = '#16a34a';
+                  
+                  return `<th style="background: ${bgColor}; color: white; padding: 10px; border: 1px solid #ddd;">${aseg.replace(/_/g, ' ').toUpperCase()}</th>`;
+                }).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${coberturas.map(fila => {
+                const isCostoRow = fila.cobertura && fila.cobertura.toLowerCase().includes('costo');
+                return `
+                  <tr style="${isCostoRow ? 'background: #fff3cd; font-weight: bold;' : ''}">
+                    <td style="background: #e2e8f0; font-weight: bold; padding: 8px; border: 1px solid #ddd;">${fila.cobertura || 'N/A'}</td>
+                    ${aseguradoras.map(aseg => 
+                      `<td style="text-align: center; padding: 8px; border: 1px solid #ddd;">${fila[aseg] || 'N/A'}</td>`
+                    ).join('')}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          
+          <p style="text-align: center; font-size: 10px; color: #6c757d; margin-top: 30px;">
+            Documento generado automáticamente por CASIN - Sistema de Cotización
+          </p>
+        </div>
+      `;
+
+      const opt = {
+        margin: 1,
+        filename: `Cotizacion_Tabla_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'cm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(element).save();
+      toast.success('📄 PDF generado con html2pdf');
+      
+    } catch (error) {
+      console.error('Error with html2pdf:', error);
+      generateCSVAsPDF();
+    }
+  };
+
+  // Función fallback para generar CSV como PDF
+  const generateCSVAsPDF = () => {
+    try {
+      toast.warn('⚠️ Generando como archivo de texto (sin librerías PDF disponibles)');
+      
+      const coberturas = cotizaciones.tabla_comparativa.coberturas;
+      const aseguradoras = [];
+      
+      if (coberturas.length > 0) {
+        Object.keys(coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      // Generar contenido de texto
+      let content = `COTIZACIÓN DE SEGUROS AUTOMÓVILES\nFecha: ${new Date().toLocaleDateString('es-MX')}\n\n`;
+      
+      if (cotizaciones.vehiculo) {
+        content += `INFORMACIÓN DEL VEHÍCULO\n`;
+        content += `${cotizaciones.vehiculo.marca || 'N/A'} ${cotizaciones.vehiculo.modelo || 'N/A'} ${cotizaciones.vehiculo.anio || 'N/A'}\n`;
+        content += `C.P. ${cotizaciones.vehiculo.cp || 'N/A'} | COBERTURA AMPLIA\n\n`;
+      }
+
+      content += `COBERTURAS\t${aseguradoras.join('\t')}\n`;
+      content += '-'.repeat(80) + '\n';
+      
+      coberturas.forEach(fila => {
+        content += `${fila.cobertura || 'N/A'}\t`;
+        content += aseguradoras.map(aseg => fila[aseg] || 'N/A').join('\t');
+        content += '\n';
+      });
+
+      content += '\nDocumento generado automáticamente por CASIN - Sistema de Cotización';
+
+      // Descargar como archivo de texto
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Tabla_Cotizacion_${new Date().toISOString().split('T')[0]}.html`;
+      a.download = `Cotizacion_Tabla_${new Date().toISOString().split('T')[0]}.txt`;
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
       
-      toast.success('📋 Tabla exportada como HTML (imprime como PDF desde el navegador)');
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 1000);
+      
+      toast.success('📄 Archivo de texto descargado (abrir e imprimir como PDF)');
+      
     } catch (error) {
-      console.error('Error exporting table PDF:', error);
-      toast.error('❌ Error al exportar tabla como PDF');
+      console.error('Error generating fallback file:', error);
+      toast.error('❌ Error al generar archivo');
     }
   };
 
@@ -967,27 +1303,29 @@ Genera un correo completo y profesional listo para enviar.
                       </span>
                     </div>
                   </div>
-                  <div className="file-status">
-                    {file.status === 'pending' && (
-                      <span className="status pending">⏳ Pendiente</span>
-                    )}
-                    {file.status === 'processing' && (
-                      <span className="status processing">🔄 Procesando...</span>
-                    )}
-                    {file.status === 'completed' && (
-                      <span className="status completed">✅ Listo</span>
-                    )}
+                  <div className="file-actions">
+                    <div className="file-status">
+                      {file.status === 'pending' && (
+                        <span className="status pending">⏳ Pendiente</span>
+                      )}
+                      {file.status === 'processing' && (
+                        <span className="status processing">🔄 Procesando...</span>
+                      )}
+                      {file.status === 'completed' && (
+                        <span className="status completed">✅ Listo</span>
+                      )}
+                    </div>
+                    <button 
+                      className="remove-file-btn"
+                      onClick={() => removeFile(file.id)}
+                      title="Eliminar archivo"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
                   </div>
-                  <button 
-                    className="remove-file-btn"
-                    onClick={() => removeFile(file.id)}
-                    title="Eliminar archivo"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <line x1="18" y1="6" x2="6" y2="18"/>
-                      <line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
                 </div>
               ))}
             </div>
