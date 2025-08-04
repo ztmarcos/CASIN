@@ -53,11 +53,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const reorderedColumns = useMemo(() => {
     if (!tableColumns || tableColumns.length === 0) return [];
 
-    // Filtrar columnas especiales
-    let filteredColumns = tableColumns.filter(col => 
-      col !== 'estado_pago' && 
-      col !== 'firebase_doc_id'
-    );
+    // Filtrar columnas especiales (consistente con filteredColumns)
+    const excludeColumns = [
+      'pdf',
+      'firebase_doc_id', 
+      'estado_pago',
+      'created_at',
+      'updated_at',
+      'createdat',
+      'updatedat'
+    ];
+    
+    let filteredColumns = tableColumns.filter(col => {
+      const columnName = col.toLowerCase();
+      return !excludeColumns.includes(columnName);
+    });
 
     // Forzar numero_poliza y contratante al inicio, id al final
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
@@ -77,10 +87,32 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return finalOrder;
   }, [tableColumns, columnOrder, tableName, forceRender]);
 
-  // Filtrar columnas PDF/pdf
+  // Filtrar columnas especiales (igual que ColumnManager)
   const filteredColumns = useMemo(() => {
     if (!tableColumns) return [];
-    return tableColumns.filter(col => col.toLowerCase() !== 'pdf');
+    
+    const excludeColumns = [
+      'pdf',
+      'firebase_doc_id', 
+      'estado_pago',
+      'created_at',
+      'updated_at',
+      'createdat',
+      'updatedat'
+    ];
+    
+    const result = tableColumns.filter(col => {
+      const columnName = col.toLowerCase();
+      return !excludeColumns.includes(columnName);
+    });
+    
+    // Log para debugging
+    if (tableColumns.length > 0) {
+      console.log('🔧 DataTable: All tableColumns received:', tableColumns);
+      console.log('🔧 DataTable: Filtered columns result:', result);
+    }
+    
+    return result;
   }, [tableColumns]);
 
   // Simple effect just to set the data - NO SORTING HERE
@@ -116,14 +148,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             const structure = await response.json();
             if (structure.columns) {
               const allColumns = structure.columns.map(col => col.name);
-              console.log('🔧 Got complete column structure from API:', allColumns);
+              console.log('🔧 DataTable: Got complete column structure from API:', allColumns);
               
               // Check if columns actually changed
               if (JSON.stringify(allColumns) !== JSON.stringify(tableColumns)) {
-                console.log('🔧 Setting NEW table columns from API structure:', allColumns);
+                console.log('🔧 DataTable: Setting NEW table columns from API structure:', allColumns);
                 setTableColumns(allColumns);
               } else {
-                console.log('🔧 Table columns unchanged, keeping API structure');
+                console.log('🔧 DataTable: Table columns unchanged, keeping API structure');
               }
               return; // Exit early - we successfully used API structure
             }
@@ -518,6 +550,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       }
     };
 
+
+
     // Add event listeners
     window.addEventListener('dataTableUpdate', handleDataUpdate);
     window.addEventListener('policyDataUpdated', handlePolicyDataUpdate);
@@ -525,12 +559,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     window.addEventListener('tableStructureUpdated', handleTableStructureUpdate);
     window.addEventListener('columnOrderUpdated', handleColumnOrderUpdate);
 
+
     return () => {
       window.removeEventListener('dataTableUpdate', handleDataUpdate);
       window.removeEventListener('policyDataUpdated', handlePolicyDataUpdate);
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('tableStructureUpdated', handleTableStructureUpdate);
       window.removeEventListener('columnOrderUpdated', handleColumnOrderUpdate);
+
     };
   }, [tableName]);
 
@@ -630,6 +666,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </svg>
               Capturador
             </button>
+
           </div>
         </div>
 
@@ -1005,6 +1042,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     setMailModal({ isOpen: true, rowData });
   };
 
+  const handleOpenEmailModal = (rowData) => {
+    console.log('📧 DataTable: Opening email modal via callback with row data:', rowData);
+    setMailModal({ isOpen: true, rowData });
+  };
+
   const handleCloseMailModal = () => {
     setMailModal({ isOpen: false, rowData: null });
   };
@@ -1360,6 +1402,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </svg>
             Capturador
           </button>
+
         </div>
       </div>
 
@@ -1373,6 +1416,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           <PDFParser 
             selectedTable={tableName} 
             onClose={() => setShowPDFParser(false)}
+            onOpenEmailModal={handleOpenEmailModal}
           />
         </div>
       </Modal>
@@ -1655,6 +1699,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               {showPdfUpload && (
                 <CellPDFParser
                   columnName={editingCell.column}
+                  tableName={tableName}
                   onValueExtracted={setEditValue}
                 />
               )}

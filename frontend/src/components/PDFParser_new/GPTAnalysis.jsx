@@ -4,7 +4,8 @@ import { API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 
-const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose }) => {
+
+const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose, onOpenEmailModal }) => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -12,9 +13,12 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
     const [editedData, setEditedData] = useState(null);
     const [message, setMessage] = useState(null);
     const [editingCell, setEditingCell] = useState(null);
+
     
     // Move tableName to component scope so it's available everywhere
     const tableName = typeof selectedTable === 'string' ? selectedTable : selectedTable?.name;
+    
+
     
     // Debug logs
     console.log('GPTAnalysis - selectedTable:', selectedTable);
@@ -170,6 +174,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         }
     }, [parsedData, tableName, autoAnalyze]);
 
+
+
     const analyzeContent = async () => {
         if (!tableName || !tableInfo) {
             setError('Por favor selecciona una tabla válida primero');
@@ -255,18 +261,36 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     6. Para campos de texto, extrae el texto completo como se muestra
                     ${tableInfo.type === 'simple' ? '7. Esta es una tabla de póliza simple, enfócate en información básica de la póliza' : ''}
                     
+                    REGLAS ESPECÍFICAS PARA EMAIL:
+                    7. PARA CAMPOS EMAIL: NO captures emails de compañías de seguros (como @gnp.com.mx, @axa.com.mx, @qualitas.com.mx, etc.)
+                    8. PARA CAMPOS EMAIL: Solo captura emails personales del contratante/asegurado (gmail.com, hotmail.com, yahoo.com, outlook.com, etc.)
+                    9. PARA CAMPOS EMAIL: Si solo encuentras emails corporativos de aseguradoras, devuelve null
+                    
+                    REGLAS ESPECÍFICAS PARA NOMBRES:
+                    10. DISTINGUIR ENTRE CLIENTE Y PROPIETARIO: Cuando el documento mencione tanto "cliente" como "propietario" o "titular", captura ambos por separado
+                    11. CAMPO "contratante": Usar el nombre del CLIENTE (quien contrata la póliza)
+                    12. CAMPO "propietario" o "titular": Usar el nombre del PROPIETARIO del vehículo/inmueble (puede ser diferente al cliente)
+                    13. CAMPO "asegurado": Usar el nombre de la persona ASEGURADA (puede ser cliente, propietario o ambos)
+                    14. Si solo hay una persona mencionada, usar el mismo nombre para todos los campos relevantes
+                    15. Si hay múltiples personas, identificar claramente el rol de cada una según el contexto del documento
+                    
                     REGLAS DE NORMALIZACIÓN DE TEXTO:
-                    8. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
-                    9. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
-                    10. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
-                    11. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra
-                    12. TEXTO GENERAL: Limpia espacios extra, normaliza comillas y apostrofes
-                    13. NO normalices valores RFC más allá de mayúsculas y quitar espacios
+                    16. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
+                    17. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
+                    18. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
+                    19. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra
+                    20. TEXTO GENERAL: Limpia espacios extra, normaliza comillas y apostrofes
+                    21. NO normalices valores RFC más allá de mayúsculas y quitar espacios
+                    22. DERECHO DE PÓLIZA: Busca tanto "derecho de póliza" como "gastos de expedición" - ambos se refieren al mismo concepto
                     
                     NORMALIZACIÓN ESPECÍFICA POR CAMPO:
-                    - contratante, nombre: Aplicar normalización de nombres (formato Título)
+                    - contratante: Usar nombre del CLIENTE (quien contrata), aplicar normalización de nombres (formato Título)
+                    - propietario/titular: Usar nombre del PROPIETARIO del vehículo/inmueble, aplicar normalización de nombres (formato Título)
+                    - asegurado: Usar nombre de la persona ASEGURADA, aplicar normalización de nombres (formato Título)
                     - direccion: Aplicar normalización de direcciones (estandarizar abreviaciones + formato Título)
                     - rfc: Solo mayúsculas y quitar espacios, sin otros cambios
+                    - email: Solo emails personales, evitar emails corporativos de aseguradoras
+                    - derecho_de_poliza: Buscar tanto "derecho de póliza" como "gastos de expedición" - ambos son el mismo concepto
                     - Todos los demás campos de texto: Aplicar limpieza general de texto y normalización de nombres de compañías
                 `
             };
@@ -460,6 +484,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 setMessage('Datos insertados exitosamente');
                 setError(null);
 
+                // Data will be sent via custom event to TableMail
+
                 // Notify data table about the new data insertion and close modal
                 const event = new CustomEvent('policyDataUpdated', {
                     detail: { table: tableName, shouldCloseModal: true }
@@ -469,11 +495,26 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 // Also trigger the new notification system
                 notifyDataInsert(tableName);
                 
-                // Close the modal after successful insertion
+                // Open TableMail modal in DataTable component via callback
+                setTimeout(() => {
+                    console.log('🚀 Opening TableMail modal automatically');
+                    console.log('📧 Data to pass to TableMail:', cleanData);
+                    console.log('📧 ¡ABRIENDO MODAL DE EMAIL AUTOMÁTICAMENTE - ESTILO DATATABLE!');
+                    
+                    // Use callback to trigger TableMail modal in DataTable
+                    if (onOpenEmailModal) {
+                        onOpenEmailModal(cleanData);
+                    } else {
+                        console.warn('⚠️ onOpenEmailModal callback not available');
+                    }
+                }, 1200); // Give time to see success message
+                
+                // Close GPTAnalysis modal after dispatching the email event
                 if (onClose) {
                     setTimeout(() => {
+                        console.log('🔒 Closing GPTAnalysis modal - TableMail should open in DataTable');
                         onClose();
-                    }, 1500); // Give time to show success message
+                    }, 1500); // Close sooner since we don't need to keep this open
                 }
             } catch (insertError) {
                 console.error('Error during data insertion:', insertError);
@@ -665,6 +706,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     </div>
                 </div>
             )}
+
         </div>
     );
 };

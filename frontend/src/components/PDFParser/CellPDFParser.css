@@ -82,4 +82,67 @@
 
 [data-theme='dark'] .file-input-label:hover {
   background-color: #374151;
+}
+
+/* New styles for improved CellPDFParser */
+.column-info {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+}
+
+.column-info strong {
+  display: block;
+  color: #1976d2;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.column-info p {
+  margin: 0;
+  color: #555;
+  font-size: 0.875rem;
+}
+
+.error-message {
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.analyzing-status {
+  animation: fadeIn 0.3s ease-in;
+}
+
+/* Spinner animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Dark mode for new elements */
+[data-theme='dark'] .column-info {
+  background: #1e3a8a;
+  border-left-color: #3b82f6;
+}
+
+[data-theme='dark'] .column-info strong {
+  color: #60a5fa;
+}
+
+[data-theme='dark'] .column-info p {
+  color: #d1d5db;
+}
+
+/* Better disabled state */
+.file-input-label.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 } 
