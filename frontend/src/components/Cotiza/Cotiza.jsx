@@ -652,6 +652,250 @@ Genera un correo completo y profesional listo para enviar.
     }
   };
 
+  const downloadTableAsCSV = () => {
+    if (!cotizaciones || !cotizaciones.tabla_comparativa) {
+      toast.error('No hay tabla de cotización para exportar');
+      return;
+    }
+
+    try {
+      const coberturas = cotizaciones.tabla_comparativa.coberturas;
+      const aseguradoras = [];
+      
+      // Obtener nombres de aseguradoras
+      if (coberturas.length > 0) {
+        Object.keys(coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      // Crear encabezados CSV
+      let csvContent = 'COBERTURA,' + aseguradoras.join(',') + '\n';
+      
+      // Agregar filas de datos
+      coberturas.forEach(fila => {
+        let row = `"${fila.cobertura || ''}"`;
+        aseguradoras.forEach(aseg => {
+          row += `,"${fila[aseg] || 'N/A'}"`;
+        });
+        csvContent += row + '\n';
+      });
+
+      // Agregar información del vehículo al final
+      if (cotizaciones.vehiculo) {
+        csvContent += '\n\n"INFORMACIÓN DEL VEHÍCULO"\n';
+        csvContent += `"Marca","${cotizaciones.vehiculo.marca || 'N/A'}"\n`;
+        csvContent += `"Modelo","${cotizaciones.vehiculo.modelo || 'N/A'}"\n`;
+        csvContent += `"Año","${cotizaciones.vehiculo.anio || 'N/A'}"\n`;
+        csvContent += `"C.P.","${cotizaciones.vehiculo.cp || 'N/A'}"\n`;
+      }
+
+      // Crear y descargar archivo
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Cotizacion_Seguros_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('📊 Tabla exportada como CSV');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('❌ Error al exportar CSV');
+    }
+  };
+
+  const downloadTableAsXLS = () => {
+    if (!cotizaciones || !cotizaciones.tabla_comparativa) {
+      toast.error('No hay tabla de cotización para exportar');
+      return;
+    }
+
+    try {
+      const coberturas = cotizaciones.tabla_comparativa.coberturas;
+      const aseguradoras = [];
+      
+      // Obtener nombres de aseguradoras
+      if (coberturas.length > 0) {
+        Object.keys(coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      // Crear tabla HTML para Excel
+      let htmlTable = '<table border="1">';
+      
+      // Agregar información del vehículo
+      if (cotizaciones.vehiculo) {
+        htmlTable += '<tr><td colspan="' + (aseguradoras.length + 1) + '" style="background-color: #4a5568; color: white; font-weight: bold; text-align: center;">INFORMACIÓN DEL VEHÍCULO</td></tr>';
+        htmlTable += `<tr><td style="font-weight: bold;">Marca</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.marca || 'N/A'}</td></tr>`;
+        htmlTable += `<tr><td style="font-weight: bold;">Modelo</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.modelo || 'N/A'}</td></tr>`;
+        htmlTable += `<tr><td style="font-weight: bold;">Año</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.anio || 'N/A'}</td></tr>`;
+        htmlTable += `<tr><td style="font-weight: bold;">C.P.</td><td colspan="${aseguradoras.length}">${cotizaciones.vehiculo.cp || 'N/A'}</td></tr>`;
+        htmlTable += '<tr><td colspan="' + (aseguradoras.length + 1) + '"></td></tr>';
+      }
+      
+      // Agregar encabezados de la tabla de cotización
+      htmlTable += '<tr><td style="background-color: #4a5568; color: white; font-weight: bold;">COBERTURAS</td>';
+      aseguradoras.forEach(aseg => {
+        const className = aseg.toUpperCase().includes('GNP') ? '#2563eb' : 
+                         aseg.toUpperCase().includes('QUALITAS') ? '#dc2626' :
+                         aseg.toUpperCase().includes('HDI') ? '#16a34a' : '#6b7280';
+        htmlTable += `<td style="background-color: ${className}; color: white; font-weight: bold; text-align: center;">${aseg.replace(/_/g, ' ')}</td>`;
+      });
+      htmlTable += '</tr>';
+      
+      // Agregar filas de datos
+      coberturas.forEach(fila => {
+        const isCostoRow = fila.cobertura && fila.cobertura.toLowerCase().includes('costo');
+        htmlTable += '<tr>';
+        htmlTable += `<td style="background-color: #e2e8f0; font-weight: bold;">${fila.cobertura || ''}</td>`;
+        aseguradoras.forEach(aseg => {
+          const value = fila[aseg] || 'N/A';
+          const style = isCostoRow ? 'font-weight: bold; font-size: 14px;' : '';
+          htmlTable += `<td style="text-align: center; ${style}">${value}</td>`;
+        });
+        htmlTable += '</tr>';
+      });
+      
+      htmlTable += '</table>';
+
+      // Crear archivo Excel
+      const blob = new Blob(['\ufeff' + htmlTable], { 
+        type: 'application/vnd.ms-excel;charset=utf-8;' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Cotizacion_Seguros_${new Date().toISOString().split('T')[0]}.xls`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('📈 Tabla exportada como Excel');
+    } catch (error) {
+      console.error('Error exporting XLS:', error);
+      toast.error('❌ Error al exportar Excel');
+    }
+  };
+
+  const downloadTableAsPDF = () => {
+    if (!cotizaciones || !cotizaciones.tabla_comparativa) {
+      toast.error('No hay tabla de cotización para exportar');
+      return;
+    }
+
+    try {
+      // Crear contenido HTML de la tabla
+      const coberturas = cotizaciones.tabla_comparativa.coberturas;
+      const aseguradoras = [];
+      
+      // Obtener nombres de aseguradoras
+      if (coberturas.length > 0) {
+        Object.keys(coberturas[0]).forEach(key => {
+          if (key !== 'cobertura') {
+            aseguradoras.push(key);
+          }
+        });
+      }
+
+      let htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Cotización de Seguros</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .vehiculo-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+            .vehiculo-info h3 { margin: 0 0 10px 0; color: #2c3e50; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: center; }
+            .cobertura-header { background: #4a5568; color: white; font-weight: bold; }
+            .cobertura-name { background: #e2e8f0; font-weight: bold; text-align: left; }
+            .gnp-header { background: #2563eb; color: white; }
+            .qualitas-header { background: #dc2626; color: white; }
+            .hdi-header { background: #16a34a; color: white; }
+            .other-header { background: #6b7280; color: white; }
+            .costo-row { font-weight: bold; background: #fff3cd; }
+            @media print {
+              body { margin: 0; }
+              table { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>COTIZACIÓN DE SEGUROS AUTOMÓVILES</h1>
+            <p>Fecha: ${new Date().toLocaleDateString('es-MX')}</p>
+          </div>
+      `;
+
+      // Agregar información del vehículo
+      if (cotizaciones.vehiculo) {
+        htmlContent += `
+          <div class="vehiculo-info">
+            <h3>${cotizaciones.vehiculo.marca} ${cotizaciones.vehiculo.modelo} ${cotizaciones.vehiculo.anio}</h3>
+            <p>C.P. ${cotizaciones.vehiculo.cp} | COBERTURA AMPLIA</p>
+          </div>
+        `;
+      }
+
+      // Crear tabla
+      htmlContent += '<table><thead><tr>';
+      htmlContent += '<th class="cobertura-header">COBERTURAS</th>';
+      
+      aseguradoras.forEach(aseg => {
+        let headerClass = 'other-header';
+        if (aseg.toUpperCase().includes('GNP')) headerClass = 'gnp-header';
+        else if (aseg.toUpperCase().includes('QUALITAS')) headerClass = 'qualitas-header';
+        else if (aseg.toUpperCase().includes('HDI')) headerClass = 'hdi-header';
+        
+        htmlContent += `<th class="${headerClass}">${aseg.replace(/_/g, ' ')}</th>`;
+      });
+      
+      htmlContent += '</tr></thead><tbody>';
+      
+      // Agregar filas de datos
+      coberturas.forEach(fila => {
+        const isCostoRow = fila.cobertura && fila.cobertura.toLowerCase().includes('costo');
+        htmlContent += `<tr ${isCostoRow ? 'class="costo-row"' : ''}>`;
+        htmlContent += `<td class="cobertura-name">${fila.cobertura || ''}</td>`;
+        aseguradoras.forEach(aseg => {
+          htmlContent += `<td>${fila[aseg] || 'N/A'}</td>`;
+        });
+        htmlContent += '</tr>';
+      });
+      
+      htmlContent += '</tbody></table></body></html>';
+
+      // Crear y descargar archivo PDF
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Tabla_Cotizacion_${new Date().toISOString().split('T')[0]}.html`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success('📋 Tabla exportada como HTML (imprime como PDF desde el navegador)');
+    } catch (error) {
+      console.error('Error exporting table PDF:', error);
+      toast.error('❌ Error al exportar tabla como PDF');
+    }
+  };
+
   return (
     <div className="cotiza-container">
       <div className="cotiza-header">
@@ -1026,6 +1270,46 @@ Genera un correo completo y profesional listo para enviar.
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                           </svg>
                           Copiar datos
+                        </button>
+                        <button 
+                          className="btn-outline"
+                          onClick={downloadTableAsCSV}
+                          title="Exportar tabla como CSV"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
+                          </svg>
+                          CSV
+                        </button>
+                        <button 
+                          className="btn-outline"
+                          onClick={downloadTableAsXLS}
+                          title="Exportar tabla como Excel"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="9" cy="9" r="2"/>
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                          </svg>
+                          Excel
+                        </button>
+                        <button 
+                          className="btn-outline"
+                          onClick={downloadTableAsPDF}
+                          title="Exportar tabla como PDF"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
+                          </svg>
+                          PDF Tabla
                         </button>
                         <button 
                           className="btn-outline"
