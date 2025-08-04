@@ -528,7 +528,7 @@ REQUISITOS:
 - Todo el contenido en ESPAÑOL
 - Usar colores corporativos azules (#007bff, #0056b3)
 - Tabla responsive y fácil de leer
-- Información de contacto: CASIN Seguros, Tel: +52 55 1234-5678, Email: contacto@casin.com.mx
+- Información de contacto: CASIN Seguros, Tel: [Tu número de teléfono], Email: contacto@casin.com.mx
 
 Genera un correo completo y profesional listo para enviar.
           `
@@ -1118,7 +1118,7 @@ Genera un correo completo y profesional listo para enviar.
                       id="telefono"
                       value={clientData.telefono}
                       onChange={(e) => setClientData(prev => ({...prev, telefono: e.target.value}))}
-                      placeholder="Ej: +52 55 1234-5678"
+                      placeholder="Ej: +52 55 0000-0000"
                     />
                   </div>
                   
@@ -1333,4 +1333,4 @@ Genera un correo completo y profesional listo para enviar.
   );
 };
 
-export default Cotiza; 
+export default Cotiza;
