@@ -335,6 +335,7 @@ class FirebaseReportsService {
       
       // Get available insurance collections dynamically
       const insuranceCollections = await this.getAvailableInsuranceCollections();
+      console.log('📋 Collections to check for expirations:', insuranceCollections);
       
       const expirations = [];
       
@@ -355,12 +356,53 @@ class FirebaseReportsService {
             let expirationDate = null;
             
             // Common field names for expiration dates
-            const expirationFields = ['fecha_fin', 'fecha_vencimiento', 'vigencia_hasta', 'fecha_expiracion'];
+            const expirationFields = [
+              'fecha_fin', 
+              'fecha_vencimiento', 
+              'vigencia_fin', 
+              'vigencia_hasta', 
+              'fecha_expiracion',
+              'fecha_finalizacion',
+              'fecha_termino',
+              'vencimiento',
+              'expiracion'
+            ];
             
             for (const field of expirationFields) {
               if (doc[field]) {
-                expirationDate = new Date(doc[field]);
-                break;
+                console.log(`📅 Found date field '${field}':`, doc[field], 'in document:', doc.id);
+                
+                // Try to parse different date formats
+                let dateValue = doc[field];
+                
+                // Handle DD-MMM-YYYY format (like "19-Apr-2025")
+                if (typeof dateValue === 'string' && dateValue.includes('-')) {
+                  const dateParts = dateValue.split('-');
+                  if (dateParts.length === 3) {
+                    const monthMap = {
+                      'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+                      'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+                      'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                    };
+                    
+                    if (monthMap[dateParts[1]]) {
+                      // Convert to ISO format: YYYY-MM-DD
+                      dateValue = `${dateParts[2]}-${monthMap[dateParts[1]]}-${dateParts[0].padStart(2, '0')}`;
+                      console.log(`📅 Converted date format:`, doc[field], '→', dateValue);
+                    }
+                  }
+                }
+                
+                expirationDate = new Date(dateValue);
+                
+                // Verify the date is valid
+                if (!isNaN(expirationDate.getTime())) {
+                  console.log(`✅ Valid date parsed:`, expirationDate.toISOString());
+                  break;
+                } else {
+                  console.log(`❌ Invalid date:`, dateValue);
+                  expirationDate = null;
+                }
               }
             }
             
@@ -383,7 +425,23 @@ class FirebaseReportsService {
                 moneda: doc.moneda || 'MXN'
               };
               
+              console.log('📅 Found expiration:', {
+                collection: collectionName,
+                policy: expirationEntry.numero_poliza,
+                name: expirationEntry.nombre_contratante,
+                date: expirationEntry.fecha_fin,
+                type: expirationEntry.tipo_seguro
+              });
+              
               expirations.push(expirationEntry);
+            } else {
+              // Log when we don't find valid expiration dates
+              console.log('⚠️ No valid expiration date found in document:', {
+                collection: collectionName,
+                id: doc.id,
+                fields: Object.keys(doc).filter(key => key.includes('fecha') || key.includes('vencimiento') || key.includes('fin')),
+                values: Object.keys(doc).filter(key => key.includes('fecha') || key.includes('vencimiento') || key.includes('fin')).map(key => ({ [key]: doc[key] }))
+              });
             }
           }
           

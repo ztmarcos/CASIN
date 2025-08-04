@@ -310,6 +310,15 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.expiration-item.clickable {
+  cursor: pointer;
+}
+
+.expiration-item.clickable:hover {
+  background: var(--hover-background);
+  border-color: var(--primary-color);
+}
+
 .expiration-info {
   display: flex;
   align-items: center;
@@ -330,6 +339,17 @@
   font-weight: 500;
   color: var(--text-primary);
   font-family: 'Roboto Mono', monospace;
+}
+
+.expiration-ramo {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+  background: var(--background-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  text-transform: uppercase;
 }
 
 .expiration-details {
@@ -513,6 +533,95 @@
 .test-errors ul {
   margin: 5px 0 0 20px;
   color: #dc2626;
+}
+
+/* Policy Modal Styles */
+.policy-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.policy-modal-content {
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.policy-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.policy-modal-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.close-modal-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+  background: var(--background-secondary);
+  color: var(--text-primary);
+}
+
+.policy-modal-body {
+  padding: 1.5rem;
+}
+
+.policy-details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.policy-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: var(--background-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.policy-detail-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.policy-detail-value {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  word-break: break-word;
 }
 
 .test-errors li {

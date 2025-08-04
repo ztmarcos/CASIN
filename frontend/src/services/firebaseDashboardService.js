@@ -49,19 +49,21 @@ class FirebaseDashboardService {
           endDate = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
           break;
         case 'month':
-          endDate = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+          // End of current month
+          endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
           break;
         case 'quarter':
           endDate = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
           break;
         default:
-          endDate = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+          // End of current month by default
+          endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
       }
 
       // Get expirations from reports service
       const expirations = await this.reportsService.getVencimientos();
       
-      // Filter by period
+      // Filter by period (only current month)
       const filteredExpirations = expirations.filter(policy => {
         if (!policy.fecha_fin) {
           console.log('⚠️ Policy without fecha_fin:', policy);
@@ -76,13 +78,25 @@ class FirebaseDashboardService {
           return false;
         }
         
+        // Filter for current month only
         const isInPeriod = expirationDate >= today && expirationDate <= endDate;
         
         if (isInPeriod) {
-          console.log('✅ Valid expiration found:', {
+          console.log('✅ Valid expiration found (current month):', {
             policy: policy.numero_poliza,
             date: policy.fecha_fin,
-            name: policy.nombre_contratante
+            name: policy.nombre_contratante,
+            expirationDate: expirationDate.toISOString(),
+            today: today.toISOString(),
+            endDate: endDate.toISOString()
+          });
+        } else {
+          console.log('❌ Expiration outside period:', {
+            policy: policy.numero_poliza,
+            date: policy.fecha_fin,
+            expirationDate: expirationDate.toISOString(),
+            today: today.toISOString(),
+            endDate: endDate.toISOString()
           });
         }
         
