@@ -27,6 +27,11 @@ service firebase.storage {
       allow read, write: if isCASINAdmin();
     }
     
+    // Permitir acceso a blog-images para la otra aplicación
+    match /blog-images/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
     // Permitir acceso a archivos públicos
     match /public/{allPaths=**} {
       allow read: if true;
