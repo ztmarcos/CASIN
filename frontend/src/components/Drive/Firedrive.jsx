@@ -8,10 +8,17 @@ import firebaseStorageProxy from '../../services/firebaseStorageProxy';
 import { ref, listAll, getDownloadURL, getMetadata, uploadBytes } from 'firebase/storage';
 import './Drive.css';
 
-// DEBUGGING: Direct Firebase check
+// DEBUGGING: Direct Firebase check with better error handling
 const debugDirectFirebaseCheck = async (teamId, folderPath) => {
   try {
     console.log(`🐛 DIRECT FIREBASE CHECK: team ${teamId}, path "${folderPath}"`);
+    
+    // Check if storage is properly initialized
+    if (!storage) {
+      console.error('🐛 STORAGE NOT INITIALIZED');
+      return -1;
+    }
+    
     const fullPath = `teams/${teamId}/${folderPath}`;
     const storageRef = ref(storage, fullPath);
     const result = await listAll(storageRef);
@@ -22,6 +29,18 @@ const debugDirectFirebaseCheck = async (teamId, folderPath) => {
     return result.items.length;
   } catch (error) {
     console.error('🐛 DIRECT CHECK ERROR:', error);
+    
+    // Provide more specific error information
+    if (error.code === 'storage/unauthorized') {
+      console.error('🐛 UNAUTHORIZED: Check Firebase Storage rules');
+    } else if (error.code === 'storage/unauthenticated') {
+      console.error('🐛 UNAUTHENTICATED: User not logged in');
+    } else if (error.code === 'storage/object-not-found') {
+      console.error('🐛 OBJECT NOT FOUND: Path does not exist');
+    } else {
+      console.error('🐛 UNKNOWN ERROR:', error.code, error.message);
+    }
+    
     return -1;
   }
 };
@@ -142,6 +161,14 @@ const Firedrive = () => {
     try {
       addDebugInfo('Iniciando test de conexión Firebase Storage...');
       
+      // Check if storage is initialized
+      if (!storage) {
+        addDebugInfo('❌ Firebase Storage no inicializado');
+        setConnectionStatus('error');
+        setError('Firebase Storage no está inicializado correctamente.');
+        return false;
+      }
+      
       // Check if user is authenticated
       if (!user) {
         addDebugInfo('Usuario no autenticado');
@@ -160,6 +187,14 @@ const Firedrive = () => {
       
       addDebugInfo(`Usuario: ${user.email} | Team: ${getCleanTeamName(userTeam.name)}`);
       addDebugInfo(`Team ID: ${userTeam.id}`);
+      
+      // Test direct Firebase access first
+      try {
+        const directTest = await debugDirectFirebaseCheck(userTeam.id, '');
+        addDebugInfo(`Direct Firebase test: ${directTest >= 0 ? 'SUCCESS' : 'FAILED'}`);
+      } catch (directError) {
+        addDebugInfo(`Direct Firebase test failed: ${directError.code || directError.message}`);
+      }
       
       // Test team storage connection
       const connectionTest = await firebaseTeamStorageService.testTeamStorageConnection(userTeam.id);
@@ -210,6 +245,9 @@ const Firedrive = () => {
       } else if (error.message.includes('CORS')) {
         errorMessage = 'Error de CORS. Firebase Storage necesita configuración CORS para desarrollo local.';
         addDebugInfo('Error CORS detectado');
+      } else if (error.code === 'storage/object-not-found') {
+        errorMessage = 'La ruta del equipo no existe en Firebase Storage.';
+        addDebugInfo('Ruta de equipo no encontrada');
       } else {
         addDebugInfo(`Error desconocido: ${error.code}`);
       }
