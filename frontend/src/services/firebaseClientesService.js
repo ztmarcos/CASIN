@@ -53,6 +53,76 @@ class FirebaseClientesService {
         return dateValue.toISOString().split('T')[0];
       }
 
+      // Si es un timestamp de Excel/Google Sheets (números como 458924375)
+      if (typeof dateValue === 'number') {
+        // Detectar si es un timestamp de Excel/Google Sheets (1-100000)
+        if (dateValue >= 1 && dateValue <= 100000) {
+          console.log(`🔧 Detectado posible timestamp de Excel/Google Sheets: ${dateValue}`);
+          
+          // Convertir timestamp de Excel a fecha
+          // Excel/Google Sheets timestamps son días desde 1900-01-01
+          // Pero Excel tiene un bug: considera 1900 como año bisiesto
+          // Por eso usamos 1899-12-30 como base
+          const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
+          const millisecondsPerDay = 24 * 60 * 60 * 1000;
+          
+          const date = new Date(excelEpoch.getTime() + (dateValue * millisecondsPerDay));
+          
+          if (!isNaN(date.getTime())) {
+            const result = date.toISOString().split('T')[0];
+            console.log(`✅ Timestamp Excel convertido: ${dateValue} -> ${result}`);
+            return result;
+          } else {
+            console.warn(`⚠️ Timestamp Excel inválido: ${dateValue}`);
+          }
+        }
+        
+        // Si es un timestamp Unix (segundos desde 1970) - típicamente 10 dígitos
+        if (dateValue >= 1000000000 && dateValue <= 9999999999) {
+          console.log(`🔧 Detectado posible timestamp Unix (segundos): ${dateValue}`);
+          const date = new Date(dateValue * 1000);
+          if (!isNaN(date.getTime())) {
+            const result = date.toISOString().split('T')[0];
+            console.log(`✅ Timestamp Unix (segundos) convertido: ${dateValue} -> ${result}`);
+            return result;
+          }
+        }
+        
+        // Si es un timestamp Unix en milisegundos - típicamente 13 dígitos
+        if (dateValue >= 1000000000000 && dateValue <= 9999999999999) {
+          console.log(`🔧 Detectado posible timestamp Unix (milisegundos): ${dateValue}`);
+          const date = new Date(dateValue);
+          if (!isNaN(date.getTime())) {
+            const result = date.toISOString().split('T')[0];
+            console.log(`✅ Timestamp Unix (milisegundos) convertido: ${dateValue} -> ${result}`);
+            return result;
+          }
+        }
+        
+        // Para otros números grandes que podrían ser fechas (como 458924375)
+        if (dateValue > 100000) {
+          console.log(`🔧 Detectado número grande que podría ser fecha: ${dateValue}`);
+          
+          // Intentar como timestamp Unix en segundos
+          let date = new Date(dateValue * 1000);
+          if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+            const result = date.toISOString().split('T')[0];
+            console.log(`✅ Número grande convertido como timestamp Unix (segundos): ${dateValue} -> ${result}`);
+            return result;
+          }
+          
+          // Intentar como timestamp Unix en milisegundos
+          date = new Date(dateValue);
+          if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+            const result = date.toISOString().split('T')[0];
+            console.log(`✅ Número grande convertido como timestamp Unix (milisegundos): ${dateValue} -> ${result}`);
+            return result;
+          }
+          
+          console.warn(`⚠️ Número grande no pudo ser convertido a fecha válida: ${dateValue}`);
+        }
+      }
+
       // Si es un string, intentar diferentes formatos
       if (typeof dateValue === 'string') {
         // Limpiar el string
@@ -119,15 +189,7 @@ class FirebaseClientesService {
         return dateValue.toDate().toISOString().split('T')[0];
       }
       
-      // Si es un número (timestamp)
-      if (typeof dateValue === 'number') {
-        const date = new Date(dateValue);
-        if (!isNaN(date.getTime())) {
-          return date.toISOString().split('T')[0];
-        }
-      }
-      
-      console.warn(`⚠️ Formato de fecha no reconocido: ${dateValue}`);
+      console.warn(`⚠️ Formato de fecha no reconocido: ${dateValue} (tipo: ${typeof dateValue})`);
       return 'N/A';
       
     } catch (error) {
@@ -222,6 +284,34 @@ class FirebaseClientesService {
               pdf: data.pdf || 'N/A',
               responsable: data.responsable || 'N/A'
             };
+            
+            // Log para detectar problemas con fechas
+            if (data.vigencia_inicio !== undefined || data.vigencia_fin !== undefined || 
+                data.fecha_inicio !== undefined || data.fecha_fin !== undefined) {
+              console.log(`📅 Procesando fechas para póliza ${policy.numero_poliza}:`);
+              console.log(`  Original vigencia_inicio: ${data.vigencia_inicio} (${typeof data.vigencia_inicio})`);
+              console.log(`  Original vigencia_fin: ${data.vigencia_fin} (${typeof data.vigencia_fin})`);
+              console.log(`  Original fecha_inicio: ${data.fecha_inicio} (${typeof data.fecha_inicio})`);
+              console.log(`  Original fecha_fin: ${data.fecha_fin} (${typeof data.fecha_fin})`);
+              console.log(`  Normalizado vigencia_inicio: ${policy.vigencia_inicio}`);
+              console.log(`  Normalizado vigencia_fin: ${policy.vigencia_fin}`);
+            }
+            
+            // Detectar valores undefined o problemáticos
+            const problematicFields = [];
+            Object.entries(data).forEach(([key, value]) => {
+              if (value === undefined) {
+                problematicFields.push(`${key}: undefined`);
+              } else if (value === null) {
+                problematicFields.push(`${key}: null`);
+              } else if (typeof value === 'string' && value.trim() === '') {
+                problematicFields.push(`${key}: empty string`);
+              }
+            });
+            
+            if (problematicFields.length > 0) {
+              console.warn(`⚠️ Valores problemáticos en póliza ${policy.numero_poliza}:`, problematicFields);
+            }
             
             // Agrupar por nombre normalizado
             if (!clientMap.has(normalizedName)) {
