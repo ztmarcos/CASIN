@@ -7,6 +7,7 @@ export const FEATURES = {
   BIRTHDAYS_ENABLED: true,
   REPORTS_ENABLED: true,
   TABLES_ENABLED: true,
+  COTIZA_ENABLED: true, // ✅ Enable Cotiza section
   
   // Pagination settings
   DEFAULT_PAGE_SIZE: 25, // Reduced from 50 to be more efficient
