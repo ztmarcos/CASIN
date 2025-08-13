@@ -115,7 +115,7 @@ export const TeamProvider = ({ children }) => {
             // Crear el equipo CASIN si no existe
             console.log('🆕 Creating CASIN team with fixed ID');
             const newTeamData = {
-              name: 'CASIN Team',
+              name: 'CASIN',
               description: 'Equipo principal CASIN con datos en Firebase Storage gs://casinbbdd.firebasestorage.app',
               owner: user.email,
               createdAt: new Date(),
