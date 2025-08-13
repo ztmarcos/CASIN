@@ -28,4 +28,35 @@ const sendWelcomeEmail = async (gptResponse, data) => {
   }
 };
 
-export { sendWelcomeEmail }; 
+const sendEmailWithGmail = async (to, subject, htmlContent, fromName = 'CASIN Seguros') => {
+  try {
+    const response = await fetch(`${API_URL}/email/send`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to,
+        subject,
+        htmlContent,
+        from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
+        fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+        fromName
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send email');
+    }
+
+    const result = await response.json();
+    console.log('Email sent successfully with Gmail:', result);
+    return result;
+  } catch (error) {
+    console.error('Error sending email with Gmail:', error);
+    throw error;
+  }
+};
+
+export { sendWelcomeEmail, sendEmailWithGmail }; 

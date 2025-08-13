@@ -32,6 +32,8 @@ if (result.error) {
     'GOOGLE_DRIVE_FOLDER_ID',
     'SMTP_HOST',
     'SMTP_USER',
+    'GMAIL_USERNAME',
+    'GMAIL_APP_PASSWORD',
     'DB_HOST',
     'DB_USER',
     'DB_NAME'
@@ -4600,8 +4602,8 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 SMTP_HOST:', process.env.SMTP_HOST);
     
     // Usar remitente dinámico o fallback a variables por defecto
-    const smtpUser = from || process.env.SMTP_USER_CASIN || process.env.SMTP_USER;
-    const smtpPass = fromPass || process.env.SMTP_PASS_CASIN || process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
+    const smtpUser = from || process.env.SMTP_USER_CASIN || process.env.GMAIL_USERNAME || process.env.SMTP_USER;
+    const smtpPass = fromPass || process.env.SMTP_PASS_CASIN || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
     const senderName = fromName || 'CASIN Seguros';
     
     console.log('📧 SMTP_USER (dinámico):', smtpUser);
