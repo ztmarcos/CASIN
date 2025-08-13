@@ -26,4 +26,39 @@ const sendReportEmail = async (policies, reportType) => {
     }
 };
 
-export { sendReportEmail }; 
+const sendReportEmailWithGmail = async (policies, reportType, to, subject, htmlContent) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/email/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                to,
+                subject,
+                htmlContent,
+                from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
+                fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+                fromName: 'CASIN Seguros - Reportes',
+                driveLinks: policies.map(policy => ({
+                    name: `Poliza_${policy.id || policy.numero}`,
+                    link: policy.driveLink || '#'
+                })).filter(link => link.link !== '#')
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to send report email');
+        }
+
+        const result = await response.json();
+        console.log('Report email sent successfully with Gmail:', result);
+        return result;
+    } catch (error) {
+        console.error('Error sending report email with Gmail:', error);
+        throw error;
+    }
+};
+
+export { sendReportEmail, sendReportEmailWithGmail }; 

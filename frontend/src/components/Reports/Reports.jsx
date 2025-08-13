@@ -352,90 +352,245 @@ export default function Reports() {
 
 
 
-  const handleSendEmail = async () => {
+  // Función para calcular fechas de recordatorios basadas en forma de pago
+  const calculateReminderDates = (baseDate, paymentForm) => {
+    if (!baseDate || !paymentForm) return [];
+    
+    const base = new Date(baseDate);
     const today = new Date();
-    const thirtyDaysFromNow = new Date(today);
-    thirtyDaysFromNow.setDate(today.getDate() + 30);
+    const reminders = [];
     
-    const fourteenDaysFromNow = new Date(today);
-    fourteenDaysFromNow.setDate(today.getDate() + 14);
+    // Mapeo de formas de pago a días de anticipación
+    const reminderDays = {
+      'ANUAL': [30, 15, 3],      // 30, 15 y 3 días antes
+      'SEMESTRAL': [21, 7, 1],   // 21, 7 y 1 día antes
+      'TRIMESTRAL': [14, 7, 1],  // 14, 7 y 1 día antes
+      'BIMESTRAL': [10, 3, 1],   // 10, 3 y 1 día antes
+      'MENSUAL': [7, 3, 1],      // 7, 3 y 1 día antes
+      'default': [15, 7, 1]      // Default para formas no especificadas
+    };
     
-    console.log('Checking policies with dates:', {
-      today: today.toISOString(),
-      thirtyDaysFromNow: thirtyDaysFromNow.toISOString(),
-      fourteenDaysFromNow: fourteenDaysFromNow.toISOString()
+    const days = reminderDays[paymentForm.toUpperCase()] || reminderDays.default;
+    
+    days.forEach(daysBefore => {
+      const reminderDate = new Date(base);
+      reminderDate.setDate(reminderDate.getDate() - daysBefore);
+      
+      // Solo incluir recordatorios futuros o del día actual
+      if (reminderDate >= today) {
+        reminders.push({
+          date: reminderDate,
+          daysBefore,
+          type: daysBefore === days[0] ? 'Primer Recordatorio' : 
+                daysBefore === days[1] ? 'Segundo Recordatorio' : 'Recordatorio Final'
+        });
+      }
     });
     
-    // Filter policies based on type and date range
-    const duePolicies = filteredPolicies.filter(policy => {
+    return reminders.sort((a, b) => a.date - b.date);
+  };
+
+  // Función para generar contenido de recordatorio
+  const generateReminderContent = (policy, reminderType, daysUntilDue, selectedType) => {
+    const clientName = policy.nombre_contratante || policy.contratante || 'Cliente';
+    const policyNumber = policy.numero_poliza || 'N/A';
+    const amount = getPolicyTotalAmount(policy);
+    const dueDate = selectedType === 'Vencimientos' ? policy.fecha_fin : policy.fecha_proximo_pago;
+    
+    const subject = selectedType === 'Vencimientos' 
+      ? `${reminderType} - Vencimiento Póliza ${policyNumber} - ${clientName}`
+      : `${reminderType} - Pago Parcial Póliza ${policyNumber} - ${clientName}`;
+    
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${clientName}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviarle este ${reminderType.toLowerCase()} para recordarle que su póliza <strong>${policyNumber}</strong> ${selectedType === 'Vencimientos' ? 'vencerá' : 'tiene un pago parcial programado'} el <strong>${formatDate(dueDate)}</strong>.</p>
+        
+        ${selectedType === 'Vencimientos' 
+          ? `<p>El monto total de la póliza es de <strong>$${amount?.toLocaleString() || 'N/A'} pesos</strong>.</p>`
+          : `<p>El monto del pago parcial es de <strong>$${policy.pago_parcial?.toLocaleString() || 'N/A'} pesos</strong>.</p>`
+        }
+        
+        <p>Faltan <strong>${daysUntilDue} día${daysUntilDue !== 1 ? 's' : ''}</strong> para la fecha límite.</p>
+        
+        <p>Tenemos campaña de pago con tarjeta de crédito a 3 y 6 MSI o si desea puede pagarlo con débito o en ventanilla del banco en efectivo o cheque y por transferencia electrónica como pago de servicios.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+        
+        <p style="font-size: 12px; color: #666; font-style: italic;">
+          <strong>NOTA:</strong> EN CASO DE REQUERIR FACTURA ES NECESARIO COMPARTIR SU CONSTANCIA FISCAL ACTUALIZADA NO MAYOR A 2 MESES DE ANTIGÜEDAD ANTES DE REALIZAR SU PAGO.
+        </p>
+      </div>
+    `;
+    
+    return { subject, htmlContent };
+  };
+
+  const handleSendEmail = async () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    console.log('🎯 Iniciando envío de recordatorios automáticos...');
+    console.log('📅 Fecha actual:', today.toISOString());
+    console.log('📋 Tipo de reporte:', selectedType);
+    
+    // Filtrar pólizas que cumplen con los criterios
+    const eligiblePolicies = filteredPolicies.filter(policy => {
       try {
+        // Verificar que tenga email
+        if (!policy.email) {
+          console.log('❌ Póliza sin email:', policy.numero_poliza);
+          return false;
+        }
+        
+        // Verificar que esté marcada como "No Pagado"
+        const currentStatus = getPolicyStatus(policy);
+        if (currentStatus !== 'No Pagado') {
+          console.log('❌ Póliza ya pagada:', policy.numero_poliza, 'Status:', currentStatus);
+          return false;
+        }
+        
+        // Verificar forma de pago
+        if (!policy.forma_pago) {
+          console.log('❌ Póliza sin forma de pago:', policy.numero_poliza);
+          return false;
+        }
+        
         if (selectedType === 'Vencimientos') {
+          // Para vencimientos: verificar fecha_fin
           if (!policy.fecha_fin) {
-            console.log('Missing fecha_fin for policy:', policy.numero_poliza);
+            console.log('❌ Póliza sin fecha de vencimiento:', policy.numero_poliza);
             return false;
           }
           
-          const policyEndDate = parseDate(policy.fecha_fin);
-          if (!policyEndDate || isNaN(policyEndDate.getTime())) {
-            console.log('Invalid fecha_fin for policy:', policy.numero_poliza, policy.fecha_fin);
+          const endDate = parseDate(policy.fecha_fin);
+          if (!endDate || isNaN(endDate.getTime())) {
+            console.log('❌ Fecha de vencimiento inválida:', policy.numero_poliza, policy.fecha_fin);
             return false;
           }
-
-          // Include expired policies (past dates) AND policies expiring within the next 30 days
-          return policyEndDate <= thirtyDaysFromNow;
-        } else {
-          // Pagos Parciales
+          
+          return true; // Incluir todas las pólizas no pagadas con fecha de vencimiento
+          
+        } else if (selectedType === 'Pagos Parciales') {
+          // Para pagos parciales: verificar que tenga pago_parcial y fecha_proximo_pago
+          if (!policy.pago_parcial || policy.pago_parcial <= 0) {
+            console.log('❌ Póliza sin pago parcial:', policy.numero_poliza);
+            return false;
+          }
+          
           if (!policy.fecha_proximo_pago) {
-            console.log('Missing fecha_proximo_pago for policy:', policy.numero_poliza);
+            console.log('❌ Póliza sin fecha de próximo pago:', policy.numero_poliza);
             return false;
           }
-
+          
           const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
           if (!nextPaymentDate || isNaN(nextPaymentDate.getTime())) {
-            console.log('Invalid fecha_proximo_pago for policy:', policy.numero_poliza, policy.fecha_proximo_pago);
+            console.log('❌ Fecha de próximo pago inválida:', policy.numero_poliza, policy.fecha_proximo_pago);
             return false;
           }
-
-          // Check if next payment is due within the next 14 days
-          return nextPaymentDate >= today && nextPaymentDate <= fourteenDaysFromNow;
+          
+          return true; // Incluir todas las pólizas no pagadas con pago parcial
         }
+        
+        return false;
       } catch (error) {
-        console.error('Error processing policy date:', policy.numero_poliza, error);
+        console.error('❌ Error procesando póliza:', policy.numero_poliza, error);
         return false;
       }
     });
-
-    console.log('Due policies:', duePolicies.map(p => ({
-      numero_poliza: p.numero_poliza,
-      fecha_fin: p.fecha_fin,
-      fecha_proximo_pago: p.fecha_proximo_pago,
-      type: selectedType
-    })));
-
-    if (duePolicies.length === 0) {
+    
+    console.log(`✅ Pólizas elegibles encontradas: ${eligiblePolicies.length}`);
+    
+    if (eligiblePolicies.length === 0) {
       setEmailStatus({ 
         type: 'error', 
-        message: selectedType === 'Vencimientos' 
-          ? 'No hay pólizas que venzan en los próximos 30 días' 
-          : 'No hay pólizas con pagos programados en las próximas 2 semanas'
+        message: `No hay pólizas ${selectedType === 'Vencimientos' ? 'con vencimientos próximos' : 'con pagos parciales'} que requieran recordatorios`
       });
       return;
     }
-
+    
     setIsSendingEmail(true);
     setEmailStatus(null);
-
+    
     try {
-      await sendReportEmail(duePolicies, selectedType);
+      let totalRemindersSent = 0;
+      const sentReminders = [];
+      
+      for (const policy of eligiblePolicies) {
+        const baseDate = selectedType === 'Vencimientos' ? policy.fecha_fin : policy.fecha_proximo_pago;
+        const reminders = calculateReminderDates(baseDate, policy.forma_pago);
+        
+        console.log(`📅 Recordatorios calculados para póliza ${policy.numero_poliza}:`, reminders);
+        
+        for (const reminder of reminders) {
+          const daysUntilDue = Math.ceil((new Date(baseDate) - reminder.date) / (1000 * 60 * 60 * 24));
+          const { subject, htmlContent } = generateReminderContent(policy, reminder.type, daysUntilDue, selectedType);
+          
+          try {
+            console.log(`📧 Enviando ${reminder.type} para póliza ${policy.numero_poliza}...`);
+            
+            const response = await fetch('/api/email/send-welcome', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: policy.email,
+                subject: subject,
+                htmlContent: htmlContent,
+                from: 'casinseguros@gmail.com',
+                fromPass: 'espajcgariyhsboq',
+                fromName: `CASIN Seguros - ${reminder.type}`
+              }),
+            });
+            
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Failed to send email');
+            }
+            
+            const result = await response.json();
+            totalRemindersSent++;
+            sentReminders.push({
+              policy: policy.numero_poliza,
+              client: policy.nombre_contratante || policy.contratante,
+              reminder: reminder.type,
+              email: policy.email,
+              messageId: result.messageId
+            });
+            
+            console.log(`✅ ${reminder.type} enviado exitosamente a ${policy.email}`);
+            
+            // Esperar un poco entre emails para evitar rate limiting
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+          } catch (error) {
+            console.error(`❌ Error enviando ${reminder.type} para póliza ${policy.numero_poliza}:`, error);
+          }
+        }
+      }
+      
+      console.log(`🎉 Proceso completado. ${totalRemindersSent} recordatorios enviados.`);
+      console.log('📊 Resumen de recordatorios enviados:', sentReminders);
+      
       setEmailStatus({ 
         type: 'success', 
-        message: `Recordatorios enviados exitosamente a ${duePolicies.length} titular(es)` 
+        message: `Sistema de recordatorios completado: ${totalRemindersSent} recordatorios enviados a ${eligiblePolicies.length} pólizas`
       });
+      
     } catch (error) {
-      console.error('Error sending emails:', error);
+      console.error('❌ Error en el sistema de recordatorios:', error);
       setEmailStatus({ 
         type: 'error', 
-        message: 'Error al enviar los recordatorios por email: ' + error.message 
+        message: 'Error en el sistema de recordatorios: ' + error.message 
       });
     } finally {
       setIsSendingEmail(false);

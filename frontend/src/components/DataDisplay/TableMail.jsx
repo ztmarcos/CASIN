@@ -5,6 +5,12 @@ import './TableMail.css';
 
 const SENDER_OPTIONS = [
   {
+    label: 'CASIN Seguros (casinseguros@gmail.com)',
+    value: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
+    pass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+    name: 'CASIN Seguros'
+  },
+  {
     label: 'CASIN (casindb46@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_CASIN || 'casindb46@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_CASIN || 'qlqvjpccsgfihszj',
@@ -24,6 +30,209 @@ const SENDER_OPTIONS = [
   }
 ];
 
+// Templates de email por ramo y tipo (nueva póliza o renovación)
+const EMAIL_TEMPLATES = {
+  // ===== AUTOS =====
+  autos: {
+    nueva: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || 'N/A'} pesos</strong>, para su revisión y amable programación de pago con fecha límite del ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '31 de Mayo 2024'} antes de las 12 del día.</p>
+        
+        <p>Tenemos campaña de pago con tarjeta de crédito a 3 y 6 MSI o si desea puede pagarlo con débito o en ventanilla del banco en efectivo o cheque y por transferencia electrónica como pago de servicios.</p>
+        
+        <p>Por otra parte anexo en link donde puede consultar las condiciones generales <a href="https://www.gnp.com.mx/content/pp/mx/es/footer/blue-navigation/asistencia-y-contacto/servicios-en-linea/condiciones-generales/condiciones-generales.html" style="color: #0066cc;">https://www.gnp.com.mx/content/pp/mx/es/footer/blue-navigation/asistencia-y-contacto/servicios-en-linea/condiciones-generales/condiciones-generales.html</a></p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+        
+        <p style="font-size: 12px; color: #666; font-style: italic;">
+          <strong>NOTA:</strong> EN CASO DE REQUERIR FACTURA ES NECESARIO COMPARTIR SU CONSTANCIA FISCAL ACTUALIZADA NO MAYOR A 2 MESES DE ANTIGÜEDAD ANTES DE REALIZAR SU PAGO.
+        </p>
+      </div>
+    `,
+    renovacion: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || 'N/A'} pesos</strong>, para su revisión y amable programación de pago con fecha límite del ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '31 de Mayo 2024'} antes de las 12 del día.</p>
+        
+        <p>Tenemos campaña de pago con tarjeta de crédito a 3 y 6 MSI o si desea puede pagarlo con débito o en ventanilla del banco en efectivo o cheque y por transferencia electrónica como pago de servicios.</p>
+        
+        <p>Por otra parte anexo en link donde puede consultar las condiciones generales <a href="https://www.gnp.com.mx/content/pp/mx/es/footer/blue-navigation/asistencia-y-contacto/servicios-en-linea/condiciones-generales/condiciones-generales.html" style="color: #0066cc;">https://www.gnp.com.mx/content/pp/mx/es/footer/blue-navigation/asistencia-y-contacto/servicios-en-linea/condiciones-generales/condiciones-generales.html</a></p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+        
+        <p style="font-size: 12px; color: #666; font-style: italic;">
+          <strong>NOTA:</strong> EN CASO DE REQUERIR FACTURA ES NECESARIO COMPARTIR SU CONSTANCIA FISCAL ACTUALIZADA NO MAYOR A 2 MESES DE ANTIGÜEDAD ANTES DE REALIZAR SU PAGO.
+        </p>
+      </div>
+    `
+  },
+  
+  // ===== VIDA =====
+  vida: {
+    nueva: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `,
+    renovacion: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `
+  },
+  
+  // ===== GMM =====
+  gmm: {
+    nueva: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `,
+    renovacion: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `
+  },
+  
+  // ===== HOGAR =====
+  hogar: {
+    nueva: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `,
+    renovacion: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `
+  },
+  
+  // ===== DEFAULT =====
+  default: {
+    nueva: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `,
+    renovacion: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong></p>
+        
+        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        
+        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        
+        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        
+        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        
+        <p>Cordialmente,<br>
+        <strong>CASIN Seguros</strong></p>
+      </div>
+    `
+  }
+};
+
 const TableMail = ({ isOpen, onClose, rowData }) => {
   const [emailContent, setEmailContent] = useState({ subject: '', message: '' });
   const [isGenerating, setIsGenerating] = useState(false);
@@ -33,9 +242,46 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [showDriveSelector, setShowDriveSelector] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [emailType, setEmailType] = useState('welcome_email');
+  const [emailType, setEmailType] = useState('nueva_autos');
   const fileInputRef = useRef(null);
   const [sender, setSender] = useState(SENDER_OPTIONS[0]);
+
+  // Función para convertir HTML a texto plano
+  const htmlToPlainText = (html) => {
+    if (!html) return '';
+    
+    // Crear un elemento temporal para parsear el HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Obtener el texto plano
+    let text = tempDiv.textContent || tempDiv.innerText || '';
+    
+    // Limpiar espacios extra y saltos de línea
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // Reemplazar etiquetas comunes con formato legible para los templates
+    text = text
+      .replace(/Apreciable Asegurado/g, '\nApreciable Asegurado')
+      .replace(/Tengo el gusto de saludarle/g, '\n\nTengo el gusto de saludarle')
+      .replace(/De parte del Act\. Marcos Zavala/g, '\n\nDe parte del Act. Marcos Zavala')
+      .replace(/me permito enviar su renovación/g, '\n\nme permito enviar su renovación')
+      .replace(/Anexo carátula y recibo/g, '\n\nAnexo carátula y recibo')
+      .replace(/para su revisión y amable programación/g, '\n\npara su revisión y amable programación')
+      .replace(/Tenemos campaña de pago/g, '\n\nTenemos campaña de pago')
+      .replace(/Por otra parte anexo/g, '\n\nPor otra parte anexo')
+      .replace(/Quedando atenta/g, '\n\nQuedando atenta')
+      .replace(/le agradezco su amable atención/g, '\n\nle agradezco su amable atención')
+      .replace(/Cordialmente/g, '\n\nCordialmente')
+      .replace(/CASIN Seguros/g, '\nCASIN Seguros')
+      .replace(/NOTA:/g, '\n\nNOTA:')
+      .replace(/EN CASO DE REQUERIR FACTURA/g, '\n\nEN CASO DE REQUERIR FACTURA');
+    
+    // Limpiar líneas vacías múltiples y espacios al inicio
+    text = text.replace(/\n{3,}/g, '\n\n').replace(/^\s+/, '');
+    
+    return text;
+  };
 
   // Reset states when modal closes
   useEffect(() => {
@@ -45,7 +291,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
       setSuccess(null);
       setAttachments([]);
       setSelectedFolder(null);
-      setEmailType('welcome_email');
+      setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
     }
   }, [isOpen]);
@@ -81,29 +327,88 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
 
       console.log('Generando correo tipo:', emailType, 'para:', { ...rowData, email: emailAddress });
 
-      const response = await fetch(`${API_URL}/gpt/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: emailType,
-          data: { ...rowData, email: emailAddress }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al conectar con el servidor');
-      }
-
-      const result = await response.json();
+      // Determinar el ramo y tipo basado en el tipo de email seleccionado o en los datos
+      let ramo = 'default';
+      let tipo = 'renovacion'; // Por defecto es renovación
       
-      if (result.emailContent) {
-        console.log('Contenido generado:', result.emailContent);
-        setEmailContent(result.emailContent);
+      // Si el tipo de email especifica un ramo y tipo, usarlo
+      if (emailType.includes('autos')) {
+        ramo = 'autos';
+        tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
+      } else if (emailType.includes('vida')) {
+        ramo = 'vida';
+        tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
+      } else if (emailType.includes('gmm')) {
+        ramo = 'gmm';
+        tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
+      } else if (emailType.includes('hogar')) {
+        ramo = 'hogar';
+        tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
+      } else if (emailType.includes('general')) {
+        ramo = 'default';
+        tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
       } else {
-        throw new Error('No se pudo generar el contenido del correo');
+        // Intentar detectar el ramo basado en los campos disponibles
+        if (rowData.descripcion_del_vehiculo || rowData.modelo || rowData.placas) {
+          ramo = 'autos';
+        } else if (rowData.contratante && rowData.numero_poliza) {
+          // Intentar detectar si es vida basado en el contexto
+          if (rowData.aseguradora && rowData.aseguradora.toLowerCase().includes('vida')) {
+            ramo = 'vida';
+          } else if (rowData.aseguradora && rowData.aseguradora.toLowerCase().includes('gmm')) {
+            ramo = 'gmm';
+          } else if (rowData.aseguradora && rowData.aseguradora.toLowerCase().includes('hogar')) {
+            ramo = 'hogar';
+          }
+        }
       }
+
+      console.log('Ramo detectado:', ramo, 'Tipo:', tipo);
+
+      // Usar el template específico del ramo y tipo
+      const ramoTemplates = EMAIL_TEMPLATES[ramo] || EMAIL_TEMPLATES.default;
+      const template = ramoTemplates[tipo] || ramoTemplates.renovacion;
+      const htmlContent = template(rowData);
+      
+      // Generar asunto basado en el tipo de email, ramo y tipo de póliza
+      let subject = 'Póliza de Seguro - CASIN Seguros';
+      
+      if (emailType === 'nueva_autos' || (ramo === 'autos' && tipo === 'nueva')) {
+        subject = `Nueva Póliza Seguro Auto - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'renovacion_autos' || (ramo === 'autos' && tipo === 'renovacion')) {
+        subject = `Renovación Seguro Auto - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'nueva_vida' || (ramo === 'vida' && tipo === 'nueva')) {
+        subject = `Nueva Póliza Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'renovacion_vida' || (ramo === 'vida' && tipo === 'renovacion')) {
+        subject = `Renovación Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'nueva_gmm' || (ramo === 'gmm' && tipo === 'nueva')) {
+        subject = `Nueva Póliza GMM - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'renovacion_gmm' || (ramo === 'gmm' && tipo === 'renovacion')) {
+        subject = `Renovación GMM - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'nueva_hogar' || (ramo === 'hogar' && tipo === 'nueva')) {
+        subject = `Nueva Póliza Seguro Hogar - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'renovacion_hogar' || (ramo === 'hogar' && tipo === 'renovacion')) {
+        subject = `Renovación Seguro Hogar - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'nueva_general' || (ramo === 'default' && tipo === 'nueva')) {
+        subject = `Nueva Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'renovacion_general' || (ramo === 'default' && tipo === 'renovacion')) {
+        subject = `Renovación de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+      } else if (emailType === 'bienvenida') {
+        subject = `Bienvenida - Confirmación de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+      } else if (emailType === 'recordatorio') {
+        subject = `Recordatorio de Pago - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+      } else if (emailType === 'informacion') {
+        subject = `Información de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+      }
+
+      const emailContent = {
+        subject: subject,
+        message: htmlContent
+      };
+
+      console.log('Contenido generado con template:', ramo);
+      setEmailContent(emailContent);
+      
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'Error al generar el correo. Por favor, intenta de nuevo.');
@@ -403,12 +708,34 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
               onChange={(e) => setEmailType(e.target.value)}
               disabled={isGenerating}
             >
-              <option value="welcome_email">🎉 Bienvenida / Confirmación de Póliza</option>
-              <option value="reminder_email">⚠️ Recordatorio / Renovación</option>
-              <option value="info_email">📋 Información General</option>
+              <optgroup label="🚗 Autos">
+                <option value="nueva_autos">🆕 Nueva Póliza Auto</option>
+                <option value="renovacion_autos">🔄 Renovación Auto</option>
+              </optgroup>
+              <optgroup label="💙 Vida">
+                <option value="nueva_vida">🆕 Nueva Póliza Vida</option>
+                <option value="renovacion_vida">🔄 Renovación Vida</option>
+              </optgroup>
+              <optgroup label="🏥 GMM">
+                <option value="nueva_gmm">🆕 Nueva Póliza GMM</option>
+                <option value="renovacion_gmm">🔄 Renovación GMM</option>
+              </optgroup>
+              <optgroup label="🏠 Hogar">
+                <option value="nueva_hogar">🆕 Nueva Póliza Hogar</option>
+                <option value="renovacion_hogar">🔄 Renovación Hogar</option>
+              </optgroup>
+              <optgroup label="📋 General">
+                <option value="nueva_general">🆕 Nueva Póliza General</option>
+                <option value="renovacion_general">🔄 Renovación General</option>
+              </optgroup>
+              <optgroup label="📧 Otros">
+                <option value="bienvenida">🎉 Bienvenida / Confirmación</option>
+                <option value="recordatorio">⚠️ Recordatorio de Pago</option>
+                <option value="informacion">📋 Información General</option>
+              </optgroup>
             </select>
             <small className="email-type-help">
-              Seleccione el tipo de correo para generar el contenido apropiado
+              Seleccione el tipo de correo para generar el contenido apropiado según el ramo y tipo de póliza
             </small>
           </div>
           
@@ -428,11 +755,25 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
             <textarea 
               className="mail-textarea"
               placeholder={isGenerating ? "Generando contenido..." : "Escriba su mensaje..."}
-              value={emailContent.message}
-              onChange={(e) => setEmailContent(prev => ({ ...prev, message: e.target.value }))}
-              rows={8}
+              value={htmlToPlainText(emailContent.message)}
+              onChange={(e) => {
+                // Convertir el texto plano de vuelta a HTML básico para mantener el formato
+                const plainText = e.target.value;
+                const htmlContent = plainText
+                  .replace(/\n\n/g, '</p><p>')
+                  .replace(/\n/g, '<br>')
+                  .replace(/^/, '<p>')
+                  .replace(/$/, '</p>')
+                  .replace(/<p><\/p>/g, '');
+                
+                setEmailContent(prev => ({ ...prev, message: htmlContent }));
+              }}
+              rows={12}
               disabled={isGenerating}
             />
+            <small className="email-type-help">
+              El mensaje se muestra en formato de texto plano para facilitar la edición
+            </small>
           </div>
 
           {/* Attachments Section */}
