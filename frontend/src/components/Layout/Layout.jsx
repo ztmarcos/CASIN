@@ -5,7 +5,7 @@ import { useTeam } from '../../context/TeamContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
 import SupportChat from '../SupportChat/SupportChat';
-
+import { getCleanTeamName } from '../../utils/teamUtils';
 
 import { FEATURES } from '../../config/features';
 import logoImage from '/logo.png';
@@ -24,7 +24,7 @@ const Layout = ({ children }) => {
           <NavLink to="/" className="logo">
             <img src={logoImage} alt="CASIN Seguros Logo" className="logo-image" />
             <div className="logo-content">
-              <span className="logo-text">{userTeam?.name || 'CASIN'}</span>
+              <span className="logo-text">{getCleanTeamName(userTeam?.name) || 'CASIN'}</span>
               {userRole === 'admin' && <span className="admin-badge">Admin</span>}
               {userRole === 'member' && <span className="member-badge">Miembro</span>}
             </div>
