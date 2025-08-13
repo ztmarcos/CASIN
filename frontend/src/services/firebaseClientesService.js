@@ -40,7 +40,104 @@ class FirebaseClientesService {
   }
 
   /**
-   * Extrae el nombre del cliente de un documento según la tabla
+   * Normaliza y formatea una fecha desde diferentes formatos posibles
+   */
+  normalizeDate(dateValue) {
+    if (!dateValue || dateValue === 'N/A' || dateValue === '') {
+      return 'N/A';
+    }
+
+    try {
+      // Si ya es una fecha válida, formatearla
+      if (dateValue instanceof Date) {
+        return dateValue.toISOString().split('T')[0];
+      }
+
+      // Si es un string, intentar diferentes formatos
+      if (typeof dateValue === 'string') {
+        // Limpiar el string
+        const cleanDate = dateValue.trim();
+        
+        // Formato ISO (YYYY-MM-DD)
+        if (/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+          return cleanDate;
+        }
+        
+        // Formato DD/MM/YYYY o MM/DD/YYYY
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(cleanDate)) {
+          const [first, second, year] = cleanDate.split('/');
+          
+          // Intentar detectar si es DD/MM o MM/DD basado en valores válidos
+          const firstNum = parseInt(first);
+          const secondNum = parseInt(second);
+          
+          // Si el primer número es > 12, probablemente es DD/MM
+          if (firstNum > 12) {
+            return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+          }
+          // Si el segundo número es > 12, probablemente es MM/DD
+          else if (secondNum > 12) {
+            return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+          }
+          // Si ambos son <= 12, asumir DD/MM (más común en español)
+          else {
+            return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+          }
+        }
+        
+        // Formato DD-MM-YYYY o MM-DD-YYYY
+        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(cleanDate)) {
+          const [first, second, year] = cleanDate.split('-');
+          
+          // Intentar detectar si es DD-MM o MM-DD basado en valores válidos
+          const firstNum = parseInt(first);
+          const secondNum = parseInt(second);
+          
+          // Si el primer número es > 12, probablemente es DD-MM
+          if (firstNum > 12) {
+            return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+          }
+          // Si el segundo número es > 12, probablemente es MM-DD
+          else if (secondNum > 12) {
+            return `${year}-${first.padStart(2, '0')}-${second.padStart(2, '0')}`;
+          }
+          // Si ambos son <= 12, asumir DD-MM (más común en español)
+          else {
+            return `${year}-${second.padStart(2, '0')}-${first.padStart(2, '0')}`;
+          }
+        }
+        
+        // Intentar parsear con Date constructor
+        const parsedDate = new Date(cleanDate);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toISOString().split('T')[0];
+        }
+      }
+      
+      // Si es un timestamp de Firebase
+      if (dateValue && typeof dateValue === 'object' && dateValue.toDate) {
+        return dateValue.toDate().toISOString().split('T')[0];
+      }
+      
+      // Si es un número (timestamp)
+      if (typeof dateValue === 'number') {
+        const date = new Date(dateValue);
+        if (!isNaN(date.getTime())) {
+          return date.toISOString().split('T')[0];
+        }
+      }
+      
+      console.warn(`⚠️ Formato de fecha no reconocido: ${dateValue}`);
+      return 'N/A';
+      
+    } catch (error) {
+      console.error(`❌ Error procesando fecha ${dateValue}:`, error);
+      return 'N/A';
+    }
+  }
+
+  /**
+   * Extrae el nombre del cliente desde los datos del documento
    */
   extractClientName(docData, tableName) {
     const clientNameFields = {
@@ -113,8 +210,8 @@ class FirebaseClientesService {
               normalizedName: normalizedName,
               numero_poliza: data.numero_poliza || 'N/A',
               aseguradora: data.aseguradora || 'N/A',
-              vigencia_inicio: data.vigencia_inicio || data.fecha_inicio || 'N/A',
-              vigencia_fin: data.vigencia_fin || data.fecha_fin || 'N/A',
+              vigencia_inicio: this.normalizeDate(data.vigencia_inicio || data.fecha_inicio),
+              vigencia_fin: this.normalizeDate(data.vigencia_fin || data.fecha_fin),
               forma_pago: data.forma_de_pago || data.forma_pago || 'N/A',
               prima_total: data.pago_total_o_prima_total || data.importe_a_pagar_mxn || data.importe_total || 0,
               email: data.e_mail || data.email || 'N/A',
@@ -263,7 +360,14 @@ class FirebaseClientesService {
         try {
           // Solo procesar si hay fecha de fin de vigencia válida
           if (policy.vigencia_fin && policy.vigencia_fin !== 'N/A') {
-            const endDate = new Date(policy.vigencia_fin);
+            // Si la fecha ya está normalizada (formato ISO), usarla directamente
+            let endDate;
+            if (/^\d{4}-\d{2}-\d{2}$/.test(policy.vigencia_fin)) {
+              endDate = new Date(policy.vigencia_fin + 'T00:00:00');
+            } else {
+              endDate = new Date(policy.vigencia_fin);
+            }
+            
             // Verificar que la fecha sea válida
             if (!isNaN(endDate.getTime())) {
               if (endDate > now) {
