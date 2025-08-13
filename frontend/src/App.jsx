@@ -36,6 +36,7 @@ import Directorio from './components/Directorio/Directorio'
 import DirectorioSimple from './components/Directorio/DirectorioSimple'
 import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 import Cotiza from './components/Cotiza/Cotiza'
+import Clientes from './components/Clientes/Clientes'
 
 // Componente protector de rutas con verificación de permisos
 const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
@@ -289,6 +290,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <Cotiza />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/clientes" element={
+        <ProtectedRoute>
+          <Layout>
+            <Clientes />
           </Layout>
         </ProtectedRoute>
       } />
