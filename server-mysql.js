@@ -4738,6 +4738,270 @@ app.delete('/api/prospeccion/:userId/:cardId', async (req, res) => {
   }
 });
 
+// Task Email Notifications endpoint
+app.post('/api/email/send-task-notification', async (req, res) => {
+  try {
+    console.log('📧 Task notification email request');
+    const { type, task, participants, sender, comment, changes, newAssignees, assigner, commentAuthor } = req.body;
+    
+    if (!type || !task || !participants || !Array.isArray(participants)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: type, task, participants'
+      });
+    }
+
+    // Configurar credenciales SMTP
+    const smtpUser = sender?.value || process.env.GMAIL_USERNAME || 'casinseguros@gmail.com';
+    const smtpPass = sender?.pass || process.env.GMAIL_APP_PASSWORD;
+    const senderName = sender?.name || 'CASIN Seguros';
+
+    if (!smtpPass) {
+      console.log('❌ No SMTP password configured');
+      return res.status(500).json({
+        success: false,
+        error: 'SMTP password not configured'
+      });
+    }
+
+    // Configurar transporter
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: smtpUser,
+        pass: smtpPass
+      }
+    });
+
+    // Generar contenido del email según el tipo
+    let subject, htmlContent;
+    
+    switch (type) {
+      case 'task_created':
+        subject = `Nueva Tarea: ${task.title} - CASIN Tasks`;
+        htmlContent = generateTaskCreatedEmail(task, senderName);
+        break;
+      
+      case 'task_updated':
+        subject = `Tarea Actualizada: ${task.title} - CASIN Tasks`;
+        htmlContent = generateTaskUpdatedEmail(task, changes, senderName);
+        break;
+      
+      case 'comment_added':
+        subject = `Nuevo Comentario: ${task.title} - CASIN Tasks`;
+        htmlContent = generateCommentAddedEmail(task, comment, commentAuthor, senderName);
+        break;
+      
+      case 'task_assigned':
+        subject = `Tarea Asignada: ${task.title} - CASIN Tasks`;
+        htmlContent = generateTaskAssignedEmail(task, newAssignees, assigner, senderName);
+        break;
+      
+      default:
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid notification type'
+        });
+    }
+
+    // Enviar email a cada participante
+    const emailPromises = participants.map(async (participantEmail) => {
+      try {
+        const mailOptions = {
+          from: `"${senderName}" <${smtpUser}>`,
+          to: participantEmail,
+          subject: subject,
+          html: htmlContent
+        };
+
+        const result = await transporter.sendMail(mailOptions);
+        console.log(`✅ Email enviado a ${participantEmail}:`, result.messageId);
+        return { email: participantEmail, success: true, messageId: result.messageId };
+      } catch (error) {
+        console.error(`❌ Error enviando email a ${participantEmail}:`, error);
+        return { email: participantEmail, success: false, error: error.message };
+      }
+    });
+
+    const results = await Promise.all(emailPromises);
+    const successCount = results.filter(r => r.success).length;
+    
+    console.log(`📊 Notificaciones enviadas: ${successCount}/${participants.length}`);
+    
+    res.json({
+      success: true,
+      message: `Task notification sent to ${successCount}/${participants.length} participants`,
+      results: results,
+      taskTitle: task.title,
+      notificationType: type
+    });
+
+  } catch (error) {
+    console.error('❌ Error sending task notification:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send task notification',
+      details: error.message
+    });
+  }
+});
+
+// Helper functions for email templates
+function generateTaskCreatedEmail(task, senderName) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">📋 Nueva Tarea Creada</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        ${task.description ? `<p style="color: #6b7280;"><strong>Descripción:</strong><br>${task.description}</p>` : ''}
+        
+        <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p style="margin: 5px 0; color: #374151;"><strong>Estado:</strong> <span style="background-color: #fbbf24; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${getStatusText(task.status)}</span></p>
+          <p style="margin: 5px 0; color: #374151;"><strong>Prioridad:</strong> <span style="background-color: ${getPriorityColor(task.priority)}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${getPriorityText(task.priority)}</span></p>
+          ${task.assignedTo ? `<p style="margin: 5px 0; color: #374151;"><strong>Asignado a:</strong> ${task.assignedTo}</p>` : ''}
+          ${task.dueDate ? `<p style="margin: 5px 0; color: #374151;"><strong>Fecha límite:</strong> ${new Date(task.dueDate).toLocaleDateString('es-ES')}</p>` : ''}
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function generateTaskUpdatedEmail(task, changes, senderName) {
+  const changesHtml = changes.map(change => 
+    `<li><strong>${change.field}:</strong> ${change.oldValue} → ${change.newValue}</li>`
+  ).join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">🔄 Tarea Actualizada</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Cambios realizados:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            ${changesHtml}
+          </ul>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function generateCommentAddedEmail(task, comment, commentAuthor, senderName) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">💬 Nuevo Comentario</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #3b82f6;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">${commentAuthor?.name || 'Usuario'} comentó:</p>
+          <p style="margin: 0; color: #374151;">"${comment?.text || comment}"</p>
+          ${comment?.createdAt ? `<p style="margin: 10px 0 0 0; color: #6b7280; font-size: 12px;">${new Date(comment.createdAt).toLocaleDateString('es-ES')} ${new Date(comment.createdAt).toLocaleTimeString('es-ES')}</p>` : ''}
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function generateTaskAssignedEmail(task, newAssignees, assigner, senderName) {
+  const assigneesHtml = newAssignees.map(assignee => `<li>${assignee.name || assignee.email}</li>`).join('');
+
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">👥 Tarea Asignada</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        <p style="color: #374151;">${assigner?.name || 'Un usuario'} te ha asignado esta tarea.</p>
+        
+        <div style="background-color: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Asignado a:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #374151;">
+            ${assigneesHtml}
+          </ul>
+        </div>
+        
+        ${task.description ? `<p style="color: #6b7280;"><strong>Descripción:</strong><br>${task.description}</p>` : ''}
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function getStatusText(status) {
+  switch (status) {
+    case 'pending': return 'Pendiente';
+    case 'in_progress': return 'En Progreso';
+    case 'completed': return 'Completada';
+    case 'cancelled': return 'Cancelada';
+    default: return 'Pendiente';
+  }
+}
+
+function getPriorityText(priority) {
+  switch (priority) {
+    case 'high': return 'Alta';
+    case 'medium': return 'Media';
+    case 'low': return 'Baja';
+    default: return 'Media';
+  }
+}
+
+function getPriorityColor(priority) {
+  switch (priority) {
+    case 'high': return '#ef4444';
+    case 'medium': return '#f59e0b';
+    case 'low': return '#10b981';
+    default: return '#f59e0b';
+  }
+}
+
 // Catch-all for undefined API routes
 app.get('/api/*', (req, res) => {
   res.status(404).json({ 

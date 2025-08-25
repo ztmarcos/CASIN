@@ -1,34 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { API_URL } from '../../config/api.js';
 import DriveSelector from '../Drive/DriveSelector.jsx';
+import { getSenderOptions } from '../../config/users.js';
 import './TableMail.css';
 
-const SENDER_OPTIONS = [
-  {
-    label: 'CASIN Seguros (casinseguros@gmail.com)',
-    value: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
-    pass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
-    name: 'CASIN Seguros'
-  },
-  {
-    label: 'CASIN (casindb46@gmail.com)',
-    value: import.meta.env.VITE_SMTP_USER_CASIN || 'casindb46@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_CASIN || 'qlqvjpccsgfihszj',
-    name: 'CASIN Seguros'
-  },
-  {
-    label: 'Lore (lorenacasin5@gmail.com)',
-    value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'yxeyswjxsicwgoow',
-    name: 'Lore Seguros'
-  },
-  {
-    label: 'Mich (michelldiaz.casinseguros@gmail.com)',
-    value: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_MICH || 'klejsbcgpjmwoogg',
-    name: 'Mich Seguros'
-  }
-];
+const SENDER_OPTIONS = getSenderOptions();
 
 // Templates de email por ramo y tipo (nueva póliza o renovación)
 const EMAIL_TEMPLATES = {

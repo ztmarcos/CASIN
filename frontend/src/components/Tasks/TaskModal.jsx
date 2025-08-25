@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTeam } from '../../context/TeamContext';
 import firebaseTaskService from '../../services/firebaseTaskService';
+import taskEmailService from '../../services/taskEmailService';
+import { getTaskUsers } from '../../config/users.js';
 import './TaskModal.css';
 
 const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
@@ -53,50 +55,90 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
 
   const currentUser = getCurrentUser();
 
+  // Función para obtener el ícono del rol
+  const getUserRoleIcon = (role) => {
+    switch (role) {
+      case 'admin': 
+        return '👑';
+      case 'manager': 
+        return '👨‍💼';
+      case 'member': 
+        return '👤';
+      case 'user': 
+        return '👤';
+      case 'guest': 
+        return '👥';
+      case 'invited': 
+        return '👥';
+      default: 
+        return '👤';
+    }
+  };
+
   // Convert team members to user format for the modal
   const getTeamUsersForModal = () => {
-    if (!teamMembers || teamMembers.length === 0) {
-      return [];
-    }
+    // Obtener usuarios de la configuración compartida
+    const configUsers = getTaskUsers();
     
-    return teamMembers.map(member => {
-      // Get clean display name - only show proper names, not emails or IDs
-      let displayName = '';
-      
-      if (member.email === user?.email && user?.displayName) {
-        // Current user: use Google Auth display name
-        displayName = user.displayName;
-      } else if (member.name && 
-                 member.name !== member.email && 
-                 !member.name.includes('UpSvtCw') && 
-                 !member.name.includes('@') &&
-                 !member.name.includes('http')) {
-        // Valid name that's not an email or URL
-        displayName = member.name;
-      } else {
-        // Extract clean name from email prefix
-        const emailPrefix = member.email.split('@')[0];
-        if (emailPrefix.includes('.')) {
-          // Handle names like "john.doe" -> "John Doe"
-          displayName = emailPrefix
-            .split('.')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join(' ');
+    // Obtener usuarios del equipo (filtrando z.t.marcos)
+    const teamUsers = teamMembers && teamMembers.length > 0 ? teamMembers
+      .filter(member => member.email !== 'z.t.marcos@gmail.com') // Filtrar z.t.marcos
+      .map(member => {
+        // Get clean display name - only show proper names, not emails or IDs
+        let displayName = '';
+        
+        if (member.email === user?.email && user?.displayName) {
+          // Current user: use Google Auth display name
+          displayName = user.displayName;
+        } else if (member.name && 
+                   member.name !== member.email && 
+                   !member.name.includes('UpSvtCw') && 
+                   !member.name.includes('@') &&
+                   !member.name.includes('http')) {
+          // Valid name that's not an email or URL
+          displayName = member.name;
         } else {
-          // Handle names like "johndoe123" -> "Johndoe123"
-          displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+          // Extract clean name from email prefix
+          const emailPrefix = member.email.split('@')[0];
+          if (emailPrefix.includes('.')) {
+            // Handle names like "john.doe" -> "John Doe"
+            displayName = emailPrefix
+              .split('.')
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ');
+          } else {
+            // Handle names like "johndoe123" -> "Johndoe123"
+            displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+          }
         }
+        
+        return {
+          id: member.email,
+          name: displayName,
+          email: member.email,
+          role: member.role || 'user',
+          avatar: '👤', // Always use emoji, never URLs
+          isCurrentUser: member.email === user?.email
+        };
+      }) : [];
+    
+    // Combinar usuarios de configuración y del equipo, evitando duplicados
+    const allUsers = [...configUsers];
+    
+    // Agregar usuarios del equipo que no estén en la configuración
+    teamUsers.forEach(teamUser => {
+      const exists = allUsers.find(configUser => configUser.email === teamUser.email);
+      if (!exists) {
+        allUsers.push(teamUser);
       }
-      
-      return {
-        id: member.email,
-        name: displayName,
-        email: member.email,
-        role: member.role || 'user',
-        avatar: '👤', // Always use emoji, never URLs
-        isCurrentUser: member.email === user?.email
-      };
     });
+    
+    // Marcar el usuario actual
+    allUsers.forEach(userItem => {
+      userItem.isCurrentUser = userItem.email === user?.email;
+    });
+    
+    return allUsers;
   };
 
   useEffect(() => {
@@ -316,7 +358,7 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
     }));
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (commentInput.trim()) {
       // Clean author name - no emails or technical data
       let cleanAuthorName = currentUser.name;
@@ -330,14 +372,44 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
         author: cleanAuthorName,
         authorAvatar: '👤', // Always use emoji
         authorRole: currentUser.role,
-        timestamp: new Date()
+        authorEmail: user?.email, // Para notificaciones
+        timestamp: new Date(),
+        createdAt: new Date()
       };
       
-      setFormData(prev => ({
-        ...prev,
-        comments: [...prev.comments, newComment]
-      }));
+      // Actualizar formData con el nuevo comentario
+      const updatedFormData = {
+        ...formData,
+        comments: [...formData.comments, newComment]
+      };
+      
+      setFormData(updatedFormData);
       setCommentInput('');
+      
+      // Enviar notificaciones por email (solo si existe la tarea)
+      if (task?.id) {
+        const taskWithComment = { ...formData, ...task, comments: updatedFormData.comments };
+        const participants = taskEmailService.getTaskParticipants(taskWithComment);
+        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        if (filteredParticipants.length > 0) {
+          try {
+            await taskEmailService.notifyCommentAdded(
+              taskWithComment, 
+              newComment, 
+              filteredParticipants, 
+              {
+                name: cleanAuthorName,
+                email: user?.email,
+                role: currentUser.role
+              }
+            );
+            console.log('✅ Notificaciones de comentario enviadas');
+          } catch (emailError) {
+            console.warn('⚠️ Error enviando notificaciones de comentario:', emailError);
+          }
+        }
+      }
     }
   };
 
@@ -428,16 +500,7 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
     }
   };
 
-  const getUserRoleIcon = (role) => {
-    switch (role) {
-      case 'admin': return '👑';
-      case 'member': return '👤';
-      case 'user': return '👤';
-      case 'guest': return '👥';
-      case 'invited': return '👥';
-      default: return '👤';
-    }
-  };
+
 
   const renderEditableField = (field, label, value, type = 'text', options = null) => {
     const isEditing = editingField === field;

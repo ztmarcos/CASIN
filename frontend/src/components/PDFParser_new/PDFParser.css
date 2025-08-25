@@ -16,11 +16,67 @@
   background: var(--bg-surface-secondary, #f8f9fa);
   border-radius: 8px;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+.upload-options {
+  display: flex;
   justify-content: center;
   align-items: center;
-  gap: 2rem;
-  flex-shrink: 0;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.drive-selector-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  font-size: 16px;
+}
+
+.drive-selector-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.selected-file-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.file-name {
+  font-weight: 500;
+  color: #374151;
+}
+
+.drive-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.drive-link:hover {
+  background: #eff6ff;
+  text-decoration: underline;
 }
 
 .analysis-section {

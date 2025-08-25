@@ -85,3 +85,5 @@ heroku config --app sis-casin | grep -E "(OPENAI|API_KEY)"
 **Conclusión**: Las variables de Heroku están **seguras** para uso en producción. El comando `heroku config` solo muestra las variables a personas autorizadas.
 
 
+
+

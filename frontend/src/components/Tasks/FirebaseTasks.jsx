@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { useTeam } from '../../context/TeamContext';
+import { useAuth } from '../../context/AuthContext';
 import firebaseTaskService from '../../services/firebaseTaskService';
+import taskEmailService from '../../services/taskEmailService';
 import TaskCard from './TaskCard';
 import TaskModal from './TaskModal';
 import './FirebaseTasks.css';
@@ -9,6 +11,7 @@ import './FirebaseTasks.css';
 const FirebaseTasks = () => {
   const { theme } = useTheme();
   const { userTeam } = useTeam();
+  const { user } = useAuth();
   const isDark = theme === 'dark';
   
   const [tasks, setTasks] = useState([]);
@@ -104,10 +107,43 @@ const FirebaseTasks = () => {
 
   const handleTaskSave = async (taskData) => {
     try {
+      let savedTask;
+      
       if (editingTask) {
-        await firebaseTaskService.updateTask(editingTask.id, taskData);
+        // Actualizar tarea existente
+        savedTask = await firebaseTaskService.updateTask(editingTask.id, taskData);
+        
+        // Detectar cambios y enviar notificaciones
+        const participants = taskEmailService.getTaskParticipants(taskData);
+        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        if (filteredParticipants.length > 0) {
+          const changes = taskEmailService.detectTaskChanges(editingTask, taskData);
+          if (changes.length > 0) {
+            try {
+              await taskEmailService.notifyTaskUpdated(editingTask, taskData, filteredParticipants, changes);
+              console.log('✅ Notificaciones de actualización enviadas');
+            } catch (emailError) {
+              console.warn('⚠️ Error enviando notificaciones:', emailError);
+            }
+          }
+        }
       } else {
-        await firebaseTaskService.createTask(taskData);
+        // Crear nueva tarea
+        savedTask = await firebaseTaskService.createTask(taskData);
+        
+        // Enviar notificaciones de creación
+        const participants = taskEmailService.getTaskParticipants(taskData);
+        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        if (filteredParticipants.length > 0) {
+          try {
+            await taskEmailService.notifyTaskCreated(taskData, filteredParticipants);
+            console.log('✅ Notificaciones de creación enviadas');
+          } catch (emailError) {
+            console.warn('⚠️ Error enviando notificaciones:', emailError);
+          }
+        }
       }
       
       setShowModal(false);
@@ -122,7 +158,34 @@ const FirebaseTasks = () => {
 
   const handleStatusChange = async (taskId, newStatus) => {
     try {
-      await firebaseTaskService.updateTask(taskId, { status: newStatus });
+      // Encontrar la tarea actual para comparar cambios
+      const currentTask = tasks.find(t => t.id === taskId);
+      
+      if (currentTask && currentTask.status !== newStatus) {
+        // Actualizar tarea
+        const updatedTaskData = { ...currentTask, status: newStatus };
+        await firebaseTaskService.updateTask(taskId, { status: newStatus });
+        
+        // Enviar notificaciones de cambio de estado
+        const participants = taskEmailService.getTaskParticipants(currentTask);
+        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        if (filteredParticipants.length > 0) {
+          const changes = [{ 
+            field: 'Estado', 
+            oldValue: taskEmailService.getStatusText(currentTask.status), 
+            newValue: taskEmailService.getStatusText(newStatus) 
+          }];
+          
+          try {
+            await taskEmailService.notifyTaskUpdated(currentTask, updatedTaskData, filteredParticipants, changes);
+            console.log('✅ Notificaciones de cambio de estado enviadas');
+          } catch (emailError) {
+            console.warn('⚠️ Error enviando notificaciones:', emailError);
+          }
+        }
+      }
+      
       await loadTasks();
     } catch (err) {
       console.error('Error updating task status:', err);

@@ -3,6 +3,7 @@ import pdfService from '../../services/pdfService';
 import tableService from '../../services/data/tableService';
 import GPTAnalysis from './GPTAnalysis';
 import ListadoAnalysis from './ListadoAnalysis';
+import DriveDocumentSelector from '../Drive/DriveDocumentSelector';
 import './PDFParser.css';
 
 const PDFParser = ({ selectedTable, onClose, onOpenEmailModal }) => {
@@ -11,6 +12,8 @@ const PDFParser = ({ selectedTable, onClose, onOpenEmailModal }) => {
   const [error, setError] = useState(null);
   const [fileName, setFileName] = useState('');
   const [tableTypes, setTableTypes] = useState({});
+  const [showDriveSelector, setShowDriveSelector] = useState(false);
+  const [selectedDriveDocument, setSelectedDriveDocument] = useState(null);
 
   // Move tableName logic here for better clarity
   const getTableName = () => {
@@ -79,6 +82,42 @@ const PDFParser = ({ selectedTable, onClose, onOpenEmailModal }) => {
     }
   };
 
+  const handleDriveDocumentSelect = async (documentData) => {
+    const { file, parsedData: driveParsedData, driveDocument } = documentData;
+    
+    setFileName(file.name);
+    setSelectedDriveDocument(driveDocument);
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Parse the downloaded file
+      const result = await pdfService.parsePDF(file);
+      
+      // Merge with Drive metadata
+      const enhancedResult = {
+        ...result,
+        metadata: {
+          ...result.metadata,
+          fileName: file.name,
+          fileSize: file.size,
+          driveId: driveDocument.id,
+          driveLink: driveDocument.webViewLink,
+          lastModified: driveDocument.modifiedTime,
+          source: 'drive'
+        },
+        driveDocument: driveDocument
+      };
+      
+      setParsedData(enhancedResult);
+    } catch (err) {
+      console.error('Error parsing PDF from Drive:', err);
+      setError('Failed to parse PDF file from Drive');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getTableInfo = (name) => {
     return tableTypes[name] || null;
   };
@@ -94,17 +133,44 @@ const PDFParser = ({ selectedTable, onClose, onOpenEmailModal }) => {
   return (
     <div className="pdf-parser">
       <div className="upload-section">
-        <label className="file-input-label">
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleFileUpload}
-            className="file-input"
-          />
-          <span className="file-input-text">
-            {fileName ? `Selected: ${fileName}` : 'Choose PDF File'}
-          </span>
-        </label>
+        <div className="upload-options">
+          <label className="file-input-label">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileUpload}
+              className="file-input"
+            />
+            <span className="file-input-text">
+              📁 Subir PDF Local
+            </span>
+          </label>
+          
+          <button 
+            className="drive-selector-button"
+            onClick={() => setShowDriveSelector(true)}
+            type="button"
+          >
+            📁 Seleccionar de Drive
+          </button>
+        </div>
+        
+        {fileName && (
+          <div className="selected-file-info">
+            <span className="file-name">📄 {fileName}</span>
+            {selectedDriveDocument && (
+              <a 
+                href={selectedDriveDocument.webViewLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="drive-link"
+              >
+                🔗 Ver en Drive
+              </a>
+            )}
+          </div>
+        )}
+        
         {loading && <div className="loading">Processing PDF...</div>}
         {error && <div className="error-message">{error}</div>}
       </div>
@@ -133,6 +199,14 @@ const PDFParser = ({ selectedTable, onClose, onOpenEmailModal }) => {
           </div>
         </div>
       )}
+
+      {/* Drive Document Selector Modal */}
+      <DriveDocumentSelector
+        isOpen={showDriveSelector}
+        onClose={() => setShowDriveSelector(false)}
+        onDocumentSelect={handleDriveDocumentSelect}
+        selectedDocumentId={selectedDriveDocument?.id}
+      />
     </div>
   );
 };
