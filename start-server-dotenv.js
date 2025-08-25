@@ -21,7 +21,7 @@ if (process.env.VITE_OPENAI_API_KEY) {
 }
 
 // Force set the correct OpenAI API key if we detect your local one
-if (process.env.VITE_OPENAI_API_KEY && process.env.VITE_OPENAI_API_KEY.startsWith('sk-proj-5eHUbtp3Kjkzf')) {
+if (process.env.VITE_OPENAI_API_KEY && process.env.VITE_OPENAI_API_KEY.startsWith('sk-proj-')) {
     console.log('🎯 Using your local OpenAI key from VITE_OPENAI_API_KEY');
     process.env.OPENAI_API_KEY = process.env.VITE_OPENAI_API_KEY;
 }
