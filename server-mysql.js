@@ -4038,7 +4038,7 @@ app.post('/api/gpt/analyze', async (req, res) => {
     }
 
     // Create OpenAI prompt for PDF analysis
-    // Use custom instructions if provided from frontend, otherwise use default
+    // Use custom instructions if provided from frontend, otherwise use basic default
     const prompt = instructions || `
 Analiza el siguiente documento PDF y extrae la información específica para los campos solicitados.
 
@@ -4048,34 +4048,21 @@ ${text}
 CAMPOS A EXTRAER:
 ${validColumns.map(col => `- ${col}: Encuentra el valor exacto en el documento`).join('\n')}
 
-EJEMPLOS DE EXTRACCIÓN PARA ESTE TIPO DE DOCUMENTO:
-- Si ves "No. Póliza 00000617500228" → numero_poliza: "00000617500228"
-- Si ves "Prima Neta $25,153.43" → prima_neta: "$25,153.43"
-- Si ves "Derecho de Póliza $620.00" → derecho_de_poliza: "$620.00"
-- Si ves "I.V.A. $4,123.74" → i_v_a: "$4,123.74"
-- Si ves "R.F.C. ZADM581120S90" → rfc: "ZADM581120S90"
-- Si ves "25/Jun/2024" → vigencia_inicio: "25/Jun/2024"
-- Si ves "25/Jun/2025" → vigencia_fin: "25/Jun/2025"
-- Si ves "365 días" → duracion: "365 días"
-- Si ves "Importe por Pagar $29,897.18" → pago_total_o_prima_total: "$29,897.18"
-
-REGLAS DE EXTRACCIÓN:
-1. Busca ACTIVAMENTE valores similares a los ejemplos
-2. NO seas conservador - extrae TODO lo que puedas identificar
-3. Para valores monetarios, incluye el símbolo $ y decimales
-4. Para fechas, mantén el formato exacto del documento
-5. Para RFCs, usa mayúsculas sin espacios
-6. Para números de póliza, incluye todos los dígitos
-7. Si encuentras "Grupo Nacional Provincial" → "GNP"
-8. Si encuentras variaciones de nombres de aseguradoras, normalízalas
+INSTRUCCIONES:
+1. Extrae valores EXACTOS del documento PDF
+2. No inventes información que no esté en el documento
+3. Devuelve null si no puedes encontrar un valor específico
+4. Para fechas, mantén el formato como aparece en el documento
+5. Para valores monetarios, incluye la cantidad completa con decimales si están presentes
+6. Para campos de texto, extrae el texto completo como se muestra
 
 FORMATO DE RESPUESTA:
-Responde ÚNICAMENTE con un objeto JSON válido:
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
 {
   ${validColumns.map(col => `"${col}": "valor_extraído_o_null"`).join(',\n  ')}
 }
 
-IMPORTANTE: Extrae TODO lo que encuentres, no seas conservador. Es mejor extraer algo aproximado que nada.`;
+No incluyas explicaciones adicionales, solo el objeto JSON.`;
     
     console.log('🔍 Using prompt from:', instructions ? 'frontend (custom)' : 'backend (default)');
     console.log('📝 Prompt preview:', prompt.substring(0, 300) + '...');

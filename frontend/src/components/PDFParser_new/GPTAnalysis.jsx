@@ -257,6 +257,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('- Text preview:', parsedData.text?.substring(0, 500) + '...');
             console.log('- Has meaningful content:', parsedData.text?.length > 100);
             
+            console.log('🔍 PROMPT DEBUG:');
+            console.log('- Using custom frontend prompt:', true);
+            console.log('- Instructions length:', `${columns.map(col => `- ${col}: Encuentra el valor exacto en el texto`).join('\n')}`.length);
+            
             const prompt = {
                 text: parsedData.text,
                 tables: [targetTable],
