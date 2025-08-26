@@ -18,7 +18,7 @@ class FirebaseTeamStorageService {
     return null;
   }
 
-  cacheSet(key, data, ttlMs = 5 * 60 * 1000) { // 5 minutes default
+  cacheSet(key, data, ttlMs = 30 * 1000) { // 30 seconds default - much shorter for better refresh
     this.cache.set(key, {
       data,
       expires: Date.now() + ttlMs
@@ -330,6 +330,9 @@ class FirebaseTeamStorageService {
       
       console.log(`✅ File ${file.name} uploaded successfully`);
       
+      // FORCE clear all cache to avoid any potential issues
+      this.cacheClearAll();
+      
       // VERIFICATION: Try to immediately list files to confirm upload
       console.log(`🔍 VERIFICATION: Checking if file exists after upload...`);
       try {
@@ -343,6 +346,8 @@ class FirebaseTeamStorageService {
         } else {
           console.warn(`⚠️ VERIFICATION FAILED: File ${file.name} not found in immediate listing`);
           console.log(`🔍 Files found in verification:`, listResult.items.map(item => item.name));
+          console.log(`🔍 Expected path: ${filePath}`);
+          console.log(`🔍 Verification path: ${verificationPath}`);
         }
       } catch (verifyError) {
         console.warn(`⚠️ VERIFICATION ERROR: Could not verify upload:`, verifyError);

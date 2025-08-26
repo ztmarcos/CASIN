@@ -637,6 +637,44 @@ const Firedrive = () => {
     await firebaseTeamStorageService.deleteFileFromTeam(file.relativePath, userTeam.id);
   };
 
+  const handleForceRefresh = async () => {
+    if (!userTeam) {
+      alert('No hay equipo asignado');
+      return;
+    }
+
+    try {
+      addDebugInfo('🔄 FORZANDO REFRESH MANUAL...');
+      
+      // Force clear all caches
+      firebaseTeamStorageService.cacheClearAll();
+      addDebugInfo('🧹 Cache limpiado completamente');
+      
+      // Clear current state
+      setCurrentFiles([]);
+      setFolders([]);
+      setError(null);
+      addDebugInfo('🗑️ Estado local limpiado');
+      
+      // Add delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Force reload
+      addDebugInfo('📁 Recargando carpetas...');
+      await loadFolderStructure();
+      
+      addDebugInfo('📄 Recargando archivos...');  
+      await loadCurrentFolderFiles();
+      
+      addDebugInfo('✅ REFRESH FORZADO COMPLETADO');
+      
+    } catch (error) {
+      console.error('❌ Error in force refresh:', error);
+      addDebugInfo(`❌ Error en refresh forzado: ${error.message}`);
+      alert(`Error en refresh forzado: ${error.message}`);
+    }
+  };
+
   const handleCleanupOrphanedFolders = async () => {
     if (!userTeam) {
       alert('No hay equipo asignado');
@@ -756,21 +794,32 @@ const Firedrive = () => {
       addDebugInfo(`🎉 Todos los archivos subidos exitosamente`);
       
       // Add delay to allow Firebase to propagate changes
-      addDebugInfo(`⏳ Esperando 3 segundos para refrescar...`);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      addDebugInfo(`⏳ Esperando 5 segundos para refrescar...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // FORCE clear all caches
+      addDebugInfo(`🧹 Limpiando todos los caches...`);
+      firebaseTeamStorageService.cacheClearAll();
       
       // Clear current files and folders before refreshing to force a clean reload
       setCurrentFiles([]);
       setFolders([]);
-      addDebugInfo(`🔄 Limpiando cache y recargando contenido completo...`);
+      addDebugInfo(`🔄 Limpiando estado y recargando contenido completo...`);
+      
+      // Add another small delay before refresh
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Refresh both folders and files to show new uploads
-      await Promise.all([
-        loadFolderStructure(),
-        loadCurrentFolderFiles()
-      ]);
-      
-      addDebugInfo(`✅ Contenido refrescado - deberías ver los nuevos archivos`);
+      try {
+        await Promise.all([
+          loadFolderStructure(),
+          loadCurrentFolderFiles()
+        ]);
+        addDebugInfo(`✅ Contenido refrescado - deberías ver los nuevos archivos`);
+      } catch (refreshError) {
+        addDebugInfo(`❌ Error en refresh: ${refreshError.message}`);
+        console.error('Refresh error:', refreshError);
+      }
       
     } catch (error) {
       console.error('❌ Error uploading files:', error);
@@ -1080,6 +1129,24 @@ const Firedrive = () => {
             }}
           >
             🧹 Limpiar
+          </button>
+          
+          <button
+            className="force-refresh-button"
+            onClick={handleForceRefresh}
+            title="Forzar actualización"
+            style={{
+              background: '#007bff',
+              color: 'white',
+              border: 'none',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              marginLeft: '10px'
+            }}
+          >
+            🔄 Forzar Refresh
           </button>
         </div>
       </div>
