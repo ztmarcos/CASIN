@@ -258,8 +258,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('- Has meaningful content:', parsedData.text?.length > 100);
             
             console.log('🔍 PROMPT DEBUG:');
-            console.log('- Using custom frontend prompt:', true);
-            console.log('- Instructions length:', `${columns.map(col => `- ${col}: Encuentra el valor exacto en el texto`).join('\n')}`.length);
+            console.log('- Using backend default prompt (no custom instructions)');
+            console.log('- Target columns:', columns.length);
             
             const prompt = {
                 text: parsedData.text,
@@ -267,52 +267,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 metadata: parsedData.metadata,
                 targetColumns: columns,
                 tableName: tableName,
-                tableType: tableInfo.type || 'simple',
-                instructions: `
-                    Por favor analiza el documento y extrae la siguiente información:
-                    ${columns.map(col => `- ${col}: Encuentra el valor exacto en el texto`).join('\n')}
-                    
-                    Reglas importantes:
-                    1. Extrae valores EXACTOS del documento
-                    2. No repitas valores en diferentes campos
-                    3. Devuelve null si no se puede encontrar un valor
-                    4. Para fechas, mantén el formato como se muestra en el documento
-                    5. Para valores monetarios, incluye la cantidad completa con decimales
-                    6. Para campos de texto, extrae el texto completo como se muestra
-                    ${tableInfo.type === 'simple' ? '7. Esta es una tabla de póliza simple, enfócate en información básica de la póliza' : ''}
-                    
-                    REGLAS ESPECÍFICAS PARA EMAIL:
-                    7. PARA CAMPOS EMAIL: NO captures emails de compañías de seguros (como @gnp.com.mx, @axa.com.mx, @qualitas.com.mx, etc.)
-                    8. PARA CAMPOS EMAIL: Solo captura emails personales del contratante/asegurado (gmail.com, hotmail.com, yahoo.com, outlook.com, etc.)
-                    9. PARA CAMPOS EMAIL: Si solo encuentras emails corporativos de aseguradoras, devuelve null
-                    
-                    REGLAS ESPECÍFICAS PARA NOMBRES:
-                    10. DISTINGUIR ENTRE CLIENTE Y PROPIETARIO: Cuando el documento mencione tanto "cliente" como "propietario" o "titular", captura ambos por separado
-                    11. CAMPO "contratante": Usar el nombre del CLIENTE (quien contrata la póliza)
-                    12. CAMPO "propietario" o "titular": Usar el nombre del PROPIETARIO del vehículo/inmueble (puede ser diferente al cliente)
-                    13. CAMPO "asegurado": Usar el nombre de la persona ASEGURADA (puede ser cliente, propietario o ambos)
-                    14. Si solo hay una persona mencionada, usar el mismo nombre para todos los campos relevantes
-                    15. Si hay múltiples personas, identificar claramente el rol de cada una según el contexto del documento
-                    
-                    REGLAS DE NORMALIZACIÓN DE TEXTO:
-                    16. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
-                    17. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
-                    18. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
-                    19. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra
-                    20. TEXTO GENERAL: Limpia espacios extra, normaliza comillas y apostrofes
-                    21. NO normalices valores RFC más allá de mayúsculas y quitar espacios
-                    22. DERECHO DE PÓLIZA: Busca tanto "derecho de póliza" como "gastos de expedición" - ambos se refieren al mismo concepto
-                    
-                    NORMALIZACIÓN ESPECÍFICA POR CAMPO:
-                    - contratante: Usar nombre del CLIENTE (quien contrata), aplicar normalización de nombres (formato Título)
-                    - propietario/titular: Usar nombre del PROPIETARIO del vehículo/inmueble, aplicar normalización de nombres (formato Título)
-                    - asegurado: Usar nombre de la persona ASEGURADA, aplicar normalización de nombres (formato Título)
-                    - direccion: Aplicar normalización de direcciones (estandarizar abreviaciones + formato Título)
-                    - rfc: Solo mayúsculas y quitar espacios, sin otros cambios
-                    - email: Solo emails personales, evitar emails corporativos de aseguradoras
-                    - derecho_de_poliza: Buscar tanto "derecho de póliza" como "gastos de expedición" - ambos son el mismo concepto
-                    - Todos los demás campos de texto: Aplicar limpieza general de texto y normalización de nombres de compañías
-                `
+                tableType: tableInfo.type || 'simple'
+                // No instructions - let backend use its simpler prompt
             };
 
             const response = await fetch(`${API_URL}/gpt/analyze`, {
