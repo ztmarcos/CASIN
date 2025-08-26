@@ -3961,6 +3961,7 @@ app.post('/api/gpt/analyze', async (req, res) => {
     console.log('- targetColumns sample:', targetColumns?.slice(0, 3));
     console.log('- PDF text length:', text?.length);
     console.log('- PDF text preview:', text?.substring(0, 200) + '...');
+    console.log('- PDF text has meaningful content:', text && text.length > 100 && text.includes(' ') && !text.includes('undefined'));
 
     if (!targetColumns || !tableName || !text) {
       console.log('❌ Missing required fields validation failed');
@@ -4113,6 +4114,8 @@ No incluyas explicaciones adicionales, solo el objeto JSON.`;
 
       const extractedContent = openaiResult.choices[0].message.content.trim();
       console.log('📝 Extracted content:', extractedContent);
+      console.log('📝 Content length:', extractedContent.length);
+      console.log('📝 Content starts with:', extractedContent.substring(0, 100));
 
       // Parse the JSON response from OpenAI
       let extractedData;

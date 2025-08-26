@@ -241,7 +241,22 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             if (!columns || columns.length === 0) {
                 throw new Error(`No columns found for table ${tableName}`);
             }
+            
+            // Debug: Check if we have valid PDF data
+            if (!parsedData || !parsedData.text) {
+                throw new Error('No PDF text data available for analysis');
+            }
+            
+            if (parsedData.text.length < 50) {
+                throw new Error('PDF text too short - may not have been extracted properly');
+            }
 
+            // Debug: Log the PDF text being sent
+            console.log('🔍 PDF TEXT DEBUG:');
+            console.log('- Text length:', parsedData.text?.length);
+            console.log('- Text preview:', parsedData.text?.substring(0, 500) + '...');
+            console.log('- Has meaningful content:', parsedData.text?.length > 100);
+            
             const prompt = {
                 text: parsedData.text,
                 tables: [targetTable],
