@@ -39,6 +39,7 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
                         console.log('🚨 DEBUG: Generating special prompt for pago_parcial column');
                         return `- ${col}: ¡IMPORTANTE! Este es un AVISO DE PAGO/RECIBO. DEBES encontrar el MONTO TOTAL que se debe pagar. Busca TODOS los números con formato de dinero ($1,234.56, 2,500.00, etc.) y selecciona el MÁS GRANDE. NUNCA devuelvas 0.00 o null - SIEMPRE hay un total a pagar en estos documentos.`;
                       }
+                      
                       return `- ${col}: Encuentra el valor exacto en el texto`;
                     }).join('\n')}
                     

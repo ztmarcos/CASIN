@@ -36,7 +36,8 @@ service cloud.firestore {
                'ztmarcos@gmail.com', 
                'marcos@casin.com',
                '2012solitario@gmail.com',
-               'marcoszavala09@gmail.com'
+               'marcoszavala09@gmail.com',
+               'lorenacasin5@gmail.com'
              ];
     }
     
