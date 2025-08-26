@@ -4037,7 +4037,8 @@ app.post('/api/gpt/analyze', async (req, res) => {
     }
 
     // Create OpenAI prompt for PDF analysis
-    const prompt = `
+    // Use custom instructions if provided from frontend, otherwise use default
+    const prompt = instructions || `
 Analiza el siguiente documento PDF y extrae la información específica para los campos solicitados.
 
 DOCUMENTO PDF:
@@ -4064,6 +4065,9 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
 }
 
 No incluyas explicaciones adicionales, solo el objeto JSON.`;
+    
+    console.log('🔍 Using prompt from:', instructions ? 'frontend (custom)' : 'backend (default)');
+    console.log('📝 Prompt preview:', prompt.substring(0, 300) + '...');
 
     console.log('🔍 Sending request to OpenAI...');
     console.log('📝 Prompt length:', prompt.length);

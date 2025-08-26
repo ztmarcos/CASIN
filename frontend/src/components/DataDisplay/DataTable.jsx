@@ -911,7 +911,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         tableName: 'current_table',
         instructions: customPrompt || `
           Please analyze the document and extract the following information:
-          - ${editingCell.column}: Find the exact value in the text
+          ${editingCell.column === 'pago_parcial' 
+            ? `- ${editingCell.column}: Capture the total of the receipt. Find the total amount to be paid in this document.`
+            : `- ${editingCell.column}: Find the exact value in the text`
+          }
           
           Important rules:
           1. Extract EXACT values from the document
@@ -919,6 +922,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           3. For dates, maintain the format as shown in the document
           4. For currency values, include the full amount with decimals
           5. For text fields, extract the complete text as shown
+          ${editingCell.column === 'pago_parcial' ? `
+          6. For pago_parcial: NEVER return null - ALWAYS find at least one amount
+          7. Look for terms like "Total", "Total a Pagar", "Importe Total", "Monto Total"
+          8. If multiple amounts found, use the LARGEST number (usually the total)` : ''}
         `
       };
 
