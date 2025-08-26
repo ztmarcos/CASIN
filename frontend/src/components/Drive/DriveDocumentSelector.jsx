@@ -1,14 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config/api.js';
+import { useAuth } from '../../context/AuthContext';
+import { useTeam } from '../../context/TeamContext';
+import { getCleanTeamName } from '../../utils/teamUtils';
+import firebaseTeamStorageService from '../../services/firebaseTeamStorageService';
 import './DriveDocumentSelector.css';
 
 const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocumentId }) => {
+  const { user } = useAuth();
+  const { userTeam } = useTeam();
   const [documents, setDocuments] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentFolder, setCurrentFolder] = useState(null);
   const [breadcrumbs, setBreadcrumbs] = useState([]);
+  const [currentFolderPath, setCurrentFolderPath] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -19,57 +27,81 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
   const loadRootDocuments = async () => {
     setLoading(true);
     setError(null);
+    
+    if (!userTeam) {
+      setError('No hay equipo asignado');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_URL}/drive/files`);
-      if (!response.ok) {
-        throw new Error('Failed to load documents');
-      }
-      const data = await response.json();
+      console.log(`📁 PDFParser: Cargando documentos del equipo ${getCleanTeamName(userTeam.name)}`);
       
-      if (data.success && data.files) {
-        // Filtrar solo PDFs y carpetas
-        const filteredFiles = data.files.filter(file => 
-          file.mimeType === 'application/pdf' || 
-          file.mimeType === 'application/vnd.google-apps.folder'
-        );
-        setDocuments(filteredFiles);
-        setCurrentFolder(null);
-        setBreadcrumbs([]);
-      }
+      // Cargar carpetas y archivos PDF del storage del equipo
+      const [folderData, files] = await Promise.all([
+        firebaseTeamStorageService.listTeamFoldersOnly(currentFolderPath, userTeam.id),
+        firebaseTeamStorageService.listFilesInFolder(currentFolderPath, userTeam.id)
+      ]);
+      
+      // Filtrar solo archivos PDF
+      const pdfFiles = files.filter(file => 
+        file.name.toLowerCase().endsWith('.pdf') && file.name !== '.keep'
+      );
+      
+      console.log(`📁 PDFParser: Encontradas ${folderData.folders.length} carpetas y ${pdfFiles.length} PDFs`);
+      
+      setFolders(folderData.folders);
+      setDocuments(pdfFiles);
+      setCurrentFolder(null);
+      setBreadcrumbs([]);
+      setCurrentFolderPath('');
+      
     } catch (err) {
-      console.error('Error loading documents:', err);
-      setError('Error loading documents from Drive');
+      console.error('Error loading documents from Firebase:', err);
+      setError(`Error loading documents: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadFolderContents = async (folderId, folderName) => {
+  const loadFolderContents = async (folderPath, folderName) => {
     setLoading(true);
     setError(null);
+    
+    if (!userTeam) {
+      setError('No hay equipo asignado');
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const response = await fetch(`${API_URL}/drive/files?folderId=${folderId}`);
-      if (!response.ok) {
-        throw new Error('Failed to load folder contents');
-      }
-      const data = await response.json();
+      console.log(`📁 PDFParser: Navegando a carpeta "${folderName}" en path "${folderPath}"`);
       
-      if (data.success && data.files) {
-        // Filtrar solo PDFs y carpetas
-        const filteredFiles = data.files.filter(file => 
-          file.mimeType === 'application/pdf' || 
-          file.mimeType === 'application/vnd.google-apps.folder'
-        );
-        setDocuments(filteredFiles);
-        setCurrentFolder({ id: folderId, name: folderName });
-        
-        // Actualizar breadcrumbs
-        const newBreadcrumbs = [...breadcrumbs, { id: folderId, name: folderName }];
-        setBreadcrumbs(newBreadcrumbs);
-      }
+      // Cargar carpetas y archivos PDF de la carpeta específica
+      const [folderData, files] = await Promise.all([
+        firebaseTeamStorageService.listTeamFoldersOnly(folderPath, userTeam.id),
+        firebaseTeamStorageService.listFilesInFolder(folderPath, userTeam.id)
+      ]);
+      
+      // Filtrar solo archivos PDF
+      const pdfFiles = files.filter(file => 
+        file.name.toLowerCase().endsWith('.pdf') && file.name !== '.keep'
+      );
+      
+      console.log(`📁 PDFParser: En "${folderName}": ${folderData.folders.length} carpetas y ${pdfFiles.length} PDFs`);
+      
+      setFolders(folderData.folders);
+      setDocuments(pdfFiles);
+      setCurrentFolder({ path: folderPath, name: folderName });
+      setCurrentFolderPath(folderPath);
+      
+      // Actualizar breadcrumbs
+      const newBreadcrumbs = [...breadcrumbs, { path: folderPath, name: folderName }];
+      setBreadcrumbs(newBreadcrumbs);
+      
     } catch (err) {
       console.error('Error loading folder contents:', err);
-      setError('Error loading folder contents');
+      setError(`Error loading folder contents: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -84,16 +116,16 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
       const targetBreadcrumb = breadcrumbs[index];
       const newBreadcrumbs = breadcrumbs.slice(0, index + 1);
       setBreadcrumbs(newBreadcrumbs);
-      await loadFolderContents(targetBreadcrumb.id, targetBreadcrumb.name);
+      await loadFolderContents(targetBreadcrumb.path, targetBreadcrumb.name);
     }
   };
 
   const [selectedDocument, setSelectedDocument] = useState(null);
 
   const handleDocumentSelect = (document) => {
-    if (document.mimeType === 'application/vnd.google-apps.folder') {
+    if (document.isFolder) {
       // Navegar a la carpeta
-      loadFolderContents(document.id, document.name);
+      loadFolderContents(document.relativePath, document.name);
     } else {
       // Seleccionar documento PDF con checkmark
       setSelectedDocument(document);
@@ -101,8 +133,8 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
   };
 
   const handleAnalyzeSelectedDocument = async () => {
-    if (!selectedDocument || selectedDocument.mimeType !== 'application/pdf') {
-      setError('Please select a PDF file to analyze');
+    if (!selectedDocument || !selectedDocument.name.toLowerCase().endsWith('.pdf')) {
+      setError('Por favor selecciona un archivo PDF para analizar');
       return;
     }
 
@@ -110,10 +142,15 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
     setError(null);
     
     try {
-      // Descargar el documento
-      const response = await fetch(`${API_URL}/drive/download/${selectedDocument.id}`);
+      console.log(`📄 PDFParser: Descargando archivo "${selectedDocument.name}" de Firebase Storage`);
+      
+      // Obtener la URL de descarga del archivo desde Firebase
+      const downloadURL = await firebaseTeamStorageService.loadFileDownloadURL(selectedDocument);
+      
+      // Descargar el archivo
+      const response = await fetch(downloadURL);
       if (!response.ok) {
-        throw new Error('Failed to download document');
+        throw new Error(`Failed to download file: ${response.status}`);
       }
       
       const blob = await response.blob();
@@ -121,33 +158,50 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
       // Crear un archivo File desde el blob
       const file = new File([blob], selectedDocument.name, { type: 'application/pdf' });
       
-      // Crear objeto parsedData simulado
-      const parsedData = {
-        text: `Documento descargado: ${selectedDocument.name}`,
-        metadata: {
-          fileName: selectedDocument.name,
-          fileSize: selectedDocument.size,
-          lastModified: selectedDocument.modifiedTime,
-          driveId: selectedDocument.id,
-          driveLink: selectedDocument.webViewLink
+      console.log(`📄 PDFParser: Archivo descargado exitosamente - ${file.size} bytes`);
+      
+      // Crear objeto de datos para el parser
+      const documentData = {
+        file: file,
+        parsedData: {
+          metadata: {
+            fileName: selectedDocument.name,
+            fileSize: selectedDocument.size,
+            lastModified: selectedDocument.modifiedTime,
+            source: 'firebase_team_storage',
+            teamId: userTeam.id,
+            teamName: userTeam.name,
+            relativePath: selectedDocument.relativePath
+          }
         },
-        source: 'drive',
-        driveDocument: selectedDocument
+        driveDocument: {
+          id: selectedDocument.id,
+          name: selectedDocument.name,
+          size: selectedDocument.size,
+          modifiedTime: selectedDocument.modifiedTime,
+          webViewLink: downloadURL // Use Firebase download URL as "view" link
+        }
       };
       
-      onDocumentSelect({ file, parsedData, driveDocument: selectedDocument });
+      onDocumentSelect(documentData);
       onClose();
     } catch (err) {
-      console.error('Error downloading document:', err);
-      setError('Error downloading document from Drive');
+      console.error('Error downloading document from Firebase:', err);
+      setError(`Error al descargar documento: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredDocuments = documents.filter(doc => 
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Combinar carpetas y documentos para mostrar en una sola lista
+  const allItems = [
+    ...folders.filter(folder => 
+      folder.name.toLowerCase().includes(searchTerm.toLowerCase())
+    ),
+    ...documents.filter(doc => 
+      doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  ];
 
   const formatFileSize = (bytes) => {
     if (!bytes) return 'Unknown size';
@@ -173,7 +227,7 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
     <div className="drive-document-selector-overlay" onClick={onClose}>
       <div className="drive-document-selector-modal" onClick={e => e.stopPropagation()}>
         <div className="drive-document-selector-header">
-          <h3>📁 Seleccionar Documento de Google Drive</h3>
+          <h3>📁 Seleccionar PDF del Equipo {userTeam?.name || 'Drive'}</h3>
           <button className="close-button" onClick={onClose}>✕</button>
         </div>
 
@@ -184,10 +238,10 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
               className="breadcrumb-item"
               onClick={() => navigateToBreadcrumb(-1)}
             >
-              📁 Drive
+              📁 {userTeam?.name || 'Equipo'}
             </button>
             {breadcrumbs.map((crumb, index) => (
-              <React.Fragment key={crumb.id}>
+              <React.Fragment key={crumb.path}>
                 <span className="breadcrumb-separator">/</span>
                 <button 
                   className="breadcrumb-item"
@@ -231,37 +285,37 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
           {/* Documents List */}
           {!loading && !error && (
             <div className="documents-list">
-              {filteredDocuments.length === 0 ? (
+              {allItems.length === 0 ? (
                 <div className="no-documents">
-                  {searchTerm ? 'No se encontraron documentos que coincidan con la búsqueda' : 'No hay documentos en esta carpeta'}
+                  {searchTerm ? 'No se encontraron documentos que coincidan con la búsqueda' : 'No hay documentos PDF ni carpetas en esta ubicación'}
                 </div>
               ) : (
-                filteredDocuments.map(doc => (
+                allItems.map(item => (
                   <div 
-                    key={doc.id} 
-                    className={`document-item ${doc.id === selectedDocument?.id ? 'selected' : ''}`}
-                    onClick={() => handleDocumentSelect(doc)}
+                    key={item.id} 
+                    className={`document-item ${item.id === selectedDocument?.id ? 'selected' : ''}`}
+                    onClick={() => handleDocumentSelect(item)}
                   >
                     <div className="document-icon">
-                      {doc.mimeType === 'application/vnd.google-apps.folder' ? '📁' : '📄'}
+                      {item.isFolder ? '📁' : '📄'}
                     </div>
                     <div className="document-info">
-                      <div className="document-name">{doc.name}</div>
+                      <div className="document-name">{item.name}</div>
                       <div className="document-details">
-                        {doc.mimeType === 'application/vnd.google-apps.folder' ? (
+                        {item.isFolder ? (
                           <span>Carpeta</span>
                         ) : (
                           <>
-                            <span>{formatFileSize(doc.size)}</span>
+                            <span>{formatFileSize(item.size)}</span>
                             <span>•</span>
-                            <span>{formatDate(doc.modifiedTime)}</span>
+                            <span>{formatDate(item.modifiedTime)}</span>
                           </>
                         )}
                       </div>
                     </div>
-                    {doc.mimeType === 'application/pdf' && (
+                    {!item.isFolder && item.name.toLowerCase().endsWith('.pdf') && (
                       <div className="selection-indicator">
-                        {doc.id === selectedDocument?.id ? (
+                        {item.id === selectedDocument?.id ? (
                           <div className="checkmark">✅</div>
                         ) : (
                           <div className="checkbox">☐</div>

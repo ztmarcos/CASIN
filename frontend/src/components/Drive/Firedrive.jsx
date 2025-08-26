@@ -467,9 +467,19 @@ const Firedrive = () => {
       
       // Clear current state to force refresh
       setFolders([]);
+      setCurrentFiles([]);
       
-      // Reload folder structure only (files should remain as they were)
-      await loadFolderStructure();
+      // Add delay to allow Firebase to propagate changes
+      addDebugInfo(`⏳ Esperando 2 segundos para refrescar después de crear carpeta...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Reload both folder structure and files
+      await Promise.all([
+        loadFolderStructure(),
+        loadCurrentFolderFiles()
+      ]);
+      
+      addDebugInfo(`✅ Vista refrescada después de crear carpeta`);
       
     } catch (error) {
       console.error('❌ Error creating folder:', error);
@@ -674,15 +684,21 @@ const Firedrive = () => {
       addDebugInfo(`🎉 Todos los archivos subidos exitosamente`);
       
       // Add delay to allow Firebase to propagate changes
-      addDebugInfo(`⏳ Esperando 2 segundos para refrescar...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      addDebugInfo(`⏳ Esperando 3 segundos para refrescar...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Clear current files before refreshing to force a clean reload
+      // Clear current files and folders before refreshing to force a clean reload
       setCurrentFiles([]);
-      addDebugInfo(`🔄 Limpiando cache y recargando archivos...`);
+      setFolders([]);
+      addDebugInfo(`🔄 Limpiando cache y recargando contenido completo...`);
       
-      // Refresh current folder files to show new uploads
-      await loadCurrentFolderFiles();
+      // Refresh both folders and files to show new uploads
+      await Promise.all([
+        loadFolderStructure(),
+        loadCurrentFolderFiles()
+      ]);
+      
+      addDebugInfo(`✅ Contenido refrescado - deberías ver los nuevos archivos`);
       
     } catch (error) {
       console.error('❌ Error uploading files:', error);
