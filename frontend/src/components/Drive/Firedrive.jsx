@@ -322,12 +322,14 @@ const Firedrive = () => {
       const visibleFiles = files.filter(file => file.name !== '.keep');
       
       addDebugInfo(`📄 Archivos visibles: ${visibleFiles.length} (sin archivos .keep)`);
+      addDebugInfo(`📋 VISIBLE FILES LIST:`, visibleFiles.map(f => `${f.name} (${f.size} bytes)`));
       
       if (directCount !== files.length) {
         addDebugInfo(`⚠️ MISMATCH DETECTED! Direct Firebase vs Service count differs`);
       }
       
       setCurrentFiles(visibleFiles);
+      addDebugInfo(`✅ STATE UPDATED: currentFiles set to ${visibleFiles.length} files`);
       
     } catch (error) {
       console.error('❌ Error loading files:', error);
@@ -1234,11 +1236,12 @@ const Firedrive = () => {
                 📄 Archivos ({currentFiles.length})
               </h3>
               <div className="files-grid">
-                {currentFiles
-                  .filter(file => 
+                {(() => {
+                  const filteredFiles = currentFiles.filter(file => 
                     !searchTerm || file.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((file) => (
+                  );
+                  console.log('🎯 RENDERING FILES:', filteredFiles.map(f => f.name));
+                  return filteredFiles.map((file) => (
                     <div
                       key={file.id}
                       className="file-item"
@@ -1288,7 +1291,8 @@ const Firedrive = () => {
                         </button>
                       </div>
                     </div>
-                  ))}
+                  ));
+                })()}
               </div>
             </div>
           )}
