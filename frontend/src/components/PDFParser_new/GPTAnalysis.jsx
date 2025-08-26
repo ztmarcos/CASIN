@@ -134,7 +134,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     // Función para formatear valores
     const formatValue = (value) => {
-        if (value === null || value === undefined) return 'N/A';
+        // More permissive handling - show empty string for null/undefined instead of N/A
+        if (value === null || value === undefined || value === '') return '';
         if (typeof value === 'string') return value;
         if (typeof value === 'number') return value.toString();
         if (typeof value === 'boolean') return value.toString();
@@ -158,7 +159,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 return 'Invalid Object';
             }
         }
-        return 'N/A';
+        return value.toString();
     };
 
     useEffect(() => {
@@ -315,30 +316,67 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 // Convert backend analysis to frontend format
                 const cleanData = {};
                 
+                // Debug: Log the raw response structure
+                console.log('🔍 RAW result.extractedData:', result.extractedData);
+                console.log('🔍 RAW result.columnAnalysis:', result.columnAnalysis);
+                
                 // For OpenAI analysis, use extractedData directly
-                if (result.extractedData) {
+                if (result.extractedData && Object.keys(result.extractedData).length > 0) {
                     console.log('📊 Using OpenAI extracted data:', result.extractedData);
                     Object.assign(cleanData, result.extractedData);
                 } else {
+                    console.log('📊 Using column analysis fallback');
                     // Fallback: Extract sample values from each column analysis
                     Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
-                        // Use the first non-empty sample value as default
-                        if (analysis.sampleValues && analysis.sampleValues.length > 0) {
-                            cleanData[column] = analysis.sampleValues[0];
-                        } else if (analysis.extractedValue !== undefined) {
-                            cleanData[column] = analysis.extractedValue;
-                        } else {
-                            cleanData[column] = null;
+                        console.log(`🔍 Processing column ${column}:`, analysis);
+                        
+                        // Try multiple sources for the value
+                        let value = null;
+                        
+                        if (analysis.extractedValue !== undefined && analysis.extractedValue !== null) {
+                            value = analysis.extractedValue;
+                            console.log(`✅ Using extractedValue for ${column}:`, value);
+                        } else if (analysis.sampleValues && analysis.sampleValues.length > 0) {
+                            value = analysis.sampleValues[0];
+                            console.log(`✅ Using sampleValue for ${column}:`, value);
+                        } else if (analysis.detectedValue !== undefined && analysis.detectedValue !== null) {
+                            value = analysis.detectedValue;
+                            console.log(`✅ Using detectedValue for ${column}:`, value);
+                        } else if (analysis.value !== undefined && analysis.value !== null) {
+                            value = analysis.value;
+                            console.log(`✅ Using value for ${column}:`, value);
                         }
+                        
+                        cleanData[column] = value;
                     });
                 }
 
                 console.log('📊 Processed analysis data:', cleanData);
                 console.log('📈 Analysis summary:', result.summary);
 
+                // Check if cleanData is empty and try to provide fallback
+                if (Object.keys(cleanData).length === 0 || Object.values(cleanData).every(v => v === null || v === undefined)) {
+                    console.log('⚠️ No data extracted, trying to use sample data from analysis');
+                    
+                    // Try to extract any sample data from the analysis
+                    if (result.columnAnalysis) {
+                        Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
+                            if (!cleanData[column] || cleanData[column] === null) {
+                                // Try to get any available value
+                                if (analysis.description || analysis.type) {
+                                    cleanData[column] = `${analysis.type || 'text'} field`;
+                                }
+                            }
+                        });
+                    }
+                    
+                    console.log('📊 Fallback data applied:', cleanData);
+                }
+
                 setAnalysis(result);
                 setMappedData(cleanData);
             } else {
+                console.error('❌ Invalid response structure:', result);
                 throw new Error('Invalid response structure from analysis');
             }
         } catch (err) {
