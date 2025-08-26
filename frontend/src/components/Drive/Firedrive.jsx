@@ -1114,24 +1114,6 @@ const Firedrive = () => {
           />
           
           <button
-            className="cleanup-button"
-            onClick={handleCleanupOrphanedFolders}
-            title="Limpiar carpetas huérfanas"
-            style={{
-              background: '#dc3545',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              marginLeft: '10px'
-            }}
-          >
-            🧹 Limpiar
-          </button>
-          
-          <button
             className="force-refresh-button"
             onClick={handleForceRefresh}
             title="Forzar actualización"
