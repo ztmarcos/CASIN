@@ -28,6 +28,10 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
     setLoading(true);
     setError(null);
     
+    // Clear search term when going back to root
+    setSearchTerm('');
+    console.log('🔍 PDFParser: Campo de búsqueda limpiado al ir a raíz');
+    
     if (!userTeam) {
       setError('No hay equipo asignado');
       setLoading(false);
@@ -67,6 +71,10 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
   const loadFolderContents = async (folderPath, folderName) => {
     setLoading(true);
     setError(null);
+    
+    // Clear search term when navigating to a folder
+    setSearchTerm('');
+    console.log('🔍 PDFParser: Campo de búsqueda limpiado al navegar a carpeta');
     
     if (!userTeam) {
       setError('No hay equipo asignado');
@@ -108,6 +116,10 @@ const DriveDocumentSelector = ({ isOpen, onClose, onDocumentSelect, selectedDocu
   };
 
   const navigateToBreadcrumb = async (index) => {
+    // Clear search term when navigating via breadcrumbs
+    setSearchTerm('');
+    console.log('🔍 PDFParser: Campo de búsqueda limpiado al navegar por breadcrumbs');
+    
     if (index === -1) {
       // Navegar a la raíz
       await loadRootDocuments();

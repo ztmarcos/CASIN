@@ -359,6 +359,10 @@ const Firedrive = () => {
       addDebugInfo('Ya estamos en esta carpeta');
       return;
     }
+
+    // Clear search term when navigating to a new folder
+    setSearchTerm('');
+    addDebugInfo('🔍 Campo de búsqueda limpiado al navegar');
     
     try {
       // Clear current files immediately to avoid showing old files
@@ -388,6 +392,10 @@ const Firedrive = () => {
     }
     
     addDebugInfo('Navegando un nivel hacia atrás');
+    
+    // Clear search term when navigating back
+    setSearchTerm('');
+    addDebugInfo('🔍 Campo de búsqueda limpiado al regresar');
     
     // Clear current files immediately to avoid showing old files
     setCurrentFiles([]);

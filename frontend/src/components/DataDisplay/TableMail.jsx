@@ -205,6 +205,19 @@ const EMAIL_TEMPLATES = {
         <p>Cordialmente,<br>
         <strong>CASIN Seguros</strong></p>
       </div>
+    `,
+    recibo: (data) => `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        <p><strong>Estimada ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong>, buen día</p>
+        
+        <p>Por este medio, deseo informar de la renovación del seguro de ${data.ramo || 'Vida'} del Sr. ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'} de la vigencia ${data.vigencia_inicio || 'N/A'}-${data.vigencia_fin ? new Date(data.vigencia_fin).getFullYear() : 'N/A'}, asegurado en <strong>${data.aseguradora || 'AXA Seguros'}</strong>.</p>
+        
+        <p>Adjunto el recibo de cobro por <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} ${data.moneda || 'dls'}</strong> de la póliza de ${data.ramo || 'vida'} no. <strong>${data.numero_poliza || 'N/A'}</strong> para su revisión y amable programación del pago con fecha límite ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}.</p>
+        
+        <p>Quedo al pendiente de su amable confirmación de recibido.</p>
+        
+        <p>Saludos cordiales!!</p>
+      </div>
     `
   }
 };
@@ -308,7 +321,10 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
       let tipo = 'renovacion'; // Por defecto es renovación
       
       // Si el tipo de email especifica un ramo y tipo, usarlo
-      if (emailType.includes('autos')) {
+      if (emailType === 'recibo') {
+        ramo = 'default';
+        tipo = 'recibo';
+      } else if (emailType.includes('autos')) {
         ramo = 'autos';
         tipo = emailType.includes('nueva') ? 'nueva' : 'renovacion';
       } else if (emailType.includes('vida')) {
@@ -375,6 +391,8 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
         subject = `Recordatorio de Pago - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
       } else if (emailType === 'informacion') {
         subject = `Información de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+      } else if (emailType === 'recibo') {
+        subject = `Recibo de Cobro - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
       }
 
       const emailContent = {
@@ -708,6 +726,7 @@ const TableMail = ({ isOpen, onClose, rowData }) => {
                 <option value="bienvenida">🎉 Bienvenida / Confirmación</option>
                 <option value="recordatorio">⚠️ Recordatorio de Pago</option>
                 <option value="informacion">📋 Información General</option>
+                <option value="recibo">💰 Enviar Recibo</option>
               </optgroup>
             </select>
             <small className="email-type-help">
