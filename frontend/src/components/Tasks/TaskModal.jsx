@@ -28,6 +28,15 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
   const [errors, setErrors] = useState({});
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [creatingTestUsers, setCreatingTestUsers] = useState(false);
+  
+  // Estados para comentarios mejorados
+  const [editingComment, setEditingComment] = useState(null);
+  const [editingCommentText, setEditingCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [replyInput, setReplyInput] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionPosition, setMentionPosition] = useState(0);
 
   // Get current user data
   const getCurrentUser = () => {
@@ -336,7 +345,7 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
   };
 
   const handleCommentChange = (e) => {
-    setCommentInput(e.target.value);
+    handleCommentInputChange(e);
   };
 
   const handleAddTag = async () => {
@@ -374,7 +383,9 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
         authorRole: currentUser.role,
         authorEmail: user?.email, // Para notificaciones
         timestamp: new Date(),
-        createdAt: new Date()
+        createdAt: new Date(),
+        replies: [],
+        mentions: extractMentions(commentInput.trim())
       };
       
       // Actualizar formData con el nuevo comentario
@@ -405,12 +416,235 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
               }
             );
             console.log('✅ Notificaciones de comentario enviadas');
+            
+            // Enviar notificación específica a usuarios mencionados
+            if (newComment.mentions && newComment.mentions.length > 0) {
+              const mentionedEmails = newComment.mentions.map(mention => mention.email);
+              await taskEmailService.notifyMentionedUsers(
+                taskWithComment,
+                newComment,
+                mentionedEmails,
+                {
+                  name: cleanAuthorName,
+                  email: user?.email,
+                  role: currentUser.role
+                }
+              );
+              console.log('✅ Notificaciones a usuarios mencionados enviadas');
+            }
           } catch (emailError) {
             console.warn('⚠️ Error enviando notificaciones de comentario:', emailError);
           }
         }
       }
     }
+  };
+
+  // Función para extraer menciones del texto
+  const extractMentions = (text) => {
+    const mentionRegex = /@(\w+)/g;
+    const mentions = [];
+    let match;
+    
+    while ((match = mentionRegex.exec(text)) !== null) {
+      const mentionedUser = teamUsersForModal.find(user => 
+        user.name.toLowerCase().includes(match[1].toLowerCase()) ||
+        user.email.toLowerCase().includes(match[1].toLowerCase())
+      );
+      if (mentionedUser) {
+        mentions.push({
+          name: mentionedUser.name,
+          email: mentionedUser.email,
+          position: match.index
+        });
+      }
+    }
+    
+    return mentions;
+  };
+
+  // Función para manejar edición de comentarios
+  const handleEditComment = (comment) => {
+    setEditingComment(comment.id);
+    setEditingCommentText(comment.text);
+  };
+
+  // Función para guardar edición de comentarios
+  const handleSaveCommentEdit = () => {
+    if (editingCommentText.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        comments: prev.comments.map(comment => 
+          comment.id === editingComment 
+            ? { 
+                ...comment, 
+                text: editingCommentText.trim(),
+                editedAt: new Date(),
+                mentions: extractMentions(editingCommentText.trim())
+              }
+            : comment
+        )
+      }));
+      setEditingComment(null);
+      setEditingCommentText('');
+    }
+  };
+
+  // Función para cancelar edición de comentarios
+  const handleCancelCommentEdit = () => {
+    setEditingComment(null);
+    setEditingCommentText('');
+  };
+
+  // Función para eliminar comentarios
+  const handleDeleteComment = (commentId) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este comentario?')) {
+      setFormData(prev => ({
+        ...prev,
+        comments: prev.comments.filter(comment => comment.id !== commentId)
+      }));
+    }
+  };
+
+  // Función para responder a comentarios
+  const handleReplyToComment = (comment) => {
+    setReplyingTo(comment.id);
+    setReplyInput('');
+  };
+
+  // Función para cancelar respuesta
+  const handleCancelReply = () => {
+    setReplyingTo(null);
+    setReplyInput('');
+  };
+
+  // Función para agregar respuesta
+  const handleAddReply = async () => {
+    if (replyInput.trim() && replyingTo) {
+      const newReply = {
+        id: Date.now().toString(),
+        text: replyInput.trim(),
+        author: currentUser.name,
+        authorAvatar: '👤',
+        authorRole: currentUser.role,
+        authorEmail: user?.email,
+        timestamp: new Date(),
+        createdAt: new Date(),
+        mentions: extractMentions(replyInput.trim())
+      };
+
+      // Encontrar el comentario padre
+      const parentComment = formData.comments.find(comment => comment.id === replyingTo);
+
+      setFormData(prev => ({
+        ...prev,
+        comments: prev.comments.map(comment => 
+          comment.id === replyingTo 
+            ? { 
+                ...comment, 
+                replies: [...(comment.replies || []), newReply]
+              }
+            : comment
+        )
+      }));
+
+      // Enviar notificaciones por email (solo si existe la tarea)
+      if (task?.id && parentComment) {
+        const taskWithReply = { ...formData, ...task };
+        const participants = taskEmailService.getTaskParticipants(taskWithReply);
+        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        if (filteredParticipants.length > 0) {
+          try {
+            await taskEmailService.notifyReplyAdded(
+              taskWithReply,
+              parentComment,
+              newReply,
+              filteredParticipants,
+              {
+                name: currentUser.name,
+                email: user?.email,
+                role: currentUser.role
+              }
+            );
+            console.log('✅ Notificaciones de respuesta enviadas');
+            
+            // Enviar notificación específica a usuarios mencionados en la respuesta
+            if (newReply.mentions && newReply.mentions.length > 0) {
+              const mentionedEmails = newReply.mentions.map(mention => mention.email);
+              await taskEmailService.notifyMentionedUsers(
+                taskWithReply,
+                newReply,
+                mentionedEmails,
+                {
+                  name: currentUser.name,
+                  email: user?.email,
+                  role: currentUser.role
+                }
+              );
+              console.log('✅ Notificaciones a usuarios mencionados en respuesta enviadas');
+            }
+          } catch (emailError) {
+            console.warn('⚠️ Error enviando notificaciones de respuesta:', emailError);
+          }
+        }
+      }
+
+      setReplyingTo(null);
+      setReplyInput('');
+    }
+  };
+
+  // Función para manejar menciones en el input
+  const handleCommentInputChange = (e) => {
+    const value = e.target.value;
+    setCommentInput(value);
+    
+    // Detectar menciones
+    const cursorPosition = e.target.selectionStart;
+    const textBeforeCursor = value.substring(0, cursorPosition);
+    const mentionMatch = textBeforeCursor.match(/@(\w*)$/);
+    
+    if (mentionMatch) {
+      setShowMentions(true);
+      setMentionQuery(mentionMatch[1]);
+      setMentionPosition(cursorPosition);
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // Función para insertar mención
+  const handleInsertMention = (mentionedUser) => {
+    const beforeMention = commentInput.substring(0, mentionPosition - mentionQuery.length - 1);
+    const afterMention = commentInput.substring(mentionPosition);
+    const newText = beforeMention + '@' + mentionedUser.name + ' ' + afterMention;
+    
+    setCommentInput(newText);
+    setShowMentions(false);
+    setMentionQuery('');
+  };
+
+  // Función para renderizar texto con menciones
+  const renderTextWithMentions = (text) => {
+    if (!text) return '';
+    
+    const parts = text.split(/(@\w+)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        const mentionedUser = teamUsersForModal.find(user => 
+          user.name.toLowerCase().includes(part.substring(1).toLowerCase())
+        );
+        if (mentionedUser) {
+          return (
+            <span key={index} className="mention">
+              {part}
+            </span>
+          );
+        }
+      }
+      return part;
+    });
   };
 
   const validateForm = () => {
@@ -822,32 +1056,210 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
                               {getUserRoleIcon(comment.authorRole)} {getUserRoleText(comment.authorRole)}
                             </span>
                           </div>
-                          <span className="comment-time">
-                            {new Date(comment.timestamp).toLocaleString('es-ES')}
-                  </span>
+                          <div className="comment-actions">
+                            <span className="comment-time">
+                              {new Date(comment.timestamp).toLocaleString('es-ES')}
+                              {comment.editedAt && (
+                                <span className="edited-badge"> (editado)</span>
+                              )}
+                            </span>
+                            {comment.authorEmail === user?.email && (
+                              <div className="comment-buttons">
+                                <button 
+                                  className="edit-comment-btn"
+                                  onClick={() => handleEditComment(comment)}
+                                  title="Editar comentario"
+                                >
+                                  ✏️
+                                </button>
+                                <button 
+                                  className="delete-comment-btn"
+                                  onClick={() => handleDeleteComment(comment.id)}
+                                  title="Eliminar comentario"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div className="comment-text">{comment.text}</div>
+                        
+                        {editingComment === comment.id ? (
+                          <div className="comment-edit-container">
+                            <textarea
+                              value={editingCommentText}
+                              onChange={(e) => setEditingCommentText(e.target.value)}
+                              rows="3"
+                              className="comment-edit-textarea"
+                            />
+                            <div className="comment-edit-actions">
+                              <button 
+                                className="save-edit-btn"
+                                onClick={handleSaveCommentEdit}
+                              >
+                                💾 Guardar
+                              </button>
+                              <button 
+                                className="cancel-edit-btn"
+                                onClick={handleCancelCommentEdit}
+                              >
+                                ✕ Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="comment-text">
+                            {renderTextWithMentions(comment.text)}
+                          </div>
+                        )}
+                        
+                        {/* Respuestas */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <div className="comment-replies">
+                            {comment.replies.map((reply, replyIndex) => (
+                              <div key={reply.id || replyIndex} className="comment-reply">
+                                <div className="reply-header">
+                                  <div className="reply-author-info">
+                                    <span className="reply-avatar">{reply.authorAvatar || '👤'}</span>
+                                    <strong>{reply.author}</strong>
+                                    <span className={`role-badge ${reply.authorRole}`}>
+                                      {getUserRoleIcon(reply.authorRole)} {getUserRoleText(reply.authorRole)}
+                                    </span>
+                                  </div>
+                                  <div className="reply-actions">
+                                    <span className="reply-time">
+                                      {new Date(reply.timestamp).toLocaleString('es-ES')}
+                                      {reply.editedAt && (
+                                        <span className="edited-badge"> (editado)</span>
+                                      )}
+                                    </span>
+                                    {reply.authorEmail === user?.email && (
+                                      <div className="reply-buttons">
+                                        <button 
+                                          className="edit-reply-btn"
+                                          onClick={() => handleEditComment(reply)}
+                                          title="Editar respuesta"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button 
+                                          className="delete-reply-btn"
+                                          onClick={() => handleDeleteComment(reply.id)}
+                                          title="Eliminar respuesta"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="reply-text">
+                                  {renderTextWithMentions(reply.text)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {/* Botón de respuesta */}
+                        <div className="comment-reply-section">
+                          <button 
+                            className="reply-btn"
+                            onClick={() => handleReplyToComment(comment)}
+                          >
+                            💬 Responder
+                          </button>
+                        </div>
+                        
+                        {/* Input de respuesta */}
+                        {replyingTo === comment.id && (
+                          <div className="reply-input-container">
+                            <div className="reply-input-header">
+                              <span>Respondiendo a <strong>{comment.author}</strong></span>
+                              <button 
+                                className="cancel-reply-btn"
+                                onClick={handleCancelReply}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                            <textarea
+                              value={replyInput}
+                              onChange={(e) => setReplyInput(e.target.value)}
+                              placeholder="Escribe tu respuesta... (Usa @ para mencionar usuarios)"
+                              rows="2"
+                              className="reply-textarea"
+                            />
+                            <div className="reply-input-actions">
+                              <button 
+                                className="add-reply-btn"
+                                onClick={handleAddReply}
+                                disabled={!replyInput.trim()}
+                              >
+                                💬 Responder
+                              </button>
+                              <button 
+                                className="cancel-reply-btn"
+                                onClick={handleCancelReply}
+                              >
+                                Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
                     <div className="no-comments">No hay comentarios aún</div>
                   )}
                 </div>
+                
+                {/* Add Comment Section */}
                 <div className="add-comment">
                   <div className="current-user-info">
                     <span className="user-avatar">👤</span>
                     <span>Comentando como <strong>{currentUser.name}</strong> ({getUserRoleText(currentUser.role)})</span>
                   </div>
-                  <textarea
-                    value={commentInput}
-                    onChange={handleCommentChange}
-                    onKeyPress={(e) => handleKeyPress(e, handleAddComment)}
-                    placeholder="Escribe un comentario... (Usa @ para mencionar usuarios)"
-                    rows="3"
-                  />
+                  <div className="comment-input-container">
+                    <textarea
+                      value={commentInput}
+                      onChange={handleCommentChange}
+                      onKeyPress={(e) => handleKeyPress(e, handleAddComment)}
+                      placeholder="Escribe un comentario... (Usa @ para mencionar usuarios)"
+                      rows="3"
+                      className="comment-textarea"
+                    />
+                    
+                    {/* Mentions Dropdown */}
+                    {showMentions && (
+                      <div className="mentions-dropdown">
+                        {teamUsersForModal
+                          .filter(user => 
+                            user.name.toLowerCase().includes(mentionQuery.toLowerCase()) ||
+                            user.email.toLowerCase().includes(mentionQuery.toLowerCase())
+                          )
+                          .map(user => (
+                            <div 
+                              key={user.id}
+                              className="mention-option"
+                              onClick={() => handleInsertMention(user)}
+                            >
+                              <span className="mention-avatar">{user.avatar}</span>
+                              <div className="mention-info">
+                                <div className="mention-name">{user.name}</div>
+                                <div className="mention-email">{user.email}</div>
+                              </div>
+                              <span className="mention-role">{getUserRoleText(user.role)}</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </div>
                   <button 
                     onClick={handleAddComment} 
                     disabled={!commentInput.trim()}
+                    className="add-comment-btn"
                   >
                     💬 Comentar
                   </button>

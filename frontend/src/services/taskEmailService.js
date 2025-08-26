@@ -56,12 +56,21 @@ class TaskEmailService {
     try {
       console.log('📧 Enviando notificación de comentario agregado:', taskData.title);
       
+      // Obtener usuarios mencionados en el comentario
+      const mentionedUsers = this.getMentionedUsers(comment);
+      console.log('👥 Usuarios mencionados:', mentionedUsers);
+      
+      // Combinar participantes regulares con usuarios mencionados
+      const allParticipants = [...new Set([...participants, ...mentionedUsers])];
+      console.log('📧 Todos los participantes (incluyendo mencionados):', allParticipants);
+      
       const emailData = {
         type: 'comment_added',
         task: taskData,
         comment: comment,
-        participants: participants,
+        participants: allParticipants,
         commentAuthor: commentAuthor,
+        mentionedUsers: mentionedUsers, // Agregar usuarios mencionados específicamente
         sender: this.defaultSender
       };
 
@@ -69,6 +78,34 @@ class TaskEmailService {
     } catch (error) {
       console.error('Error enviando notificación de comentario:', error);
     }
+  }
+
+  /**
+   * Obtiene los usuarios mencionados en un comentario
+   */
+  getMentionedUsers(comment) {
+    const mentionedUsers = [];
+    
+    if (comment.mentions && Array.isArray(comment.mentions)) {
+      comment.mentions.forEach(mention => {
+        if (mention.email) {
+          mentionedUsers.push(mention.email);
+        }
+      });
+    }
+    
+    // También buscar menciones en el texto del comentario como respaldo
+    if (comment.text) {
+      const mentionRegex = /@(\w+)/g;
+      let match;
+      while ((match = mentionRegex.exec(comment.text)) !== null) {
+        // Aquí podrías buscar en una lista de usuarios del equipo
+        // Por ahora, solo agregamos el patrón encontrado
+        console.log('🔍 Mención encontrada en texto:', match[1]);
+      }
+    }
+    
+    return mentionedUsers;
   }
 
   /**
@@ -89,6 +126,68 @@ class TaskEmailService {
       await this.sendTaskNotification(emailData);
     } catch (error) {
       console.error('Error enviando notificación de asignación:', error);
+    }
+  }
+
+  /**
+   * Envía notificación específica a usuarios mencionados
+   */
+  async notifyMentionedUsers(taskData, comment, mentionedUsers, commentAuthor) {
+    try {
+      if (mentionedUsers.length === 0) {
+        console.log('📧 No hay usuarios mencionados para notificar');
+        return;
+      }
+
+      console.log('📧 Enviando notificación a usuarios mencionados:', mentionedUsers);
+      
+      const emailData = {
+        type: 'user_mentioned',
+        task: taskData,
+        comment: comment,
+        participants: mentionedUsers,
+        commentAuthor: commentAuthor,
+        mentionedUsers: mentionedUsers,
+        sender: this.defaultSender
+      };
+
+      await this.sendTaskNotification(emailData);
+    } catch (error) {
+      console.error('Error enviando notificación a usuarios mencionados:', error);
+    }
+  }
+
+  /**
+   * Envía notificación cuando se agrega una respuesta a un comentario
+   */
+  async notifyReplyAdded(taskData, parentComment, reply, participants, replyAuthor) {
+    try {
+      console.log('📧 Enviando notificación de respuesta agregada');
+      
+      // Obtener usuarios mencionados en la respuesta
+      const mentionedUsers = this.getMentionedUsers(reply);
+      
+      // Incluir al autor del comentario padre y usuarios mencionados
+      const allParticipants = [...new Set([
+        ...participants,
+        ...mentionedUsers,
+        parentComment.authorEmail // Notificar al autor del comentario padre
+      ])];
+      
+      const emailData = {
+        type: 'reply_added',
+        task: taskData,
+        parentComment: parentComment,
+        reply: reply,
+        participants: allParticipants,
+        replyAuthor: replyAuthor,
+        mentionedUsers: mentionedUsers,
+        sender: this.defaultSender
+      };
+
+      await this.sendTaskNotification(emailData);
+    } catch (error) {
+      console.error('Error enviando notificación de respuesta:', error);
     }
   }
 

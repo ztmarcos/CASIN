@@ -4746,7 +4746,21 @@ app.delete('/api/prospeccion/:userId/:cardId', async (req, res) => {
 app.post('/api/email/send-task-notification', async (req, res) => {
   try {
     console.log('📧 Task notification email request');
-    const { type, task, participants, sender, comment, changes, newAssignees, assigner, commentAuthor } = req.body;
+    const { 
+      type, 
+      task, 
+      participants, 
+      sender, 
+      comment, 
+      changes, 
+      newAssignees, 
+      assigner, 
+      commentAuthor,
+      mentionedUsers,
+      parentComment,
+      reply,
+      replyAuthor
+    } = req.body;
     
     if (!type || !task || !participants || !Array.isArray(participants)) {
       return res.status(400).json({
@@ -4794,6 +4808,16 @@ app.post('/api/email/send-task-notification', async (req, res) => {
       case 'comment_added':
         subject = `Nuevo Comentario: ${task.title} - CASIN Tasks`;
         htmlContent = generateCommentAddedEmail(task, comment, commentAuthor, senderName);
+        break;
+      
+      case 'user_mentioned':
+        subject = `Te han mencionado en: ${task.title} - CASIN Tasks`;
+        htmlContent = generateUserMentionedEmail(task, comment, commentAuthor, senderName);
+        break;
+      
+      case 'reply_added':
+        subject = `Nueva Respuesta en: ${task.title} - CASIN Tasks`;
+        htmlContent = generateReplyAddedEmail(task, parentComment, reply, replyAuthor, senderName);
         break;
       
       case 'task_assigned':
@@ -4929,6 +4953,73 @@ function generateCommentAddedEmail(task, comment, commentAuthor, senderName) {
           <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">${commentAuthor?.name || 'Usuario'} comentó:</p>
           <p style="margin: 0; color: #374151;">"${comment?.text || comment}"</p>
           ${comment?.createdAt ? `<p style="margin: 10px 0 0 0; color: #6b7280; font-size: 12px;">${new Date(comment.createdAt).toLocaleDateString('es-ES')} ${new Date(comment.createdAt).toLocaleTimeString('es-ES')}</p>` : ''}
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function generateUserMentionedEmail(task, comment, commentAuthor, senderName) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">@ Te han mencionado</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        <div style="background-color: #ecfdf5; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #10b981;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">${commentAuthor?.name || 'Usuario'} te mencionó en un comentario:</p>
+          <p style="margin: 0; color: #374151;">"${comment?.text || comment}"</p>
+          ${comment?.createdAt ? `<p style="margin: 10px 0 0 0; color: #6b7280; font-size: 12px;">${new Date(comment.createdAt).toLocaleDateString('es-ES')} ${new Date(comment.createdAt).toLocaleTimeString('es-ES')}</p>` : ''}
+        </div>
+        
+        <div style="background-color: #fef3c7; padding: 10px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 0; color: #92400e; font-size: 14px;">
+            <strong>💡 Tip:</strong> Puedes responder directamente a este comentario desde el sistema de tareas.
+          </p>
+        </div>
+        
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+        
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Saludos,<br>
+          <strong>${senderName}</strong><br>
+          Sistema de Tareas CASIN
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+function generateReplyAddedEmail(task, parentComment, reply, replyAuthor, senderName) {
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+      <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; padding: 20px; border-radius: 10px 10px 0 0;">
+        <h2 style="margin: 0; font-size: 24px;">💬 Nueva Respuesta</h2>
+      </div>
+      
+      <div style="border: 1px solid #e5e7eb; border-top: none; padding: 20px; border-radius: 0 0 10px 10px;">
+        <h3 style="color: #374151; margin-top: 0;">${task.title}</h3>
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #6b7280;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">Comentario original de ${parentComment?.author || 'Usuario'}:</p>
+          <p style="margin: 0; color: #374151; font-style: italic;">"${parentComment?.text || 'Comentario'}"</p>
+        </div>
+        
+        <div style="background-color: #faf5ff; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #8b5cf6;">
+          <p style="margin: 0 0 10px 0; color: #374151; font-weight: bold;">${replyAuthor?.name || 'Usuario'} respondió:</p>
+          <p style="margin: 0; color: #374151;">"${reply?.text || reply}"</p>
+          ${reply?.createdAt ? `<p style="margin: 10px 0 0 0; color: #6b7280; font-size: 12px;">${new Date(reply.createdAt).toLocaleDateString('es-ES')} ${new Date(reply.createdAt).toLocaleTimeString('es-ES')}</p>` : ''}
         </div>
         
         <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">

@@ -90,6 +90,44 @@
   cursor: pointer;
 }
 
+.email-type-container {
+  position: relative;
+}
+
+.auto-detection-indicator {
+  margin-top: 8px;
+}
+
+.detection-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.table-type-info {
+  opacity: 0.9;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  }
+  100% {
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  }
+}
+
 .email-type-help {
   display: block;
   color: #64748b;

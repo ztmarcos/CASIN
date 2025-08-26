@@ -1629,6 +1629,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         isOpen={mailModal.isOpen}
         onClose={handleCloseMailModal}
         rowData={mailModal.rowData}
+        tableType={tableName}
       />
 
       {/* Drive Manager Modal */}
