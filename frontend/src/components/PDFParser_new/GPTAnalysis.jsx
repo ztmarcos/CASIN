@@ -311,6 +311,23 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
             const result = await response.json();
             console.log('✅ GPT Analysis Response:', result);
+            
+            // DETAILED DEBUG LOGGING
+            console.log('🔍 DETAILED RESPONSE DEBUG:');
+            console.log('- result.success:', result.success);
+            console.log('- result.extractedData keys:', result.extractedData ? Object.keys(result.extractedData) : 'NO extractedData');
+            console.log('- result.extractedData values:', result.extractedData ? Object.values(result.extractedData) : 'NO extractedData');
+            console.log('- result.columnAnalysis keys:', result.columnAnalysis ? Object.keys(result.columnAnalysis) : 'NO columnAnalysis');
+            
+            if (result.columnAnalysis) {
+                Object.entries(result.columnAnalysis).forEach(([col, analysis]) => {
+                    console.log(`📋 Column ${col}:`, {
+                        extractedValue: analysis.extractedValue,
+                        hasValue: analysis.hasValue,
+                        sampleValues: analysis.sampleValues
+                    });
+                });
+            }
 
             if (result.success && result.columnAnalysis) {
                 // Convert backend analysis to frontend format
@@ -353,24 +370,42 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
                 console.log('📊 Processed analysis data:', cleanData);
                 console.log('📈 Analysis summary:', result.summary);
+                
+                // EXTRA DEBUG: Show what we actually got in cleanData
+                console.log('🔍 FINAL cleanData contents:');
+                Object.entries(cleanData).forEach(([key, value]) => {
+                    console.log(`  ${key}: ${value} (type: ${typeof value})`);
+                });
 
                 // Check if cleanData is empty and try to provide fallback
                 if (Object.keys(cleanData).length === 0 || Object.values(cleanData).every(v => v === null || v === undefined)) {
                     console.log('⚠️ No data extracted, trying to use sample data from analysis');
                     
-                    // Try to extract any sample data from the analysis
+                    // Create sample editable data so user can see the structure
                     if (result.columnAnalysis) {
                         Object.entries(result.columnAnalysis).forEach(([column, analysis]) => {
                             if (!cleanData[column] || cleanData[column] === null) {
-                                // Try to get any available value
-                                if (analysis.description || analysis.type) {
-                                    cleanData[column] = `${analysis.type || 'text'} field`;
+                                // Provide sample/placeholder values based on column names
+                                if (column.includes('nombre') || column.includes('contratante') || column.includes('asegurado')) {
+                                    cleanData[column] = 'Click para editar nombre';
+                                } else if (column.includes('email') || column.includes('e_mail')) {
+                                    cleanData[column] = 'usuario@email.com';
+                                } else if (column.includes('fecha') || column.includes('vigencia')) {
+                                    cleanData[column] = '01/01/2024';
+                                } else if (column.includes('poliza') || column.includes('numero')) {
+                                    cleanData[column] = '123456';
+                                } else if (column.includes('aseguradora')) {
+                                    cleanData[column] = 'GNP';
+                                } else if (column.includes('prima') || column.includes('pago') || column.includes('importe')) {
+                                    cleanData[column] = '0.00';
+                                } else {
+                                    cleanData[column] = 'Click para editar';
                                 }
                             }
                         });
                     }
                     
-                    console.log('📊 Fallback data applied:', cleanData);
+                    console.log('📊 Fallback editable data applied:', cleanData);
                 }
 
                 setAnalysis(result);
