@@ -1261,7 +1261,7 @@
 }
 
 .files-grid:empty::after {
-  content: "📄 Los archivos aparecerán aquí una vez que se extraiga el texto";
+  content: "📂 No hay archivos en esta carpeta";
   display: block;
   text-align: center;
   color: var(--text-secondary);

@@ -325,6 +325,11 @@ const Firedrive = () => {
       addDebugInfo(`📄 Archivos visibles: ${visibleFiles.length} (sin archivos .keep)`);
       addDebugInfo(`📋 VISIBLE FILES LIST:`, visibleFiles.map(f => `${f.name} (${f.size} bytes)`));
       addDebugInfo(`🔍 RAW VISIBLE FILES STRUCTURE:`, visibleFiles);
+      if (visibleFiles.length > 0) {
+        addDebugInfo(`🔍 FIRST FILE PROPERTIES:`, Object.keys(visibleFiles[0]));
+        addDebugInfo(`🔍 FIRST FILE NAME:`, visibleFiles[0].name);
+        addDebugInfo(`🔍 FIRST FILE SIZE:`, visibleFiles[0].size);
+      }
       
       if (directCount !== files.length) {
         addDebugInfo(`⚠️ MISMATCH DETECTED! Direct Firebase vs Service count differs`);
@@ -1239,9 +1244,18 @@ const Firedrive = () => {
               </h3>
               <div className="files-grid">
                 {(() => {
-                  const filteredFiles = currentFiles.filter(file => 
-                    !searchTerm || file.name.toLowerCase().includes(searchTerm.toLowerCase())
-                  );
+                  const filteredFiles = currentFiles.filter(file => {
+                    // Ensure file has a name property
+                    if (!file || !file.name) {
+                      console.warn('⚠️ File without name property:', file);
+                      return false;
+                    }
+                    return !searchTerm || file.name.toLowerCase().includes(searchTerm.toLowerCase());
+                  });
+                  console.log('🔍 SEARCH TERM:', searchTerm);
+                  console.log('📊 CURRENT FILES COUNT:', currentFiles.length);
+                  console.log('📊 CURRENT FILES NAMES:', currentFiles.map(f => f.name));
+                  console.log('🎯 FILTERED FILES COUNT:', filteredFiles.length);
                   console.log('🎯 RENDERING FILES:', filteredFiles.map(f => f.name));
                   return filteredFiles.map((file) => (
                     <div
