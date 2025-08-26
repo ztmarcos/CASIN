@@ -317,12 +317,14 @@ const Firedrive = () => {
       
       addDebugInfo(`📄 Cargados ${files.length} archivos para "${currentFolderPath}"`);
       addDebugInfo(`🔍 COMPARISON: Direct count ${directCount} vs Service count ${files.length}`);
+      addDebugInfo(`🔍 RAW FILES BEFORE FILTER:`, files);
       
       // Filter out .keep files for cleaner display
       const visibleFiles = files.filter(file => file.name !== '.keep');
       
       addDebugInfo(`📄 Archivos visibles: ${visibleFiles.length} (sin archivos .keep)`);
       addDebugInfo(`📋 VISIBLE FILES LIST:`, visibleFiles.map(f => `${f.name} (${f.size} bytes)`));
+      addDebugInfo(`🔍 RAW VISIBLE FILES STRUCTURE:`, visibleFiles);
       
       if (directCount !== files.length) {
         addDebugInfo(`⚠️ MISMATCH DETECTED! Direct Firebase vs Service count differs`);
