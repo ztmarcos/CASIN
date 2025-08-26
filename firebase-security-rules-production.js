@@ -37,7 +37,8 @@ service cloud.firestore {
                'marcos@casin.com',
                '2012solitario@gmail.com',
                'marcoszavala09@gmail.com',
-               'lorenacasin5@gmail.com'
+               'lorenacasin5@gmail.com',
+               'michelldiaz.casinseguros@gmail.com'
              ];
     }
     
