@@ -392,8 +392,12 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     console.log(`  ${key}: ${value} (type: ${typeof value})`);
                 });
 
-                // Check if cleanData is empty and try to provide fallback
-                if (Object.keys(cleanData).length === 0 || Object.values(cleanData).every(v => v === null || v === undefined)) {
+                // Check if cleanData has mostly null values and provide fallback
+                const nullCount = Object.values(cleanData).filter(v => v === null || v === undefined).length;
+                const totalCount = Object.keys(cleanData).length;
+                const hasLowExtractionRate = (nullCount / totalCount) > 0.8; // More than 80% null
+                
+                if (Object.keys(cleanData).length === 0 || hasLowExtractionRate) {
                     console.log('⚠️ No data extracted, trying to use sample data from analysis');
                     
                     // Create sample editable data so user can see the structure
