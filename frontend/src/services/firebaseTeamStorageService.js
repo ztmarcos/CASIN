@@ -44,6 +44,75 @@ class FirebaseTeamStorageService {
     console.log(`🧹 All cache cleared: ${count} entries removed`);
   }
 
+  // Clean up orphaned or problematic folders
+  async cleanupOrphanedFolders(teamId = this.currentTeamId) {
+    try {
+      if (!teamId) {
+        throw new Error('No team ID provided');
+      }
+
+      console.log(`🧹 Starting cleanup for team ${teamId}...`);
+      
+      // Get all files and folders in the team storage
+      const allFiles = await this.listAllTeamFilesRecursive('', teamId);
+      
+      // Group by folder path
+      const folderGroups = {};
+      allFiles.forEach(file => {
+        const folderPath = file.relativePath.split('/')[0]; // Get top-level folder
+        if (!folderGroups[folderPath]) {
+          folderGroups[folderPath] = [];
+        }
+        folderGroups[folderPath].push(file);
+      });
+      
+      console.log(`📋 Found ${Object.keys(folderGroups).length} top-level folders`);
+      
+      const cleanupResults = [];
+      
+      // Check each folder for cleanup opportunities
+      for (const [folderName, files] of Object.entries(folderGroups)) {
+        console.log(`🔍 Checking folder: ${folderName} (${files.length} items)`);
+        
+        // Check if folder only contains .keep files or is empty
+        const nonKeepFiles = files.filter(file => !file.name.includes('.keep'));
+        const keepFiles = files.filter(file => file.name.includes('.keep'));
+        
+        if (nonKeepFiles.length === 0 && keepFiles.length > 0) {
+          console.log(`🗑️ Folder "${folderName}" only contains .keep files - marking for cleanup`);
+          cleanupResults.push({
+            folderName,
+            action: 'delete',
+            reason: 'only_keep_files',
+            fileCount: files.length
+          });
+        } else if (files.length === 0) {
+          console.log(`🗑️ Folder "${folderName}" is empty - marking for cleanup`);
+          cleanupResults.push({
+            folderName,
+            action: 'delete',
+            reason: 'empty',
+            fileCount: 0
+          });
+        } else {
+          console.log(`✅ Folder "${folderName}" has content - keeping`);
+        }
+      }
+      
+      return {
+        success: true,
+        teamId,
+        totalFolders: Object.keys(folderGroups).length,
+        cleanupCandidates: cleanupResults,
+        summary: `${cleanupResults.length} folders marked for cleanup`
+      };
+      
+    } catch (error) {
+      console.error(`❌ Error during cleanup:`, error);
+      throw error;
+    }
+  }
+
   // Set the current team context
   setCurrentTeam(teamId) {
     this.currentTeamId = teamId;
@@ -318,6 +387,62 @@ class FirebaseTeamStorageService {
 
     } catch (error) {
       console.error(`❌ Error deleting file ${filePath}:`, error);
+      throw error;
+    }
+  }
+
+  // Delete folder recursively from team storage
+  async deleteFolderFromTeam(folderPath, teamId = this.currentTeamId) {
+    try {
+      if (!teamId) {
+        throw new Error('No team ID provided');
+      }
+
+      console.log(`🗑️ Recursively deleting folder from team ${teamId}: ${folderPath}`);
+      
+      // First, get all files and subfolders in this folder
+      const allFiles = await this.listAllTeamFilesRecursive(folderPath, teamId);
+      
+      console.log(`📋 Found ${allFiles.length} items to delete in folder: ${folderPath}`);
+      
+      // Delete all files and subfolders
+      const deletePromises = allFiles.map(async (file) => {
+        try {
+          const fullPath = file.fullPath;
+          console.log(`🗑️ Deleting: ${fullPath}`);
+          
+          const storageRef = ref(storage, fullPath);
+          await deleteObject(storageRef);
+          
+          return { success: true, path: fullPath };
+        } catch (error) {
+          console.error(`❌ Error deleting ${file.fullPath}:`, error);
+          return { success: false, path: file.fullPath, error: error.message };
+        }
+      });
+      
+      const results = await Promise.allSettled(deletePromises);
+      
+      // Count successful and failed deletions
+      const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+      const failed = results.filter(r => r.status === 'rejected' || !r.value.success).length;
+      
+      console.log(`✅ Folder deletion completed: ${successful} successful, ${failed} failed`);
+      
+      // Clear cache for this team to ensure fresh data
+      this.cacheClearTeam(teamId);
+      
+      return { 
+        success: true, 
+        deletedFolder: folderPath, 
+        teamId,
+        deletedCount: successful,
+        failedCount: failed,
+        totalItems: allFiles.length
+      };
+
+    } catch (error) {
+      console.error(`❌ Error deleting folder ${folderPath}:`, error);
       throw error;
     }
   }

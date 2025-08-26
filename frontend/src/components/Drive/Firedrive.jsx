@@ -614,23 +614,95 @@ const Firedrive = () => {
   };
 
   const handleFolderDelete = async (folder) => {
-    // Delete folder by removing its .keep file and any contents
+    // Delete folder recursively with all its contents
     try {
-      const keepFilePath = `${folder.relativePath}/.keep`;
-      await firebaseTeamStorageService.deleteFileFromTeam(keepFilePath, userTeam.id);
+      addDebugInfo(`🗑️ Eliminando carpeta "${folder.name}" recursivamente...`);
       
-      // Note: In a production environment, you'd want to recursively delete all contents
-      // For now, this will work for empty folders (which only have .keep files)
-    } catch (error) {
-      // If .keep file doesn't exist, that's okay for empty folders
-      if (!error.message.includes('not found')) {
-        throw error;
+      // Use the new recursive deletion function
+      const result = await firebaseTeamStorageService.deleteFolderFromTeam(folder.relativePath, userTeam.id);
+      
+      addDebugInfo(`✅ Carpeta eliminada: ${result.deletedCount} archivos eliminados, ${result.failedCount} fallidos`);
+      
+      if (result.failedCount > 0) {
+        addDebugInfo(`⚠️ Algunos archivos no se pudieron eliminar (${result.failedCount})`);
       }
+      
+    } catch (error) {
+      addDebugInfo(`❌ Error eliminando carpeta: ${error.message}`);
+      throw error;
     }
   };
 
   const handleFileDelete = async (file) => {
     await firebaseTeamStorageService.deleteFileFromTeam(file.relativePath, userTeam.id);
+  };
+
+  const handleCleanupOrphanedFolders = async () => {
+    if (!userTeam) {
+      alert('No hay equipo asignado');
+      return;
+    }
+
+    const confirmed = confirm(
+      '¿Estás seguro de que quieres limpiar carpetas huérfanas?\n\n' +
+      'Esto eliminará carpetas que solo contienen archivos .keep o están vacías.\n' +
+      'Esta acción no se puede deshacer.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      addDebugInfo('🧹 Iniciando limpieza de carpetas huérfanas...');
+      
+      const cleanupResult = await firebaseTeamStorageService.cleanupOrphanedFolders(userTeam.id);
+      
+      addDebugInfo(`📋 Limpieza completada: ${cleanupResult.summary}`);
+      
+      if (cleanupResult.cleanupCandidates.length > 0) {
+        const candidateNames = cleanupResult.cleanupCandidates.map(c => c.folderName).join(', ');
+        addDebugInfo(`🗑️ Carpetas para eliminar: ${candidateNames}`);
+        
+        // Ask user if they want to proceed with deletion
+        const deleteConfirmed = confirm(
+          `Se encontraron ${cleanupResult.cleanupCandidates.length} carpetas para limpiar:\n\n` +
+          `${candidateNames}\n\n` +
+          '¿Quieres proceder con la eliminación?'
+        );
+        
+        if (deleteConfirmed) {
+          addDebugInfo('🗑️ Procediendo con eliminación de carpetas...');
+          
+          for (const candidate of cleanupResult.cleanupCandidates) {
+            try {
+              addDebugInfo(`🗑️ Eliminando carpeta: ${candidate.folderName}`);
+              await firebaseTeamStorageService.deleteFolderFromTeam(candidate.folderName, userTeam.id);
+              addDebugInfo(`✅ Carpeta eliminada: ${candidate.folderName}`);
+            } catch (error) {
+              addDebugInfo(`❌ Error eliminando ${candidate.folderName}: ${error.message}`);
+            }
+          }
+          
+          addDebugInfo('🔄 Refrescando vista después de limpieza...');
+          
+          // Refresh the view
+          setFolders([]);
+          setCurrentFiles([]);
+          await Promise.all([
+            loadFolderStructure(),
+            loadCurrentFolderFiles()
+          ]);
+          
+          addDebugInfo('✅ Limpieza completada y vista refrescada');
+        }
+      } else {
+        addDebugInfo('✅ No se encontraron carpetas para limpiar');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error during cleanup:', error);
+      addDebugInfo(`❌ Error en limpieza: ${error.message}`);
+      alert(`Error durante la limpieza: ${error.message}`);
+    }
   };
 
   const cancelRename = () => {
@@ -991,6 +1063,24 @@ const Firedrive = () => {
             disabled={uploading}
             style={{ display: 'none' }}
           />
+          
+          <button
+            className="cleanup-button"
+            onClick={handleCleanupOrphanedFolders}
+            title="Limpiar carpetas huérfanas"
+            style={{
+              background: '#dc3545',
+              color: 'white',
+              border: 'none',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              marginLeft: '10px'
+            }}
+          >
+            🧹 Limpiar
+          </button>
         </div>
       </div>
 
