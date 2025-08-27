@@ -203,26 +203,35 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           ? 'http://localhost:3001/api' 
           : '/api';
         
-        const response = await fetch(`${API_URL}/data/tables/${selectedTable.name}/structure`);
-        console.log('Received structure response status:', response.status);
+        const structureUrl = `${API_URL}/data/tables/${selectedTable.name}/structure`;
+        console.log('🔧 ColumnManager: Fetching structure from:', structureUrl);
+        
+        const response = await fetch(structureUrl);
+        console.log('🔧 ColumnManager: Received structure response status:', response.status);
         
         if (response.ok) {
           const structure = await response.json();
-          console.log('Received complete table structure from API:', structure);
+          console.log('🔧 ColumnManager: Received complete table structure from API:', structure);
           
-          if (structure.columns) {
+          if (structure.columns && Array.isArray(structure.columns)) {
             const newColumns = structure.columns.map(col => ({
               name: col.name,
-              type: col.type || 'TEXT'
+              type: col.type || 'TEXT',
+              isCustom: col.isCustom || false
             }));
-            console.log('🔧 ColumnManager: Raw columns from API:', newColumns.map(c => c.name));
+            console.log('🔧 ColumnManager: Raw columns from API:', newColumns.map(c => `${c.name}${c.isCustom ? ' (custom)' : ''}`));
             console.log('🔧 ColumnManager: Setting columns from API structure (unified):', newColumns);
             setColumns(newColumns);
+            setError(null); // Clear any previous errors
             return;
+          } else {
+            console.warn('🔧 ColumnManager: Invalid structure.columns:', structure.columns);
           }
+        } else {
+          console.warn('🔧 ColumnManager: API response not ok:', response.status, response.statusText);
         }
       } catch (apiError) {
-        console.warn('Could not get structure from API:', apiError);
+        console.error('🔧 ColumnManager: Could not get structure from API:', apiError);
       }
       
       // FALLBACK: Try tableService approach
@@ -531,7 +540,7 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
 
   // Filtrar columnas especiales (igual que DataTable)
   const filteredColumns = useMemo(() => {
-    return columns.filter(colObj => {
+    const result = columns.filter(colObj => {
       const columnName = colObj.name.toLowerCase();
       // Lista completa de columnas a filtrar
       const excludeColumns = [
@@ -546,6 +555,28 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
       
       return !excludeColumns.includes(columnName);
     });
+    
+    console.log('🔧 ColumnManager: Filtrado de columnas:', {
+      total: columns.length,
+      filtered: result.length,
+      allColumns: columns.map(c => c.name),
+      filteredColumns: result.map(c => c.name),
+      excludedColumns: columns.filter(c => {
+        const columnName = c.name.toLowerCase();
+        const excludeColumns = [
+          'pdf',
+          'firebase_doc_id', 
+          'estado_pago',
+          'created_at',
+          'updated_at',
+          'createdat',
+          'updatedat'
+        ];
+        return excludeColumns.includes(columnName);
+      }).map(c => c.name)
+    });
+    
+    return result;
   }, [columns]);
 
   // Log para debugging
@@ -563,6 +594,9 @@ const ColumnManager = ({ selectedTable, onOrderChange }) => {
           Columnas {columns.length > 0 && `(${columns.length})`}
         </h3>
         <div className="header-buttons">
+          <button className="refresh-btn" onClick={refreshData} title="Refrescar columnas">
+            🔄
+          </button>
           <button className="create-btn" onClick={() => setShowCreateForm(!showCreateForm)}>
             {showCreateForm ? '—' : '+'}
           </button>
