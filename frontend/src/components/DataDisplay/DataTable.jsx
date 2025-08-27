@@ -69,18 +69,31 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Forzar numero_poliza y contratante al inicio, id al final
+    // Ordenamiento personalizado: numero_poliza, contratante, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasContratante = filteredColumns.includes('contratante');
+    const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
+    const hasPrimerPago = filteredColumns.includes('primer_pago');
+    const hasPagoParcial = filteredColumns.includes('pago_parcial');
     const hasId = filteredColumns.includes('id');
 
     // Quitar los que vamos a reordenar
-    filteredColumns = filteredColumns.filter(col => col !== 'numero_poliza' && col !== 'contratante' && col !== 'id');
+    filteredColumns = filteredColumns.filter(col => 
+      col !== 'numero_poliza' && 
+      col !== 'contratante' && 
+      col !== 'pago_total_o_prima_total' &&
+      col !== 'primer_pago' && 
+      col !== 'pago_parcial' &&
+      col !== 'id'
+    );
 
-    // Orden final: numero_poliza, contratante, ...resto..., id
+    // Orden final: numero_poliza, contratante, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
     const finalOrder = [
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasContratante ? ['contratante'] : []),
+      ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
+      ...(hasPrimerPago ? ['primer_pago'] : []),
+      ...(hasPagoParcial ? ['pago_parcial'] : []),
       ...filteredColumns,
       ...(hasId ? ['id'] : [])
     ];

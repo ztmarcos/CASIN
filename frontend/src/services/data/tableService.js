@@ -226,6 +226,11 @@ class TableService {
               const columnName = key.toLowerCase();
               if (columnName.includes('rfc')) {
                 value = this.normalizeText(value, 'rfc');
+              } else if (columnName.includes('primer_pago') || columnName.includes('pago_parcial') ||
+                        columnName.includes('importe') || columnName.includes('monto') ||
+                        columnName.includes('prima')) {
+                // Handle monetary values
+                value = this.normalizeMonetaryValue(value);
               } else if (columnName.includes('nombre') || columnName.includes('contratante') || 
                         columnName.includes('propietario') || columnName.includes('agente') ||
                         columnName.includes('responsable') || columnName.includes('beneficiario')) {
@@ -1037,6 +1042,36 @@ class TableService {
       console.error('Error getting child tables:', error);
       return [];
     }
+  }
+
+  // Function to normalize monetary values
+  normalizeMonetaryValue(value) {
+    if (!value || value === null || value === undefined) return null;
+    
+    // Convert to string for processing
+    let strValue = String(value).trim();
+    
+    // Remove currency symbols and common formatting
+    strValue = strValue
+      .replace(/[$,\s]/g, '') // Remove dollar signs, commas, and spaces
+      .replace(/MXN|USD|EUR|€|\$/gi, '') // Remove currency codes
+      .replace(/[^\d.-]/g, '') // Keep only digits, decimal points, and minus signs
+      .trim();
+    
+    // If empty after cleaning, return null
+    if (!strValue || strValue === '') return null;
+    
+    // Convert to number
+    const numValue = parseFloat(strValue);
+    
+    // Validate the number
+    if (isNaN(numValue)) {
+      console.warn(`⚠️ Invalid monetary value: "${value}" -> "${strValue}"`);
+      return null;
+    }
+    
+    // Round to 2 decimal places for monetary values
+    return Math.round(numValue * 100) / 100;
   }
 
   // Comprehensive text normalization function for database operations
