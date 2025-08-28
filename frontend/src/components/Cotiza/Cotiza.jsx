@@ -170,7 +170,19 @@ const Cotiza = () => {
         },
         body: JSON.stringify({
           image: base64,
-          prompt: 'Extrae todo el texto visible en esta imagen. Si es un documento de seguros, identifica información relevante como coberturas, primas, deducibles, etc.'
+          prompt: `Analiza esta imagen de documento de seguros y extrae toda la información visible con alta precisión.
+
+INSTRUCCIONES ESPECÍFICAS:
+- Identifica TODAS las aseguradoras mencionadas (ANA, HDI, QUALITAS, GNP, etc.)
+- Extrae valores monetarios con formato exacto (incluyendo comas y decimales)
+- Identifica coberturas como: SUMA ASEGURADA, DAÑOS MATERIALES, ROBO TOTAL, RESPONSABILIDAD CIVIL, GASTOS MÉDICOS, COSTO ANUAL
+- Mantén la estructura tabular si existe
+- Nota valores especiales como "Amparada", "No aplica", "Incluido"
+- Extrae información del vehículo: marca, modelo, año, código postal
+- Preserva números de póliza, fechas y detalles técnicos
+
+FORMATO DE SALIDA:
+Proporciona el texto extraído de manera estructurada, manteniendo la organización visual original del documento.`
         })
       });
 
@@ -221,70 +233,103 @@ const Cotiza = () => {
       const fileNames = extractedTexts.map(et => et.fileName).join(', ');
       const fileCount = extractedTexts.length;
 
-      const dynamicPrompt = `Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
+      const dynamicPrompt = `Eres un experto analista de seguros. Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
+
+ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN:
+${fileNames.includes('Cotizacion_Tabla') ? `
+🔍 DETECCIÓN ESPECIAL: Documento contiene "Cotizacion_Tabla" - Este es un PDF generado con estructura tabular.
+INSTRUCCIONES ESPECÍFICAS PARA PDFs TABULARES:
+- Busca patrones como "COBERTURAS", "ANA", "HDI", "QUALITAS", "GNP" en el texto
+- Los valores monetarios pueden aparecer como números separados por espacios
+- Las aseguradoras suelen estar en columnas consecutivas
+- Identifica filas de "SUMA ASEGURADA", "DAÑOS MATERIALES", "ROBO TOTAL", "RESPONSABILIDAD CIVIL", "GASTOS MÉDICOS", "COSTO ANUAL"
+- Los valores pueden estar sin formato (ej: "446,400.00", "483,000.00", "503,000.00")
+` : ''}
+
+IDENTIFICACIÓN DE ASEGURADORAS:
+- Busca nombres como: ANA, HDI, QUALITAS, GNP, ZURICH, MAPFRE, AXA, SEGUROS MONTERREY, QUÁLITAS
+- Si ves abreviaciones como "ANA" = "ANA Seguros"
+- Si ves "HDI" = "HDI Seguros" 
+- Si ves "QUALITAS" = "Quálitas Seguros"
+- Si ves "GNP" = "GNP Seguros"
+
+EXTRACCIÓN DE VALORES:
+- Para SUMA ASEGURADA: busca números grandes (400,000+)
+- Para COSTO ANUAL: busca el número más grande por aseguradora (usualmente el precio total)
+- Para DAÑOS MATERIALES/ROBO TOTAL: busca números menores (2,000-50,000)
+- Para RESPONSABILIDAD CIVIL: puede decir "Amparada" o tener un valor numérico
+- Para GASTOS MÉDICOS: busca números como 200,000 o "No aplica"
 
 CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
 
-IMPORTANTE: 
-- Extrae las aseguradoras REALES de los documentos subidos (${fileNames})
-- Identifica automáticamente todas las aseguradoras mencionadas en los documentos
-- NO uses aseguradoras hardcodeadas
-- Crea las columnas dinámicamente basándote SOLO en las aseguradoras encontradas
-- Si encuentras múltiples opciones de la misma aseguradora, créa columnas separadas
-
-FORMATO DE RESPUESTA (adaptado a las aseguradoras encontradas):
+FORMATO DE RESPUESTA EXACTO:
 {
   "vehiculo": {
-    "marca": "[EXTRAER DE DOCUMENTOS]",
-    "modelo": "[EXTRAER DE DOCUMENTOS]", 
-    "anio": "[EXTRAER DE DOCUMENTOS]",
-    "cp": "[EXTRAER DE DOCUMENTOS]"
+    "marca": "[EXTRAER: Busca Hyundai, Toyota, Nissan, etc.]",
+    "modelo": "[EXTRAER: Busca Tucson, Corolla, Sentra, etc.]", 
+    "anio": "[EXTRAER: Busca año como 2023, 2024, etc.]",
+    "cp": "[EXTRAER: Busca código postal como 68026, etc.]"
   },
   "tabla_comparativa": {
     "coberturas": [
       {
         "cobertura": "SUMA ASEGURADA",
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
       },
       {
         "cobertura": "DAÑOS MATERIALES", 
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
       },
       {
         "cobertura": "ROBO TOTAL",
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
       },
       {
         "cobertura": "RESPONSABILIDAD CIVIL",
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
       },
       {
         "cobertura": "GASTOS MÉDICOS OCUPANTES",
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
+        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
       },
       {
         "cobertura": "COSTO ANUAL",
-        "[ASEGURADORA_1]": "[VALOR_REAL]",
-        "[ASEGURADORA_2]": "[VALOR_REAL]"
+        "[ASEGURADORA_1_REAL]": "[PRECIO_TOTAL_REAL]",
+        "[ASEGURADORA_2_REAL]": "[PRECIO_TOTAL_REAL]",
+        "[ASEGURADORA_3_REAL]": "[PRECIO_TOTAL_REAL]",
+        "[ASEGURADORA_4_REAL]": "[PRECIO_TOTAL_REAL]"
       }
     ]
   },
   "recomendaciones": [
     {
-      "aseguradora": "[NOMBRE_REAL]",
-      "razon": "[ANÁLISIS_REAL]",
-      "precio": "[PRECIO_REAL]"
+      "aseguradora": "[NOMBRE_ASEGURADORA_REAL_CON_MEJOR_PRECIO]",
+      "razon": "[ANÁLISIS_DEL_POR_QUÉ_ES_LA_MEJOR_OPCIÓN]",
+      "precio": "[PRECIO_MÁS_COMPETITIVO]"
     }
   ]
 }
 
-Archivos subidos: ${fileCount} documentos
-Nombres: ${fileNames}`;
+DOCUMENTOS A ANALIZAR:
+Cantidad: ${fileCount} archivos
+Nombres: ${fileNames}
+
+INSTRUCCIÓN FINAL: Extrae ÚNICAMENTE información REAL encontrada en los documentos. NO inventes datos. Si no encuentras un valor, usa "No disponible" en lugar de inventar números.`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);

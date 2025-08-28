@@ -77,8 +77,37 @@ class TaskEmailService {
       };
 
       await this.sendTaskNotification(emailData);
+      
+      // Si el comentario es de un admin (z.t.marcos), enviar notificación especial a casinseguros
+      if (commentAuthor?.email === 'z.t.marcos@gmail.com') {
+        await this.notifyAdminCommentToCasin(taskData, comment, commentAuthor);
+      }
     } catch (error) {
       console.error('Error enviando notificación de comentario:', error);
+    }
+  }
+
+  /**
+   * Envía notificación especial cuando un admin (z.t.marcos) agrega un comentario
+   * Esta notificación va directamente a casinseguros@gmail.com
+   */
+  async notifyAdminCommentToCasin(taskData, comment, commentAuthor) {
+    try {
+      console.log('📧 Enviando notificación de comentario de admin a CASIN:', taskData.title);
+      
+      const emailData = {
+        type: 'admin_comment',
+        task: taskData,
+        comment: comment,
+        participants: ['casinseguros@gmail.com'], // Solo a casinseguros
+        commentAuthor: commentAuthor,
+        sender: this.defaultSender
+      };
+
+      await this.sendTaskNotification(emailData);
+      console.log('✅ Notificación de comentario de admin enviada a CASIN');
+    } catch (error) {
+      console.error('Error enviando notificación de comentario de admin:', error);
     }
   }
 
