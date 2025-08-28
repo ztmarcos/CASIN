@@ -14,9 +14,12 @@ const Cotiza = () => {
     telefono: '',
     empresa: ''
   });
+  const [selectedSender, setSelectedSender] = useState('casin');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingTable, setIsGeneratingTable] = useState(false);
   const [isGeneratingMail, setIsGeneratingMail] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const supportedTypes = {
     'application/pdf': 'PDF',
@@ -138,28 +141,14 @@ const Cotiza = () => {
   };
 
   const extractTextFromPDF = async (file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      console.log('📄 Enviando PDF para parsing:', file.name);
+      console.log('📄 Parseando PDF con PDF.js:', file.name);
       
-      const response = await fetch('/api/parse-pdf', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to parse PDF`);
-      }
-
-      const result = await response.json();
+      // Importar pdfService dinámicamente para evitar SSR issues
+      const pdfService = (await import('../../services/pdfService.js')).default;
+      
+      const result = await pdfService.parsePDF(file);
       console.log('✅ PDF parseado:', file.name, 'Páginas:', result.pages, 'Caracteres:', result.text?.length);
-      
-      if (result.warning) {
-        console.warn('⚠️ Warning:', result.warning);
-        toast.warn(`PDF ${file.name}: ${result.warning}`);
-      }
       
       return result.text || `Error: No se pudo extraer texto del PDF ${file.name}`;
     } catch (error) {
@@ -429,6 +418,38 @@ Nombres: ${fileNames}`;
 
     setIsGeneratingMail(true);
     setShowMailForm(false);
+    setLoadingProgress(0);
+    setLoadingMessage('Iniciando generación de correo...');
+
+    // Scroll inmediato a la animación de carga
+    setTimeout(() => {
+      const loadingElement = document.querySelector('.mail-generation-loading');
+      if (loadingElement) {
+        loadingElement.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }, 100);
+
+    // Simular progreso con mensajes informativos
+    const progressSteps = [
+      { progress: 20, message: 'Analizando datos del cliente...' },
+      { progress: 40, message: 'Procesando cotizaciones...' },
+      { progress: 60, message: 'Generando contenido con IA...' },
+      { progress: 80, message: 'Formateando correo profesional...' },
+      { progress: 95, message: 'Finalizando detalles...' }
+    ];
+
+    let currentStep = 0;
+    const progressInterval = setInterval(() => {
+      if (currentStep < progressSteps.length) {
+        setLoadingProgress(progressSteps[currentStep].progress);
+        setLoadingMessage(progressSteps[currentStep].message);
+        currentStep++;
+      }
+    }, 800);
 
     try {
       // Preparar datos estructurados de la cotización
@@ -544,11 +565,54 @@ Genera un correo completo y profesional listo para enviar.
       toast.success('📧 Correo profesional generado exitosamente');
 
     } catch (error) {
+      clearInterval(progressInterval);
       console.error('Error generating mail:', error);
       toast.error('❌ Error al generar correo');
     } finally {
-      setIsGeneratingMail(false);
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      setLoadingMessage('¡Correo generado!');
+      setTimeout(() => {
+        setIsGeneratingMail(false);
+        setLoadingProgress(0);
+        setLoadingMessage('');
+        
+        // Scroll al correo generado después de ocultar la animación
+        setTimeout(() => {
+          const mailElement = document.querySelector('.mail-section');
+          if (mailElement) {
+            mailElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 300);
+      }, 500);
     }
+  };
+
+  // Función para obtener configuración del remitente
+  const getSenderConfig = (sender) => {
+    const senderConfigs = {
+      casin: {
+        email: import.meta.env.VITE_SMTP_USER_CASIN || 'casinseguros@gmail.com',
+        name: 'CASIN Seguros',
+        password: import.meta.env.VITE_SMTP_PASS_CASIN
+      },
+      lore: {
+        email: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
+        name: 'Lore Seguros',
+        password: import.meta.env.VITE_SMTP_PASS_LORE
+      },
+      mich: {
+        email: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
+        name: 'Mich Seguros',
+        password: import.meta.env.VITE_SMTP_PASS_MICH
+      }
+    };
+    
+    return senderConfigs[sender] || senderConfigs.casin;
   };
 
   const sendDirectEmail = async () => {
@@ -561,7 +625,10 @@ Genera un correo completo y profesional listo para enviar.
     
     try {
       console.log('📧 Enviando correo directo a:', clientData.email);
+      console.log('📧 Usando remitente:', selectedSender);
       
+      // Configurar remitente según la selección
+      const senderConfig = getSenderConfig(selectedSender);
       const subject = `Propuesta de Seguros - ${clientData.nombre}`;
       
       const response = await fetch('/api/email/send-welcome', {
@@ -574,7 +641,10 @@ Genera un correo completo y profesional listo para enviar.
           subject: subject,
           htmlContent: generatedMail,
           clientData: clientData,
-          cotizaciones: cotizaciones
+          cotizaciones: cotizaciones,
+          from: senderConfig.email,
+          fromName: senderConfig.name,
+          fromPass: senderConfig.password
         }),
       });
 
@@ -1346,7 +1416,7 @@ Genera un correo completo y profesional listo para enviar.
               <h3>Archivos listos para análisis ({extractedTexts.length})</h3>
               <div className="files-actions">
                 <button 
-                  className="btn-primary btn-large"
+                  className="btn-primary"
                   onClick={generateCotizaciones}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1427,7 +1497,7 @@ Genera un correo completo y profesional listo para enviar.
                   <div className="mail-button-section">
                     <div className="mail-button-container">
                       <button 
-                        className="btn-secondary btn-large"
+                        className="btn-secondary"
                         onClick={() => setShowMailForm(true)}
                         disabled={isGeneratingMail}
                       >
@@ -1445,6 +1515,7 @@ Genera un correo completo y profesional listo para enviar.
                           setCotizaciones(null);
                           setGeneratedMail('');
                           setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
+                          setSelectedSender('casin');
                           toast.info('🔄 Sistema reiniciado completamente');
                         }}
                       >
@@ -1467,7 +1538,7 @@ Genera un correo completo y profesional listo para enviar.
                     gap: '15px' 
                   }}>
                     <button 
-                      className="btn-secondary btn-large"
+                      className="btn-secondary"
                       onClick={() => setShowMailForm(true)}
                       disabled={isGeneratingMail}
                       style={{
@@ -1490,6 +1561,7 @@ Genera un correo completo y profesional listo para enviar.
                         setCotizaciones(null);
                         setGeneratedMail('');
                         setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
+                        setSelectedSender('casin');
                         toast.info('🔄 Sistema reiniciado completamente');
                       }}
                       style={{
@@ -1656,6 +1728,8 @@ Genera un correo completo y profesional listo para enviar.
                             setExtractedTexts([]);
                             setCotizaciones(null);
                             setGeneratedMail('');
+                            setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
+                            setSelectedSender('casin');
                             toast.info('🔄 Sistema reiniciado completamente');
                           }}
                         >
@@ -1754,6 +1828,23 @@ Genera un correo completo y profesional listo para enviar.
                       placeholder="Ej: Empresa ABC S.A. de C.V."
                     />
                   </div>
+
+                  <div className="form-group form-group-full">
+                    <label htmlFor="sender">Remitente del correo *</label>
+                    <select
+                      id="sender"
+                      value={selectedSender}
+                      onChange={(e) => setSelectedSender(e.target.value)}
+                      className="sender-select"
+                    >
+                      <option value="casin">📧 CASIN Seguros (casinseguros@gmail.com)</option>
+                      <option value="lore">📧 Lore Seguros (lorenacasin5@gmail.com)</option>
+                      <option value="mich">📧 Mich Seguros (michelldiaz.casinseguros@gmail.com)</option>
+                    </select>
+                    <small className="sender-help">
+                      Selecciona desde qué cuenta se enviará el correo al cliente
+                    </small>
+                  </div>
                 </div>
                 
                 <div className="form-actions">
@@ -1773,7 +1864,7 @@ Genera un correo completo y profesional listo para enviar.
                     {isGeneratingMail ? (
                       <>
                         <span className="button-spinner"></span>
-                        Generando propuesta...
+                        📧 Generando correo...
                       </>
                     ) : (
                       <>
@@ -1781,12 +1872,32 @@ Genera un correo completo y profesional listo para enviar.
                           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                           <polyline points="22,6 12,13 2,6"/>
                         </svg>
-                        Generar propuesta
+                        📧 Generar propuesta de correo
                       </>
                     )}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {isGeneratingMail && (
+          <div className="mail-generation-loading">
+            <div className="loading-content">
+              <div className="loading-spinner"></div>
+              <h3>✨ Generando correo</h3>
+              <div className="progress-container">
+                <div className="progress-bar">
+                  <div 
+                    className="progress-fill" 
+                    style={{ width: `${loadingProgress}%` }}
+                  ></div>
+                </div>
+                <span className="progress-text">{loadingProgress}%</span>
+              </div>
+              <p>{loadingMessage}<span className="loading-dots"></span></p>
+              <small>Nuestro asistente de IA está trabajando en su propuesta</small>
             </div>
           </div>
         )}
@@ -1803,54 +1914,14 @@ Genera un correo completo y profesional listo para enviar.
               </div>
               <div className="mail-actions">
                 <button 
-                  className="btn-outline"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedMail);
-                    toast.success('📋 Correo HTML copiado al portapapeles');
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                  Copiar HTML
-                </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => {
-                    const plainText = generatedMail.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-                    navigator.clipboard.writeText(plainText);
-                    toast.success('📝 Texto plano copiado al portapapeles');
-                  }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10,9 9,9 8,9"/>
-                  </svg>
-                  Copiar texto
-                </button>
-                <button 
-                  className="btn-primary"
-                  onClick={() => downloadPDF()}
-                  title="Descargar propuesta como PDF"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14,2 14,8 20,8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                    <polyline points="10,9 9,9 8,9"/>
-                  </svg>
-                  Descargar PDF
-                </button>
-                <button 
                   className="btn-primary"
                   onClick={sendDirectEmail}
                   disabled={isGeneratingMail}
                   title="Enviar correo directamente desde el servidor"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #28a745, #20c997)',
+                    borderColor: '#28a745'
+                  }}
                 >
                   {isGeneratingMail ? (
                     <>
@@ -1862,29 +1933,61 @@ Genera un correo completo y profesional listo para enviar.
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                         <polyline points="22,6 12,13 2,6"/>
-                        <path d="m4 4 7 4 7-4"/>
-                        <circle cx="18" cy="6" r="2" fill="currentColor"/>
                       </svg>
-                      Enviar directamente
+                      📧 Enviar correo ahora
                     </>
                   )}
                 </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => {
-                    const subject = `Propuesta de Seguros - ${clientData.nombre}`;
-                    const body = generatedMail.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-                    const mailtoLink = `mailto:${clientData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                    window.open(mailtoLink, '_blank');
-                  }}
-                  title="Abrir en tu cliente de correo local"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                    <polyline points="22,6 12,13 2,6"/>
-                  </svg>
-                  Abrir en correo local
-                </button>
+                
+                {/* Acciones secundarias */}
+                <div className="secondary-actions">
+                  <button 
+                    className="btn-secondary"
+                    onClick={() => downloadPDF()}
+                    title="Descargar propuesta como PDF"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14,2 14,8 20,8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                      <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                    Descargar PDF
+                  </button>
+                  
+                  <button 
+                    className="btn-outline"
+                    onClick={() => {
+                      const subject = `Propuesta de Seguros - ${clientData.nombre}`;
+                      const body = generatedMail.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+                      const mailtoLink = `mailto:${clientData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                      window.open(mailtoLink, '_blank');
+                    }}
+                    title="Abrir en tu cliente de correo local"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    Abrir en correo local
+                  </button>
+                  
+                  <button 
+                    className="btn-outline"
+                    onClick={() => {
+                      const plainText = generatedMail.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+                      navigator.clipboard.writeText(plainText);
+                      toast.success('📝 Texto copiado al portapapeles');
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Copiar texto
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -1930,24 +2033,25 @@ Genera un correo completo y profesional listo para enviar.
                 <span className="mail-preview-info">Se verá así en el cliente de correo del cliente</span>
               </div>
               <div className="mail-content">
-                <div dangerouslySetInnerHTML={{ __html: generatedMail }} />
+                <div dangerouslySetInnerHTML={{ __html: generatedMail
+                  // Limpiar bloques de código
+                  .replace(/```[\s\S]*?```/g, '')
+                  .replace(/"{3}[\s\S]*?"{3}/g, '')
+                  // Limpiar JSON estructurado
+                  .replace(/\{\s*"correo"[\s\S]*?\}\s*$/g, '')
+                  .replace(/^\s*\{\s*"correo"[\s\S]*$/gm, '')
+                  .replace(/^\s*\{[\s\S]*?"html":\s*"[\s\S]*$/gm, '')
+                  // Limpiar líneas que empiecen con JSON
+                  .replace(/^\s*\{.*$/gm, '')
+                  .replace(/^\s*".*$/gm, '')
+                  // Limpiar espacios extra
+                  .replace(/\n\s*\n\s*\n/g, '\n\n')
+                  .trim()
+                }} />
               </div>
             </div>
 
-            <div className="mail-code-section">
-              <details>
-                <summary>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="16,18 22,12 16,6"/>
-                    <polyline points="8,6 2,12 8,18"/>
-                  </svg>
-                  Ver código HTML del correo
-                </summary>
-                <div className="mail-code">
-                  <pre><code>{generatedMail}</code></pre>
-                </div>
-              </details>
-            </div>
+
           </div>
         )}
       </div>

@@ -1546,8 +1546,16 @@
 
 .mail-actions {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.secondary-actions {
+  display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .client-info-summary {
@@ -1865,4 +1873,258 @@
   .client-form {
     padding: 20px;
   }
+}
+
+/* Sender selector styles */
+.form-group-full {
+  grid-column: 1 / -1;
+}
+
+.sender-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: var(--input-background);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sender-select:hover {
+  border-color: var(--primary-color);
+}
+
+.sender-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-color-alpha);
+}
+
+.sender-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.sender-select option {
+  padding: 8px;
+  background: var(--card-background);
+  color: var(--text-primary);
+}
+
+/* Enhanced loading animation */
+.button-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Loading pulse effect for the button */
+.btn-primary:disabled {
+  position: relative;
+  overflow: hidden;
+  animation: pulse-loading 2s ease-in-out infinite;
+}
+
+@keyframes pulse-loading {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(40, 167, 69, 0);
+  }
+}
+
+/* Additional loading indicator for the mail generation */
+.mail-generation-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 25px 20px;
+  background: var(--card-background);
+  border-radius: 8px;
+  margin: 15px 0;
+  border: 1px dashed var(--primary-color);
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mail-generation-loading .loading-content {
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.mail-generation-loading .loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+.mail-generation-loading .loading-dots::after {
+  content: '';
+  animation: dots 2s infinite;
+}
+
+@keyframes dots {
+  0%, 20% { content: ''; }
+  40% { content: '.'; }
+  60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
+/* Progress bar styles */
+.progress-container {
+  width: 100%;
+  max-width: 250px;
+  margin: 15px auto;
+  text-align: center;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: var(--border-color);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #28a745, #20c997, #17a2b8);
+  border-radius: 4px;
+  transition: width 0.5s ease-in-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.progress-text {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+/* Enhanced loading content */
+.mail-generation-loading h3 {
+  color: var(--primary-color);
+  margin-bottom: 15px;
+  font-size: 1.1rem;
+}
+
+.mail-generation-loading p {
+  color: var(--text-secondary);
+  margin: 8px 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.mail-generation-loading small {
+  color: var(--text-secondary);
+  opacity: 0.8;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+/* Force green button style for email send - override default primary */
+.mail-actions .btn-primary {
+  background: linear-gradient(135deg, #28a745, #20c997) !important;
+  border-color: #28a745 !important;
+  color: white !important;
+  width: 100% !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+}
+
+/* Secondary action buttons should be smaller and inline */
+.secondary-actions .btn-secondary,
+.secondary-actions .btn-outline {
+  flex: 1;
+  min-width: 140px;
+  font-size: 0.85rem !important;
+}
+
+.mail-actions .btn-primary:hover {
+  background: linear-gradient(135deg, #218838, #1e7e34) !important;
+  border-color: #1e7e34 !important;
+}
+
+/* Unified button styles - ALL buttons same WHITE style except email send */
+.btn-primary, .btn-secondary, .btn-outline {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 12px 20px !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  min-height: 44px !important;
+  box-sizing: border-box;
+  text-align: center !important;
+  white-space: nowrap;
+  /* ALL BUTTONS SAME WHITE STYLE */
+  background: white !important;
+  border-color: #ddd !important;
+  color: #333 !important;
+}
+
+.btn-primary:hover, .btn-secondary:hover, .btn-outline:hover {
+  background: #f8f9fa !important;
+  border-color: #007bff !important;
+  color: #007bff !important;
+}
+
+.btn-primary:disabled, .btn-secondary:disabled, .btn-outline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* All SVG icons in buttons should be 16px */
+.btn-primary svg, .btn-secondary svg, .btn-outline svg {
+  width: 16px !important;
+  height: 16px !important;
 } 
