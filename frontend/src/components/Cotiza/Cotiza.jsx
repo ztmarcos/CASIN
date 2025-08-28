@@ -253,12 +253,24 @@ IDENTIFICACIÓN DE ASEGURADORAS:
 - Si ves "QUALITAS" = "Quálitas Seguros"
 - Si ves "GNP" = "GNP Seguros"
 
-EXTRACCIÓN DE VALORES:
+EXTRACCIÓN DE VALORES - CRÍTICO PARA DEDUCIBLES:
 - Para SUMA ASEGURADA: busca números grandes (400,000+)
 - Para COSTO ANUAL: busca el número más grande por aseguradora (usualmente el precio total)
-- Para DAÑOS MATERIALES/ROBO TOTAL: busca números menores (2,000-50,000)
 - Para RESPONSABILIDAD CIVIL: puede decir "Amparada" o tener un valor numérico
 - Para GASTOS MÉDICOS: busca números como 200,000 o "No aplica"
+
+🚨 MANEJO ESPECÍFICO DE DEDUCIBLES (ESPECIALMENTE QUALITAS):
+- DAÑOS MATERIALES: Busca DEDUCIBLES, NO importes de prima
+- ROBO TOTAL: Busca DEDUCIBLES, NO importes de prima
+- Para QUALITAS: Deducible típico = 5% de suma asegurada
+- Busca texto como "Deducible: 5%", "5% S.A.", "Deducible mínimo"
+- Si suma asegurada es $503,000 → deducible debe ser ~$25,150 (5%)
+- EVITA extraer valores como $7,564 o $4,155 que son primas, no deducibles
+
+IDENTIFICACIÓN DE DEDUCIBLES VS IMPORTES:
+- Deducible: Lo que paga el cliente en siniestro (ej: 5% suma asegurada)
+- Importe de prima: Costo del seguro por cobertura (valor menor)
+- Si no encuentras deducible explícito, calcula: suma_asegurada * 0.05 para Qualitas
 
 CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
 
@@ -281,17 +293,17 @@ FORMATO DE RESPUESTA EXACTO:
       },
       {
         "cobertura": "DAÑOS MATERIALES", 
-        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
+        "[ASEGURADORA_1_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[ASEGURADORA_2_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[ASEGURADORA_3_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO - Para Qualitas buscar 5% S.A.]",
+        "[ASEGURADORA_4_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]"
       },
       {
         "cobertura": "ROBO TOTAL",
-        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
+        "[ASEGURADORA_1_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[ASEGURADORA_2_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[ASEGURADORA_3_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO - Para Qualitas buscar 5% S.A.]",
+        "[ASEGURADORA_4_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]"
       },
       {
         "cobertura": "RESPONSABILIDAD CIVIL",
@@ -329,7 +341,12 @@ DOCUMENTOS A ANALIZAR:
 Cantidad: ${fileCount} archivos
 Nombres: ${fileNames}
 
-INSTRUCCIÓN FINAL: Extrae ÚNICAMENTE información REAL encontrada en los documentos. NO inventes datos. Si no encuentras un valor, usa "No disponible" en lugar de inventar números.`;
+INSTRUCCIÓN FINAL CRÍTICA: 
+1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
+2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
+3. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
+4. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
+5. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
