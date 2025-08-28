@@ -15,6 +15,7 @@ const Cotiza = () => {
     empresa: ''
   });
   const [selectedSender, setSelectedSender] = useState('casin');
+  const [sendBccToSender, setSendBccToSender] = useState(true); // BCC al remitente por defecto
   const [isProcessing, setIsProcessing] = useState(false);
   const [isGeneratingTable, setIsGeneratingTable] = useState(false);
   const [isGeneratingMail, setIsGeneratingMail] = useState(false);
