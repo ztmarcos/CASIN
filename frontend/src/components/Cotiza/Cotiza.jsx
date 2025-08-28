@@ -646,7 +646,8 @@ Genera un correo completo y profesional listo para enviar.
           cotizaciones: cotizaciones,
           from: senderConfig.email,
           fromName: senderConfig.name,
-          fromPass: senderConfig.password
+          fromPass: senderConfig.password,
+          sendBccToSender: sendBccToSender
         }),
       });
 
@@ -663,8 +664,14 @@ Genera un correo completo y profesional listo para enviar.
       console.log('📧 Server response:', result);
 
       if (result.success) {
-        toast.success(`✅ Correo enviado exitosamente a ${clientData.email}`);
+        const successMessage = result.bccSent 
+          ? `✅ Correo enviado exitosamente a ${clientData.email} (Copia BCC enviada al remitente)`
+          : `✅ Correo enviado exitosamente a ${clientData.email}`;
+        toast.success(successMessage);
         console.log('📧 Email enviado:', result.messageId);
+        if (result.bccSent) {
+          console.log('📧 Copia BCC enviada a:', result.bccSent);
+        }
       } else {
         throw new Error(result.error || result.details || 'Error desconocido al enviar correo');
       }
@@ -1564,6 +1571,7 @@ Genera un correo completo y profesional listo para enviar.
                         setGeneratedMail('');
                         setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
                         setSelectedSender('casin');
+                        setSendBccToSender(true);
                         toast.info('🔄 Sistema reiniciado completamente');
                       }}
                       style={{
@@ -1845,6 +1853,21 @@ Genera un correo completo y profesional listo para enviar.
                     </select>
                     <small className="sender-help">
                       Selecciona desde qué cuenta se enviará el correo al cliente
+                    </small>
+                  </div>
+
+                  <div className="form-group form-group-full">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={sendBccToSender}
+                        onChange={(e) => setSendBccToSender(e.target.checked)}
+                        style={{ marginRight: '8px' }}
+                      />
+                      Enviar copia oculta (BCC) al remitente
+                    </label>
+                    <small className="sender-help">
+                      Si está activado, el remitente recibirá una copia oculta del correo enviado
                     </small>
                   </div>
                 </div>
