@@ -93,7 +93,7 @@ export const AuthProvider = ({ children }) => {
               userData = {
                 email: value,
                 token: 'fallback-token',
-                name: value === 'z.t.marcos@gmail.com' ? 'Marcos Zavala' : '2012 Solitario',
+                name: value === 'z.t.marcos@gmail.com' ? 'Marquitos' : '2012 Solitario',
                 photoURL: '',
                 uid: value.replace(/[@.]/g, '_')
               };

@@ -26,6 +26,15 @@ export const SENDER_OPTIONS = [
     email: 'michelldiaz.casinseguros@gmail.com',
     role: 'user',
     avatar: '👩‍💼'
+  },
+  {
+    label: 'Marquitos (z.t.marcos@gmail.com)',
+    value: import.meta.env.VITE_SMTP_USER_MARCOS || 'z.t.marcos@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_MARCOS || 'cpwv xoym wjrf uvpy',
+    name: 'Marquitos',
+    email: 'z.t.marcos@gmail.com',
+    role: 'admin',
+    avatar: '👨‍💻'
   }
 ];
 

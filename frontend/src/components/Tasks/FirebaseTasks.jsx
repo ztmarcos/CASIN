@@ -134,7 +134,12 @@ const FirebaseTasks = () => {
         
         // Enviar notificaciones de creación
         const participants = taskEmailService.getTaskParticipants(taskData);
-        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
+        
+        // Para tareas nuevas, solo filtrar si hay otros participantes además del creador
+        // Si el creador se asigna a sí mismo, debe recibir la notificación
+        const filteredParticipants = participants.length > 1 
+          ? taskEmailService.filterParticipants(participants, user?.email)
+          : participants; // Si solo hay un participante (el creador), no filtrar
         
         if (filteredParticipants.length > 0) {
           try {
@@ -143,6 +148,8 @@ const FirebaseTasks = () => {
           } catch (emailError) {
             console.warn('⚠️ Error enviando notificaciones:', emailError);
           }
+        } else {
+          console.log('ℹ️ No hay participantes para notificar después del filtrado');
         }
       }
       

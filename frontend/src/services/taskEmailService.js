@@ -13,6 +13,8 @@ class TaskEmailService {
   async notifyTaskCreated(taskData, participants) {
     try {
       console.log('📧 Enviando notificación de tarea creada:', taskData.title);
+      console.log('📧 Participantes encontrados:', participants);
+      console.log('📧 Datos de la tarea:', taskData);
       
       const emailData = {
         type: 'task_created',
@@ -36,8 +38,8 @@ class TaskEmailService {
       
       const emailData = {
         type: 'task_updated',
+        task: newTask, // El backend espera 'task', no 'newTask'
         oldTask: oldTask,
-        newTask: newTask,
         participants: participants,
         changes: changes,
         sender: this.defaultSender
@@ -222,20 +224,26 @@ class TaskEmailService {
    * Obtiene los participantes únicos de una tarea
    */
   getTaskParticipants(taskData) {
+    console.log('🔍 getTaskParticipants - taskData recibida:', taskData);
     const participants = new Set();
     
     // Agregar creador de la tarea
     if (taskData.createdByUser?.email) {
+      console.log('✅ Agregando creador:', taskData.createdByUser.email);
       participants.add(taskData.createdByUser.email);
     }
 
     // Agregar usuarios asignados
     if (taskData.assignedUsers && Array.isArray(taskData.assignedUsers)) {
+      console.log('✅ Usuarios asignados encontrados:', taskData.assignedUsers);
       taskData.assignedUsers.forEach(user => {
         if (user.email) {
+          console.log('✅ Agregando usuario asignado:', user.email);
           participants.add(user.email);
         }
       });
+    } else {
+      console.log('❌ No se encontraron assignedUsers o no es array:', taskData.assignedUsers);
     }
 
     // Agregar autores de comentarios
@@ -247,7 +255,9 @@ class TaskEmailService {
       });
     }
 
-    return Array.from(participants);
+    const finalParticipants = Array.from(participants);
+    console.log('🎯 Participantes finales:', finalParticipants);
+    return finalParticipants;
   }
 
   /**

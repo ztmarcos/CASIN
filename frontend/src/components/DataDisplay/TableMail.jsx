@@ -16,7 +16,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || 'N/A'} pesos</strong>, para su revisión y amable programación de pago con fecha límite del ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '31 de Mayo 2024'} antes de las 12 del día.</p>
         
@@ -42,7 +42,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro del auto <strong>${data.descripcion_del_vehiculo || 'vehículo'} ${data.modelo || ''} ${data.serie || ''}</strong> modelo ${data.modelo || 'N/A'} de la vigencia ${data.vigencia_inicio || 'N/A'} al ${data.vigencia_fin || 'N/A'} con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || 'N/A'} pesos</strong>, para su revisión y amable programación de pago con fecha límite del ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : '31 de Mayo 2024'} antes de las 12 del día.</p>
         
@@ -72,7 +72,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -88,7 +88,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de vida con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -108,7 +108,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -124,7 +124,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de Gastos Médicos Mayores con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -144,7 +144,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de mascotas con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de mascotas con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -160,7 +160,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de mascotas con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de mascotas con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -180,7 +180,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de negocio con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de negocio con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -196,7 +196,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de negocio con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de negocio con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -216,7 +216,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de Responsabilidad Civil con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de Responsabilidad Civil con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -232,7 +232,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de Responsabilidad Civil con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de Responsabilidad Civil con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -252,7 +252,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de transporte con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de transporte con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -268,7 +268,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de transporte con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de transporte con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -288,7 +288,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -304,7 +304,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -324,7 +324,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su nueva póliza de seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su nueva póliza de seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -340,7 +340,7 @@ const EMAIL_TEMPLATES = {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marcos Zavala, me permito enviar su renovación del seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>De parte del Act. Marquitos, me permito enviar su renovación del seguro con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
         
         <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
         
@@ -378,6 +378,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [emailType, setEmailType] = useState('nueva_autos');
   const fileInputRef = useRef(null);
   const [sender, setSender] = useState(SENDER_OPTIONS[0]);
+  const [sendBccToSender, setSendBccToSender] = useState(true); // Por defecto activado
 
   // Función para convertir HTML a texto plano
   const htmlToPlainText = (html) => {
@@ -397,7 +398,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     text = text
       .replace(/Apreciable Asegurado/g, '\nApreciable Asegurado')
       .replace(/Tengo el gusto de saludarle/g, '\n\nTengo el gusto de saludarle')
-      .replace(/De parte del Act\. Marcos Zavala/g, '\n\nDe parte del Act. Marcos Zavala')
+      .replace(/De parte del Act\. Marcos Zavala/g, '\n\nDe parte del Act. Marquitos')
       .replace(/me permito enviar su renovación/g, '\n\nme permito enviar su renovación')
       .replace(/Anexo carátula y recibo/g, '\n\nAnexo carátula y recibo')
       .replace(/para su revisión y amable programación/g, '\n\npara su revisión y amable programación')
@@ -632,6 +633,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setSelectedFolder(null);
       setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
+      setSendBccToSender(true); // Reset BCC option
     }
   }, [isOpen]);
 
@@ -960,6 +962,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         formData.append('from', sender.value);
         formData.append('fromName', sender.name);
         formData.append('fromPass', sender.pass);
+        formData.append('sendBccToSender', sendBccToSender.toString());
         
         // Add drive links if any
         if (uploadedFiles.length > 0) {
@@ -993,6 +996,11 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
 
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
+        
+        // Show BCC info if sent
+        if (result.bccSent) {
+          console.log('📧 Copia BCC enviada a:', result.bccSent);
+        }
       } else {
         // No attachments, use JSON approach
         const emailData = {
@@ -1002,6 +1010,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           from: sender.value,
           fromName: sender.name,
           fromPass: sender.pass,
+          sendBccToSender: sendBccToSender,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,
             link: file.driveLink
@@ -1024,9 +1033,14 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
 
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
+        
+        // Show BCC info if sent
+        if (result.bccSent) {
+          console.log('📧 Copia BCC enviada a:', result.bccSent);
+        }
       }
 
-      setSuccess('¡Correo enviado exitosamente!');
+      setSuccess(sendBccToSender ? '¡Correo enviado exitosamente! (Copia BCC enviada al remitente)' : '¡Correo enviado exitosamente!');
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -1078,6 +1092,21 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
               ))}
             </select>
             <small className="email-type-help">Elige el remitente del correo</small>
+          </div>
+          <div className="mail-field">
+            <label>
+              <input
+                type="checkbox"
+                checked={sendBccToSender}
+                onChange={(e) => setSendBccToSender(e.target.checked)}
+                disabled={isGenerating}
+                style={{ marginRight: '8px' }}
+              />
+              Enviar copia oculta (BCC) al remitente
+            </label>
+            <small className="email-type-help">
+              Si está activado, el remitente recibirá una copia oculta del correo enviado
+            </small>
           </div>
           <div className="mail-field">
             <label>Para:</label>

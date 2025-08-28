@@ -4567,7 +4567,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -4578,19 +4578,20 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       from = req.body.from;
       fromName = req.body.fromName;
       fromPass = req.body.fromPass;
+      sendBccToSender = req.body.sendBccToSender === 'true'; // Convert string to boolean
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -4647,6 +4648,12 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       text: emailBody.replace(/<[^>]*>/g, '') // Versión texto plano
     };
     
+    // Add BCC to sender if requested
+    if (sendBccToSender && smtpUser) {
+      mailOptions.bcc = smtpUser;
+      console.log('📧 Adding BCC to sender:', smtpUser);
+    }
+    
     // Add file attachments if available
     if (req.files && req.files.length > 0) {
       console.log('📎 Adding file attachments:', req.files.length);
@@ -4659,6 +4666,9 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
 
     console.log('📤 Enviando correo a:', to);
     console.log('📋 Asunto:', subject);
+    if (sendBccToSender && smtpUser) {
+      console.log('📧 Enviando copia BCC al remitente:', smtpUser);
+    }
 
     // Enviar el correo
     let info;
@@ -4677,7 +4687,8 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       message: 'Correo enviado exitosamente',
       messageId: info.messageId,
       recipient: to,
-      subject: subject
+      subject: subject,
+      bccSent: sendBccToSender && smtpUser ? smtpUser : null
     });
 
   } catch (error) {
@@ -5580,11 +5591,8 @@ app.get('/api/debug/firebase', (req, res) => {
 // COTIZA MODULE ENDPOINTS
 // =============================================================================
 
-// Enable file uploads (using existing multer configuration)
-const uploadToFile = multer({ dest: 'uploads/' });
-
-// Parse PDF endpoint
-app.post('/api/parse-pdf', uploadToFile.single('file'), async (req, res) => {
+// Parse PDF endpoint (using existing memory multer configuration)
+app.post('/api/parse-pdf', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
@@ -5594,11 +5602,10 @@ app.post('/api/parse-pdf', uploadToFile.single('file'), async (req, res) => {
 
     // Import pdf-parse
     const pdfParse = require('pdf-parse');
-    const fs = require('fs');
 
     try {
-      // Read the uploaded file
-      const dataBuffer = fs.readFileSync(req.file.path);
+      // Use the buffer directly from memory storage
+      const dataBuffer = req.file.buffer;
       
       // Parse the PDF
       console.log('🔍 Extracting text from PDF...');

@@ -89,9 +89,8 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
     // Obtener usuarios de la configuración compartida
     const configUsers = getTaskUsers();
     
-    // Obtener usuarios del equipo (filtrando z.t.marcos)
+    // Obtener usuarios del equipo 
     const teamUsers = teamMembers && teamMembers.length > 0 ? teamMembers
-      .filter(member => member.email !== 'z.t.marcos@gmail.com') // Filtrar z.t.marcos
       .map(member => {
         // Get clean display name - only show proper names, not emails or IDs
         let displayName = '';

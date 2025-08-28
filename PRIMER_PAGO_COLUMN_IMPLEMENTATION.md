@@ -134,6 +134,35 @@ La columna se almacena en la colección `table_metadata` de cada tabla:
 
 ---
 
+## 🐛 **Solución: ColumnManager y Columnas Personalizadas**
+
+### **Problema Identificado:**
+El ColumnManager no mostraba las columnas personalizadas `primer_pago` y `pago_parcial` aunque estaban correctamente en Firebase y la API.
+
+### **Solución Implementada:**
+1. **✅ Debugging mejorado**: Logs detallados para diagnosticar carga de columnas
+2. **✅ Botón de refresh**: Botón 🔄 para forzar recarga de columnas
+3. **✅ Mejor manejo de errores**: Logging detallado del proceso de carga
+4. **✅ Indicador de columnas custom**: Marcador `(custom)` para columnas personalizadas
+
+### **Verificación del Endpoint:**
+```bash
+# ✅ El endpoint devuelve correctamente las columnas personalizadas:
+curl http://localhost:3001/api/data/tables/vida/structure | grep primer_pago
+# Resultado: "primer_pago","type":"DECIMAL(10,2)","isCustom":true
+
+curl http://localhost:3001/api/data/tables/vida/structure | grep pago_parcial  
+# Resultado: "pago_parcial","type":"DECIMAL","isCustom":true
+```
+
+### **Pasos para Verificar en Frontend:**
+1. **Ir a la tabla "vida"** en el frontend
+2. **Abrir la consola del navegador** (F12)
+3. **Hacer click en el botón 🔄** del ColumnManager
+4. **Revisar los logs** que muestran las columnas cargadas
+
+---
+
 ## 🔄 **Ordenamiento Lógico de Columnas de Pago**
 
 El sistema ahora organiza las columnas relacionadas con pagos de manera lógica y secuencial:
