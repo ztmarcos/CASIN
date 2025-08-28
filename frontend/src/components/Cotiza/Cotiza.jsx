@@ -531,7 +531,7 @@ DATOS DE LA COTIZACIÓN:
 - Precios disponibles: ${cotizacionData.precios ? 'Sí' : 'Información de precios disponible'}
 
 ESTRUCTURA DEL CORREO:
-1. **Encabezado profesional** con logo placeholder y datos de contacto
+1. **Encabezado profesional** con título CASIN Seguros (SIN LOGO)
 2. **Saludo personalizado** al cliente
 3. **Resumen ejecutivo** del análisis realizado
 4. **Tabla comparativa** con las principales coberturas y precios (si están disponibles)
@@ -541,6 +541,7 @@ ESTRUCTURA DEL CORREO:
 
 REQUISITOS:
 - Usar HTML moderno con estilos CSS inline
+- NO INCLUIR IMÁGENES ni logos - solo texto y estilos
 - Tono profesional pero amigable
 - Incluir toda la información de cotización de forma organizada
 - Destacar los precios más competitivos
@@ -2034,18 +2035,21 @@ Genera un correo completo y profesional listo para enviar.
               </div>
               <div className="mail-content">
                 <div dangerouslySetInnerHTML={{ __html: generatedMail
-                  // Limpiar bloques de código
+                  // Limpiar todo el JSON visible
+                  .replace(/^\s*\{\s*"correo"[\s\S]*$/g, '')
+                  .replace(/\{\s*"correo"[\s\S]*?\}/g, '')
                   .replace(/```[\s\S]*?```/g, '')
                   .replace(/"{3}[\s\S]*?"{3}/g, '')
-                  // Limpiar JSON estructurado
-                  .replace(/\{\s*"correo"[\s\S]*?\}\s*$/g, '')
-                  .replace(/^\s*\{\s*"correo"[\s\S]*$/gm, '')
-                  .replace(/^\s*\{[\s\S]*?"html":\s*"[\s\S]*$/gm, '')
-                  // Limpiar líneas que empiecen con JSON
-                  .replace(/^\s*\{.*$/gm, '')
-                  .replace(/^\s*".*$/gm, '')
+                  // Limpiar cualquier línea que contenga JSON
+                  .replace(/.*"correo".*\n?/g, '')
+                  .replace(/.*"html".*\n?/g, '')
+                  .replace(/.*"asunto".*\n?/g, '')
+                  // Limpiar líneas que empiecen con { o "
+                  .replace(/^\s*[\{"].*\n?/gm, '')
+                  .replace(/^\s*\}\s*\n?/gm, '')
                   // Limpiar espacios extra
                   .replace(/\n\s*\n\s*\n/g, '\n\n')
+                  .replace(/^\s+|\s+$/g, '')
                   .trim()
                 }} />
               </div>
