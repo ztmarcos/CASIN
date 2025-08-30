@@ -30,16 +30,16 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
         tableName: tableName || 'default_table', // Usar el tableName real pasado como prop
         tableType: 'simple',
         instructions: `
-          Extrae el valor para la columna "${columnName}" del documento PDF.
+          Del documento PDF, extrae el valor para: ${columnName}
           
           ${columnName === 'pago_parcial' || columnName === 'primer_recibo' || columnName === 'primer_pago' || columnName === 'importe_primer_recibo' ? `
-          Para ${columnName}: Busca el TOTAL a pagar del documento. Términos como "Importe por Pagar", "Total", "Monto Total".
-          Extrae SOLO el número sin símbolos de moneda.
+          Busca el TOTAL a pagar. Términos: "Importe por Pagar", "Total", "Monto Total".
+          Extrae solo el número (sin $ ni símbolos).
           ` : `
-          Para ${columnName}: Extrae el valor exacto como aparece en el documento.
+          Extrae el valor exacto del documento.
           `}
           
-          Responde SOLO JSON válido: {"${columnName}": "valor_encontrado"}
+          Formato: {"${columnName}": "4861.04"}
         `
       };
 
