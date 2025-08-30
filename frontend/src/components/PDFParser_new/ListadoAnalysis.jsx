@@ -75,6 +75,7 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                     
                     REGLAS DE NORMALIZACIÓN DE TEXTO:
                     8. NOMBRES DE ASEGURADORA: Siempre normaliza "Grupo Nacional Provincial, S.A.B.", "Grupo Nacional Provincial S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación a "GNP"
+                    8.1. También normaliza "Qualitas SA de CV", "Qualitas S.A. de C.V.", "Qualitas Seguros", o cualquier variación a "Qualitas"
                     9. NOMBRES DE PERSONAS: Convierte a formato Título Apropiado (ej., "JUAN PÉREZ LÓPEZ" → "Juan Pérez López", mantén "de", "del", "la" en minúsculas)
                     10. DIRECCIONES: Estandariza abreviaciones (Av. → Avenida, Col. → Colonia, No. → Número, etc.) y usa formato Título
                     11. CAMPOS RFC: Mantén el RFC exactamente como se encuentra, solo en mayúsculas y sin espacios extra

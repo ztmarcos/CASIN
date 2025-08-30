@@ -4056,6 +4056,11 @@ INSTRUCCIONES:
 5. Para valores monetarios, incluye la cantidad completa con decimales si están presentes
 6. Para campos de texto, extrae el texto completo como se muestra
 
+NORMALIZACIÓN DE ASEGURADORAS:
+7. Para campos de aseguradora, normaliza los nombres de las compañías:
+   - "Grupo Nacional Provincial", "Grupo Nacional Provincial S.A.B.", "Grupo Nacional Provincial, S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación → convertir a "GNP"
+   - "Qualitas SA de CV", "Qualitas S.A. de C.V.", "Qualitas Seguros", o cualquier variación → convertir a "Qualitas"
+
 FORMATO DE RESPUESTA:
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
 {
