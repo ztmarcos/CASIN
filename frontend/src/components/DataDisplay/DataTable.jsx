@@ -923,37 +923,23 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         targetColumns: [editingCell.column],
         tableName: 'current_table',
         instructions: customPrompt || `
-          Please analyze the document and extract the following information:
-          ${editingCell.column === 'pago_parcial' 
-            ? `- ${editingCell.column}: Capture the total of the receipt. Find the total amount to be paid in this document.`
-            : `- ${editingCell.column}: Find the exact value in the text`
-          }
+          Analiza el documento PDF y extrae ÚNICAMENTE el valor para la columna: ${editingCell.column}
           
-          Important rules:
-          1. Extract EXACT values from the document
-          2. Return null if a value cannot be found
-          3. For dates, maintain the format as shown in the document
-          4. For currency values, include the full amount with decimals
-          5. For text fields, extract the complete text as shown
           ${editingCell.column === 'pago_parcial' ? `
-          6. For pago_parcial: NEVER return null - ALWAYS find at least one amount
-          7. Look for terms like "Total", "Total a Pagar", "Importe Total", "Monto Total"
-          8. If multiple amounts found, use the LARGEST number (usually the total)` : ''}
+          INSTRUCCIÓN ESPECIAL PARA PAGO PARCIAL:
+          - Busca el TOTAL del documento (monto total a pagar)
+          - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total"
+          - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total)
+          - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
+          ` : `
+          INSTRUCCIÓN GENERAL:
+          - Extrae el valor exacto para la columna "${editingCell.column}"
+          - Si no encuentras el valor, devuelve null
+          - Para fechas, mantén el formato original
+          - Para valores monetarios, incluye decimales si están presentes
+          `}
           
-          NORMALIZACIÓN DE ASEGURADORAS:
-          9. Para campos de aseguradora, normaliza los nombres de las compañías:
-             - "Grupo Nacional Provincial", "Grupo Nacional Provincial S.A.B.", "Grupo Nacional Provincial, S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación → convertir a "GNP"
-             - "Qualitas SA de CV", "Qualitas S.A. de C.V.", "Qualitas Seguros", o cualquier variación → convertir a "Qualitas"
-          
-          REGLAS ESPECÍFICAS POR CAMPO:
-          10. Para campos de email (e_mail, email): 
-              - SOLO extrae emails del cliente/contratante
-              - NO extraigas emails de compañías de seguros, agentes, o cualquier otra entidad
-              - Si no hay email del cliente, devuelve null
-          11. Para campos de pago parcial (pago_parcial, primer_recibo, importe_primer_recibo):
-              - Busca específicamente montos de pagos parciales o primer recibo
-              - Busca términos como "primer pago", "pago inicial", "primer recibo", "pago parcial"
-              - Si no encuentras un monto específico de pago parcial, devuelve null (NO uses el monto total)
+          Responde SOLO con un objeto JSON: {"${editingCell.column}": "valor_extraído"}
         `
       };
 
