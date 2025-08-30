@@ -46,7 +46,9 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
           - Para valores monetarios, incluye decimales si están presentes
           `}
           
-          Responde SOLO con un objeto JSON: {"${columnName}": "valor_extraído"}
+          IMPORTANTE: Reemplaza "VALOR_REAL_EXTRAÍDO_DEL_DOCUMENTO" con el valor numérico o texto que encuentres en el documento.
+          
+          Responde SOLO con un objeto JSON: {"${columnName}": "VALOR_REAL_EXTRAÍDO_DEL_DOCUMENTO"}
         `
       };
 
