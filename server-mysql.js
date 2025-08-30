@@ -4066,10 +4066,12 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - SOLO extrae emails del cliente/contratante
    - NO extraigas emails de compañías de seguros, agentes, o cualquier otra entidad
    - Si no hay email del cliente, devuelve null
-9. Para campos de pago parcial (pago_parcial, primer_recibo, importe_primer_recibo):
-   - Busca específicamente montos de pagos parciales o primer recibo
-   - Busca términos como "primer pago", "pago inicial", "primer recibo", "pago parcial"
-   - Si no encuentras un monto específico de pago parcial, devuelve null (NO uses el monto total)
+9. Para campos de primer pago/recibo (pago_parcial, primer_recibo, importe_primer_recibo, primer_pago):
+   - Busca el TOTAL del documento (monto total a pagar del recibo)
+   - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
+   - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total del recibo)
+   - Estos campos capturan el monto total que aparece en el recibo del primer pago
+   - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
 
 FORMATO DE RESPUESTA:
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
