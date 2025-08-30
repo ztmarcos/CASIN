@@ -28,8 +28,26 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
         metadata: data.metadata,
         targetColumns: [columnName], // Usar 'targetColumns' como espera el backend
         tableName: tableName || 'default_table', // Usar el tableName real pasado como prop
-        tableType: 'simple'
-        // No instructions - let backend use its simpler, more effective prompt
+        tableType: 'simple',
+        instructions: `
+          Analiza el documento PDF y extrae ÚNICAMENTE el valor para la columna: ${columnName}
+          
+          ${columnName === 'pago_parcial' ? `
+          INSTRUCCIÓN ESPECIAL PARA PAGO PARCIAL:
+          - Busca el TOTAL del documento (monto total a pagar)
+          - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total"
+          - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total)
+          - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
+          ` : `
+          INSTRUCCIÓN GENERAL:
+          - Extrae el valor exacto para la columna "${columnName}"
+          - Si no encuentras el valor, devuelve null
+          - Para fechas, mantén el formato original
+          - Para valores monetarios, incluye decimales si están presentes
+          `}
+          
+          Responde SOLO con un objeto JSON: {"${columnName}": "valor_extraído"}
+        `
       };
 
       // Call GPT analysis endpoint using relative URL (will be proxied by Vite)
