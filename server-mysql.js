@@ -4071,11 +4071,12 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - NO extraigas emails de compañías de seguros, agentes, o cualquier otra entidad
    - Si no hay email del cliente, devuelve null
 9. Para campos de primer pago/recibo (pago_parcial, primer_recibo, importe_primer_recibo, primer_pago):
-   - Busca el TOTAL del documento (monto total a pagar del recibo)
-   - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
-   - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total del recibo)
-   - Estos campos capturan el monto total que aparece en el recibo del primer pago
-   - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
+   - Busca el TOTAL FINAL que el cliente debe pagar en el documento
+   - Busca EXACTAMENTE estos términos: "Importe por Pagar", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
+   - EXTRAE SOLO EL NÚMERO sin símbolos de moneda ($, comas, etc.)
+   - Ejemplo: si encuentras "Importe por Pagar $4,861.04", devuelve "4861.04"
+   - NO uses "Prima Neta" - usa el TOTAL FINAL que incluye todos los cargos
+   - Si hay múltiples montos, usa el etiquetado como total o importe final a pagar
 
 FORMATO DE RESPUESTA:
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:

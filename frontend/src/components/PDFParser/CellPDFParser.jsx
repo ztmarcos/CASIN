@@ -48,11 +48,12 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
           
           ${columnName === 'pago_parcial' || columnName === 'primer_recibo' || columnName === 'primer_pago' || columnName === 'importe_primer_recibo' ? `
           INSTRUCCIÓN ESPECIAL PARA PRIMER PAGO/RECIBO:
-          - Busca el TOTAL del documento (monto total a pagar del recibo)
-          - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
-          - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total del recibo)
-          - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
-          - Este campo captura el monto total que aparece en el recibo del primer pago
+          - Busca el TOTAL del documento que el cliente debe pagar
+          - Busca EXACTAMENTE estos términos: "Importe por Pagar", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
+          - EXTRAE SOLO EL NÚMERO, sin símbolos de moneda ni texto adicional
+          - Ejemplo: si ves "Importe por Pagar $4,861.04", devuelve "4861.04"
+          - Si hay múltiples montos, usa el que esté etiquetado como total o importe a pagar
+          - NO uses valores como "Prima Neta" - usa el TOTAL FINAL que debe pagar el cliente
           ` : `
           INSTRUCCIÓN GENERAL:
           - Extrae el valor exacto para la columna "${columnName}"
