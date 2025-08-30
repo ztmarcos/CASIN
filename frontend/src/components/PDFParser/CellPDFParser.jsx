@@ -30,25 +30,16 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
         tableName: tableName || 'default_table', // Usar el tableName real pasado como prop
         tableType: 'simple',
         instructions: `
-          Analiza el documento PDF y extrae ÚNICAMENTE el valor para la columna: ${columnName}
+          Extrae el valor para la columna "${columnName}" del documento PDF.
           
           ${columnName === 'pago_parcial' || columnName === 'primer_recibo' || columnName === 'primer_pago' || columnName === 'importe_primer_recibo' ? `
-          INSTRUCCIÓN ESPECIAL PARA PAGOS:
-          - Busca el TOTAL del documento (monto total a pagar)
-          - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total"
-          - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total)
-          - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
+          Para ${columnName}: Busca el TOTAL a pagar del documento. Términos como "Importe por Pagar", "Total", "Monto Total".
+          Ejemplo: Si ves "Importe por Pagar $6,363.03", responde: {"${columnName}": "6363.03"}
           ` : `
-          INSTRUCCIÓN GENERAL:
-          - Extrae el valor exacto para la columna "${columnName}"
-          - Si no encuentras el valor, devuelve null
-          - Para fechas, mantén el formato original
-          - Para valores monetarios, incluye decimales si están presentes
+          Para ${columnName}: Extrae el valor exacto como aparece en el documento.
           `}
           
-          IMPORTANTE: Reemplaza "VALOR_REAL_EXTRAÍDO_DEL_DOCUMENTO" con el valor numérico o texto que encuentres en el documento.
-          
-          Responde SOLO con un objeto JSON: {"${columnName}": "VALOR_REAL_EXTRAÍDO_DEL_DOCUMENTO"}
+          Responde SOLO JSON válido con el valor real encontrado.
         `
       };
 
