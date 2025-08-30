@@ -939,6 +939,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           6. For pago_parcial: NEVER return null - ALWAYS find at least one amount
           7. Look for terms like "Total", "Total a Pagar", "Importe Total", "Monto Total"
           8. If multiple amounts found, use the LARGEST number (usually the total)` : ''}
+          
+          NORMALIZACIÓN DE ASEGURADORAS:
+          9. Para campos de aseguradora, normaliza los nombres de las compañías:
+             - "Grupo Nacional Provincial", "Grupo Nacional Provincial S.A.B.", "Grupo Nacional Provincial, S.A.B.", "Grupo Nación Aprovincial", "Grupo Nacional Aprovincial", "GNP Seguros", "G.N.P.", o cualquier variación → convertir a "GNP"
+             - "Qualitas SA de CV", "Qualitas S.A. de C.V.", "Qualitas Seguros", o cualquier variación → convertir a "Qualitas"
+          
+          REGLAS ESPECÍFICAS POR CAMPO:
+          10. Para campos de email (e_mail, email): 
+              - SOLO extrae emails del cliente/contratante
+              - NO extraigas emails de compañías de seguros, agentes, o cualquier otra entidad
+              - Si no hay email del cliente, devuelve null
+          11. Para campos de pago parcial (pago_parcial, primer_recibo, importe_primer_recibo):
+              - Busca específicamente montos de pagos parciales o primer recibo
+              - Busca términos como "primer pago", "pago inicial", "primer recibo", "pago parcial"
+              - Si no encuentras un monto específico de pago parcial, devuelve null (NO uses el monto total)
         `
       };
 
