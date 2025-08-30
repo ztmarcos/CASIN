@@ -4072,9 +4072,8 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - Si no hay email del cliente, devuelve null
 9. Para campos de primer pago/recibo (pago_parcial, primer_recibo, importe_primer_recibo, primer_pago):
    - Busca el TOTAL FINAL que el cliente debe pagar en el documento
-   - Busca EXACTAMENTE estos términos: "Importe por Pagar", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
+   - Busca términos como: "Importe por Pagar", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
    - EXTRAE SOLO EL NÚMERO sin símbolos de moneda ($, comas, etc.)
-   - Ejemplo: si encuentras "Importe por Pagar $4,861.04", devuelve "4861.04"
    - NO uses "Prima Neta" - usa el TOTAL FINAL que incluye todos los cargos
    - Si hay múltiples montos, usa el etiquetado como total o importe final a pagar
 
