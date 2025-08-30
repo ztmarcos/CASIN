@@ -32,8 +32,8 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
         instructions: `
           Analiza el documento PDF y extrae ÚNICAMENTE el valor para la columna: ${columnName}
           
-          ${columnName === 'pago_parcial' ? `
-          INSTRUCCIÓN ESPECIAL PARA PAGO PARCIAL:
+          ${columnName === 'pago_parcial' || columnName === 'primer_recibo' || columnName === 'importe_primer_recibo' ? `
+          INSTRUCCIÓN ESPECIAL PARA PAGOS:
           - Busca el TOTAL del documento (monto total a pagar)
           - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total"
           - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total)

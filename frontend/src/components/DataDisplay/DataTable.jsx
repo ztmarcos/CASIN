@@ -902,73 +902,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     handleCancelEdit();
   };
 
-  const handlePdfUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !editingCell) return;
 
-    if (file.type !== 'application/pdf') {
-      console.error('Please upload a PDF file');
-      return;
-    }
-
-    setIsAnalyzing(true);
-    try {
-      // Parse PDF content
-      const data = await pdfService.parsePDF(file);
-      
-      // Create prompt for GPT
-      const prompt = {
-        text: data.text,
-        metadata: data.metadata,
-        targetColumns: [editingCell.column],
-        tableName: 'current_table',
-        instructions: customPrompt || `
-          Analiza el documento PDF y extrae ÚNICAMENTE el valor para la columna: ${editingCell.column}
-          
-          ${editingCell.column === 'pago_parcial' ? `
-          INSTRUCCIÓN ESPECIAL PARA PAGO PARCIAL:
-          - Busca el TOTAL del documento (monto total a pagar)
-          - Busca términos como "Total", "Total a Pagar", "Importe Total", "Monto Total"
-          - Si hay múltiples montos, usa el MÁS GRANDE (generalmente el total)
-          - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
-          ` : `
-          INSTRUCCIÓN GENERAL:
-          - Extrae el valor exacto para la columna "${editingCell.column}"
-          - Si no encuentras el valor, devuelve null
-          - Para fechas, mantén el formato original
-          - Para valores monetarios, incluye decimales si están presentes
-          `}
-          
-          Responde SOLO con un objeto JSON: {"${editingCell.column}": "valor_extraído"}
-        `
-      };
-
-      // Call GPT analysis endpoint
-      const response = await fetch(`${API_URL}/gpt/analyze`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(prompt),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze PDF');
-      }
-
-      const result = await response.json();
-      
-      if (result.mappedData && result.mappedData[editingCell.column] !== undefined) {
-        setEditValue(result.mappedData[editingCell.column] || '');
-      }
-      
-      setShowPdfUpload(false);
-    } catch (err) {
-      console.error('Error analyzing PDF:', err);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
 
   // Add selection handlers
   const handleCellSelection = (event, rowIndex, column, value, rowObject) => {
