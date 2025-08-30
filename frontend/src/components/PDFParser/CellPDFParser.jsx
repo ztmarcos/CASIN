@@ -22,6 +22,20 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
       // Parse PDF content
       const data = await pdfService.parsePDF(file);
       
+      // DETAILED DEBUG LOGGING
+      console.log('🔍 PDF PARSING DEBUG:');
+      console.log('- File name:', file.name);
+      console.log('- File size:', file.size);
+      console.log('- PDF pages:', data.pages);
+      console.log('- Text length:', data.text?.length);
+      console.log('- Text preview (first 500 chars):', data.text?.substring(0, 500));
+      console.log('- Text has content:', data.text && data.text.length > 50);
+      console.log('- Metadata:', data.metadata);
+      
+      if (!data.text || data.text.length < 50) {
+        throw new Error(`PDF text extraction failed or too short. Length: ${data.text?.length}`);
+      }
+      
       // Create simplified prompt specifically for the column
       const prompt = {
         text: data.text,
@@ -50,6 +64,17 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
           Responde SOLO con un objeto JSON válido.
         `
       };
+
+      // DETAILED REQUEST DEBUG
+      console.log('🚀 SENDING REQUEST TO BACKEND:');
+      console.log('- URL:', '/api/gpt/analyze');
+      console.log('- Method:', 'POST');
+      console.log('- Prompt object keys:', Object.keys(prompt));
+      console.log('- Text being sent (length):', prompt.text?.length);
+      console.log('- Text being sent (preview):', prompt.text?.substring(0, 200) + '...');
+      console.log('- Target columns:', prompt.targetColumns);
+      console.log('- Table name:', prompt.tableName);
+      console.log('- Full prompt object:', JSON.stringify(prompt, null, 2));
 
       // Call GPT analysis endpoint using relative URL (will be proxied by Vite)
       const response = await fetch('/api/gpt/analyze', {

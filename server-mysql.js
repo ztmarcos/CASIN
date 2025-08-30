@@ -3954,14 +3954,18 @@ app.post('/api/gpt/analyze', async (req, res) => {
 
     const { text, tables, metadata, targetColumns, tableName, tableType, instructions } = req.body;
 
-    console.log('🔍 Detailed request analysis:');
+    console.log('🔍 DETAILED BACKEND REQUEST ANALYSIS:');
     console.log('- tableName:', tableName);
     console.log('- targetColumns type:', typeof targetColumns);
     console.log('- targetColumns length:', targetColumns?.length);
-    console.log('- targetColumns sample:', targetColumns?.slice(0, 3));
+    console.log('- targetColumns content:', targetColumns);
     console.log('- PDF text length:', text?.length);
-    console.log('- PDF text preview:', text?.substring(0, 200) + '...');
+    console.log('- PDF text preview (first 300 chars):', text?.substring(0, 300) + '...');
+    console.log('- PDF text preview (last 300 chars):', text?.length > 300 ? '...' + text?.substring(text.length - 300) : text);
     console.log('- PDF text has meaningful content:', text && text.length > 100 && text.includes(' ') && !text.includes('undefined'));
+    console.log('- Instructions provided:', !!instructions);
+    console.log('- Instructions preview:', instructions?.substring(0, 200) + '...');
+    console.log('- Metadata:', metadata);
 
     if (!targetColumns || !tableName || !text) {
       console.log('❌ Missing required fields validation failed');
@@ -4086,8 +4090,12 @@ No incluyas explicaciones adicionales, solo el objeto JSON.`;
     console.log('🔍 Using prompt from:', instructions ? 'frontend (custom)' : 'backend (default)');
     console.log('📝 Prompt preview:', prompt.substring(0, 300) + '...');
 
-    console.log('🔍 Sending request to OpenAI...');
+    console.log('🔍 SENDING REQUEST TO OPENAI:');
     console.log('📝 Prompt length:', prompt.length);
+    console.log('📝 Prompt preview (first 500 chars):', prompt.substring(0, 500) + '...');
+    console.log('📝 Prompt preview (last 500 chars):', prompt.length > 500 ? '...' + prompt.substring(prompt.length - 500) : prompt);
+    console.log('🎯 Target columns for OpenAI:', validColumns);
+    console.log('📊 Text being analyzed length:', text?.length);
 
     try {
       // Make request to OpenAI
@@ -4121,17 +4129,26 @@ No incluyas explicaciones adicionales, solo el objeto JSON.`;
       }
 
       const openaiResult = await response.json();
-      console.log('✅ OpenAI response received');
+      console.log('✅ OPENAI RESPONSE RECEIVED:');
       console.log('📊 Usage:', openaiResult.usage);
+      console.log('📊 Full OpenAI response structure:', {
+        choices: openaiResult.choices?.length,
+        hasMessage: !!openaiResult.choices?.[0]?.message,
+        messageRole: openaiResult.choices?.[0]?.message?.role,
+        contentLength: openaiResult.choices?.[0]?.message?.content?.length
+      });
 
       if (!openaiResult.choices || !openaiResult.choices[0] || !openaiResult.choices[0].message) {
+        console.error('❌ Invalid OpenAI response structure:', openaiResult);
         throw new Error('Invalid OpenAI response structure');
       }
 
       const extractedContent = openaiResult.choices[0].message.content.trim();
-      console.log('📝 Extracted content:', extractedContent);
+      console.log('📝 EXTRACTED CONTENT FROM OPENAI:');
       console.log('📝 Content length:', extractedContent.length);
+      console.log('📝 Full content:', extractedContent);
       console.log('📝 Content starts with:', extractedContent.substring(0, 100));
+      console.log('📝 Content ends with:', extractedContent.substring(extractedContent.length - 100));
 
       // Parse the JSON response from OpenAI
       let extractedData;
