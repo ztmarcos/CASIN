@@ -30,17 +30,16 @@ const CellPDFParser = ({ columnName, tableName, onValueExtracted }) => {
         tableName: tableName || 'default_table', // Usar el tableName real pasado como prop
         tableType: 'simple',
         instructions: `
-          Del documento PDF, extrae el valor para: ${columnName}
+          Analiza el documento PDF y encuentra el valor para: ${columnName}
           
           ${columnName === 'pago_parcial' || columnName === 'primer_recibo' || columnName === 'primer_pago' || columnName === 'importe_primer_recibo' ? `
-          Busca el TOTAL a pagar en ESTE documento específico. 
-          Términos: "PRIMA TOTAL", "PRIMER PAGO", "Importe por Pagar", "Total".
-          Extrae ÚNICAMENTE el número de ESTE documento (sin $ ni símbolos).
+          Busca el monto total a pagar. Busca "PRIMA TOTAL:", "PRIMER PAGO :", "Importe por Pagar", "Total".
+          Devuelve solo el número sin símbolos de moneda.
           ` : `
-          Extrae el valor exacto del documento.
+          Encuentra el valor exacto en el documento.
           `}
           
-          Responde solo: {"${columnName}": "número_encontrado_en_este_documento"}
+          Devuelve JSON con el número real que encuentres.
         `
       };
 
