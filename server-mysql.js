@@ -4074,10 +4074,12 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - NUNCA devuelvas null - SIEMPRE encuentra al menos un monto
 
 FORMATO DE RESPUESTA:
-Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
 {
-  ${validColumns.map(col => `"${col}": "valor_extraído_o_null"`).join(',\n  ')}
+  ${validColumns.map(col => `"${col}": null`).join(',\n  ')}
 }
+
+Reemplaza cada "null" con el valor real extraído del documento, o mantén null si no encuentras el valor.
 
 No incluyas explicaciones adicionales, solo el objeto JSON.`;
     
