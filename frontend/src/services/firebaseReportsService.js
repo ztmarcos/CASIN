@@ -295,8 +295,14 @@ class FirebaseReportsService {
     try {
       console.log(`🔄 Updating policy ${policyId} payment status to: ${paymentStatus} in collection: ${tableName}`);
       
+      // Ensure tableName is properly encoded for URL
+      const encodedTableName = encodeURIComponent(tableName);
+      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}`;
+      
+      console.log(`🌐 Making request to: ${apiUrl}`);
+      
       // Update the document in Firebase through backend API
-      const response = await fetch(`${API_URL}/data/${tableName}/${policyId}`, {
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -307,7 +313,16 @@ class FirebaseReportsService {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error(`❌ HTTP Error ${response.status}:`, errorText);
+        
+        if (response.status === 404) {
+          throw new Error(`API endpoint not found. Please ensure the backend server is running and the endpoint /api/data/${tableName} exists.`);
+        } else if (response.status === 500) {
+          throw new Error(`Backend server error: ${errorText}`);
+        } else {
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
       }
 
       const result = await response.json();
@@ -321,7 +336,15 @@ class FirebaseReportsService {
       
     } catch (error) {
       console.error('❌ Error updating policy status:', error);
-      throw error;
+      
+      // Provide more helpful error messages
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('No se pudo conectar con el servidor backend. Verifique que el servidor esté ejecutándose.');
+      } else if (error.message.includes('API endpoint not found')) {
+        throw new Error(`El endpoint de la API no existe. Contacte al administrador del sistema.`);
+      } else {
+        throw error;
+      }
     }
   }
 

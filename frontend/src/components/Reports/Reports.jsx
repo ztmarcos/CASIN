@@ -214,7 +214,12 @@ export default function Reports() {
       console.log(`🔄 Updating policy ${policy.numero_poliza} payment status from ${currentStatus} to ${newStatus}`);
       
       const policyId = policy.id || policy.firebase_doc_id;
-      await firebaseReportsService.updatePolicyPaymentStatus(policy.ramo.toLowerCase(), policyId, newStatus);
+      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      
+      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Status: ${newStatus}`);
+      
+      await firebaseReportsService.updatePolicyPaymentStatus(collectionName, policyId, newStatus);
       
       // Update local state
       const policyKey = getPolicyKey(policy);
@@ -227,7 +232,21 @@ export default function Reports() {
       
     } catch (err) {
       console.error('❌ Error updating payment status:', err);
-      toast.error('Error al actualizar el estado de pago');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Error al actualizar el estado de pago';
+      
+      if (err.message.includes('No se pudo conectar')) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifique que el servidor esté ejecutándose.';
+      } else if (err.message.includes('API endpoint not found')) {
+        errorMessage = 'Error del servidor: endpoint no encontrado. Contacte al administrador.';
+      } else if (err.message.includes('Document with ID')) {
+        errorMessage = 'Póliza no encontrada en la base de datos.';
+      } else if (err.message.includes('Failed to update document')) {
+        errorMessage = 'Error al actualizar en la base de datos.';
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
