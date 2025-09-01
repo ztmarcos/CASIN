@@ -198,6 +198,28 @@ export default function Reports() {
     }
   };
 
+  // Function to map display names to collection names
+  const mapDisplayNameToCollection = (displayName) => {
+    if (!displayName) return 'unknown';
+    
+    const name = displayName.toString().toLowerCase();
+    
+    // Map display names to actual collection names
+    if (name.includes('gastos') || name.includes('médicos') || name.includes('gmm')) return 'gmm';
+    if (name.includes('auto') || name.includes('coche') || name.includes('carro')) return 'autos';
+    if (name.includes('hogar') || name.includes('casa') || name.includes('vivienda')) return 'hogar';
+    if (name.includes('vida')) return 'vida';
+    if (name.includes('responsabilidad') || name.includes('civil') || name.includes('rc')) return 'rc';
+    if (name.includes('transporte')) return 'transporte';
+    if (name.includes('mascota')) return 'mascotas';
+    if (name.includes('diverso')) return 'diversos';
+    if (name.includes('negocio')) return 'negocio';
+    if (name.includes('grupo')) return 'gruposgmm';
+    
+    // If no match, return the original name in lowercase
+    return name.replace(/\s+/g, '_').toLowerCase();
+  };
+
   // Handle payment status toggle for policies
   const handleToggleStatus = async (policy) => {
     try {
