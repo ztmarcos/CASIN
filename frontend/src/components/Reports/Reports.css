@@ -522,25 +522,25 @@
 
 /* Estilos para botones CAP y CFP en Reports */
 .status-toggle.cap-toggle.cap-active {
-  background-color: #6b7280;
+  background-color: #dc2626; /* Rojo */
   color: white;
 }
 
 .status-toggle.cap-toggle.cap-inactive {
-  background-color: #9ca3af;
+  background-color: #6b7280; /* Gris */
   color: white;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .status-toggle.cfp-toggle.cfp-active {
-  background-color: #dc2626;
+  background-color: #991b1b; /* Rojo más oscuro */
   color: white;
 }
 
 .status-toggle.cfp-toggle.cfp-inactive {
-  background-color: #fca5a5;
+  background-color: #6b7280; /* Gris */
   color: white;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 /* Estilos para el contenedor de botones en tarjetas */

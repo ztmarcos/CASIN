@@ -241,6 +241,15 @@ export default function Reports() {
       console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
       console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Status: ${newStatus}`);
       
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_pago: newStatus } 
+            : p
+        )
+      );
+      
       await firebaseReportsService.updatePolicyPaymentStatus(collectionName, policyId, newStatus);
       
       // Update local state
@@ -269,6 +278,15 @@ export default function Reports() {
       }
       
       toast.error(errorMessage);
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_pago: policy.estado_pago || 'No Pagado' } 
+            : p
+        )
+      );
     }
   };
 
@@ -286,6 +304,15 @@ export default function Reports() {
       const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} CAP status from ${currentStatus} to ${newStatus}`);
+      
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_cap: newStatus } 
+            : p
+        )
+      );
       
       const policyId = policy.id || policy.firebase_doc_id;
       const collectionName = mapDisplayNameToCollection(policy.ramo);
@@ -307,6 +334,15 @@ export default function Reports() {
     } catch (err) {
       console.error('❌ Error updating CAP status:', err);
       toast.error('Error al actualizar el estado CAP');
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_cap: policy.estado_cap || 'Inactivo' } 
+            : p
+        )
+      );
     }
   };
 
@@ -324,6 +360,15 @@ export default function Reports() {
       const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} CFP status from ${currentStatus} to ${newStatus}`);
+      
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_cfp: newStatus } 
+            : p
+        )
+      );
       
       const policyId = policy.id || policy.firebase_doc_id;
       const collectionName = mapDisplayNameToCollection(policy.ramo);
@@ -345,6 +390,15 @@ export default function Reports() {
     } catch (err) {
       console.error('❌ Error updating CFP status:', err);
       toast.error('Error al actualizar el estado CFP');
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_cfp: policy.estado_cfp || 'Inactivo' } 
+            : p
+        )
+      );
     }
   };
 

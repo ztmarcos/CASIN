@@ -1053,6 +1053,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       
       console.log(`🔄 Updating payment status for record ${record.id} from ${currentStatus} to ${newStatus}`);
       
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_pago: newStatus } : row
+        )
+      );
+      
       await firebaseTableService.updateData(tableName, record.id, 'estado_pago', newStatus);
       
       toast.success(`Estado de pago actualizado a: ${newStatus}`);
@@ -1060,7 +1067,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       // Notify other components about the edit
       notifyDataEdit(tableName);
       
-      // Refresh the data
+      // Refresh the data to ensure consistency
       if (onRefresh) {
         await onRefresh();
       }
@@ -1068,6 +1075,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     } catch (error) {
       console.error('Error updating payment status:', error);
       toast.error('Error al actualizar el estado de pago');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_pago: record.estado_pago || 'No Pagado' } : row
+        )
+      );
     }
   };
 
@@ -1078,6 +1092,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       
       console.log(`🔄 Updating CAP status for record ${record.id} from ${currentStatus} to ${newStatus}`);
       
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_cap: newStatus } : row
+        )
+      );
+      
       await firebaseTableService.updateData(tableName, record.id, 'estado_cap', newStatus);
       
       toast.success(`Estado CAP actualizado a: ${newStatus}`);
@@ -1085,7 +1106,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       // Notify other components about the edit
       notifyDataEdit(tableName);
       
-      // Refresh the data
+      // Refresh the data to ensure consistency
       if (onRefresh) {
         await onRefresh();
       }
@@ -1093,6 +1114,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     } catch (error) {
       console.error('Error updating CAP status:', error);
       toast.error('Error al actualizar el estado CAP');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_cap: record.estado_cap || 'Inactivo' } : row
+        )
+      );
     }
   };
 
@@ -1103,6 +1131,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       
       console.log(`🔄 Updating CFP status for record ${record.id} from ${currentStatus} to ${newStatus}`);
       
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_cfp: newStatus } : row
+        )
+      );
+      
       await firebaseTableService.updateData(tableName, record.id, 'estado_cfp', newStatus);
       
       toast.success(`Estado CFP actualizado a: ${newStatus}`);
@@ -1110,7 +1145,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       // Notify other components about the edit
       notifyDataEdit(tableName);
       
-      // Refresh the data
+      // Refresh the data to ensure consistency
       if (onRefresh) {
         await onRefresh();
       }
@@ -1118,6 +1153,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     } catch (error) {
       console.error('Error updating CFP status:', error);
       toast.error('Error al actualizar el estado CFP');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, estado_cfp: record.estado_cfp || 'Inactivo' } : row
+        )
+      );
     }
   };
 

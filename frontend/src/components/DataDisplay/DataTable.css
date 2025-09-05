@@ -2392,29 +2392,29 @@ td .edit-cell-input[type="select"] {
 }
 
 .payment-paid {
-  background-color: transparent; /* Sin fondo */
-  color: #4CAF50; /* Texto verde */
+  background-color: #4CAF50; /* Fondo verde */
+  color: white; /* Texto blanco */
   border: 1px solid #4CAF50;
-  opacity: 0.85; /* Más tenue */
+  opacity: 0.9;
 }
 
 .payment-paid:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(76, 175, 80, 0.1); /* Fondo tenue al hover */
+  background-color: #45a049; /* Verde más oscuro al hover */
 }
 
 .payment-unpaid {
-  background-color: transparent; /* Sin fondo */
-  color: #f44336; /* Texto rojo */
+  background-color: #f44336; /* Fondo rojo */
+  color: white; /* Texto blanco */
   border: 1px solid #f44336;
-  opacity: 0.85; /* Más tenue */
+  opacity: 0.9;
 }
 
 .payment-unpaid:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(244, 67, 54, 0.1); /* Fondo tenue al hover */
+  background-color: #da190b; /* Rojo más oscuro al hover */
 }
 
 .action-header.payment-header {
@@ -2433,29 +2433,29 @@ td .edit-cell-input[type="select"] {
 }
 
 [data-theme='dark'] .payment-paid {
-  background-color: transparent; /* Sin fondo */
-  color: #4CAF50; /* Texto verde */
+  background-color: #4CAF50; /* Fondo verde */
+  color: white; /* Texto blanco */
   border: 1px solid #4CAF50;
-  opacity: 0.85; /* Más tenue */
+  opacity: 0.9;
 }
 
 [data-theme='dark'] .payment-paid:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(76, 175, 80, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #45a049; /* Verde más oscuro al hover */
 }
 
 [data-theme='dark'] .payment-unpaid {
-  background-color: transparent; /* Sin fondo */
-  color: #f44336; /* Texto rojo */
+  background-color: #f44336; /* Fondo rojo */
+  color: white; /* Texto blanco */
   border: 1px solid #f44336;
-  opacity: 0.85; /* Más tenue */
+  opacity: 0.9;
 }
 
 [data-theme='dark'] .payment-unpaid:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(244, 67, 54, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #da190b; /* Rojo más oscuro al hover */
 }
 
 [data-theme='dark'] .action-header.payment-header {
@@ -2471,56 +2471,56 @@ td .edit-cell-input[type="select"] {
 
 /* Estilos para botones CAP */
 .cap-active {
-  background-color: transparent; /* Sin fondo */
-  color: #6b7280; /* Texto gris */
-  border: 1px solid #6b7280;
-  opacity: 0.85; /* Más tenue */
+  background-color: #dc2626; /* Fondo rojo */
+  color: white; /* Texto blanco */
+  border: 1px solid #dc2626;
+  opacity: 0.9;
 }
 
 .cap-active:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(107, 114, 128, 0.1); /* Fondo tenue al hover */
+  background-color: #b91c1c; /* Rojo más oscuro al hover */
 }
 
 .cap-inactive {
-  background-color: transparent; /* Sin fondo */
-  color: #9ca3af; /* Texto gris más claro */
-  border: 1px solid #9ca3af;
-  opacity: 0.7; /* Más tenue */
+  background-color: #6b7280; /* Fondo gris */
+  color: white; /* Texto blanco */
+  border: 1px solid #6b7280;
+  opacity: 0.8;
 }
 
 .cap-inactive:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   transform: scale(1.03);
-  background-color: rgba(156, 163, 175, 0.1); /* Fondo tenue al hover */
+  background-color: #4b5563; /* Gris más oscuro al hover */
 }
 
 /* Estilos para botones CFP */
 .cfp-active {
-  background-color: transparent; /* Sin fondo */
-  color: #dc2626; /* Texto rojo */
-  border: 1px solid #dc2626;
-  opacity: 0.85; /* Más tenue */
+  background-color: #991b1b; /* Fondo rojo más oscuro */
+  color: white; /* Texto blanco */
+  border: 1px solid #991b1b;
+  opacity: 0.9;
 }
 
 .cfp-active:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(220, 38, 38, 0.1); /* Fondo tenue al hover */
+  background-color: #7f1d1d; /* Rojo aún más oscuro al hover */
 }
 
 .cfp-inactive {
-  background-color: transparent; /* Sin fondo */
-  color: #fca5a5; /* Texto rojo más claro */
-  border: 1px solid #fca5a5;
-  opacity: 0.7; /* Más tenue */
+  background-color: #6b7280; /* Fondo gris */
+  color: white; /* Texto blanco */
+  border: 1px solid #6b7280;
+  opacity: 0.8;
 }
 
 .cfp-inactive:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   transform: scale(1.03);
-  background-color: rgba(252, 165, 165, 0.1); /* Fondo tenue al hover */
+  background-color: #4b5563; /* Gris más oscuro al hover */
 }
 
 /* Headers para CAP y CFP */
@@ -2557,55 +2557,55 @@ td .edit-cell-input[type="select"] {
 
 /* Estilos para modo oscuro */
 [data-theme='dark'] .cap-active {
-  background-color: transparent; /* Sin fondo */
-  color: #9ca3af; /* Texto gris más claro para dark */
-  border: 1px solid #9ca3af;
-  opacity: 0.85; /* Más tenue */
+  background-color: #dc2626; /* Fondo rojo */
+  color: white; /* Texto blanco */
+  border: 1px solid #dc2626;
+  opacity: 0.9;
 }
 
 [data-theme='dark'] .cap-active:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(156, 163, 175, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #b91c1c; /* Rojo más oscuro al hover */
 }
 
 [data-theme='dark'] .cap-inactive {
-  background-color: transparent; /* Sin fondo */
-  color: #6b7280; /* Texto gris para dark */
+  background-color: #6b7280; /* Fondo gris */
+  color: white; /* Texto blanco */
   border: 1px solid #6b7280;
-  opacity: 0.7; /* Más tenue */
+  opacity: 0.8;
 }
 
 [data-theme='dark'] .cap-inactive:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   transform: scale(1.03);
-  background-color: rgba(107, 114, 128, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #4b5563; /* Gris más oscuro al hover */
 }
 
 [data-theme='dark'] .cfp-active {
-  background-color: transparent; /* Sin fondo */
-  color: #ef4444; /* Texto rojo para dark */
-  border: 1px solid #ef4444;
-  opacity: 0.85; /* Más tenue */
+  background-color: #991b1b; /* Fondo rojo más oscuro */
+  color: white; /* Texto blanco */
+  border: 1px solid #991b1b;
+  opacity: 0.9;
 }
 
 [data-theme='dark'] .cfp-active:hover {
-  opacity: 0.95;
+  opacity: 1;
   transform: scale(1.03);
-  background-color: rgba(239, 68, 68, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #7f1d1d; /* Rojo aún más oscuro al hover */
 }
 
 [data-theme='dark'] .cfp-inactive {
-  background-color: transparent; /* Sin fondo */
-  color: #f87171; /* Texto rojo más claro para dark */
-  border: 1px solid #f87171;
-  opacity: 0.7; /* Más tenue */
+  background-color: #6b7280; /* Fondo gris */
+  color: white; /* Texto blanco */
+  border: 1px solid #6b7280;
+  opacity: 0.8;
 }
 
 [data-theme='dark'] .cfp-inactive:hover {
-  opacity: 0.85;
+  opacity: 0.9;
   transform: scale(1.03);
-  background-color: rgba(248, 113, 113, 0.15); /* Fondo tenue al hover para dark */
+  background-color: #4b5563; /* Gris más oscuro al hover */
 }
 
 [data-theme='dark'] .action-header.cap-header {
