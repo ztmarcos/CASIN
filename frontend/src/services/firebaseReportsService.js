@@ -261,7 +261,9 @@ class FirebaseReportsService {
           const documents = result.data || [];
           
           for (const doc of documents) {
-            const policyKey = `${collectionName}_${doc.id}`;
+            // Use the same key generation logic as the component
+            const ramo = doc.ramo || doc.sourceTable || doc.table || collectionName;
+            const policyKey = `${ramo.toLowerCase()}_${doc.id}`;
             // Get payment status from document, default to 'No Pagado' if not set
             statuses[policyKey] = doc.estado_pago || 'No Pagado';
           }
