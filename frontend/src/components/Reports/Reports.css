@@ -520,6 +520,43 @@
   transform: scale(1.05);
 }
 
+/* Estilos para botones CAP y CFP en Reports */
+.status-toggle.cap-toggle.cap-active {
+  background-color: #6b7280;
+  color: white;
+}
+
+.status-toggle.cap-toggle.cap-inactive {
+  background-color: #9ca3af;
+  color: white;
+  opacity: 0.7;
+}
+
+.status-toggle.cfp-toggle.cfp-active {
+  background-color: #dc2626;
+  color: white;
+}
+
+.status-toggle.cfp-toggle.cfp-inactive {
+  background-color: #fca5a5;
+  color: white;
+  opacity: 0.7;
+}
+
+/* Estilos para el contenedor de botones en tarjetas */
+.card-status-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.card-status-buttons .status-toggle {
+  min-width: 60px;
+  font-size: 0.8em;
+  padding: 4px 8px;
+}
+
 .matrix-container {
   overflow-x: auto;
   margin-top: 1rem;

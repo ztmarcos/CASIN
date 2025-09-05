@@ -272,6 +272,82 @@ export default function Reports() {
     }
   };
 
+  // Handle CAP status toggle for policies
+  const handleToggleCapStatus = async (policy) => {
+    try {
+      // Validate policy data
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for CAP status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentStatus = policy.estado_cap || 'Inactivo';
+      const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} CAP status from ${currentStatus} to ${newStatus}`);
+      
+      const policyId = policy.id || policy.firebase_doc_id;
+      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      
+      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New CAP Status: ${newStatus}`);
+      
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_cap', newStatus);
+      
+      // Update local state
+      const policyKey = getPolicyKey(policy);
+      setPolicyStatuses(prev => ({
+        ...prev,
+        [`${policyKey}_cap`]: newStatus
+      }));
+      
+      toast.success(`Póliza ${policy.numero_poliza} CAP actualizado a: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating CAP status:', err);
+      toast.error('Error al actualizar el estado CAP');
+    }
+  };
+
+  // Handle CFP status toggle for policies
+  const handleToggleCfpStatus = async (policy) => {
+    try {
+      // Validate policy data
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for CFP status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentStatus = policy.estado_cfp || 'Inactivo';
+      const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} CFP status from ${currentStatus} to ${newStatus}`);
+      
+      const policyId = policy.id || policy.firebase_doc_id;
+      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      
+      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New CFP Status: ${newStatus}`);
+      
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_cfp', newStatus);
+      
+      // Update local state
+      const policyKey = getPolicyKey(policy);
+      setPolicyStatuses(prev => ({
+        ...prev,
+        [`${policyKey}_cfp`]: newStatus
+      }));
+      
+      toast.success(`Póliza ${policy.numero_poliza} CFP actualizado a: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating CFP status:', err);
+      toast.error('Error al actualizar el estado CFP');
+    }
+  };
+
   const matchesSearch = (value, term) => {
     if (!term.trim()) return true;
     if (value === null || value === undefined) return false;
@@ -881,6 +957,8 @@ export default function Reports() {
                     <th>Forma de Pago</th>
                     <th>Próximo Pago</th>
                     <th>Status</th>
+                    <th>CAP</th>
+                    <th>CFP</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -932,6 +1010,34 @@ export default function Reports() {
                             {getPolicyStatus(policy)}
                           </button>
                         </td>
+                        <td>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCapStatus(policy);
+                            }}
+                            className={`status-toggle cap-toggle ${
+                              (policy.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
+                            }`}
+                            title="Cambiar estado CAP"
+                          >
+                            CAP
+                          </button>
+                        </td>
+                        <td>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleCfpStatus(policy);
+                            }}
+                            className={`status-toggle cfp-toggle ${
+                              (policy.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
+                            }`}
+                            title="Cambiar estado CFP"
+                          >
+                            CFP
+                          </button>
+                        </td>
                       </tr>
                   ))}
                 </tbody>
@@ -963,15 +1069,41 @@ export default function Reports() {
                       </div>
                       <h3>{policy.numero_poliza}</h3>
                     </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleStatus(policy);
-                      }}
-                      className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
-                    >
-                      {getPolicyStatus(policy)}
-                    </button>
+                    <div className="card-status-buttons">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleStatus(policy);
+                        }}
+                        className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                      >
+                        {getPolicyStatus(policy)}
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleCapStatus(policy);
+                        }}
+                        className={`status-toggle cap-toggle ${
+                          (policy.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
+                        }`}
+                        title="Cambiar estado CAP"
+                      >
+                        CAP
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleCfpStatus(policy);
+                        }}
+                        className={`status-toggle cfp-toggle ${
+                          (policy.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
+                        }`}
+                        title="Cambiar estado CFP"
+                      >
+                        CFP
+                      </button>
+                    </div>
                   </div>
                   <div className="card-content">
                     <div className="card-info">

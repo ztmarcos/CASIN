@@ -2469,6 +2469,167 @@ td .edit-cell-input[type="select"] {
   border-color: rgba(76, 175, 80, 0.15) !important;
 }
 
+/* Estilos para botones CAP */
+.cap-active {
+  background-color: transparent; /* Sin fondo */
+  color: #6b7280; /* Texto gris */
+  border: 1px solid #6b7280;
+  opacity: 0.85; /* Más tenue */
+}
+
+.cap-active:hover {
+  opacity: 0.95;
+  transform: scale(1.03);
+  background-color: rgba(107, 114, 128, 0.1); /* Fondo tenue al hover */
+}
+
+.cap-inactive {
+  background-color: transparent; /* Sin fondo */
+  color: #9ca3af; /* Texto gris más claro */
+  border: 1px solid #9ca3af;
+  opacity: 0.7; /* Más tenue */
+}
+
+.cap-inactive:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+  background-color: rgba(156, 163, 175, 0.1); /* Fondo tenue al hover */
+}
+
+/* Estilos para botones CFP */
+.cfp-active {
+  background-color: transparent; /* Sin fondo */
+  color: #dc2626; /* Texto rojo */
+  border: 1px solid #dc2626;
+  opacity: 0.85; /* Más tenue */
+}
+
+.cfp-active:hover {
+  opacity: 0.95;
+  transform: scale(1.03);
+  background-color: rgba(220, 38, 38, 0.1); /* Fondo tenue al hover */
+}
+
+.cfp-inactive {
+  background-color: transparent; /* Sin fondo */
+  color: #fca5a5; /* Texto rojo más claro */
+  border: 1px solid #fca5a5;
+  opacity: 0.7; /* Más tenue */
+}
+
+.cfp-inactive:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+  background-color: rgba(252, 165, 165, 0.1); /* Fondo tenue al hover */
+}
+
+/* Headers para CAP y CFP */
+.action-header.cap-header {
+  background: rgba(107, 114, 128, 0.08) !important; /* Gris tenue coordinado */
+  border-color: rgba(107, 114, 128, 0.15) !important;
+  color: #6b7280 !important;
+  font-weight: 600;
+  text-align: center;
+}
+
+.action-header.cfp-header {
+  background: rgba(220, 38, 38, 0.08) !important; /* Rojo tenue coordinado */
+  border-color: rgba(220, 38, 38, 0.15) !important;
+  color: #dc2626 !important;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Celdas para CAP y CFP */
+.action-cell.cap-cell {
+  background: rgba(107, 114, 128, 0.03) !important; /* Gris muy tenue */
+  border-color: rgba(107, 114, 128, 0.08) !important;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.action-cell.cfp-cell {
+  background: rgba(220, 38, 38, 0.03) !important; /* Rojo muy tenue */
+  border-color: rgba(220, 38, 38, 0.08) !important;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Estilos para modo oscuro */
+[data-theme='dark'] .cap-active {
+  background-color: transparent; /* Sin fondo */
+  color: #9ca3af; /* Texto gris más claro para dark */
+  border: 1px solid #9ca3af;
+  opacity: 0.85; /* Más tenue */
+}
+
+[data-theme='dark'] .cap-active:hover {
+  opacity: 0.95;
+  transform: scale(1.03);
+  background-color: rgba(156, 163, 175, 0.15); /* Fondo tenue al hover para dark */
+}
+
+[data-theme='dark'] .cap-inactive {
+  background-color: transparent; /* Sin fondo */
+  color: #6b7280; /* Texto gris para dark */
+  border: 1px solid #6b7280;
+  opacity: 0.7; /* Más tenue */
+}
+
+[data-theme='dark'] .cap-inactive:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+  background-color: rgba(107, 114, 128, 0.15); /* Fondo tenue al hover para dark */
+}
+
+[data-theme='dark'] .cfp-active {
+  background-color: transparent; /* Sin fondo */
+  color: #ef4444; /* Texto rojo para dark */
+  border: 1px solid #ef4444;
+  opacity: 0.85; /* Más tenue */
+}
+
+[data-theme='dark'] .cfp-active:hover {
+  opacity: 0.95;
+  transform: scale(1.03);
+  background-color: rgba(239, 68, 68, 0.15); /* Fondo tenue al hover para dark */
+}
+
+[data-theme='dark'] .cfp-inactive {
+  background-color: transparent; /* Sin fondo */
+  color: #f87171; /* Texto rojo más claro para dark */
+  border: 1px solid #f87171;
+  opacity: 0.7; /* Más tenue */
+}
+
+[data-theme='dark'] .cfp-inactive:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+  background-color: rgba(248, 113, 113, 0.15); /* Fondo tenue al hover para dark */
+}
+
+[data-theme='dark'] .action-header.cap-header {
+  background: rgba(107, 114, 128, 0.12) !important; /* Gris más visible en dark */
+  border-color: rgba(107, 114, 128, 0.25) !important;
+  color: #9ca3af !important;
+}
+
+[data-theme='dark'] .action-header.cfp-header {
+  background: rgba(220, 38, 38, 0.12) !important; /* Rojo más visible en dark */
+  border-color: rgba(220, 38, 38, 0.25) !important;
+  color: #ef4444 !important;
+}
+
+[data-theme='dark'] .action-cell.cap-cell {
+  background: rgba(107, 114, 128, 0.05) !important; /* Gris muy tenue en dark */
+  border-color: rgba(107, 114, 128, 0.15) !important;
+}
+
+[data-theme='dark'] .action-cell.cfp-cell {
+  background: rgba(220, 38, 38, 0.05) !important; /* Rojo muy tenue en dark */
+  border-color: rgba(220, 38, 38, 0.15) !important;
+}
+
 /* Child table selector styling */
 .child-table-selector {
   display: flex;

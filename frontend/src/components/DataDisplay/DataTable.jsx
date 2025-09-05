@@ -1071,6 +1071,56 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   };
 
+  const handleCapStatusToggle = async (record) => {
+    try {
+      const currentStatus = record.estado_cap || 'Inactivo';
+      const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+      
+      console.log(`🔄 Updating CAP status for record ${record.id} from ${currentStatus} to ${newStatus}`);
+      
+      await firebaseTableService.updateData(tableName, record.id, 'estado_cap', newStatus);
+      
+      toast.success(`Estado CAP actualizado a: ${newStatus}`);
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
+      
+      // Refresh the data
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (error) {
+      console.error('Error updating CAP status:', error);
+      toast.error('Error al actualizar el estado CAP');
+    }
+  };
+
+  const handleCfpStatusToggle = async (record) => {
+    try {
+      const currentStatus = record.estado_cfp || 'Inactivo';
+      const newStatus = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+      
+      console.log(`🔄 Updating CFP status for record ${record.id} from ${currentStatus} to ${newStatus}`);
+      
+      await firebaseTableService.updateData(tableName, record.id, 'estado_cfp', newStatus);
+      
+      toast.success(`Estado CFP actualizado a: ${newStatus}`);
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
+      
+      // Refresh the data
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (error) {
+      console.error('Error updating CFP status:', error);
+      toast.error('Error al actualizar el estado CFP');
+    }
+  };
+
   const handleStatusChange = async (rowId, newValue) => {
     try {
       console.log('Status change initiated:', { rowId, newValue });
@@ -1404,6 +1454,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               }}>
                 ESTADO PAGO
               </th>
+              {/* COLUMNA CAP */}
+              <th className="action-header cap-header" style={{
+                width: '80px !important',
+                minWidth: '80px !important',
+                maxWidth: '80px !important'
+              }}>
+                CAP
+              </th>
+              {/* COLUMNA CFP */}
+              <th className="action-header cfp-header" style={{
+                width: '80px !important',
+                minWidth: '80px !important',
+                maxWidth: '80px !important'
+              }}>
+                CFP
+              </th>
               {/* COLUMNA ENVIAR MAIL */}
               <th className="action-header email-header" style={{
                 width: '100px !important',
@@ -1531,6 +1597,46 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     title="Cambiar estado de pago"
                   >
                     {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
+                  </button>
+                </td>
+                {/* COLUMNA CAP */}
+                <td className="action-cell cap-cell" style={{
+                  width: '80px !important',
+                  minWidth: '80px !important', 
+                  maxWidth: '80px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('CAP STATUS clicked for row:', row);
+                      handleCapStatusToggle(row);
+                    }}
+                    className={`action-btn cap-btn ${
+                      (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
+                    }`}
+                    title="Cambiar estado CAP"
+                  >
+                    CAP
+                  </button>
+                </td>
+                {/* COLUMNA CFP */}
+                <td className="action-cell cfp-cell" style={{
+                  width: '80px !important',
+                  minWidth: '80px !important', 
+                  maxWidth: '80px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('CFP STATUS clicked for row:', row);
+                      handleCfpStatusToggle(row);
+                    }}
+                    className={`action-btn cfp-btn ${
+                      (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
+                    }`}
+                    title="Cambiar estado CFP"
+                  >
+                    CFP
                   </button>
                 </td>
                 {/* COLUMNA ENVIAR MAIL */}
