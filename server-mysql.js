@@ -4603,7 +4603,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -4615,19 +4615,20 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       fromName = req.body.fromName;
       fromPass = req.body.fromPass;
       sendBccToSender = req.body.sendBccToSender === 'true'; // Convert string to boolean
+      cc = req.body.cc || '';
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'cc'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -4683,6 +4684,16 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       html: emailBody,
       text: emailBody.replace(/<[^>]*>/g, '') // Versión texto plano
     };
+    
+    // Add CC if provided
+    if (cc && cc.trim()) {
+      // Parse CC emails (comma-separated)
+      const ccEmails = cc.split(',').map(email => email.trim()).filter(email => email);
+      if (ccEmails.length > 0) {
+        mailOptions.cc = ccEmails;
+        console.log('📧 Adding CC recipients:', ccEmails);
+      }
+    }
     
     // Add BCC to sender if requested
     if (sendBccToSender && smtpUser) {

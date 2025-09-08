@@ -379,6 +379,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const fileInputRef = useRef(null);
   const [sender, setSender] = useState(SENDER_OPTIONS[0]);
   const [sendBccToSender, setSendBccToSender] = useState(true); // Por defecto activado
+  const [ccEmails, setCcEmails] = useState(''); // Campo CC manual
+  const [plainTextMessage, setPlainTextMessage] = useState(''); // Mensaje en texto plano para edición
 
   // Función para convertir HTML a texto plano
   const htmlToPlainText = (html) => {
@@ -388,11 +390,11 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     
-    // Obtener el texto plano
+    // Obtener el texto plano - usar textContent que es más confiable
     let text = tempDiv.textContent || tempDiv.innerText || '';
     
-    // Limpiar espacios extra y saltos de línea
-    text = text.replace(/\s+/g, ' ').trim();
+    // Limpiar espacios extra pero mantener saltos de línea
+    text = text.replace(/[ \t]+/g, ' ').trim();
     
     // Reemplazar etiquetas comunes con formato legible para los templates
     text = text
@@ -415,6 +417,19 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     text = text.replace(/\n{3,}/g, '\n\n').replace(/^\s+/, '');
     
     return text;
+  };
+
+  // Función para convertir texto plano a HTML
+  const plainTextToHtml = (text) => {
+    if (!text) return '';
+    
+    return text
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/\n/g, '<br>')
+      .replace(/^/, '<p>')
+      .replace(/$/, '</p>')
+      .replace(/<p><\/p>/g, '')
+      .replace(/<p>\s*<\/p>/g, '');
   };
 
   // Función para detectar automáticamente el tipo de póliza basado en los datos
@@ -634,6 +649,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
       setSendBccToSender(true); // Reset BCC option
+      setCcEmails(''); // Reset CC field
+      setPlainTextMessage(''); // Reset plain text message
     }
   }, [isOpen]);
 
@@ -801,6 +818,10 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       console.log('Contenido generado con template:', ramo);
       setEmailContent(emailContent);
       
+      // Actualizar también el texto plano para edición
+      const plainText = htmlToPlainText(htmlContent);
+      setPlainTextMessage(plainText);
+      
     } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'Error al generar el correo. Por favor, intenta de nuevo.');
@@ -963,6 +984,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         formData.append('fromName', sender.name);
         formData.append('fromPass', sender.pass);
         formData.append('sendBccToSender', sendBccToSender.toString());
+        formData.append('cc', ccEmails);
         
         // Add drive links if any
         if (uploadedFiles.length > 0) {
@@ -1011,6 +1033,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           fromName: sender.name,
           fromPass: sender.pass,
           sendBccToSender: sendBccToSender,
+          cc: ccEmails,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,
             link: file.driveLink
@@ -1118,6 +1141,21 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
             />
           </div>
           
+          <div className="mail-field">
+            <label>CC (Copia):</label>
+            <input 
+              type="text" 
+              value={ccEmails}
+              onChange={(e) => setCcEmails(e.target.value)}
+              placeholder="email1@ejemplo.com, email2@ejemplo.com"
+              className="mail-input"
+              disabled={isGenerating}
+            />
+            <small className="email-type-help">
+              Ingresa direcciones de correo separadas por comas para enviar copias
+            </small>
+          </div>
+          
           {/* Selector de tipo de email */}
           <div className="mail-field">
             <label>Tipo de Correo:</label>
@@ -1207,24 +1245,20 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
             <textarea 
               className="mail-textarea"
               placeholder={isGenerating ? "Generando contenido..." : "Escriba su mensaje..."}
-              value={htmlToPlainText(emailContent.message)}
+              value={plainTextMessage}
               onChange={(e) => {
-                // Convertir el texto plano de vuelta a HTML básico para mantener el formato
                 const plainText = e.target.value;
-                const htmlContent = plainText
-                  .replace(/\n\n/g, '</p><p>')
-                  .replace(/\n/g, '<br>')
-                  .replace(/^/, '<p>')
-                  .replace(/$/, '</p>')
-                  .replace(/<p><\/p>/g, '');
+                setPlainTextMessage(plainText);
                 
+                // Convertir el texto plano a HTML para el envío
+                const htmlContent = plainTextToHtml(plainText);
                 setEmailContent(prev => ({ ...prev, message: htmlContent }));
               }}
               rows={12}
               disabled={isGenerating}
             />
             <small className="email-type-help">
-              El mensaje se muestra en formato de texto plano para facilitar la edición
+              El mensaje se muestra en formato de texto plano para facilitar la edición. Los saltos de línea se convertirán automáticamente a HTML.
             </small>
           </div>
 
