@@ -578,7 +578,7 @@ export default function Reports() {
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
-        <p>De parte del Act. Marquitos, me permito enviarle este ${reminderType.toLowerCase()} para recordarle que su póliza <strong>${policyNumber}</strong> ${selectedType === 'Vencimientos' ? 'vencerá' : 'tiene un pago parcial programado'} el <strong>${formatDate(dueDate)}</strong>.</p>
+        <p>Me permito enviarle este ${reminderType.toLowerCase()} para recordarle que su póliza <strong>${policyNumber}</strong> ${selectedType === 'Vencimientos' ? 'vencerá' : 'tiene un pago parcial programado'} el <strong>${formatDate(dueDate)}</strong>.</p>
         
         ${selectedType === 'Vencimientos' 
           ? `<p>El monto total de la póliza es de <strong>$${amount?.toLocaleString() || 'N/A'} pesos</strong>.</p>`
