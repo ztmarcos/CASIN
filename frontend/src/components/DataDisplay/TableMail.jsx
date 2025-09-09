@@ -284,15 +284,19 @@ const EMAIL_TEMPLATES = {
   hogar: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurada (o), buen día</strong></p>
         
-        <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+        <p>Tenemos el gusto de enviar la emisión del seguro de Hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, que inicia la vigencia del <strong>${data.vigencia_inicio || 'N/A'}</strong> al <strong>${data.vigencia_fin || 'N/A'}</strong>, con un costo anual de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, asegurados en la compañía de seguros <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong>.</p>
         
-        <p>Me permito enviar su nueva póliza de seguro de hogar con no. de póliza <strong>${data.numero_poliza || 'N/A'}</strong> a su nombre, asegurada en <strong>${data.aseguradora || 'Grupo Nacional Provincial S.A.B'}</strong></p>
+        <p>Se adjunta carátula, condiciones generales y el aviso de cobro para la amable programación del pago; el plazo vence el día <strong>${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}</strong> a las 12:00 del día, puede ser liquidado mediante tarjeta de crédito a 3 o 6 MSI, pagando con cheque o efectivo en ventanilla bancaria o transferencia como pago de servicios.</p>
         
-        <p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} pesos</strong>, para su revisión y amable programación de pago.</p>
+        <p>Agradecemos nos informe qué forma de pago utilizará para poder apoyarle.</p>
         
-        <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+        <p><strong>Importante:</strong> Favor de revisar factura anexa.</p>
+        
+        <p>En caso de requerir algún cambio de uso del CFDI o cambie de domicilio fiscal o régimen, favor de enviarnos la constancia de identificación fiscal no mayor a 2 meses de antigüedad para actualizar sus datos y emitir su factura con sus datos vigentes, una vez emitida, ya no podrán hacer cambios.</p>
+        
+        <p>Para dar cumplimiento a las disposiciones legales agradecemos, nos dé acuse de recibido de este correo.</p>
         
         <p>Cordialmente,<br>
         <strong>CASIN Seguros</strong></p>
