@@ -659,7 +659,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       const emailFields = ['e_mail', 'email', 'correo', 'mail'];
       for (const field of emailFields) {
         if (data[field] && typeof data[field] === 'string' && data[field].includes('@')) {
-          return data[field];
+          return data[field].trim();
         }
       }
     }
@@ -950,7 +950,14 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const handleSendEmail = async () => {
     const emailAddress = extractEmail(rowData);
     if (!emailAddress) {
-      setError('No se encontró una dirección de correo válida');
+      setError('❌ No se encontró una dirección de correo válida en los datos. Verifica que el campo "e_mail", "email", "correo" o "mail" contenga una dirección válida.');
+      return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailAddress)) {
+      setError('❌ La dirección de correo no tiene un formato válido. Verifica que sea una dirección de correo correcta.');
       return;
     }
 

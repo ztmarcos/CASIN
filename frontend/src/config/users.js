@@ -12,7 +12,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Lore (lorenacasin5@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'yxeyswjxsicwgoow',
+    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'klejsbcgpjmwoogg',
     name: 'Lore',
     email: 'lorenacasin5@gmail.com',
     role: 'user',
@@ -21,7 +21,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Mich (michelldiaz.casinseguros@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_MICH || 'klejsbcgpjmwoogg',
+    pass: import.meta.env.VITE_SMTP_PASS_MICH || 'yxeyswjxsicwgoow',
     name: 'Mich',
     email: 'michelldiaz.casinseguros@gmail.com',
     role: 'user',
