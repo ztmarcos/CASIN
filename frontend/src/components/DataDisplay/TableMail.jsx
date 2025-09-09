@@ -648,7 +648,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setSelectedFolder(null);
       setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
-      setSendBccToSender(true); // Reset BCC option
+      setSendBccToSender(true); // Reset BCC option - SIEMPRE activado por defecto
       setCcEmails(''); // Reset CC field
       setPlainTextMessage(''); // Reset plain text message
     }
@@ -1070,7 +1070,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         }
       }
 
-      setSuccess(sendBccToSender ? '¡Correo enviado exitosamente! (Copia BCC enviada al remitente)' : '¡Correo enviado exitosamente!');
+      setSuccess(sendBccToSender ? '✅ ¡Correo enviado exitosamente! 📧 Copia BCC enviada al remitente para su archivo personal' : '¡Correo enviado exitosamente!');
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -1124,18 +1124,20 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
             <small className="email-type-help">Elige el remitente del correo</small>
           </div>
           <div className="mail-field">
-            <label>
+            <label style={{ display: 'flex', alignItems: 'center', backgroundColor: '#e8f5e8', padding: '10px', borderRadius: '5px', border: '1px solid #4caf50' }}>
               <input
                 type="checkbox"
                 checked={sendBccToSender}
                 onChange={(e) => setSendBccToSender(e.target.checked)}
                 disabled={isGenerating}
-                style={{ marginRight: '8px' }}
+                style={{ marginRight: '8px', transform: 'scale(1.2)' }}
               />
-              Enviar copia oculta (BCC) al remitente
+              <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>
+                📧 Enviar copia oculta (BCC) al remitente
+              </span>
             </label>
-            <small className="email-type-help">
-              Si está activado, el remitente recibirá una copia oculta del correo enviado
+            <small className="email-type-help" style={{ color: '#2e7d32', fontWeight: '500' }}>
+              ✅ RECOMENDADO: El remitente recibirá una copia oculta del correo enviado para su archivo personal
             </small>
           </div>
           <div className="mail-field">
