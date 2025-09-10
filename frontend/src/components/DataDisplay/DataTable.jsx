@@ -1493,9 +1493,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA ESTADO PAGO */}
               <th className="action-header payment-header" style={{
-                width: '70px !important',
-                minWidth: '70px !important',
-                maxWidth: '70px !important'
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
               }}>
                 PAGO
               </th>
@@ -1517,9 +1517,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA ENVIAR MAIL */}
               <th className="action-header email-header" style={{
-                width: '60px !important',
-                minWidth: '60px !important',
-                maxWidth: '60px !important'
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
               }}>
                 MAIL
               </th>
@@ -1626,9 +1626,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA ESTADO PAGO */}
                 <td className="action-cell payment-cell" style={{
-                  width: '70px !important',
-                  minWidth: '70px !important', 
-                  maxWidth: '70px !important'
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
                 }}>
                   <button 
                     onClick={(e) => {
@@ -1686,9 +1686,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA ENVIAR MAIL */}
                 <td className="action-cell email-cell" style={{
-                  width: '60px !important',
-                  minWidth: '60px !important', 
-                  maxWidth: '60px !important'
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
                 }}>
                   <button 
                     onClick={(e) => {

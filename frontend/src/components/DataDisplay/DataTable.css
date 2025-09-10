@@ -2185,6 +2185,15 @@ td .edit-cell-input[type="select"] {
   color: #059669 !important;
   background: rgba(16, 185, 129, 0.08) !important;
   border-color: rgba(16, 185, 129, 0.15) !important;
+  padding: 2px 4px !important;
+  min-width: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
 }
 
 .action-btn.email-btn:hover {
@@ -2368,14 +2377,14 @@ td .edit-cell-input[type="select"] {
 
 /* Payment button */
 .action-btn.payment-btn {
-  padding: 4px 6px !important;
-  min-width: 32px !important;
-  width: 32px !important;
-  height: 32px !important;
+  padding: 2px 4px !important;
+  min-width: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 10px !important;
+  font-size: 9px !important;
   font-weight: 600 !important;
 }
 
@@ -2393,14 +2402,14 @@ td .edit-cell-input[type="select"] {
 
 /* CAP button */
 .action-btn.cap-btn {
-  padding: 4px 6px !important;
-  min-width: 32px !important;
-  width: 32px !important;
-  height: 32px !important;
+  padding: 2px 4px !important;
+  min-width: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 9px !important;
+  font-size: 8px !important;
   font-weight: 600 !important;
 }
 
@@ -2418,14 +2427,14 @@ td .edit-cell-input[type="select"] {
 
 /* CFP button */
 .action-btn.cfp-btn {
-  padding: 4px 6px !important;
-  min-width: 32px !important;
-  width: 32px !important;
-  height: 32px !important;
+  padding: 2px 4px !important;
+  min-width: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 9px !important;
+  font-size: 8px !important;
   font-weight: 600 !important;
 }
 
