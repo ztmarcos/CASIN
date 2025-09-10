@@ -309,7 +309,7 @@ async function getTableStructure(tableName) {
         ],
         'gmm': [
           { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
-          { name: 'nombre_contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'numero_poliza', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'fecha_inicio', type: 'varchar(255)', nullable: true, key: '', default: null },
@@ -321,7 +321,7 @@ async function getTableStructure(tableName) {
           { name: 'recargo_pago_fraccionado', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'iva_16', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'email', type: 'varchar(255)', nullable: true, key: '', default: null },
-          { name: 'nombre_asegurado', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_del_asegurado', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'rfc', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'direccion', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'telefono', type: 'varchar(255)', nullable: true, key: '', default: null },

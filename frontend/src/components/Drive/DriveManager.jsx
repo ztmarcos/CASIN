@@ -11,14 +11,14 @@ const DriveManager = ({ isOpen, onClose, clientData }) => {
     setClientFolderReady(true);
   };
 
-  // Get client name for display
+  // Get client name for display (GMM REAL columns: 'contratante' and 'nombre_del_asegurado')
   const getClientName = () => {
     if (!clientData) return 'Cliente';
     
-    return clientData.nombre_contratante || 
-           clientData.contratante || 
-           clientData.nombre_asegurado ||
-           clientData.nombre_del_asegurado || 
+    return clientData.contratante || 
+           clientData.nombre_del_asegurado ||
+           clientData.nombre_contratante || 
+           clientData.nombre_asegurado || 
            clientData.asegurado || 
            clientData.nombre_completo ||
            'Cliente';
