@@ -2366,6 +2366,81 @@ td .edit-cell-input[type="select"] {
   font-size: 1.1rem !important;
 }
 
+/* Payment button */
+.action-btn.payment-btn {
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+.action-btn.payment-btn.payment-paid {
+  color: #059669 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.action-btn.payment-btn.payment-unpaid {
+  color: #dc2626 !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+/* CAP button */
+.action-btn.cap-btn {
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+}
+
+.action-btn.cap-btn.cap-active {
+  color: #0ea5e9 !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  border-color: rgba(14, 165, 233, 0.2) !important;
+}
+
+.action-btn.cap-btn.cap-inactive {
+  color: #64748b !important;
+  background: rgba(100, 116, 139, 0.08) !important;
+  border-color: rgba(100, 116, 139, 0.15) !important;
+}
+
+/* CFP button */
+.action-btn.cfp-btn {
+  padding: 4px 6px !important;
+  min-width: 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+}
+
+.action-btn.cfp-btn.cfp-active {
+  color: #7c3aed !important;
+  background: rgba(124, 58, 237, 0.12) !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+}
+
+.action-btn.cfp-btn.cfp-inactive {
+  color: #64748b !important;
+  background: rgba(100, 116, 139, 0.08) !important;
+  border-color: rgba(100, 116, 139, 0.15) !important;
+}
+
 [data-theme='dark'] .action-header {
   background: #1e293b !important;
   border-color: #334155 !important;

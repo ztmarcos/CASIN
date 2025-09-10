@@ -1640,9 +1640,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                       (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
                     }`}
                     title="Cambiar estado de pago"
-                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
-                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
+                    {(row.estado_pago === 'Pagado') ? 'P' : 'NP'}
                   </button>
                 </td>
                 {/* COLUMNA CAP */}
@@ -1661,7 +1660,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                       (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
                     }`}
                     title="Cambiar estado CAP"
-                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
                     CAP
                   </button>
@@ -1682,7 +1680,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                       (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
                     }`}
                     title="Cambiar estado CFP"
-                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
                     CFP
                   </button>
@@ -1701,7 +1698,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     }}
                     className="action-btn email-btn"
                     title="Enviar email"
-                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
                     MAIL
                   </button>
