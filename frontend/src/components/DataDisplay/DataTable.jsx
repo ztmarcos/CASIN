@@ -1542,15 +1542,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header drive-header" 
                 style={{
-                  width: '70px',
-                  minWidth: '70px',
-                  maxWidth: '70px',
+                  width: actionsColumnsCollapsed ? '0' : '70px',
+                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                   backgroundColor: '#f8f9fa',
                   textAlign: 'center',
                   fontSize: '10px',
                   fontWeight: '600',
-                  padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
+                  display: 'table-cell',
+                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                 }}
               >
                 📁
@@ -1559,15 +1561,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header payment-header" 
                 style={{
-                  width: '70px',
-                  minWidth: '70px',
-                  maxWidth: '70px',
+                  width: actionsColumnsCollapsed ? '0' : '70px',
+                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                   backgroundColor: '#f8f9fa',
                   textAlign: 'center',
                   fontSize: '10px',
                   fontWeight: '600',
-                  padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
+                  display: 'table-cell',
+                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                 }}
               >
                 PAGO
@@ -1576,15 +1580,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header cap-header" 
                 style={{
-                  width: '70px',
-                  minWidth: '70px',
-                  maxWidth: '70px',
+                  width: actionsColumnsCollapsed ? '0' : '70px',
+                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                   backgroundColor: '#f8f9fa',
                   textAlign: 'center',
                   fontSize: '10px',
                   fontWeight: '600',
-                  padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
+                  display: 'table-cell',
+                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                 }}
               >
                 CAP
@@ -1593,15 +1599,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header cfp-header" 
                 style={{
-                  width: '70px',
-                  minWidth: '70px',
-                  maxWidth: '70px',
+                  width: actionsColumnsCollapsed ? '0' : '70px',
+                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                   backgroundColor: '#f8f9fa',
                   textAlign: 'center',
                   fontSize: '10px',
                   fontWeight: '600',
-                  padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
+                  display: 'table-cell',
+                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                 }}
               >
                 CFP
@@ -1610,15 +1618,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header email-header" 
                 style={{
-                  width: '70px',
-                  minWidth: '70px',
-                  maxWidth: '70px',
+                  width: actionsColumnsCollapsed ? '0' : '70px',
+                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                   backgroundColor: '#f8f9fa',
                   textAlign: 'center',
                   fontSize: '10px',
                   fontWeight: '600',
-                  padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
+                  display: 'table-cell',
+                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                 }}
               >
                 EMAIL
@@ -1699,7 +1709,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
@@ -1732,14 +1748,16 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 <td 
                   className="action-cell drive-cell" 
                   style={{
-                    width: '70px',
-                    minWidth: '70px', 
-                    maxWidth: '70px',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px', 
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
                     backgroundColor: '#f8f9fa',
-                    padding: '4px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
@@ -1779,7 +1797,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
@@ -1820,7 +1844,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
@@ -1861,7 +1891,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
@@ -1902,7 +1938,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                    display: 'table-cell',
+                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
+                    width: actionsColumnsCollapsed ? '0' : '70px',
+                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
+                    padding: actionsColumnsCollapsed ? '0' : '4px',
+                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
                   }}
                 >
                   <button 
