@@ -1493,9 +1493,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA ACCIONES */}
               <th className="action-header actions-header" style={{
-                width: '200px !important',
-                minWidth: '200px !important',
-                maxWidth: '200px !important'
+                width: '120px !important',
+                minWidth: '120px !important',
+                maxWidth: '120px !important'
               }}>
                 ACCIONES
               </th>
@@ -1602,62 +1602,49 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA ACCIONES */}
                 <td className="action-cell actions-cell" style={{
-                  width: '200px !important',
-                  minWidth: '200px !important', 
-                  maxWidth: '200px !important'
+                  width: '120px !important',
+                  minWidth: '120px !important', 
+                  maxWidth: '120px !important'
                 }}>
-                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('PAYMENT STATUS clicked for row:', row);
+                  <select 
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      const action = e.target.value;
+                      if (action === 'payment') {
                         handlePaymentStatusToggle(row);
-                      }}
-                      className={`action-btn payment-btn ${
-                        (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
-                      }`}
-                      title="Cambiar estado de pago"
-                    >
-                      {(row.estado_pago === 'Pagado') ? 'P' : 'NP'}
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('CAP STATUS clicked for row:', row);
+                      } else if (action === 'cap') {
                         handleCapStatusToggle(row);
-                      }}
-                      className={`action-btn cap-btn ${
-                        (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
-                      }`}
-                      title="Cambiar estado CAP"
-                    >
-                      CAP
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('CFP STATUS clicked for row:', row);
+                      } else if (action === 'cfp') {
                         handleCfpStatusToggle(row);
-                      }}
-                      className={`action-btn cfp-btn ${
-                        (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
-                      }`}
-                      title="Cambiar estado CFP"
-                    >
-                      CFP
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log('EMAIL clicked for row:', row);
+                      } else if (action === 'email') {
                         handleEmailClick(row);
-                      }}
-                      className="action-btn email-btn"
-                      title="Enviar email"
-                    >
-                      MAIL
-                    </button>
-                  </div>
+                      }
+                      e.target.value = ''; // Reset dropdown
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '4px 8px',
+                      fontSize: '11px',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '4px',
+                      backgroundColor: '#f9fafb'
+                    }}
+                    title="Seleccionar acción"
+                  >
+                    <option value="">Acciones...</option>
+                    <option value="payment">
+                      💰 {(row.estado_pago === 'Pagado') ? 'Pagar' : 'No Pagar'}
+                    </option>
+                    <option value="cap">
+                      🏥 CAP {(row.estado_cap === 'Activo') ? 'Desactivar' : 'Activar'}
+                    </option>
+                    <option value="cfp">
+                      📋 CFP {(row.estado_cfp === 'Activo') ? 'Desactivar' : 'Activar'}
+                    </option>
+                    <option value="email">
+                      ✉️ Enviar Email
+                    </option>
+                  </select>
                 </td>
                 {reorderedColumns.map(column => (
                   <td
