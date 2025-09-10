@@ -648,247 +648,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           )}
       </div>
 
-      {/* MODAL DE ACCIONES */}
-      {showActionsModal && selectedRowForActions && (
-        console.log('🔧 Modal should be rendering now:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante }) ||
-        <div className="modal-overlay" style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div className="actions-modal" style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '24px',
-            maxWidth: '500px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto',
-            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '20px',
-              borderBottom: '1px solid #e5e7eb',
-              paddingBottom: '16px'
-            }}>
-              <h3 style={{
-                margin: 0,
-                fontSize: '18px',
-                fontWeight: '600',
-                color: '#374151'
-              }}>
-                Acciones para: {selectedRowForActions.nombre_contratante || 'Registro'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '24px',
-                  cursor: 'pointer',
-                  color: '#6b7280',
-                  padding: '4px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '12px'
-            }}>
-              {/* Botón Eliminar */}
-              <button
-                onClick={() => {
-                  handleDeleteClick(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#fef2f2',
-                  color: '#dc2626',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#fee2e2';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#fef2f2';
-                }}
-              >
-                <span>×</span>
-                Eliminar
-              </button>
-
-              {/* Botón Drive */}
-              <button
-                onClick={() => {
-                  handleDriveClick(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#dbeafe',
-                  color: '#1e40af',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#bfdbfe';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#dbeafe';
-                }}
-              >
-                <span>📁</span>
-                Drive
-              </button>
-
-              {/* Botón Pago */}
-              <button
-                onClick={() => {
-                  handlePaymentStatusToggle(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: (selectedRowForActions.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
-                  color: (selectedRowForActions.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
-                  border: `1px solid ${(selectedRowForActions.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>💰</span>
-                {(selectedRowForActions.estado_pago === 'Pagado') ? 'PAGADO' : 'NO PAGADO'}
-              </button>
-
-              {/* Botón CAP */}
-              <button
-                onClick={() => {
-                  handleCapStatusToggle(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: (selectedRowForActions.estado_cap === 'Activo') ? '#dbeafe' : '#f3f4f6',
-                  color: (selectedRowForActions.estado_cap === 'Activo') ? '#1e40af' : '#6b7280',
-                  border: `1px solid ${(selectedRowForActions.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>📋</span>
-                CAP
-              </button>
-
-              {/* Botón CFP */}
-              <button
-                onClick={() => {
-                  handleCfpStatusToggle(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: (selectedRowForActions.estado_cfp === 'Activo') ? '#e9d5ff' : '#f3f4f6',
-                  color: (selectedRowForActions.estado_cfp === 'Activo') ? '#7c3aed' : '#6b7280',
-                  border: `1px solid ${(selectedRowForActions.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db'}`,
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>📄</span>
-                CFP
-              </button>
-
-              {/* Botón Email */}
-              <button
-                onClick={() => {
-                  handleEmailClick(selectedRowForActions);
-                  setShowActionsModal(false);
-                  setSelectedRowForActions(null);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#dcfce7',
-                  color: '#166534',
-                  border: '1px solid #bbf7d0',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#bbf7d0';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#dcfce7';
-                }}
-              >
-                <span>📧</span>
-                Email
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -2019,6 +1778,248 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             <div className="status-modal-actions">
               <button onClick={handleStatusModalClose} className="cancel-btn">
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE ACCIONES */}
+      {showActionsModal && selectedRowForActions && (
+        console.log('🔧 Modal should be rendering now:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante }) ||
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="actions-modal" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '16px'
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Acciones para: {selectedRowForActions.nombre_contratante || 'Registro'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '4px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px'
+            }}>
+              {/* Botón Eliminar */}
+              <button
+                onClick={() => {
+                  handleDeleteClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#fee2e2';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                }}
+              >
+                <span>×</span>
+                Eliminar
+              </button>
+
+              {/* Botón Drive */}
+              <button
+                onClick={() => {
+                  handleDriveClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#dbeafe',
+                  color: '#1e40af',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#bfdbfe';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#dbeafe';
+                }}
+              >
+                <span>📁</span>
+                Drive
+              </button>
+
+              {/* Botón Pago */}
+              <button
+                onClick={() => {
+                  handlePaymentStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
+                  color: (selectedRowForActions.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
+                  border: `1px solid ${(selectedRowForActions.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>💰</span>
+                {(selectedRowForActions.estado_pago === 'Pagado') ? 'PAGADO' : 'NO PAGADO'}
+              </button>
+
+              {/* Botón CAP */}
+              <button
+                onClick={() => {
+                  handleCapStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_cap === 'Activo') ? '#dbeafe' : '#f3f4f6',
+                  color: (selectedRowForActions.estado_cap === 'Activo') ? '#1e40af' : '#6b7280',
+                  border: `1px solid ${(selectedRowForActions.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>📋</span>
+                CAP
+              </button>
+
+              {/* Botón CFP */}
+              <button
+                onClick={() => {
+                  handleCfpStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_cfp === 'Activo') ? '#e9d5ff' : '#f3f4f6',
+                  color: (selectedRowForActions.estado_cfp === 'Activo') ? '#7c3aed' : '#6b7280',
+                  border: `1px solid ${(selectedRowForActions.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>📄</span>
+                CFP
+              </button>
+
+              {/* Botón Email */}
+              <button
+                onClick={() => {
+                  handleEmailClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#dcfce7',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#bbf7d0';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#dcfce7';
+                }}
+              >
+                <span>📧</span>
+                Email
               </button>
             </div>
           </div>
