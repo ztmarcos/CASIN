@@ -1493,10 +1493,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA ACCIONES */}
               <th className="action-header actions-header" style={{
-                width: '200px !important',
-                minWidth: '200px !important',
-                maxWidth: '200px !important',
-                backgroundColor: '#f8f9fa'
+                width: '180px',
+                minWidth: '180px',
+                maxWidth: '180px',
+                backgroundColor: '#f8f9fa',
+                textAlign: 'center',
+                fontSize: '11px',
+                fontWeight: '600',
+                padding: '8px 4px'
               }}>
                 ACCIONES
               </th>
@@ -1603,62 +1607,74 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA ACCIONES */}
                 <td className="action-cell actions-cell" style={{
-                  width: '200px !important',
-                  minWidth: '200px !important', 
-                  maxWidth: '200px !important',
+                  width: '180px',
+                  minWidth: '180px', 
+                  maxWidth: '180px',
                   backgroundColor: '#f8f9fa',
-                  padding: '8px'
+                  padding: '6px 4px',
+                  verticalAlign: 'middle'
                 }}>
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '6px', 
-                    flexWrap: 'wrap',
-                    justifyContent: 'flex-start'
+                  <div className="actions-container" style={{ 
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '3px',
+                    justifyItems: 'center',
+                    alignItems: 'center'
                   }}>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('PAYMENT STATUS clicked for row:', row);
                         handlePaymentStatusToggle(row);
                       }}
                       className={`action-btn payment-btn ${
                         (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
                       }`}
-                      title="Cambiar estado de pago"
+                      title={`Estado de pago: ${row.estado_pago || 'No Pagado'} - Click para cambiar`}
                       style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        fontWeight: '600',
+                        width: '32px',
+                        height: '24px',
+                        padding: '2px 4px',
+                        fontSize: '9px',
+                        fontWeight: '700',
                         border: '1px solid',
-                        borderRadius: '4px',
+                        borderRadius: '3px',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         backgroundColor: (row.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
                         color: (row.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
-                        borderColor: (row.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca'
+                        borderColor: (row.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      {(row.estado_pago === 'Pagado') ? 'P' : 'NP'}
+                      {(row.estado_pago === 'Pagado') ? '💰' : '❌'}
                     </button>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('CAP STATUS clicked for row:', row);
                         handleCapStatusToggle(row);
                       }}
                       className={`action-btn cap-btn ${
                         (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
                       }`}
-                      title="Cambiar estado CAP"
+                      title={`Estado CAP: ${row.estado_cap || 'Inactivo'} - Click para cambiar`}
                       style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        fontWeight: '600',
+                        width: '32px',
+                        height: '24px',
+                        padding: '2px 4px',
+                        fontSize: '8px',
+                        fontWeight: '700',
                         border: '1px solid',
-                        borderRadius: '4px',
+                        borderRadius: '3px',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         backgroundColor: (row.estado_cap === 'Activo') ? '#dbeafe' : '#f3f4f6',
                         color: (row.estado_cap === 'Activo') ? '#1e40af' : '#6b7280',
-                        borderColor: (row.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db'
+                        borderColor: (row.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       CAP
@@ -1666,23 +1682,28 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('CFP STATUS clicked for row:', row);
                         handleCfpStatusToggle(row);
                       }}
                       className={`action-btn cfp-btn ${
                         (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
                       }`}
-                      title="Cambiar estado CFP"
+                      title={`Estado CFP: ${row.estado_cfp || 'Inactivo'} - Click para cambiar`}
                       style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        fontWeight: '600',
+                        width: '32px',
+                        height: '24px',
+                        padding: '2px 4px',
+                        fontSize: '8px',
+                        fontWeight: '700',
                         border: '1px solid',
-                        borderRadius: '4px',
+                        borderRadius: '3px',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         backgroundColor: (row.estado_cfp === 'Activo') ? '#e9d5ff' : '#f3f4f6',
                         color: (row.estado_cfp === 'Activo') ? '#7c3aed' : '#6b7280',
-                        borderColor: (row.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db'
+                        borderColor: (row.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       CFP
@@ -1690,23 +1711,28 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log('EMAIL clicked for row:', row);
                         handleEmailClick(row);
                       }}
                       className="action-btn email-btn"
                       title="Enviar email"
                       style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
+                        width: '32px',
+                        height: '24px',
+                        padding: '2px 4px',
+                        fontSize: '12px',
                         fontWeight: '600',
                         border: '1px solid #bbf7d0',
-                        borderRadius: '4px',
+                        borderRadius: '3px',
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         backgroundColor: '#dcfce7',
-                        color: '#166534'
+                        color: '#166534',
+                        transition: 'all 0.2s ease'
                       }}
                     >
-                      MAIL
+                      📧
                     </button>
                   </div>
                 </td>
