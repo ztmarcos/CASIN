@@ -1621,7 +1621,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     }`}
                     title="Cambiar estado de pago"
                   >
-                    {(row.estado_pago === 'Pagado') ? 'P' : 'NP'}
+                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
                   </button>
                 </td>
                 {/* COLUMNA CAP */}
