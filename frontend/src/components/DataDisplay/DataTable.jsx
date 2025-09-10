@@ -1484,8 +1484,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   width: '70px',
                   minWidth: '70px',
                   maxWidth: '70px',
-                  backgroundColor: actionsColumnsCollapsed ? '#f59e0b' : '#f8f9fa',
-                  color: actionsColumnsCollapsed ? 'white' : '#374151',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
                   textAlign: 'center',
                   fontSize: '9px',
                   fontWeight: '700',
@@ -1493,7 +1493,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   display: 'table-cell',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  border: actionsColumnsCollapsed ? '2px solid #d97706' : '1px solid #e5e7eb',
+                  border: '2px solid #d97706',
                   borderRadius: '4px 0 0 4px'
                 }}
                 title={actionsColumnsCollapsed ? "Click para mostrar acciones" : "Click para ocultar acciones"}
@@ -1510,8 +1510,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                       viewBox="0 0 24 24" 
                       fill="none" 
                       stroke="currentColor" 
-                      strokeWidth="2.5"
-                      style={{ width: '14px', height: '14px' }}
+                      strokeWidth="3"
+                      style={{ width: '18px', height: '18px' }}
                     >
                       <path d="M9 18l6-6-6-6" />
                     </svg>
@@ -1529,8 +1529,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                       viewBox="0 0 24 24" 
                       fill="none" 
                       stroke="currentColor" 
-                      strokeWidth="2.5"
-                      style={{ width: '14px', height: '14px' }}
+                      strokeWidth="3"
+                      style={{ width: '18px', height: '18px' }}
                     >
                       <path d="M18 15l-6-6-6 6" />
                     </svg>
