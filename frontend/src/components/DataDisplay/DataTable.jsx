@@ -1493,11 +1493,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA ESTADO PAGO */}
               <th className="action-header payment-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
+                width: '70px !important',
+                minWidth: '70px !important',
+                maxWidth: '70px !important'
               }}>
-                💰
+                PAGO
               </th>
               {/* COLUMNA CAP */}
               <th className="action-header cap-header" style={{
@@ -1505,7 +1505,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                🏥
+                CAP
               </th>
               {/* COLUMNA CFP */}
               <th className="action-header cfp-header" style={{
@@ -1513,15 +1513,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                📋
+                CFP
               </th>
               {/* COLUMNA ENVIAR MAIL */}
               <th className="action-header email-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
+                width: '60px !important',
+                minWidth: '60px !important',
+                maxWidth: '60px !important'
               }}>
-                ✉️
+                MAIL
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1626,9 +1626,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA ESTADO PAGO */}
                 <td className="action-cell payment-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
+                  width: '70px !important',
+                  minWidth: '70px !important', 
+                  maxWidth: '70px !important'
                 }}>
                   <button 
                     onClick={(e) => {
@@ -1639,9 +1639,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     className={`action-btn payment-btn ${
                       (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
                     }`}
-                    title={`Estado: ${(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'} - Click para cambiar`}
+                    title="Cambiar estado de pago"
+                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
-                    {(row.estado_pago === 'Pagado') ? '✅' : '❌'}
+                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
                   </button>
                 </td>
                 {/* COLUMNA CAP */}
@@ -1659,9 +1660,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     className={`action-btn cap-btn ${
                       (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
                     }`}
-                    title={`CAP: ${(row.estado_cap === 'Activo') ? 'Activo' : 'Inactivo'} - Click para cambiar`}
+                    title="Cambiar estado CAP"
+                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
-                    {(row.estado_cap === 'Activo') ? '🏥' : '⚪'}
+                    CAP
                   </button>
                 </td>
                 {/* COLUMNA CFP */}
@@ -1679,16 +1681,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     className={`action-btn cfp-btn ${
                       (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
                     }`}
-                    title={`CFP: ${(row.estado_cfp === 'Activo') ? 'Activo' : 'Inactivo'} - Click para cambiar`}
+                    title="Cambiar estado CFP"
+                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
-                    {(row.estado_cfp === 'Activo') ? '📋' : '⚪'}
+                    CFP
                   </button>
                 </td>
                 {/* COLUMNA ENVIAR MAIL */}
                 <td className="action-cell email-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
+                  width: '60px !important',
+                  minWidth: '60px !important', 
+                  maxWidth: '60px !important'
                 }}>
                   <button 
                     onClick={(e) => {
@@ -1698,8 +1701,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     }}
                     className="action-btn email-btn"
                     title="Enviar email"
+                    style={{ fontSize: '10px', padding: '2px 4px' }}
                   >
-                    ✉️
+                    MAIL
                   </button>
                 </td>
                 {reorderedColumns.map(column => (
