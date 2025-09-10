@@ -1497,7 +1497,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                PAGO
+                💰
               </th>
               {/* COLUMNA CAP */}
               <th className="action-header cap-header" style={{
@@ -1505,7 +1505,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                CAP
+                🏥
               </th>
               {/* COLUMNA CFP */}
               <th className="action-header cfp-header" style={{
@@ -1513,7 +1513,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                CFP
+                📋
               </th>
               {/* COLUMNA ENVIAR MAIL */}
               <th className="action-header email-header" style={{
@@ -1521,7 +1521,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 minWidth: '50px !important',
                 maxWidth: '50px !important'
               }}>
-                MAIL
+                ✉️
               </th>
               {reorderedColumns.map(column => (
                 <th 
