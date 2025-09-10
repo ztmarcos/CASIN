@@ -2185,13 +2185,14 @@ td .edit-cell-input[type="select"] {
   color: #059669 !important;
   background: rgba(16, 185, 129, 0.08) !important;
   border-color: rgba(16, 185, 129, 0.15) !important;
-  padding: 4px 8px !important;
+  padding: 2px 4px !important;
   min-width: auto !important;
   width: auto !important;
   height: auto !important;
   display: inline-block !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 500 !important;
+  text-align: left !important;
 }
 
 .action-btn.email-btn:hover {
@@ -2375,13 +2376,14 @@ td .edit-cell-input[type="select"] {
 
 /* Payment button */
 .action-btn.payment-btn {
-  padding: 4px 8px !important;
+  padding: 2px 4px !important;
   min-width: auto !important;
   width: auto !important;
   height: auto !important;
   display: inline-block !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 500 !important;
+  text-align: left !important;
 }
 
 .action-btn.payment-btn.payment-paid {
@@ -2398,13 +2400,14 @@ td .edit-cell-input[type="select"] {
 
 /* CAP button */
 .action-btn.cap-btn {
-  padding: 4px 8px !important;
+  padding: 2px 4px !important;
   min-width: auto !important;
   width: auto !important;
   height: auto !important;
   display: inline-block !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 500 !important;
+  text-align: left !important;
 }
 
 .action-btn.cap-btn.cap-active {
@@ -2421,13 +2424,14 @@ td .edit-cell-input[type="select"] {
 
 /* CFP button */
 .action-btn.cfp-btn {
-  padding: 4px 8px !important;
+  padding: 2px 4px !important;
   min-width: auto !important;
   width: auto !important;
   height: auto !important;
   display: inline-block !important;
-  font-size: 11px !important;
+  font-size: 10px !important;
   font-weight: 500 !important;
+  text-align: left !important;
 }
 
 .action-btn.cfp-btn.cfp-active {
@@ -2454,7 +2458,7 @@ td .edit-cell-input[type="select"] {
   min-width: 80px !important;
   max-width: 80px !important;
   padding: 4px !important;
-  text-align: center !important;
+  text-align: left !important;
 }
 
 .action-column th,
@@ -2463,7 +2467,7 @@ td .edit-cell-input[type="select"] {
   min-width: 80px !important;
   max-width: 80px !important;
   padding: 4px !important;
-  text-align: center !important;
+  text-align: left !important;
   border: none !important;
 }
 
