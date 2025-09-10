@@ -2185,14 +2185,14 @@ td .edit-cell-input[type="select"] {
   color: #059669 !important;
   background: rgba(16, 185, 129, 0.08) !important;
   border-color: rgba(16, 185, 129, 0.15) !important;
-  padding: 2px 4px !important;
-  min-width: 28px !important;
-  width: 28px !important;
-  height: 28px !important;
+  padding: 1px 2px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 8px !important;
+  font-size: 7px !important;
   font-weight: 600 !important;
 }
 
@@ -2377,14 +2377,14 @@ td .edit-cell-input[type="select"] {
 
 /* Payment button */
 .action-btn.payment-btn {
-  padding: 2px 4px !important;
-  min-width: 28px !important;
-  width: 28px !important;
-  height: 28px !important;
+  padding: 1px 2px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 9px !important;
+  font-size: 8px !important;
   font-weight: 600 !important;
 }
 
@@ -2402,14 +2402,14 @@ td .edit-cell-input[type="select"] {
 
 /* CAP button */
 .action-btn.cap-btn {
-  padding: 2px 4px !important;
-  min-width: 28px !important;
-  width: 28px !important;
-  height: 28px !important;
+  padding: 1px 2px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 8px !important;
+  font-size: 7px !important;
   font-weight: 600 !important;
 }
 
@@ -2427,14 +2427,14 @@ td .edit-cell-input[type="select"] {
 
 /* CFP button */
 .action-btn.cfp-btn {
-  padding: 2px 4px !important;
-  min-width: 28px !important;
-  width: 28px !important;
-  height: 28px !important;
+  padding: 1px 2px !important;
+  min-width: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 8px !important;
+  font-size: 7px !important;
   font-weight: 600 !important;
 }
 
@@ -2454,6 +2454,25 @@ td .edit-cell-input[type="select"] {
   background: #1e293b !important;
   border-color: #334155 !important;
   color: #94a3b8 !important;
+}
+
+/* Clase específica para columnas de acción - ultra compactas */
+.action-column {
+  width: 35px !important;
+  min-width: 35px !important;
+  max-width: 35px !important;
+  padding: 2px !important;
+  text-align: center !important;
+}
+
+.action-column th,
+.action-column td {
+  width: 35px !important;
+  min-width: 35px !important;
+  max-width: 35px !important;
+  padding: 2px !important;
+  text-align: center !important;
+  border: none !important;
 }
 
 [data-theme='dark'] .action-cell {

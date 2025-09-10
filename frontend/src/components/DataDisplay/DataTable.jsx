@@ -1492,35 +1492,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 📁
               </th>
               {/* COLUMNA ESTADO PAGO */}
-              <th className="action-header payment-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
+              <th className="action-header payment-header action-column">
                 💰
               </th>
               {/* COLUMNA CAP */}
-              <th className="action-header cap-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
+              <th className="action-header cap-header action-column">
                 🏥
               </th>
               {/* COLUMNA CFP */}
-              <th className="action-header cfp-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
+              <th className="action-header cfp-header action-column">
                 📋
               </th>
               {/* COLUMNA ENVIAR MAIL */}
-              <th className="action-header email-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
+              <th className="action-header email-header action-column">
                 ✉️
               </th>
               {reorderedColumns.map(column => (
@@ -1625,11 +1609,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA ESTADO PAGO */}
-                <td className="action-cell payment-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
+                <td className="action-cell payment-cell action-column">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1645,11 +1625,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA CAP */}
-                <td className="action-cell cap-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
+                <td className="action-cell cap-cell action-column">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1665,11 +1641,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA CFP */}
-                <td className="action-cell cfp-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
+                <td className="action-cell cfp-cell action-column">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1685,11 +1657,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA ENVIAR MAIL */}
-                <td className="action-cell email-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
+                <td className="action-cell email-cell action-column">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
