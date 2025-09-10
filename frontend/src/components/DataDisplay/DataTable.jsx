@@ -645,6 +645,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
       {/* MODAL DE ACCIONES */}
       {showActionsModal && selectedRowForActions && (
+        console.log('🔧 Modal should be rendering now:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante }) ||
         <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
@@ -1723,6 +1724,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               <th 
                 className="action-header actions-modal-header" 
                 onClick={() => {
+                  console.log('🔧 Header clicked, opening modal');
                   setShowActionsModal(true);
                 }}
                 style={{
@@ -1844,6 +1846,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
+                      console.log('🔧 Button clicked, opening modal for row:', row);
                       setSelectedRowForActions(row);
                       setShowActionsModal(true);
                     }}
