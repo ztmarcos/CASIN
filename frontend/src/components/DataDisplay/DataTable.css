@@ -2321,13 +2321,20 @@ td .edit-cell-input[type="select"] {
   transition: all 0.3s ease;
 }
 
-/* Efecto de hover en botón de toggle */
-.actions-toggle-btn.collapsed:hover {
-  background: #d97706 !important;
+/* Efecto de hover en header toggle */
+.actions-toggle-header:hover {
+  transform: scale(1.02) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
 }
 
-.actions-toggle-btn.expanded:hover {
-  background: #2563eb !important;
+.actions-toggle-header.collapsed:hover {
+  background: #d97706 !important;
+  border-color: #b45309 !important;
+}
+
+.actions-toggle-header.expanded:hover {
+  background: #e5e7eb !important;
+  border-color: #9ca3af !important;
 }
 
 .action-cell.email-cell {

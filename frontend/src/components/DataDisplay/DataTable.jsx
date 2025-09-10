@@ -45,7 +45,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [tableColumns, setTableColumns] = useState([]);
   const [isEditingFlag, setIsEditingFlag] = useState(false);
   const [forceRender, setForceRender] = useState(0); // State to force re-render on column order change
-  const [actionsColumnsCollapsed, setActionsColumnsCollapsed] = useState(false); // State to control actions columns visibility
+  const [actionsColumnsCollapsed, setActionsColumnsCollapsed] = useState(true); // State to control actions columns visibility - default collapsed
 
   // Reference to track previous data
   const previousDataRef = useRef([]);
@@ -1453,41 +1453,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </svg>
             Capturador
           </button>
-          <button
-            className={`actions-toggle-btn ${actionsColumnsCollapsed ? 'collapsed' : 'expanded'}`}
-            onClick={() => setActionsColumnsCollapsed(!actionsColumnsCollapsed)}
-            title={actionsColumnsCollapsed ? "Mostrar columnas de acciones" : "Ocultar columnas de acciones"}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              background: actionsColumnsCollapsed ? '#f59e0b' : '#3b82f6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              transition: 'all 0.2s ease',
-              marginLeft: '12px'
-            }}
-          >
-            <svg 
-              className={`toggle-icon ${actionsColumnsCollapsed ? 'rotated' : ''}`} 
-              viewBox="0 0 24 24" 
-              fill="none" 
-              stroke="currentColor" 
-              strokeWidth="2"
-              style={{
-                width: '18px',
-                height: '18px',
-                transition: 'transform 0.2s ease'
-              }}
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-            {actionsColumnsCollapsed ? 'Mostrar Acciones' : 'Ocultar Acciones'}
-          </button>
 
         </div>
       </div>
@@ -1511,22 +1476,67 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         <table className="data-table">
           <thead>
             <tr>
-              {/* COLUMNA BORRAR */}
+              {/* COLUMNA TOGGLE ACCIONES */}
               <th 
-                className="action-header delete-header" 
+                className="action-header actions-toggle-header" 
+                onClick={() => setActionsColumnsCollapsed(!actionsColumnsCollapsed)}
                 style={{
                   width: '70px',
                   minWidth: '70px',
                   maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: actionsColumnsCollapsed ? '#f59e0b' : '#f8f9fa',
+                  color: actionsColumnsCollapsed ? 'white' : '#374151',
                   textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
+                  fontSize: '9px',
+                  fontWeight: '700',
                   padding: '8px 4px',
-                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  display: 'table-cell',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  border: actionsColumnsCollapsed ? '2px solid #d97706' : '1px solid #e5e7eb',
+                  borderRadius: '4px 0 0 4px'
                 }}
+                title={actionsColumnsCollapsed ? "Click para mostrar acciones" : "Click para ocultar acciones"}
               >
-                ×
+                {actionsColumnsCollapsed ? (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '1px' 
+                  }}>
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5"
+                      style={{ width: '14px', height: '14px' }}
+                    >
+                      <path d="M9 18l6-6-6-6" />
+                    </svg>
+                    <span style={{ fontSize: '7px', letterSpacing: '0.5px' }}>ACCIONES</span>
+                  </div>
+                ) : (
+                  <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '1px' 
+                  }}>
+                    <svg 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      strokeWidth="2.5"
+                      style={{ width: '14px', height: '14px' }}
+                    >
+                      <path d="M18 15l-6-6-6 6" />
+                    </svg>
+                    <span style={{ fontSize: '7px', letterSpacing: '0.5px' }}>OCULTAR</span>
+                  </div>
+                )}
               </th>
               {/* COLUMNA DRIVE */}
               <th 
