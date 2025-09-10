@@ -1475,11 +1475,37 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         <table className="data-table">
           <thead>
             <tr>
+              {/* COLUMNA BORRAR */}
+              <th className="action-header delete-header" style={{
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
+                backgroundColor: '#f8f9fa',
+                textAlign: 'center',
+                fontSize: '10px',
+                fontWeight: '600',
+                padding: '8px 4px'
+              }}>
+                ×
+              </th>
+              {/* COLUMNA DRIVE */}
+              <th className="action-header drive-header" style={{
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
+                backgroundColor: '#f8f9fa',
+                textAlign: 'center',
+                fontSize: '10px',
+                fontWeight: '600',
+                padding: '8px 4px'
+              }}>
+                📁
+              </th>
               {/* COLUMNA PAGO */}
               <th className="action-header payment-header" style={{
-                width: '80px',
-                minWidth: '80px',
-                maxWidth: '80px',
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center',
                 fontSize: '10px',
@@ -1490,9 +1516,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA CAP */}
               <th className="action-header cap-header" style={{
-                width: '60px',
-                minWidth: '60px',
-                maxWidth: '60px',
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center',
                 fontSize: '10px',
@@ -1503,9 +1529,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA CFP */}
               <th className="action-header cfp-header" style={{
-                width: '60px',
-                minWidth: '60px',
-                maxWidth: '60px',
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center',
                 fontSize: '10px',
@@ -1516,9 +1542,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </th>
               {/* COLUMNA EMAIL */}
               <th className="action-header email-header" style={{
-                width: '60px',
-                minWidth: '60px',
-                maxWidth: '60px',
+                width: '70px',
+                minWidth: '70px',
+                maxWidth: '70px',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center',
                 fontSize: '10px',
@@ -1526,22 +1552,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 padding: '8px 4px'
               }}>
                 EMAIL
-              </th>
-              {/* COLUMNA BORRAR */}
-              <th className="action-header delete-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
-                ×
-              </th>
-              {/* COLUMNA DRIVE */}
-              <th className="action-header drive-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
-                📁
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1608,11 +1618,83 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 key={rowIndex} 
                 className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
               >
+                {/* COLUMNA BORRAR */}
+                <td className="action-cell delete-cell" style={{
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  padding: '4px',
+                  verticalAlign: 'middle',
+                  textAlign: 'center'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DELETE clicked for row:', row);
+                      handleDeleteClick(row);
+                    }}
+                    className="action-btn delete-btn"
+                    title="Eliminar registro"
+                    style={{
+                      width: '100%',
+                      height: '28px',
+                      padding: '4px 6px',
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      border: '1px solid',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: '#fef2f2',
+                      color: '#dc2626',
+                      borderColor: '#fecaca',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    ×
+                  </button>
+                </td>
+                {/* COLUMNA DRIVE */}
+                <td className="action-cell drive-cell" style={{
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  padding: '4px',
+                  verticalAlign: 'middle',
+                  textAlign: 'center'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DRIVE clicked for row:', row);
+                      handleDriveClick(row);
+                    }}
+                    className="action-btn drive-btn"
+                    title="Gestionar archivos en Drive"
+                    style={{
+                      width: '100%',
+                      height: '28px',
+                      padding: '4px 6px',
+                      fontSize: '10px',
+                      fontWeight: '600',
+                      border: '1px solid',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      borderColor: '#bfdbfe',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    📁
+                  </button>
+                </td>
                 {/* COLUMNA PAGO */}
                 <td className="action-cell payment-cell" style={{
-                  width: '80px',
-                  minWidth: '80px', 
-                  maxWidth: '80px',
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
                   backgroundColor: '#f8f9fa',
                   padding: '4px',
                   verticalAlign: 'middle',
@@ -1630,7 +1712,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     style={{
                       width: '100%',
                       height: '28px',
-                      padding: '4px 8px',
+                      padding: '4px 6px',
                       fontSize: '10px',
                       fontWeight: '600',
                       border: '1px solid',
@@ -1647,9 +1729,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA CAP */}
                 <td className="action-cell cap-cell" style={{
-                  width: '60px',
-                  minWidth: '60px', 
-                  maxWidth: '60px',
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
                   backgroundColor: '#f8f9fa',
                   padding: '4px',
                   verticalAlign: 'middle',
@@ -1684,9 +1766,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA CFP */}
                 <td className="action-cell cfp-cell" style={{
-                  width: '60px',
-                  minWidth: '60px', 
-                  maxWidth: '60px',
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
                   backgroundColor: '#f8f9fa',
                   padding: '4px',
                   verticalAlign: 'middle',
@@ -1721,9 +1803,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 </td>
                 {/* COLUMNA EMAIL */}
                 <td className="action-cell email-cell" style={{
-                  width: '60px',
-                  minWidth: '60px', 
-                  maxWidth: '60px',
+                  width: '70px',
+                  minWidth: '70px', 
+                  maxWidth: '70px',
                   backgroundColor: '#f8f9fa',
                   padding: '4px',
                   verticalAlign: 'middle',
@@ -1751,42 +1833,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     }}
                   >
                     📧
-                  </button>
-                </td>
-                {/* COLUMNA BORRAR */}
-                <td className="action-cell delete-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DELETE clicked for row:', row);
-                      handleDeleteClick(row);
-                    }}
-                    className="action-btn delete-btn"
-                    title="Eliminar registro"
-                  >
-                    ×
-                  </button>
-                </td>
-                {/* COLUMNA DRIVE */}
-                <td className="action-cell drive-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DRIVE clicked for row:', row);
-                      handleDriveClick(row);
-                    }}
-                    className="action-btn drive-btn"
-                    title="Gestionar archivos en Drive"
-                  >
-                    📁
                   </button>
                 </td>
                 {reorderedColumns.map(column => (
