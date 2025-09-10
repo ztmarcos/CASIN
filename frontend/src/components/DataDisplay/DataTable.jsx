@@ -46,6 +46,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [isEditingFlag, setIsEditingFlag] = useState(false);
   const [forceRender, setForceRender] = useState(0); // State to force re-render on column order change
   const [actionsColumnsCollapsed, setActionsColumnsCollapsed] = useState(true); // State to control actions columns visibility - default collapsed
+  const [showActionsModal, setShowActionsModal] = useState(false); // State to control actions modal
+  const [selectedRowForActions, setSelectedRowForActions] = useState(null); // Row selected for actions
 
   // Reference to track previous data
   const previousDataRef = useRef([]);
@@ -639,10 +641,251 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               Tabla Principal con: Emant Listado
             </span>
           )}
-        </div>
       </div>
-    );
-  };
+
+      {/* MODAL DE ACCIONES */}
+      {showActionsModal && selectedRowForActions && (
+        <div className="modal-overlay" style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="actions-modal" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '20px',
+              borderBottom: '1px solid #e5e7eb',
+              paddingBottom: '16px'
+            }}>
+              <h3 style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#374151'
+              }}>
+                Acciones para: {selectedRowForActions.nombre_contratante || 'Registro'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '4px'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px'
+            }}>
+              {/* Botón Eliminar */}
+              <button
+                onClick={() => {
+                  handleDeleteClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#fee2e2';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#fef2f2';
+                }}
+              >
+                <span>×</span>
+                Eliminar
+              </button>
+
+              {/* Botón Drive */}
+              <button
+                onClick={() => {
+                  handleDriveClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#dbeafe',
+                  color: '#1e40af',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#bfdbfe';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#dbeafe';
+                }}
+              >
+                <span>📁</span>
+                Drive
+              </button>
+
+              {/* Botón Pago */}
+              <button
+                onClick={() => {
+                  handlePaymentStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
+                  color: (selectedRowForActions.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
+                  border: `1px solid ${(selectedRowForActions.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>💰</span>
+                {(selectedRowForActions.estado_pago === 'Pagado') ? 'PAGADO' : 'NO PAGADO'}
+              </button>
+
+              {/* Botón CAP */}
+              <button
+                onClick={() => {
+                  handleCapStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_cap === 'Activo') ? '#dbeafe' : '#f3f4f6',
+                  color: (selectedRowForActions.estado_cap === 'Activo') ? '#1e40af' : '#6b7280',
+                  border: `1px solid ${(selectedRowForActions.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>📋</span>
+                CAP
+              </button>
+
+              {/* Botón CFP */}
+              <button
+                onClick={() => {
+                  handleCfpStatusToggle(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: (selectedRowForActions.estado_cfp === 'Activo') ? '#e9d5ff' : '#f3f4f6',
+                  color: (selectedRowForActions.estado_cfp === 'Activo') ? '#7c3aed' : '#6b7280',
+                  border: `1px solid ${(selectedRowForActions.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db'}`,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>📄</span>
+                CFP
+              </button>
+
+              {/* Botón Email */}
+              <button
+                onClick={() => {
+                  handleEmailClick(selectedRowForActions);
+                  setShowActionsModal(false);
+                  setSelectedRowForActions(null);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#dcfce7',
+                  color: '#166534',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#bbf7d0';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#dcfce7';
+                }}
+              >
+                <span>📧</span>
+                Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
   // If no data but we have a tableName, show empty state with capture button
   if ((!data || !Array.isArray(data) || data.length === 0) && tableName) {
@@ -1476,10 +1719,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         <table className="data-table">
           <thead>
             <tr>
-              {/* COLUMNA TOGGLE ACCIONES */}
+              {/* COLUMNA ACCIONES MODAL */}
               <th 
-                className="action-header actions-toggle-header" 
-                onClick={() => setActionsColumnsCollapsed(!actionsColumnsCollapsed)}
+                className="action-header actions-modal-header" 
+                onClick={() => {
+                  setShowActionsModal(true);
+                }}
                 style={{
                   width: '70px',
                   minWidth: '70px',
@@ -1496,142 +1741,26 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   border: '2px solid #f59e0b',
                   borderRadius: '4px 0 0 4px'
                 }}
-                title={actionsColumnsCollapsed ? "Click para mostrar acciones" : "Click para ocultar acciones"}
+                title="Click para abrir panel de acciones"
               >
-                {actionsColumnsCollapsed ? (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: '1px' 
-                  }}>
-                    <svg 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="3"
-                      style={{ width: '18px', height: '18px' }}
-                    >
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                    <span style={{ fontSize: '7px', letterSpacing: '0.5px' }}>ACCIONES</span>
-                  </div>
-                ) : (
-                  <div style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    gap: '1px' 
-                  }}>
-                    <svg 
-                      viewBox="0 0 24 24" 
-                      fill="none" 
-                      stroke="currentColor" 
-                      strokeWidth="3"
-                      style={{ width: '18px', height: '18px' }}
-                    >
-                      <path d="M18 15l-6-6-6 6" />
-                    </svg>
-                    <span style={{ fontSize: '7px', letterSpacing: '0.5px' }}>OCULTAR</span>
-                  </div>
-                )}
-              </th>
-              {/* COLUMNA DRIVE */}
-              <th 
-                className="action-header drive-header" 
-                style={{
-                  width: actionsColumnsCollapsed ? '0' : '70px',
-                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  backgroundColor: '#f8f9fa',
-                  textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
-                  display: 'table-cell',
-                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                }}
-              >
-                📁
-              </th>
-              {/* COLUMNA PAGO */}
-              <th 
-                className="action-header payment-header" 
-                style={{
-                  width: actionsColumnsCollapsed ? '0' : '70px',
-                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  backgroundColor: '#f8f9fa',
-                  textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
-                  display: 'table-cell',
-                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                }}
-              >
-                PAGO
-              </th>
-              {/* COLUMNA CAP */}
-              <th 
-                className="action-header cap-header" 
-                style={{
-                  width: actionsColumnsCollapsed ? '0' : '70px',
-                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  backgroundColor: '#f8f9fa',
-                  textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
-                  display: 'table-cell',
-                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                }}
-              >
-                CAP
-              </th>
-              {/* COLUMNA CFP */}
-              <th 
-                className="action-header cfp-header" 
-                style={{
-                  width: actionsColumnsCollapsed ? '0' : '70px',
-                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  backgroundColor: '#f8f9fa',
-                  textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
-                  display: 'table-cell',
-                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                }}
-              >
-                CFP
-              </th>
-              {/* COLUMNA EMAIL */}
-              <th 
-                className="action-header email-header" 
-                style={{
-                  width: actionsColumnsCollapsed ? '0' : '70px',
-                  minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                  backgroundColor: '#f8f9fa',
-                  textAlign: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  padding: actionsColumnsCollapsed ? '0' : '8px 4px',
-                  display: 'table-cell',
-                  visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                  border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                }}
-              >
-                EMAIL
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '1px' 
+                }}>
+                  <svg 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="3"
+                    style={{ width: '18px', height: '18px' }}
+                  >
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                  <span style={{ fontSize: '7px', letterSpacing: '0.5px' }}>ACCIONES</span>
+                </div>
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1698,9 +1827,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 key={rowIndex} 
                 className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
               >
-                {/* COLUMNA BORRAR */}
+                {/* COLUMNA ACCIONES MODAL */}
                 <td 
-                  className="action-cell delete-cell" 
+                  className="action-cell actions-modal-cell" 
                   style={{
                     width: '70px',
                     minWidth: '70px', 
@@ -1709,266 +1838,32 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     padding: '4px',
                     verticalAlign: 'middle',
                     textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
+                    border: '1px solid #e5e7eb'
                   }}
                 >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log('DELETE clicked for row:', row);
-                      handleDeleteClick(row);
+                      setSelectedRowForActions(row);
+                      setShowActionsModal(true);
                     }}
-                    className="action-btn delete-btn"
-                    title="Eliminar registro"
+                    className="action-btn actions-modal-btn"
+                    title="Abrir panel de acciones"
                     style={{
                       width: '100%',
                       height: '28px',
                       padding: '4px 6px',
                       fontSize: '10px',
                       fontWeight: '600',
-                      border: '1px solid',
+                      border: '1px solid #f59e0b',
                       borderRadius: '4px',
                       cursor: 'pointer',
-                      backgroundColor: '#fef2f2',
-                      color: '#dc2626',
-                      borderColor: '#fecaca',
+                      backgroundColor: '#fbbf24',
+                      color: 'white',
                       transition: 'all 0.2s ease'
                     }}
                   >
-                    ×
-                  </button>
-                </td>
-                {/* COLUMNA DRIVE */}
-                <td 
-                  className="action-cell drive-cell" 
-                  style={{
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px', 
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    backgroundColor: '#f8f9fa',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                  }}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DRIVE clicked for row:', row);
-                      handleDriveClick(row);
-                    }}
-                    className="action-btn drive-btn"
-                    title="Gestionar archivos en Drive"
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '4px 6px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      border: '1px solid',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: '#dbeafe',
-                      color: '#1e40af',
-                      borderColor: '#bfdbfe',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    📁
-                  </button>
-                </td>
-                {/* COLUMNA PAGO */}
-                <td 
-                  className="action-cell payment-cell" 
-                  style={{
-                    width: '70px',
-                    minWidth: '70px', 
-                    maxWidth: '70px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '4px',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                  }}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePaymentStatusToggle(row);
-                    }}
-                    className={`action-btn payment-btn ${
-                      (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
-                    }`}
-                    title={`Estado de pago: ${row.estado_pago || 'No Pagado'} - Click para cambiar`}
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '4px 6px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      border: '1px solid',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: (row.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
-                      color: (row.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
-                      borderColor: (row.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    {(row.estado_pago === 'Pagado') ? 'PAGADO' : 'NO PAGADO'}
-                  </button>
-                </td>
-                {/* COLUMNA CAP */}
-                <td 
-                  className="action-cell cap-cell" 
-                  style={{
-                    width: '70px',
-                    minWidth: '70px', 
-                    maxWidth: '70px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '4px',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                  }}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCapStatusToggle(row);
-                    }}
-                    className={`action-btn cap-btn ${
-                      (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
-                    }`}
-                    title={`Estado CAP: ${row.estado_cap || 'Inactivo'} - Click para cambiar`}
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '4px 6px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      border: '1px solid',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: (row.estado_cap === 'Activo') ? '#dbeafe' : '#f3f4f6',
-                      color: (row.estado_cap === 'Activo') ? '#1e40af' : '#6b7280',
-                      borderColor: (row.estado_cap === 'Activo') ? '#bfdbfe' : '#d1d5db',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    CAP
-                  </button>
-                </td>
-                {/* COLUMNA CFP */}
-                <td 
-                  className="action-cell cfp-cell" 
-                  style={{
-                    width: '70px',
-                    minWidth: '70px', 
-                    maxWidth: '70px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '4px',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                  }}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleCfpStatusToggle(row);
-                    }}
-                    className={`action-btn cfp-btn ${
-                      (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
-                    }`}
-                    title={`Estado CFP: ${row.estado_cfp || 'Inactivo'} - Click para cambiar`}
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '4px 6px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      border: '1px solid',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: (row.estado_cfp === 'Activo') ? '#e9d5ff' : '#f3f4f6',
-                      color: (row.estado_cfp === 'Activo') ? '#7c3aed' : '#6b7280',
-                      borderColor: (row.estado_cfp === 'Activo') ? '#c4b5fd' : '#d1d5db',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    CFP
-                  </button>
-                </td>
-                {/* COLUMNA EMAIL */}
-                <td 
-                  className="action-cell email-cell" 
-                  style={{
-                    width: '70px',
-                    minWidth: '70px', 
-                    maxWidth: '70px',
-                    backgroundColor: '#f8f9fa',
-                    padding: '4px',
-                    verticalAlign: 'middle',
-                    textAlign: 'center',
-                    display: 'table-cell',
-                    visibility: actionsColumnsCollapsed ? 'hidden' : 'visible',
-                    width: actionsColumnsCollapsed ? '0' : '70px',
-                    minWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    maxWidth: actionsColumnsCollapsed ? '0' : '70px',
-                    padding: actionsColumnsCollapsed ? '0' : '4px',
-                    border: actionsColumnsCollapsed ? 'none' : '1px solid #e5e7eb'
-                  }}
-                >
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEmailClick(row);
-                    }}
-                    className="action-btn email-btn"
-                    title="Enviar email"
-                    style={{
-                      width: '100%',
-                      height: '28px',
-                      padding: '4px 6px',
-                      fontSize: '10px',
-                      fontWeight: '600',
-                      border: '1px solid #bbf7d0',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      backgroundColor: '#dcfce7',
-                      color: '#166534',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    📧
+                    ⚡
                   </button>
                 </td>
                 {reorderedColumns.map(column => (

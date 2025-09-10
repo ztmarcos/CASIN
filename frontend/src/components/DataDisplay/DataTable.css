@@ -2321,9 +2321,17 @@ td .edit-cell-input[type="select"] {
   transition: all 0.3s ease;
 }
 
-/* Efecto de hover en header toggle */
-.actions-toggle-header:hover {
+/* Efecto de hover en header modal */
+.actions-modal-header:hover {
   transform: scale(1.02) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  background: #f59e0b !important;
+  border-color: #d97706 !important;
+}
+
+/* Botón modal de acciones */
+.actions-modal-btn:hover {
+  transform: scale(1.05) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
   background: #f59e0b !important;
   border-color: #d97706 !important;
