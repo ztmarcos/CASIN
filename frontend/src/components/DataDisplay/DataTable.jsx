@@ -69,9 +69,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: numero_poliza, contratante, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
+    // Ordenamiento personalizado: nombre_contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
+    const hasNombreContratante = filteredColumns.includes('nombre_contratante');
+    const hasContratante = filteredColumns.includes('contratante'); // Para compatibilidad con tablas que usan 'contratante'
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
-    const hasContratante = filteredColumns.includes('contratante');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
@@ -79,18 +80,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
     // Quitar los que vamos a reordenar
     filteredColumns = filteredColumns.filter(col => 
-      col !== 'numero_poliza' && 
+      col !== 'nombre_contratante' && 
       col !== 'contratante' && 
+      col !== 'numero_poliza' && 
       col !== 'pago_total_o_prima_total' &&
       col !== 'primer_pago' && 
       col !== 'pago_parcial' &&
       col !== 'id'
     );
 
-    // Orden final: numero_poliza, contratante, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
+    // Orden final: nombre_contratante (o contratante), numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
     const finalOrder = [
+      ...(hasNombreContratante ? ['nombre_contratante'] : []),
+      ...(hasContratante && !hasNombreContratante ? ['contratante'] : []), // Solo si no hay nombre_contratante
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
-      ...(hasContratante ? ['contratante'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),

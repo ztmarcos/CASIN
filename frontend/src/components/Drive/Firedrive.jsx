@@ -126,7 +126,11 @@ const NavigationBar = ({ folderStack, onNavigateBack, teamName, currentPath }) =
   );
 };
 
-const Firedrive = () => {
+const Firedrive = ({ 
+  clientData = null, 
+  autoNavigateToClient = false, 
+  onClientFolderReady = null 
+}) => {
   const { user } = useAuth();
   const { userTeam, isLoadingTeam } = useTeam();
   const [folders, setFolders] = useState([]);
@@ -147,6 +151,8 @@ const Firedrive = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [newItemName, setNewItemName] = useState('');
+  const [clientFolderPath, setClientFolderPath] = useState(null);
+  const [hasNavigatedToClient, setHasNavigatedToClient] = useState(false);
 
   // Add debug message helper with performance timing
   const addDebugInfo = (message) => {
@@ -154,6 +160,127 @@ const Firedrive = () => {
     const perfNow = performance.now();
     setDebugInfo(prev => [...prev.slice(-4), `${timestamp}: ${message}`]); // Keep last 5 messages
     console.log(`🔧 Debug [${perfNow.toFixed(1)}ms]: ${message}`);
+  };
+
+  // Generate client folder name from client data
+  const generateClientFolderName = (clientData) => {
+    if (!clientData) return null;
+    
+    // Get client name
+    const clientName = (
+      clientData.nombre_contratante || 
+      clientData.contratante || 
+      clientData.asegurado || 
+      clientData.nombre_completo ||
+      'Cliente_Sin_Nombre'
+    ).toString().trim();
+    
+    // Get policy number
+    const policyNumber = (
+      clientData.numero_poliza || 
+      clientData.poliza || 
+      clientData.id ||
+      'Sin_Poliza'
+    ).toString().trim();
+    
+    // Clean names for folder structure (remove invalid characters)
+    const cleanName = clientName.replace(/[^a-zA-Z0-9\s\-_]/g, '').replace(/\s+/g, '_');
+    const cleanPolicy = policyNumber.replace(/[^a-zA-Z0-9\s\-_]/g, '').replace(/\s+/g, '_');
+    
+    return `Clientes/${cleanName}_${cleanPolicy}`;
+  };
+
+  // Create client folder if it doesn't exist
+  const createClientFolder = async (folderName) => {
+    if (!userTeam || !folderName) return false;
+    
+    try {
+      addDebugInfo(`🏗️ Creando carpeta de cliente: ${folderName}`);
+      
+      // Create the folder structure with a .keep file
+      const keepContent = new Blob([
+        `# Carpeta de Cliente\n\n` +
+        `Cliente: ${clientData?.nombre_contratante || clientData?.contratante || 'N/A'}\n` +
+        `Póliza: ${clientData?.numero_poliza || 'N/A'}\n` +
+        `Creada: ${new Date().toISOString()}\n` +
+        `Team: ${userTeam?.name}\n` +
+        `\n` +
+        `Esta carpeta contiene archivos específicos para este cliente/póliza.`
+      ], { type: 'text/plain' });
+      
+      await firebaseTeamStorageService.uploadFileToTeam(
+        new File([keepContent], '.keep', { type: 'text/plain' }),
+        folderName,
+        userTeam.id
+      );
+      
+      addDebugInfo(`✅ Carpeta de cliente creada: ${folderName}`);
+      return true;
+    } catch (error) {
+      addDebugInfo(`❌ Error creando carpeta de cliente: ${error.message}`);
+      console.error('Error creating client folder:', error);
+      return false;
+    }
+  };
+
+  // Navigate to client folder automatically
+  const navigateToClientFolder = async (folderPath) => {
+    if (!folderPath || hasNavigatedToClient) return;
+    
+    try {
+      addDebugInfo(`🎯 Navegando automáticamente a carpeta de cliente: ${folderPath}`);
+      
+      // Check if folder exists, create if not
+      const folderExists = await checkClientFolderExists(folderPath);
+      if (!folderExists) {
+        const created = await createClientFolder(folderPath);
+        if (!created) {
+          addDebugInfo(`❌ No se pudo crear la carpeta de cliente`);
+          return;
+        }
+        
+        // Wait for folder to be created
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      
+      // Set the folder path and update navigation
+      const pathParts = folderPath.split('/');
+      const newStack = [];
+      let currentPath = '';
+      
+      for (const part of pathParts) {
+        currentPath = currentPath ? `${currentPath}/${part}` : part;
+        newStack.push({ path: currentPath, name: part });
+      }
+      
+      setFolderStack(newStack);
+      setCurrentFolderPath(folderPath);
+      setHasNavigatedToClient(true);
+      
+      // Notify parent component that folder is ready
+      if (onClientFolderReady) {
+        onClientFolderReady(folderPath);
+      }
+      
+      addDebugInfo(`✅ Navegación automática completada: ${folderPath}`);
+      
+    } catch (error) {
+      addDebugInfo(`❌ Error navegando a carpeta de cliente: ${error.message}`);
+      console.error('Error navigating to client folder:', error);
+    }
+  };
+
+  // Check if client folder exists
+  const checkClientFolderExists = async (folderPath) => {
+    if (!userTeam || !folderPath) return false;
+    
+    try {
+      const folderData = await firebaseTeamStorageService.listTeamFoldersOnly(folderPath, userTeam.id);
+      return folderData && folderData.folders && folderData.folders.length >= 0; // Even empty folders exist
+    } catch (error) {
+      // If folder doesn't exist, the service will throw an error
+      return false;
+    }
   };
 
   // Test Firebase Storage connection with team context
@@ -872,6 +999,22 @@ const Firedrive = () => {
 
   // DISABLED: No stats in ultra fast mode
 
+  // Handle client data and auto-navigation
+  useEffect(() => {
+    if (autoNavigateToClient && clientData && userTeam && connectionStatus === 'connected' && !hasNavigatedToClient) {
+      const clientFolder = generateClientFolderName(clientData);
+      if (clientFolder) {
+        addDebugInfo(`👤 Cliente detectado - preparando navegación automática: ${clientFolder}`);
+        setClientFolderPath(clientFolder);
+        
+        // Add delay to ensure Firebase is ready
+        setTimeout(() => {
+          navigateToClientFolder(clientFolder);
+        }, 1000);
+      }
+    }
+  }, [autoNavigateToClient, clientData, userTeam, connectionStatus, hasNavigatedToClient]);
+
   // Initial load - wait for user authentication and team
   useEffect(() => {
     const initializeFiredrive = async () => {
@@ -1066,6 +1209,17 @@ const Firedrive = () => {
     <div className="drive-container">
       <div className="drive-header">
         <h2>Drive - {userTeam?.name || 'Team'}</h2>
+        {clientData && (
+          <div className="client-info" style={{ 
+            fontSize: '14px', 
+            color: '#0066cc', 
+            fontWeight: '500',
+            marginLeft: '10px'
+          }}>
+            👤 {clientData.nombre_contratante || clientData.contratante || 'Cliente'} 
+            {clientData.numero_poliza && ` - Póliza: ${clientData.numero_poliza}`}
+          </div>
+        )}
         <div className="status-badge connected">
           ✅ Conectado
         </div>

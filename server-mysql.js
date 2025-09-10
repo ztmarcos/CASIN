@@ -278,7 +278,7 @@ async function getTableStructure(tableName) {
         ],
         'vida': [
           { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
-          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'numero_poliza', type: 'int', nullable: true, key: '', default: null },
           { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'forma_pago', type: 'varchar(255)', nullable: true, key: '', default: null },
@@ -309,7 +309,7 @@ async function getTableStructure(tableName) {
         ],
         'gmm': [
           { name: 'id', type: 'varchar(50)', nullable: false, key: 'PRI', default: null },
-          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
+          { name: 'nombre_contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'numero_poliza', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'fecha_inicio', type: 'varchar(255)', nullable: true, key: '', default: null },
@@ -338,8 +338,8 @@ async function getTableStructure(tableName) {
         ],
         'hogar': [
           { name: 'id', type: 'int', nullable: false, key: 'PRI', default: null },
+          { name: 'nombre_contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'numero_poliza', type: 'varchar(50)', nullable: true, key: '', default: null },
-          { name: 'contratante', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'aseguradora', type: 'varchar(255)', nullable: true, key: '', default: null },
           { name: 'fecha_inicio', type: 'date', nullable: true, key: '', default: null },
           { name: 'fecha_fin', type: 'date', nullable: true, key: '', default: null },
@@ -2717,13 +2717,13 @@ app.get('/api/directorio-relationships', async (req, res) => {
     // Define name fields mapping for each table
     const nameFieldsMapping = {
       'autos': ['nombre_contratante'],
-      'gmm': ['contratante', 'nombre_del_asegurado'], 
-      'hogar': ['contratante'],
-      'negocio': ['contratante'],
-      'vida': ['contratante', 'nombre_del_asegurado'],
-      'diversos': ['contratante'],
-      'mascotas': ['contratante'],
-      'transporte': ['contratante']
+      'gmm': ['nombre_contratante', 'nombre_del_asegurado'], 
+      'hogar': ['nombre_contratante'],
+      'negocio': ['nombre_contratante'],
+      'vida': ['nombre_contratante', 'nombre_del_asegurado'],
+      'diversos': ['nombre_contratante'],
+      'mascotas': ['nombre_contratante'],
+      'transporte': ['nombre_contratante']
     };
     
     for (const tableName of tableNames) {
@@ -3995,14 +3995,14 @@ app.post('/api/gpt/analyze', async (req, res) => {
         // Firebase collections are predefined in table types
         const firebaseTableTypes = {
           'autos': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'vigencia_inicio', 'vigencia_fin', 'forma_pago', 'pago_total_o_prima_total', 'primer_pago', 'prima_neta', 'derecho_de_poliza', 'recargo_por_pago_fraccionado', 'i_v_a', 'e_mail', 'tipo_de_vehiculo', 'duracion', 'rfc', 'domicilio_o_direccion', 'descripcion_del_vehiculo', 'serie', 'modelo', 'placas', 'motor', 'uso', 'pago_parcial', 'pdf', 'ramo'],
-          'vida': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
-          'gmm': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo'],
+          'vida': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
+          'gmm': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo'],
           'rc': ['asegurado', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'derecho_poliza', 'prima_neta', 'recargo_pago_fraccionado', 'iva', 'email', 'limite_maximo_responsabilidad', 'responsable', 'ramo'],
-          'transporte': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo'],
-          'mascotas': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo'],
-          'diversos': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'version', 'duracion', 'moneda', 'fecha_expedicion', 'renovacion', 'responsable', 'cobrar_a', 'ramo'],
-          'negocio': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo'],
-          'hogar': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total_a_pagar', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'duracion', 'version', 'renovacion', 'fecha_expedicion', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
+          'transporte': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo'],
+          'mascotas': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo'],
+          'diversos': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'version', 'duracion', 'moneda', 'fecha_expedicion', 'renovacion', 'responsable', 'cobrar_a', 'ramo'],
+          'negocio': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo'],
+          'hogar': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total_a_pagar', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'duracion', 'version', 'renovacion', 'fecha_expedicion', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
           'gruposgmm': [],
           'directorio_contactos': ['origen', 'comentario', 'nombre_completo', 'nombre_completo_oficial', 'nickname', 'apellido', 'display_name', 'empresa', 'telefono_oficina', 'telefono_casa', 'telefono_asistente', 'telefono_movil', 'telefonos_corregidos', 'email', 'entidad', 'genero', 'status_social', 'ocupacion', 'pais', 'status', 'created_at', 'updated_at']
         };
