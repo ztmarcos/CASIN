@@ -162,14 +162,56 @@ const Firedrive = ({
     console.log(`🔧 Debug [${perfNow.toFixed(1)}ms]: ${message}`);
   };
 
-  // Generate client folder name from client data
-  const generateClientFolderName = (clientData) => {
-    if (!clientData) return null;
+  // Generate search terms for client folders
+  const generateClientSearchTerms = (clientData) => {
+    if (!clientData) return [];
     
-    // Get client name
+    const searchTerms = [];
+    
+    // Get client name variations (GMM uses 'nombre_contratante' and 'nombre_asegurado')
     const clientName = (
       clientData.nombre_contratante || 
       clientData.contratante || 
+      clientData.nombre_asegurado ||
+      clientData.nombre_del_asegurado || 
+      clientData.asegurado || 
+      clientData.nombre_completo ||
+      ''
+    ).toString().trim();
+    
+    // Get policy number
+    const policyNumber = (
+      clientData.numero_poliza || 
+      clientData.poliza || 
+      clientData.id ||
+      ''
+    ).toString().trim();
+    
+    // Add different search patterns
+    if (clientName) {
+      searchTerms.push(clientName);
+      // Split name parts for partial matches
+      const nameParts = clientName.split(/\s+/);
+      searchTerms.push(...nameParts.filter(part => part.length > 2));
+    }
+    
+    if (policyNumber) {
+      searchTerms.push(policyNumber);
+    }
+    
+    return searchTerms.filter(term => term.length > 0);
+  };
+
+  // Generate suggested folder name (as fallback)
+  const generateSuggestedFolderName = (clientData) => {
+    if (!clientData) return null;
+    
+    // Get client name  
+    const clientName = (
+      clientData.nombre_contratante || 
+      clientData.contratante || 
+      clientData.nombre_asegurado ||
+      clientData.nombre_del_asegurado || 
       clientData.asegurado || 
       clientData.nombre_completo ||
       'Cliente_Sin_Nombre'
@@ -187,7 +229,7 @@ const Firedrive = ({
     const cleanName = clientName.replace(/[^a-zA-Z0-9\s\-_]/g, '').replace(/\s+/g, '_');
     const cleanPolicy = policyNumber.replace(/[^a-zA-Z0-9\s\-_]/g, '').replace(/\s+/g, '_');
     
-    return `Clientes/${cleanName}_${cleanPolicy}`;
+    return `${cleanName}_${cleanPolicy}`;
   };
 
   // Create client folder if it doesn't exist
@@ -200,7 +242,7 @@ const Firedrive = ({
       // Create the folder structure with a .keep file
       const keepContent = new Blob([
         `# Carpeta de Cliente\n\n` +
-        `Cliente: ${clientData?.nombre_contratante || clientData?.contratante || 'N/A'}\n` +
+        `Cliente: ${clientData?.nombre_contratante || clientData?.contratante || clientData?.nombre_asegurado || 'N/A'}\n` +
         `Póliza: ${clientData?.numero_poliza || 'N/A'}\n` +
         `Creada: ${new Date().toISOString()}\n` +
         `Team: ${userTeam?.name}\n` +
@@ -223,63 +265,99 @@ const Firedrive = ({
     }
   };
 
-  // Navigate to client folder automatically
-  const navigateToClientFolder = async (folderPath) => {
-    if (!folderPath || hasNavigatedToClient) return;
+  // Search for client-related folders
+  const searchClientFolders = async (searchTerms) => {
+    if (!userTeam || !searchTerms.length) return [];
     
     try {
-      addDebugInfo(`🎯 Navegando automáticamente a carpeta de cliente: ${folderPath}`);
+      addDebugInfo(`🔍 Buscando carpetas con términos: ${searchTerms.join(', ')}`);
       
-      // Check if folder exists, create if not
-      const folderExists = await checkClientFolderExists(folderPath);
-      if (!folderExists) {
-        const created = await createClientFolder(folderPath);
-        if (!created) {
-          addDebugInfo(`❌ No se pudo crear la carpeta de cliente`);
-          return;
-        }
+      // Get all folders from root
+      const folderData = await firebaseTeamStorageService.listTeamFoldersOnly('', userTeam.id);
+      const allFolders = folderData.folders || [];
+      
+      // Score folders based on search terms
+      const scoredFolders = allFolders.map(folder => {
+        let score = 0;
+        const folderNameLower = folder.name.toLowerCase();
         
-        // Wait for folder to be created
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
+        searchTerms.forEach(term => {
+          const termLower = term.toLowerCase();
+          if (folderNameLower.includes(termLower)) {
+            // Exact match gets higher score
+            if (folderNameLower === termLower) {
+              score += 100;
+            } else if (folderNameLower.startsWith(termLower)) {
+              score += 50;
+            } else {
+              score += 25;
+            }
+          }
+        });
+        
+        return { ...folder, searchScore: score };
+      });
       
-      // Set the folder path and update navigation
-      const pathParts = folderPath.split('/');
-      const newStack = [];
-      let currentPath = '';
+      // Filter and sort by score
+      const relevantFolders = scoredFolders
+        .filter(folder => folder.searchScore > 0)
+        .sort((a, b) => b.searchScore - a.searchScore);
       
-      for (const part of pathParts) {
-        currentPath = currentPath ? `${currentPath}/${part}` : part;
-        newStack.push({ path: currentPath, name: part });
-      }
+      addDebugInfo(`📁 Encontradas ${relevantFolders.length} carpetas relevantes`);
       
-      setFolderStack(newStack);
-      setCurrentFolderPath(folderPath);
-      setHasNavigatedToClient(true);
-      
-      // Notify parent component that folder is ready
-      if (onClientFolderReady) {
-        onClientFolderReady(folderPath);
-      }
-      
-      addDebugInfo(`✅ Navegación automática completada: ${folderPath}`);
+      return relevantFolders;
       
     } catch (error) {
-      addDebugInfo(`❌ Error navegando a carpeta de cliente: ${error.message}`);
-      console.error('Error navigating to client folder:', error);
+      addDebugInfo(`❌ Error buscando carpetas: ${error.message}`);
+      console.error('Error searching client folders:', error);
+      return [];
     }
   };
 
-  // Check if client folder exists
-  const checkClientFolderExists = async (folderPath) => {
-    if (!userTeam || !folderPath) return false;
+  // Handle client folder search and navigation
+  const handleClientFolderSearch = async () => {
+    if (!clientData || hasNavigatedToClient) return;
     
     try {
-      const folderData = await firebaseTeamStorageService.listTeamFoldersOnly(folderPath, userTeam.id);
-      return folderData && folderData.folders && folderData.folders.length >= 0; // Even empty folders exist
+      setHasNavigatedToClient(true); // Prevent multiple searches
+      
+      const searchTerms = generateClientSearchTerms(clientData);
+      if (searchTerms.length === 0) {
+        addDebugInfo(`⚠️ No se pudieron generar términos de búsqueda para el cliente`);
+        return;
+      }
+      
+      // Set search term to help user see what we're looking for
+      const mainSearchTerm = searchTerms[0];
+      setSearchTerm(mainSearchTerm);
+      addDebugInfo(`🔍 Aplicando filtro de búsqueda: "${mainSearchTerm}"`);
+      
+      const relevantFolders = await searchClientFolders(searchTerms);
+      
+      if (relevantFolders.length > 0) {
+        addDebugInfo(`✅ Carpetas encontradas - mostrando resultados filtrados`);
+        // Don't navigate automatically, just show filtered results
+      } else {
+        addDebugInfo(`📂 No se encontraron carpetas específicas, mostrando vista general`);
+        // Clear search to show all folders
+        setSearchTerm('');
+        
+        // Show a suggestion for creating a new folder
+        const suggestedName = generateSuggestedFolderName(clientData);
+        if (suggestedName) {
+          addDebugInfo(`💡 Sugerencia: Crear carpeta "${suggestedName}"`);
+        }
+      }
+      
+      // Notify parent component that search is ready
+      if (onClientFolderReady) {
+        onClientFolderReady('search_completed');
+      }
+      
     } catch (error) {
-      // If folder doesn't exist, the service will throw an error
-      return false;
+      addDebugInfo(`❌ Error en búsqueda de cliente: ${error.message}`);
+      console.error('Error in client folder search:', error);
+      setSearchTerm(''); // Clear search on error
     }
   };
 
@@ -999,19 +1077,16 @@ const Firedrive = ({
 
   // DISABLED: No stats in ultra fast mode
 
-  // Handle client data and auto-navigation
+  // Handle client data and auto-search
   useEffect(() => {
     if (autoNavigateToClient && clientData && userTeam && connectionStatus === 'connected' && !hasNavigatedToClient) {
-      const clientFolder = generateClientFolderName(clientData);
-      if (clientFolder) {
-        addDebugInfo(`👤 Cliente detectado - preparando navegación automática: ${clientFolder}`);
-        setClientFolderPath(clientFolder);
-        
-        // Add delay to ensure Firebase is ready
-        setTimeout(() => {
-          navigateToClientFolder(clientFolder);
-        }, 1000);
-      }
+      const clientName = clientData.nombre_contratante || clientData.contratante || clientData.nombre_asegurado || 'Cliente';
+      addDebugInfo(`👤 Cliente detectado - iniciando búsqueda: ${clientName}`);
+      
+      // Add delay to ensure Firebase is ready
+      setTimeout(() => {
+        handleClientFolderSearch();
+      }, 1000);
     }
   }, [autoNavigateToClient, clientData, userTeam, connectionStatus, hasNavigatedToClient]);
 
@@ -1216,7 +1291,7 @@ const Firedrive = ({
             fontWeight: '500',
             marginLeft: '10px'
           }}>
-            👤 {clientData.nombre_contratante || clientData.contratante || 'Cliente'} 
+            👤 {clientData.nombre_contratante || clientData.contratante || clientData.nombre_asegurado || 'Cliente'} 
             {clientData.numero_poliza && ` - Póliza: ${clientData.numero_poliza}`}
           </div>
         )}
