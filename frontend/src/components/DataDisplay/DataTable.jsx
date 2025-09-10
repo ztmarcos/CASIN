@@ -1484,7 +1484,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   width: '70px',
                   minWidth: '70px',
                   maxWidth: '70px',
-                  backgroundColor: '#f59e0b',
+                  backgroundColor: '#fbbf24',
                   color: 'white',
                   textAlign: 'center',
                   fontSize: '9px',
@@ -1493,7 +1493,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   display: 'table-cell',
                   cursor: 'pointer',
                   transition: 'all 0.3s ease',
-                  border: '2px solid #d97706',
+                  border: '2px solid #f59e0b',
                   borderRadius: '4px 0 0 4px'
                 }}
                 title={actionsColumnsCollapsed ? "Click para mostrar acciones" : "Click para ocultar acciones"}
