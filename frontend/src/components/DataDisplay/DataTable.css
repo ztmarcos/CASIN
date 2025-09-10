@@ -2192,6 +2192,7 @@ td .edit-cell-input[type="select"] {
   display: inline-block !important;
   font-size: 11px !important;
   font-weight: 500 !important;
+  margin: 1px !important;
 }
 
 .action-btn.email-btn:hover {
@@ -2382,6 +2383,7 @@ td .edit-cell-input[type="select"] {
   display: inline-block !important;
   font-size: 11px !important;
   font-weight: 500 !important;
+  margin: 1px !important;
 }
 
 .action-btn.payment-btn.payment-paid {
@@ -2405,6 +2407,7 @@ td .edit-cell-input[type="select"] {
   display: inline-block !important;
   font-size: 11px !important;
   font-weight: 500 !important;
+  margin: 1px !important;
 }
 
 .action-btn.cap-btn.cap-active {
@@ -2428,6 +2431,7 @@ td .edit-cell-input[type="select"] {
   display: inline-block !important;
   font-size: 11px !important;
   font-weight: 500 !important;
+  margin: 1px !important;
 }
 
 .action-btn.cfp-btn.cfp-active {

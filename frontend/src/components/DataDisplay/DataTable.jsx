@@ -1491,21 +1491,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               }}>
                 📁
               </th>
-              {/* COLUMNA ESTADO PAGO */}
-              <th className="action-header payment-header action-column">
-                💰
-              </th>
-              {/* COLUMNA CAP */}
-              <th className="action-header cap-header action-column">
-                🏥
-              </th>
-              {/* COLUMNA CFP */}
-              <th className="action-header cfp-header action-column">
-                📋
-              </th>
-              {/* COLUMNA ENVIAR MAIL */}
-              <th className="action-header email-header action-column">
-                ✉️
+              {/* COLUMNA ACCIONES */}
+              <th className="action-header actions-header" style={{
+                width: '200px !important',
+                minWidth: '200px !important',
+                maxWidth: '200px !important'
+              }}>
+                ACCIONES
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1608,67 +1600,64 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     📁
                   </button>
                 </td>
-                {/* COLUMNA ESTADO PAGO */}
-                <td className="action-cell payment-cell action-column">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('PAYMENT STATUS clicked for row:', row);
-                      handlePaymentStatusToggle(row);
-                    }}
-                    className={`action-btn payment-btn ${
-                      (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
-                    }`}
-                    title="Cambiar estado de pago"
-                  >
-                    {(row.estado_pago === 'Pagado') ? 'Pagado' : 'No Pagado'}
-                  </button>
-                </td>
-                {/* COLUMNA CAP */}
-                <td className="action-cell cap-cell action-column">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('CAP STATUS clicked for row:', row);
-                      handleCapStatusToggle(row);
-                    }}
-                    className={`action-btn cap-btn ${
-                      (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
-                    }`}
-                    title="Cambiar estado CAP"
-                  >
-                    CAP
-                  </button>
-                </td>
-                {/* COLUMNA CFP */}
-                <td className="action-cell cfp-cell action-column">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('CFP STATUS clicked for row:', row);
-                      handleCfpStatusToggle(row);
-                    }}
-                    className={`action-btn cfp-btn ${
-                      (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
-                    }`}
-                    title="Cambiar estado CFP"
-                  >
-                    CFP
-                  </button>
-                </td>
-                {/* COLUMNA ENVIAR MAIL */}
-                <td className="action-cell email-cell action-column">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('EMAIL clicked for row:', row);
-                      handleEmailClick(row);
-                    }}
-                    className="action-btn email-btn"
-                    title="Enviar email"
-                  >
-                    MAIL
-                  </button>
+                {/* COLUMNA ACCIONES */}
+                <td className="action-cell actions-cell" style={{
+                  width: '200px !important',
+                  minWidth: '200px !important', 
+                  maxWidth: '200px !important'
+                }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('PAYMENT STATUS clicked for row:', row);
+                        handlePaymentStatusToggle(row);
+                      }}
+                      className={`action-btn payment-btn ${
+                        (row.estado_pago === 'Pagado') ? 'payment-paid' : 'payment-unpaid'
+                      }`}
+                      title="Cambiar estado de pago"
+                    >
+                      {(row.estado_pago === 'Pagado') ? 'P' : 'NP'}
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('CAP STATUS clicked for row:', row);
+                        handleCapStatusToggle(row);
+                      }}
+                      className={`action-btn cap-btn ${
+                        (row.estado_cap === 'Activo') ? 'cap-active' : 'cap-inactive'
+                      }`}
+                      title="Cambiar estado CAP"
+                    >
+                      CAP
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('CFP STATUS clicked for row:', row);
+                        handleCfpStatusToggle(row);
+                      }}
+                      className={`action-btn cfp-btn ${
+                        (row.estado_cfp === 'Activo') ? 'cfp-active' : 'cfp-inactive'
+                      }`}
+                      title="Cambiar estado CFP"
+                    >
+                      CFP
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log('EMAIL clicked for row:', row);
+                        handleEmailClick(row);
+                      }}
+                      className="action-btn email-btn"
+                      title="Enviar email"
+                    >
+                      MAIL
+                    </button>
+                  </div>
                 </td>
                 {reorderedColumns.map(column => (
                   <td
