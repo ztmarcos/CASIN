@@ -49,6 +49,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [showActionsModal, setShowActionsModal] = useState(false); // State to control actions modal
   const [selectedRowForActions, setSelectedRowForActions] = useState(null); // Row selected for actions
 
+  // Debug useEffect to monitor state changes
+  useEffect(() => {
+    console.log('🔧 State changed:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante });
+  }, [showActionsModal, selectedRowForActions]);
+
   // Reference to track previous data
   const previousDataRef = useRef([]);
   
@@ -1847,8 +1852,10 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     onClick={(e) => {
                       e.stopPropagation();
                       console.log('🔧 Button clicked, opening modal for row:', row);
+                      console.log('🔧 Current states before update:', { showActionsModal, selectedRowForActions });
                       setSelectedRowForActions(row);
                       setShowActionsModal(true);
+                      console.log('🔧 States should be updated now');
                     }}
                     className="action-btn actions-modal-btn"
                     title="Abrir panel de acciones"
