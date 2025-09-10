@@ -1475,22 +1475,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         <table className="data-table">
           <thead>
             <tr>
-              {/* COLUMNA BORRAR - PRIMERA Y MÁS PEQUEÑA */}
-              <th className="action-header delete-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
-                ×
-              </th>
-              {/* COLUMNA DRIVE - SEGUNDA Y PEQUEÑA */}
-              <th className="action-header drive-header" style={{
-                width: '50px !important',
-                minWidth: '50px !important',
-                maxWidth: '50px !important'
-              }}>
-                📁
-              </th>
               {/* COLUMNA PAGO */}
               <th className="action-header payment-header" style={{
                 width: '80px',
@@ -1542,6 +1526,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 padding: '8px 4px'
               }}>
                 EMAIL
+              </th>
+              {/* COLUMNA BORRAR */}
+              <th className="action-header delete-header" style={{
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
+              }}>
+                ×
+              </th>
+              {/* COLUMNA DRIVE */}
+              <th className="action-header drive-header" style={{
+                width: '50px !important',
+                minWidth: '50px !important',
+                maxWidth: '50px !important'
+              }}>
+                📁
               </th>
               {reorderedColumns.map(column => (
                 <th 
@@ -1608,42 +1608,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 key={rowIndex} 
                 className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
               >
-                {/* COLUMNA BORRAR - PRIMERA Y MÁS PEQUEÑA */}
-                <td className="action-cell delete-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DELETE clicked for row:', row);
-                      handleDeleteClick(row);
-                    }}
-                    className="action-btn delete-btn"
-                    title="Eliminar registro"
-                  >
-                    ×
-                  </button>
-                </td>
-                {/* COLUMNA DRIVE - SEGUNDA Y PEQUEÑA */}
-                <td className="action-cell drive-cell" style={{
-                  width: '50px !important',
-                  minWidth: '50px !important', 
-                  maxWidth: '50px !important'
-                }}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log('DRIVE clicked for row:', row);
-                      handleDriveClick(row);
-                    }}
-                    className="action-btn drive-btn"
-                    title="Gestionar archivos en Drive"
-                  >
-                    📁
-                  </button>
-                </td>
                 {/* COLUMNA PAGO */}
                 <td className="action-cell payment-cell" style={{
                   width: '80px',
@@ -1787,6 +1751,42 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     }}
                   >
                     📧
+                  </button>
+                </td>
+                {/* COLUMNA BORRAR */}
+                <td className="action-cell delete-cell" style={{
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DELETE clicked for row:', row);
+                      handleDeleteClick(row);
+                    }}
+                    className="action-btn delete-btn"
+                    title="Eliminar registro"
+                  >
+                    ×
+                  </button>
+                </td>
+                {/* COLUMNA DRIVE */}
+                <td className="action-cell drive-cell" style={{
+                  width: '50px !important',
+                  minWidth: '50px !important', 
+                  maxWidth: '50px !important'
+                }}>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('DRIVE clicked for row:', row);
+                      handleDriveClick(row);
+                    }}
+                    className="action-btn drive-btn"
+                    title="Gestionar archivos en Drive"
+                  >
+                    📁
                   </button>
                 </td>
                 {reorderedColumns.map(column => (
