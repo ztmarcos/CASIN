@@ -45,6 +45,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [tableColumns, setTableColumns] = useState([]);
   const [isEditingFlag, setIsEditingFlag] = useState(false);
   const [forceRender, setForceRender] = useState(0); // State to force re-render on column order change
+  const [actionsColumnsCollapsed, setActionsColumnsCollapsed] = useState(false); // State to control actions columns visibility
 
   // Reference to track previous data
   const previousDataRef = useRef([]);
@@ -1452,6 +1453,41 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </svg>
             Capturador
           </button>
+          <button
+            className={`actions-toggle-btn ${actionsColumnsCollapsed ? 'collapsed' : 'expanded'}`}
+            onClick={() => setActionsColumnsCollapsed(!actionsColumnsCollapsed)}
+            title={actionsColumnsCollapsed ? "Mostrar columnas de acciones" : "Ocultar columnas de acciones"}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.5rem 1rem',
+              background: actionsColumnsCollapsed ? '#f59e0b' : '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              transition: 'all 0.2s ease',
+              marginLeft: '12px'
+            }}
+          >
+            <svg 
+              className={`toggle-icon ${actionsColumnsCollapsed ? 'rotated' : ''}`} 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              strokeWidth="2"
+              style={{
+                width: '18px',
+                height: '18px',
+                transition: 'transform 0.2s ease'
+              }}
+            >
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+            {actionsColumnsCollapsed ? 'Mostrar Acciones' : 'Ocultar Acciones'}
+          </button>
 
         </div>
       </div>
@@ -1476,81 +1512,105 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           <thead>
             <tr>
               {/* COLUMNA BORRAR */}
-              <th className="action-header delete-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header delete-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 ×
               </th>
               {/* COLUMNA DRIVE */}
-              <th className="action-header drive-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header drive-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 📁
               </th>
               {/* COLUMNA PAGO */}
-              <th className="action-header payment-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header payment-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 PAGO
               </th>
               {/* COLUMNA CAP */}
-              <th className="action-header cap-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header cap-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 CAP
               </th>
               {/* COLUMNA CFP */}
-              <th className="action-header cfp-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header cfp-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 CFP
               </th>
               {/* COLUMNA EMAIL */}
-              <th className="action-header email-header" style={{
-                width: '70px',
-                minWidth: '70px',
-                maxWidth: '70px',
-                backgroundColor: '#f8f9fa',
-                textAlign: 'center',
-                fontSize: '10px',
-                fontWeight: '600',
-                padding: '8px 4px'
-              }}>
+              <th 
+                className="action-header email-header" 
+                style={{
+                  width: '70px',
+                  minWidth: '70px',
+                  maxWidth: '70px',
+                  backgroundColor: '#f8f9fa',
+                  textAlign: 'center',
+                  fontSize: '10px',
+                  fontWeight: '600',
+                  padding: '8px 4px',
+                  display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                }}
+              >
                 EMAIL
               </th>
               {reorderedColumns.map(column => (
@@ -1619,15 +1679,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 className={`table-row ${isNewRow ? 'newly-inserted' : ''} ${isFlashing ? 'flashing' : ''}`}
               >
                 {/* COLUMNA BORRAR */}
-                <td className="action-cell delete-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell delete-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1655,15 +1719,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA DRIVE */}
-                <td className="action-cell drive-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell drive-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1691,15 +1759,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA PAGO */}
-                <td className="action-cell payment-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell payment-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1728,15 +1800,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA CAP */}
-                <td className="action-cell cap-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell cap-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1765,15 +1841,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA CFP */}
-                <td className="action-cell cfp-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell cfp-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1802,15 +1882,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   </button>
                 </td>
                 {/* COLUMNA EMAIL */}
-                <td className="action-cell email-cell" style={{
-                  width: '70px',
-                  minWidth: '70px', 
-                  maxWidth: '70px',
-                  backgroundColor: '#f8f9fa',
-                  padding: '4px',
-                  verticalAlign: 'middle',
-                  textAlign: 'center'
-                }}>
+                <td 
+                  className="action-cell email-cell" 
+                  style={{
+                    width: '70px',
+                    minWidth: '70px', 
+                    maxWidth: '70px',
+                    backgroundColor: '#f8f9fa',
+                    padding: '4px',
+                    verticalAlign: 'middle',
+                    textAlign: 'center',
+                    display: actionsColumnsCollapsed ? 'none' : 'table-cell'
+                  }}
+                >
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();

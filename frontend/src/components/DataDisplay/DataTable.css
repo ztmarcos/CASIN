@@ -2292,6 +2292,44 @@ td .edit-cell-input[type="select"] {
   padding: 2px !important;
 }
 
+/* Botón de toggle para columnas de acciones */
+.actions-toggle-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.actions-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.actions-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+/* Animación suave para columnas que se ocultan */
+.action-header,
+.action-cell {
+  transition: all 0.3s ease;
+}
+
+/* Efecto de hover en botón de toggle */
+.actions-toggle-btn.collapsed:hover {
+  background: #d97706 !important;
+}
+
+.actions-toggle-btn.expanded:hover {
+  background: #2563eb !important;
+}
+
 .action-cell.email-cell {
   background: rgba(16, 185, 129, 0.02) !important;
   border-color: rgba(16, 185, 129, 0.08) !important;
