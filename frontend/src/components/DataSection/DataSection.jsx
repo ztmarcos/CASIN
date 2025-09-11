@@ -702,6 +702,8 @@ const DataSection = () => {
               <TableCardView 
                 data={tableData}
                 onCardClick={handleRowClick}
+                tableName={selectedTable.name}
+                onRefresh={loadTableData}
               />
             )}
           </div>

@@ -1786,7 +1786,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
       {/* MODAL DE ACCIONES */}
       {showActionsModal && selectedRowForActions && (
-        console.log('🔧 Modal should be rendering now:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante }) ||
         <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0,
