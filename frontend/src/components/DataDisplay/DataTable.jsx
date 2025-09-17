@@ -53,12 +53,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const getClientName = (rowData) => {
     if (!rowData) return 'Registro';
     
-    // For hogar table, use 'contratante' field
-    if (tableName === 'hogar') {
-      return rowData.contratante || 'Registro';
-    }
-    
-    // For other tables, try 'nombre_contratante' first, then 'contratante'
+    // For all tables, try 'nombre_contratante' first, then 'contratante' as fallback
     return rowData.nombre_contratante || rowData.contratante || 'Registro';
   };
 
@@ -1241,7 +1236,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
   const renderCell = (row, rowIndex, column) => {
     // Debug logging for hogar table
-    if (tableName === 'hogar' && column === 'contratante') {
+    if (tableName === 'hogar' && column === 'nombre_contratante') {
       console.log('🔍 renderCell debug:', { 
         tableName, 
         column, 
