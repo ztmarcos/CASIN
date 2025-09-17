@@ -1240,6 +1240,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   };
 
   const renderCell = (row, rowIndex, column) => {
+    // Debug logging for hogar table
+    if (tableName === 'hogar' && column === 'contratante') {
+      console.log('🔍 renderCell debug:', { 
+        tableName, 
+        column, 
+        rowIndex, 
+        value: row[column], 
+        rowKeys: Object.keys(row) 
+      });
+    }
+    
     // Check if this cell is being edited
     if (editingCell && editingCell.rowIndex === rowIndex && editingCell.column === column) {
       if (column === 'status') {
@@ -1648,7 +1659,19 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     ⚡
                   </button>
                 </td>
-                {reorderedColumns.map(column => (
+                {reorderedColumns.map(column => {
+                  // Debug logging for hogar table
+                  if (tableName === 'hogar' && rowIndex === 0) {
+                    console.log('🔍 Column mapping debug:', { 
+                      tableName, 
+                      column, 
+                      rowIndex, 
+                      value: row[column],
+                      hasValue: row[column] !== undefined && row[column] !== null
+                    });
+                  }
+                  
+                  return (
                   <td
                     key={`${rowIndex}-${column}`}
                     onClick={(e) => handleCellSelection(e, rowIndex, column, row[column], row)}
@@ -1661,7 +1684,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   >
                     {renderCell(row, rowIndex, column)}
                   </td>
-                ))}
+                  );
+                })}
               </tr>
               );
             })}
