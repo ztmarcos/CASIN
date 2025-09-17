@@ -180,7 +180,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             ? 'http://localhost:3001/api' 
             : '/api';
           
-          const response = await fetch(`${API_URL}/data/tables/${tableName}/structure`);
+          const response = await fetch(`${API_URL}/data/${tableName}/structure`);
           if (response.ok) {
             const structure = await response.json();
             if (structure.columns) {
@@ -559,7 +559,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 ? 'http://localhost:3001/api' 
                 : '/api';
               
-              const response = await fetch(`${API_URL}/data/tables/${tableName}/structure`);
+              const response = await fetch(`${API_URL}/data/${tableName}/structure`);
               if (response.ok) {
                 const structure = await response.json();
                 if (structure.columns) {
