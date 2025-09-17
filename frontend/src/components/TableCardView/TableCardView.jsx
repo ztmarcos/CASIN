@@ -33,14 +33,19 @@ const TableCardView = ({ data, onCardClick, tableName, onRefresh }) => {
   };
 
   const getDisplayTitle = (item) => {
-    // Priorizar el nombre del contratante
+    // For hogar table, prioritize 'contratante' field
+    if (tableName === 'hogar' && item.contratante) {
+      return item.contratante;
+    }
+    
+    // For other tables, prioritize 'nombre_contratante' first
     if (item.nombre_contratante) {
       return item.nombre_contratante;
     }
     
     const titleFields = [
-      'nombre',
       'contratante',
+      'nombre',
       'name'
     ];
     

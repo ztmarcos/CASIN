@@ -49,9 +49,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [showActionsModal, setShowActionsModal] = useState(false); // State to control actions modal
   const [selectedRowForActions, setSelectedRowForActions] = useState(null); // Row selected for actions
 
+  // Helper function to get client name based on table type
+  const getClientName = (rowData) => {
+    if (!rowData) return 'Registro';
+    
+    // For hogar table, use 'contratante' field
+    if (tableName === 'hogar') {
+      return rowData.contratante || 'Registro';
+    }
+    
+    // For other tables, try 'nombre_contratante' first, then 'contratante'
+    return rowData.nombre_contratante || rowData.contratante || 'Registro';
+  };
+
   // Debug useEffect to monitor state changes
   useEffect(() => {
-    console.log('🔧 State changed:', { showActionsModal, selectedRowForActions: selectedRowForActions?.nombre_contratante || selectedRowForActions?.contratante });
+    console.log('🔧 State changed:', { showActionsModal, selectedRowForActions: getClientName(selectedRowForActions) });
   }, [showActionsModal, selectedRowForActions]);
 
   // Reference to track previous data
@@ -79,7 +92,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
     // Ordenamiento personalizado: nombre_contratante/contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
     const hasNombreContratante = filteredColumns.includes('nombre_contratante');
-    const hasContratante = filteredColumns.includes('contratante'); // Para compatibilidad con tablas que usan 'contratante'
+    const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
@@ -757,7 +770,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const handleCellDoubleClickWithRow = (row, column, value) => {
     console.log('✏️ Double click - Direct row access:', { 
       id: row.id, 
-      nombre: row.nombre_contratante || row.contratante, 
+      nombre: getClientName(row), 
       column, 
       value: row[column] 
     });
@@ -839,7 +852,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     
     console.log('🔄 Updating cell:', {
       id: rowId,
-      nombre: row.nombre_contratante || row.contratante,
+      nombre: getClientName(row),
       column,
       oldValue: row[column],
       newValue: editValue
@@ -1822,7 +1835,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 fontWeight: '600',
                 color: '#374151'
               }}>
-                Acciones para: {selectedRowForActions.nombre_contratante || selectedRowForActions.contratante || 'Registro'}
+                Acciones para: {getClientName(selectedRowForActions)}
               </h3>
               <button
                 onClick={() => {
