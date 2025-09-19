@@ -113,10 +113,30 @@ const DataSection = () => {
   // Handle cell update
   const handleCellUpdate = async (rowId, column, newValue) => {
     try {
-      console.log('🔄 DataSection: Updating cell:', { rowId, column, newValue });
+      console.log('🔄 DataSection: Updating cell:', { 
+        tableName: selectedTable?.name, 
+        rowId, 
+        column, 
+        newValue,
+        firebaseTableService: typeof firebaseTableService,
+        updateData: typeof firebaseTableService?.updateData
+      });
+      
+      // Validate inputs
+      if (!selectedTable?.name) {
+        throw new Error('No table selected');
+      }
+      if (!rowId) {
+        throw new Error('No row ID provided');
+      }
+      if (!column) {
+        throw new Error('No column provided');
+      }
       
       // Update the cell using firebaseTableService
+      console.log('🔄 Calling firebaseTableService.updateData...');
       const result = await firebaseTableService.updateData(selectedTable.name, rowId, column, newValue);
+      console.log('🔄 Update result:', result);
       
       if (result && result.success) {
         // Update local state
@@ -133,6 +153,11 @@ const DataSection = () => {
       }
     } catch (error) {
       console.error('❌ DataSection: Error updating cell:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       throw error;
     }
   };
