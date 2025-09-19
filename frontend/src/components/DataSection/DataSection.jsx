@@ -110,6 +110,41 @@ const DataSection = () => {
     setTableData(updatedData);
   };
 
+  // Handle cell update
+  const handleCellUpdate = async (rowId, column, newValue) => {
+    try {
+      console.log('🔄 DataSection: Updating cell:', { rowId, column, newValue });
+      
+      // Update the cell using firebaseTableService
+      const result = await firebaseTableService.updateData(selectedTable.name, rowId, column, newValue);
+      
+      if (result && result.success) {
+        // Update local state
+        setTableData(prevData => 
+          prevData.map(row => 
+            row.id === rowId ? { ...row, [column]: newValue } : row
+          )
+        );
+        
+        console.log('✅ DataSection: Cell updated successfully');
+        return { success: true };
+      } else {
+        throw new Error(result?.message || 'Failed to update cell');
+      }
+    } catch (error) {
+      console.error('❌ DataSection: Error updating cell:', error);
+      throw error;
+    }
+  };
+
+  // Handle refresh
+  const handleRefresh = async (tableName = null) => {
+    const tableToRefresh = tableName || selectedTable?.name;
+    if (tableToRefresh) {
+      await handleTableSelect(tableToRefresh);
+    }
+  };
+
   // Handle new entry
   const handleNewEntry = (newEntry) => {
     setTableData(prev => [newEntry, ...prev]);
@@ -216,6 +251,8 @@ const DataSection = () => {
               data={tableData}
               tableName={selectedTable.name}
               onDataUpdate={handleDataUpdate}
+              onCellUpdate={handleCellUpdate}
+              onRefresh={handleRefresh}
               isLoading={isLoading}
             />
           </div>
