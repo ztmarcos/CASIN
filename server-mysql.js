@@ -4076,6 +4076,11 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - EXTRAE SOLO EL NÚMERO sin símbolos de moneda ($, comas, etc.)
    - NO uses "Prima Neta" - usa el TOTAL FINAL que incluye todos los cargos
    - Si hay múltiples montos, usa el etiquetado como total o importe final a pagar
+10. Para el campo contratante:
+    - Busca el nombre de la empresa o persona que aparece después de "CONTRATANTE" o "Nombre" en el documento
+    - Patrón típico: "CONTRATANTE Código de Cliente Nombre [código] [NOMBRE_EMPRESA]"
+    - Ejemplo: "CONTRATANTE Código de Cliente Nombre 177754884 IMPORTADORA DE VEHICULOS ORIENTALES SA D" → contratante = "IMPORTADORA DE VEHICULOS ORIENTALES SA D"
+    - Extrae solo el nombre de la empresa/persona, no códigos numéricos
 
 FORMATO DE RESPUESTA:
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
