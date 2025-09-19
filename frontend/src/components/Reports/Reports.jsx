@@ -207,7 +207,7 @@ export default function Reports() {
     // Map display names to actual collection names
     if (name.includes('gastos') || name.includes('médicos') || name.includes('gmm')) return 'gmm';
     if (name.includes('auto') || name.includes('coche') || name.includes('carro')) return 'autos';
-    if (name.includes('hogar') || name.includes('casa') || name.includes('vivienda')) return 'hogar';
+    if (name.includes('hogar') || name.includes('casa') || name.includes('vivienda') || name.includes('daños')) return 'hogar';
     if (name.includes('vida')) return 'vida';
     if (name.includes('responsabilidad') || name.includes('civil') || name.includes('rc')) return 'rc';
     if (name.includes('transporte')) return 'transporte';
@@ -236,10 +236,19 @@ export default function Reports() {
       console.log(`🔄 Updating policy ${policy.numero_poliza} payment status from ${currentStatus} to ${newStatus}`);
       
       const policyId = policy.id || policy.firebase_doc_id;
-      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      // Use sourceTable/table instead of ramo for collection mapping
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
       
-      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`🗂️ Policy source table: "${sourceTable}", ramo: "${policy.ramo}" -> collection: "${collectionName}"`);
       console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Status: ${newStatus}`);
+      
+      // Validate collection name exists
+      if (collectionName === 'unknown') {
+        console.error(`❌ Unknown collection mapping for sourceTable: "${sourceTable}", ramo: "${policy.ramo}"`);
+        toast.error(`Error: No se pudo mapear la tabla "${sourceTable || policy.ramo}" a una colección válida`);
+        return;
+      }
       
       // Update local state immediately for better UX
       setFilteredPolicies(prevPolicies => 
@@ -315,10 +324,19 @@ export default function Reports() {
       );
       
       const policyId = policy.id || policy.firebase_doc_id;
-      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      // Use sourceTable/table instead of ramo for collection mapping
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
       
-      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`🗂️ Policy source table: "${sourceTable}", ramo: "${policy.ramo}" -> collection: "${collectionName}"`);
       console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New CAP Status: ${newStatus}`);
+      
+      // Validate collection name exists
+      if (collectionName === 'unknown') {
+        console.error(`❌ Unknown collection mapping for sourceTable: "${sourceTable}", ramo: "${policy.ramo}"`);
+        toast.error(`Error: No se pudo mapear la tabla "${sourceTable || policy.ramo}" a una colección válida`);
+        return;
+      }
       
       await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_cap', newStatus);
       
@@ -371,10 +389,19 @@ export default function Reports() {
       );
       
       const policyId = policy.id || policy.firebase_doc_id;
-      const collectionName = mapDisplayNameToCollection(policy.ramo);
+      // Use sourceTable/table instead of ramo for collection mapping
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
       
-      console.log(`🗂️ Mapping display name "${policy.ramo}" to collection "${collectionName}"`);
+      console.log(`🗂️ Policy source table: "${sourceTable}", ramo: "${policy.ramo}" -> collection: "${collectionName}"`);
       console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New CFP Status: ${newStatus}`);
+      
+      // Validate collection name exists
+      if (collectionName === 'unknown') {
+        console.error(`❌ Unknown collection mapping for sourceTable: "${sourceTable}", ramo: "${policy.ramo}"`);
+        toast.error(`Error: No se pudo mapear la tabla "${sourceTable || policy.ramo}" a una colección válida`);
+        return;
+      }
       
       await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_cfp', newStatus);
       
