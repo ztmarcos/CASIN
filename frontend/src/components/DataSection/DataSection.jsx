@@ -211,15 +211,6 @@ const DataSection = () => {
 
         {selectedTable ? (
           <div className="table-container">
-            <div className="table-header">
-              <h2>{selectedTable.title || selectedTable.name}</h2>
-              {tableData.length > 0 && (
-                <div className="table-stats">
-                  {tableData.length} registros
-                </div>
-              )}
-            </div>
-
             <DataTable
               data={tableData}
               tableName={selectedTable.name}
