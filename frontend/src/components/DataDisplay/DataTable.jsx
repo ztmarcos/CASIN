@@ -1247,9 +1247,28 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     });
   };
 
+  // Function to format policy numbers (remove leading zeros)
+  const formatPolicyNumber = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // Convert to string
+    let strValue = String(value).trim();
+    
+    // If it's a number with leading zeros, remove them
+    if (/^0+/.test(strValue) && strValue.length > 1) {
+      // Remove leading zeros but keep at least one digit
+      strValue = strValue.replace(/^0+/, '') || '0';
+    }
+    
+    return strValue;
+  };
+
   // Function to check if a column contains money amounts
   const isMoneyColumn = (column) => {
-    const moneyColumns = [
+    const columnLower = column.toLowerCase();
+    
+    // Lista completa de columnas de dinero conocidas
+    const exactMoneyColumns = [
       'pago_total_o_prima_total',
       'primer_pago', 
       'pago_parcial',
@@ -1261,9 +1280,57 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       'prima',
       'suma_asegurada',
       'deducible',
-      'coaseguro'
+      'coaseguro',
+      'prima_total',
+      'importe_total',
+      'importe_a_pagar_mxn',
+      'suma_asegurada_contenidos',
+      'suma_asegurada_edificio',
+      'valor_inmueble',
+      'valor_mercancia',
+      'capital',
+      'beneficio',
+      'indemnizacion',
+      'reembolso',
+      'costo',
+      'tarifa',
+      'comision',
+      'descuento',
+      'recargo',
+      'iva',
+      'subtotal',
+      'importe_neto',
+      'importe_bruto'
     ];
-    return moneyColumns.includes(column.toLowerCase());
+    
+    // Verificar coincidencia exacta
+    if (exactMoneyColumns.includes(columnLower)) {
+      return true;
+    }
+    
+    // Verificar patrones de palabras clave en el nombre de la columna
+    const moneyKeywords = [
+      'prima', 'importe', 'monto', 'precio', 'suma', 'deducible', 
+      'coaseguro', 'valor', 'capital', 'beneficio', 'indemnizacion', 
+      'reembolso', 'costo', 'tarifa', 'comision', 'descuento', 
+      'recargo', 'iva', 'subtotal', 'pago', 'total'
+    ];
+    
+    return moneyKeywords.some(keyword => columnLower.includes(keyword));
+  };
+
+  // Function to check if a column is a policy number column
+  const isPolicyNumberColumn = (column) => {
+    const columnLower = column.toLowerCase();
+    const policyColumns = [
+      'numero_poliza',
+      'numero_poliza',
+      'poliza',
+      'num_poliza',
+      'policy_number',
+      'numero_de_poliza'
+    ];
+    return policyColumns.includes(columnLower);
   };
 
   const renderCell = (row, rowIndex, column) => {
@@ -1314,6 +1381,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           {status}
         </div>
       );
+    }
+    
+    // Format policy number columns (remove leading zeros)
+    if (isPolicyNumberColumn(column)) {
+      const formattedValue = formatPolicyNumber(row[column]);
+      return <span className="policy-number-cell">{formattedValue}</span>;
     }
     
     // Format money columns with commas

@@ -320,7 +320,15 @@
 .money-cell {
   text-align: right;
   font-weight: 500;
-  color: #059669;
+  color: #334155;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+/* Policy number cell styles */
+.policy-number-cell {
+  text-align: left;
+  font-weight: 500;
+  color: #334155;
   font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
 }
 
