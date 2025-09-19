@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTeam } from '../../context/TeamContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
-import SupportChat from '../SupportChat/SupportChat';
+// import SupportChat from '../SupportChat/SupportChat';
 import { getCleanTeamName } from '../../utils/teamUtils';
 
 import { FEATURES } from '../../config/features';
@@ -146,8 +146,8 @@ const Layout = ({ children }) => {
         {children}
       </main>
       
-      {/* Support Chat Widget */}
-      <SupportChat />
+      {/* Support Chat Widget - Hidden */}
+      {/* <SupportChat /> */}
     </div>
   );
 };
