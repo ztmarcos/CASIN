@@ -1422,63 +1422,60 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </div>
           )}
           <div className="table-controls">
-            <div className="search-section">
-              <input
-                type="text"
-                placeholder="Buscar en tabla..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="search-input"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm('')}
-                  className="clear-search-btn"
-                  title="Limpiar búsqueda"
-                  style={{
-                    marginLeft: '5px',
-                    padding: '5px 10px',
-                    backgroundColor: '#ff6b6b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ✕ Limpiar ({searchTerm.length})
-                </button>
-              )}
+            <input
+              type="text"
+              placeholder="Buscar en tabla..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="search-input"
+            />
+            {searchTerm && (
               <button
-                className="capturador-btn"
-                onClick={() => setShowPDFParser(true)}
-                title="Abrir Capturador"
+                onClick={() => setSearchTerm('')}
+                className="clear-search-btn"
+                title="Limpiar búsqueda"
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: '#ff6b6b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  height: '28px'
+                }}
               >
-                <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <path d="M14 2v6h6" />
-                  <path d="M16 13H8" />
-                  <path d="M16 17H8" />
-                  <path d="M10 9H8" />
-                </svg>
-                Capturador
+                ✕
               </button>
-            </div>
-            <div className="refresh-section">
-              {renderTableSelector()}
-              <button
-                className="refresh-btn"
-                onClick={refreshData}
-                disabled={isRefreshing}
-                title="Actualizar datos"
-              >
-                <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M1 4v6h6" />
-                  <path d="M23 20v-6h-6" />
-                  <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-                </svg>
-                {isRefreshing ? 'Actualizando...' : 'Actualizar'}
-              </button>
-            </div>
+            )}
+            <button
+              className="capturador-btn"
+              onClick={() => setShowPDFParser(true)}
+              title="Abrir Capturador"
+            >
+              <svg className="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+                <path d="M10 9H8" />
+              </svg>
+              Capturador
+            </button>
+            {renderTableSelector()}
+            <button
+              className="refresh-btn"
+              onClick={refreshData}
+              disabled={isRefreshing}
+              title="Actualizar datos"
+            >
+              <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 4v6h6" />
+                <path d="M23 20v-6h-6" />
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+              </svg>
+              {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+            </button>
           </div>
         </div>
 

@@ -11,7 +11,7 @@ const DataSection = () => {
   const { userTeam, currentTeam } = useTeam();
   const team = currentTeam || userTeam;
   
-  const [selectedTable, setSelectedTable] = useState(null);
+  const [selectedTable, setSelectedTable] = useState({ name: 'autos', title: 'Seguros de Autos' });
   const [tableData, setTableData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddEntryModal, setShowAddEntryModal] = useState(false);
@@ -75,6 +75,34 @@ const DataSection = () => {
     };
     
     loadTables();
+  }, []);
+
+  // Auto-load autos data on mount
+  useEffect(() => {
+    const loadAutosData = async () => {
+      try {
+        setIsLoading(true);
+        console.log('🔥 Auto-loading autos data...');
+        const result = await firebaseTableService.getData('autos');
+        console.log('🔥 Received autos data:', result);
+        
+        if (result && result.data) {
+          setTableData(result.data);
+          setSelectedTable({ name: 'autos', title: result.title || 'Seguros de Autos' });
+          console.log(`✅ Auto-loaded ${result.data.length} records for autos`);
+        } else {
+          console.warn('⚠️ No autos data received');
+          setTableData([]);
+        }
+      } catch (error) {
+        console.error('❌ Error auto-loading autos data:', error);
+        setError('Error loading autos data: ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAutosData();
   }, []);
 
   // Load table data when table is selected - SIMPLE VERSION
@@ -220,9 +248,9 @@ const DataSection = () => {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-state-icon">📊</div>
-            <div className="empty-state-text">Selecciona una tabla para comenzar</div>
-            <div className="empty-state-subtext">Usa el dropdown de arriba para elegir una tabla</div>
+            <div className="empty-state-icon">⏳</div>
+            <div className="empty-state-text">Cargando...</div>
+            <div className="empty-state-subtext">Preparando los datos de la tabla</div>
           </div>
         )}
       </div>
