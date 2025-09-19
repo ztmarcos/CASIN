@@ -10,19 +10,19 @@ export const SENDER_OPTIONS = [
     avatar: '🏢'
   },
   {
-    label: 'Lore (lorenacasin5@gmail.com)',
+    label: 'Lorena Acosta - CASIN Seguros (lorenacasin5@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_LORE || 'klejsbcgpjmwoogg',
-    name: 'CASIN Seguros',
+    name: 'Lorena Acosta - CASIN Seguros',
     email: 'lorenacasin5@gmail.com',
     role: 'user',
     avatar: '👩‍💼'
   },
   {
-    label: 'Mich (michelldiaz.casinseguros@gmail.com)',
+    label: 'Michell Diaz - CASIN Seguros (michelldiaz.casinseguros@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
     pass: import.meta.env.VITE_SMTP_PASS_MICH || 'yxeyswjxsicwgoow',
-    name: 'CASIN Seguros',
+    name: 'Michell Diaz - CASIN Seguros',
     email: 'michelldiaz.casinseguros@gmail.com',
     role: 'user',
     avatar: '👩‍💼'
