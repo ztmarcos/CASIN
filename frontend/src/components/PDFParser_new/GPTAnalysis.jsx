@@ -326,6 +326,9 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('🔍 PROMPT DEBUG:');
             console.log('- Using backend default prompt (no custom instructions)');
             console.log('- Target columns:', columns.length);
+            console.log('- Target columns list:', columns);
+            console.log('- Table name:', tableName);
+            console.log('- Has contratante column:', columns.includes('contratante'));
             
             const prompt = {
                 text: parsedData.text,
@@ -334,8 +337,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 targetColumns: columns,
                 tableName: tableName,
                 tableType: tableInfo.type || 'simple'
-                // No instructions - let backend use its simpler prompt
+                // No custom instructions - use backend default
             };
+
+            console.log('- Full prompt being sent:', JSON.stringify(prompt, null, 2));
 
             const response = await fetch(`${GPT_API_URL}/gpt/analyze`, {
                 method: 'POST',

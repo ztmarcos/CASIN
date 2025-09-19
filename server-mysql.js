@@ -2719,7 +2719,7 @@ app.get('/api/directorio-relationships', async (req, res) => {
       'autos': ['nombre_contratante'],
       'gmm': ['nombre_contratante', 'nombre_del_asegurado'], 
       'hogar': ['nombre_contratante'],
-      'negocio': ['nombre_contratante'],
+      'negocio': ['contratante'],
       'vida': ['nombre_contratante', 'nombre_del_asegurado'],
       'diversos': ['nombre_contratante'],
       'mascotas': ['nombre_contratante'],
