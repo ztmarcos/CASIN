@@ -66,10 +66,10 @@ const Datapool = () => {
               // Debug log to see actual fields
               console.log('Available fields:', Object.keys(item));
 
-              // Find contratante field by looking for keywords
-              const contratanteField = Object.keys(item).find(key => 
-                key.toLowerCase().includes('contratante') || 
+              // Find nombre_contratante field by looking for keywords
+              const nombreContratanteField = Object.keys(item).find(key => 
                 key.toLowerCase().includes('nombre_contratante') ||
+                key.toLowerCase().includes('contratante') || 
                 key.toLowerCase().includes('nombre del contratante') ||
                 key.toLowerCase().includes('nombre_del_contratante') ||
                 key.toLowerCase().includes('nombrecontratante') ||
@@ -89,9 +89,9 @@ const Datapool = () => {
               );
 
               console.log('Found fields:', {
-                contratante: contratanteField,
+                nombre_contratante: nombreContratanteField,
                 poliza: polizaField,
-                contratanteValue: item[contratanteField],
+                nombre_contratanteValue: item[nombreContratanteField],
                 polizaValue: item[polizaField]
               });
 
