@@ -316,6 +316,14 @@
   min-width: 140px !important;
 } /* telefono */
 
+/* Money cell styles */
+.money-cell {
+  text-align: right;
+  font-weight: 500;
+  color: #059669;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
 /* Regular cell styles */
 .data-table td:not(.id-cell):not(.status-cell):not(.email-cell):not(.delete-cell):not(.drive-cell) {
   width: 200px; /* Default width for regular cells */

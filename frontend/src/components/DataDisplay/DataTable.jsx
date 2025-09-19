@@ -1229,6 +1229,43 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   };
 
+  // Function to format money amounts with commas
+  const formatMoneyAmount = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // Convert to string and clean it
+    let cleanValue = String(value).replace(/[^\d.-]/g, '');
+    
+    // Check if it's a valid number
+    const numValue = parseFloat(cleanValue);
+    if (isNaN(numValue)) return String(value);
+    
+    // Format with commas for thousands
+    return numValue.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Function to check if a column contains money amounts
+  const isMoneyColumn = (column) => {
+    const moneyColumns = [
+      'pago_total_o_prima_total',
+      'primer_pago', 
+      'pago_parcial',
+      'resto',
+      'precio',
+      'monto',
+      'total',
+      'importe',
+      'prima',
+      'suma_asegurada',
+      'deducible',
+      'coaseguro'
+    ];
+    return moneyColumns.includes(column.toLowerCase());
+  };
+
   const renderCell = (row, rowIndex, column) => {
     // Debug logging for hogar table
     if (tableName === 'hogar' && column === 'nombre_contratante') {
@@ -1277,6 +1314,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           {status}
         </div>
       );
+    }
+    
+    // Format money columns with commas
+    if (isMoneyColumn(column)) {
+      const formattedValue = formatMoneyAmount(row[column]);
+      return <span className="money-cell">{formattedValue}</span>;
     }
     
     const cellValue = row[column] !== null ? String(row[column]) : '-';
