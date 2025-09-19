@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import firebaseTableService from '../../services/firebaseTableService';
-import { API_URL } from '../../config/api.js';
+import { API_URL, GPT_API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 
@@ -337,7 +337,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 // No instructions - let backend use its simpler prompt
             };
 
-            const response = await fetch(`${API_URL}/gpt/analyze`, {
+            const response = await fetch(`${GPT_API_URL}/gpt/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

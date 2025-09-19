@@ -12,6 +12,9 @@ const API_BASE_URL = isDevelopment
   ? LOCAL_BACKEND_URL // Use network IP for development  
   : HEROKU_BACKEND_URL; // Use Heroku in production
 
+// GPT endpoints are only available on Heroku, so always use Heroku for GPT
+export const GPT_API_URL = `${HEROKU_BACKEND_URL}/api`;
+
 export const API_URL = `${API_BASE_URL}/api`;
 export const BASE_URL = API_BASE_URL;
 
