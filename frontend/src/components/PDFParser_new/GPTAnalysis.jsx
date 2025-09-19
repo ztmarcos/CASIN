@@ -526,6 +526,13 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 }
             });
 
+            // Transform nombre_contratante to contratante for all tables
+            if (cleanData.nombre_contratante) {
+                cleanData.contratante = cleanData.nombre_contratante;
+                delete cleanData.nombre_contratante;
+                console.log('Transformed nombre_contratante to contratante');
+            }
+
             console.log('Final clean data before insertion:', cleanData);
             console.log('Clean data structure:', Object.keys(cleanData));
             
