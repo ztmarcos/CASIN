@@ -53,13 +53,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const getClientName = (rowData) => {
     if (!rowData) return 'Registro';
     
-    // For autos and vida tables, use 'contratante'
-    if (tableName === 'autos' || tableName === 'vida') {
-      return rowData.contratante || 'Registro';
-    }
-    
-    // For all other tables, use 'nombre_contratante'
-    return rowData.nombre_contratante || 'Registro';
+    // For ALL tables, use 'contratante'
+    return rowData.contratante || 'Registro';
   };
 
   // Debug useEffect to monitor state changes
@@ -90,9 +85,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante/nombre_contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
-    const clientNameField = (tableName === 'autos' || tableName === 'vida') ? 'contratante' : 'nombre_contratante';
-    const hasClientName = filteredColumns.includes(clientNameField);
+    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
+    const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
@@ -101,7 +95,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
     // Quitar los que vamos a reordenar
     filteredColumns = filteredColumns.filter(col => 
-      col !== 'nombre_contratante' && 
       col !== 'contratante' && 
       col !== 'numero_poliza' && 
       col !== 'pago_total_o_prima_total' &&
@@ -110,9 +103,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'id'
     );
 
-    // Orden final: contratante/nombre_contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
     const finalOrder = [
-      ...(hasClientName ? [clientNameField] : []),
+      ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),

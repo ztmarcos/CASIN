@@ -16,10 +16,10 @@ import airplaneModeService from '../../services/airplaneModeService';
 
 // Helper para forzar columnas
 function forceColumnOrder(columns) {
-  // Asegura que contratante esté presente
+  // Asegura que nombre_contratante esté presente
   let cols = columns.map(col => col.name);
-  if (!cols.includes('contratante')) {
-    cols = ['contratante', ...cols];
+  if (!cols.includes('nombre_contratante')) {
+    cols = ['nombre_contratante', ...cols];
   }
   // Asegura que numero_poliza esté presente
   if (!cols.includes('numero_poliza')) {
@@ -27,8 +27,8 @@ function forceColumnOrder(columns) {
   }
   // Quita duplicados y fuerza orden
   const uniqueCols = Array.from(new Set(cols));
-  // Siempre primero numero_poliza, luego contratante
-  const ordered = ['numero_poliza', 'contratante', ...uniqueCols.filter(c => c !== 'numero_poliza' && c !== 'contratante')];
+  // Siempre primero numero_poliza, luego nombre_contratante
+  const ordered = ['numero_poliza', 'nombre_contratante', ...uniqueCols.filter(c => c !== 'numero_poliza' && c !== 'nombre_contratante')];
   // Devuelve como objetos columna
   return ordered.map(name => {
     const found = columns.find(col => col.name === name);

@@ -204,20 +204,20 @@ class FirebaseClientesService {
   extractClientName(docData, tableName) {
     const clientNameFields = {
       'autos': ['nombre_contratante'],
-      'vida': ['contratante'],
-      'gmm': ['contratante', 'nombre_del_asegurado'],
-      'hogar': ['contratante'],
-      'negocio': ['contratante'],
-      'diversos': ['contratante'],
-      'mascotas': ['contratante'],
-      'transporte': ['contratante'],
+      'vida': ['nombre_contratante'],
+      'gmm': ['nombre_contratante', 'nombre_del_asegurado'],
+      'hogar': ['nombre_contratante'],
+      'negocio': ['nombre_contratante'],
+      'diversos': ['nombre_contratante'],
+      'mascotas': ['nombre_contratante'],
+      'transporte': ['nombre_contratante'],
       'rc': ['asegurado'],
-      'emant_caratula': ['contratante'],
-      'gruposvida': ['contratante'],
-      'gruposautos': ['contratante']
+      'emant_caratula': ['nombre_contratante'],
+      'gruposvida': ['nombre_contratante'],
+      'gruposautos': ['nombre_contratante']
     };
 
-    const fields = clientNameFields[tableName] || ['contratante', 'nombre_contratante', 'asegurado'];
+    const fields = clientNameFields[tableName] || ['nombre_contratante', 'asegurado'];
     
     for (const field of fields) {
       if (docData[field] && docData[field].trim()) {

@@ -168,11 +168,11 @@ const Firedrive = ({
     
     const searchTerms = [];
     
-    // Get client name variations (GMM REAL columns: 'contratante' and 'nombre_del_asegurado')
+    // Get client name variations (prioritize 'nombre_contratante' first)
     const clientName = (
-      clientData.contratante || 
-      clientData.nombre_del_asegurado ||
       clientData.nombre_contratante || 
+      clientData.nombre_del_asegurado ||
+      clientData.contratante || 
       clientData.nombre_asegurado ||
       clientData.asegurado || 
       clientData.nombre_completo ||
@@ -206,11 +206,11 @@ const Firedrive = ({
   const generateSuggestedFolderName = (clientData) => {
     if (!clientData) return null;
     
-    // Get client name (GMM REAL columns: 'contratante' and 'nombre_del_asegurado')
+    // Get client name (prioritize 'nombre_contratante' first)
     const clientName = (
-      clientData.contratante || 
-      clientData.nombre_del_asegurado ||
       clientData.nombre_contratante || 
+      clientData.nombre_del_asegurado ||
+      clientData.contratante || 
       clientData.nombre_asegurado ||
       clientData.asegurado || 
       clientData.nombre_completo ||
@@ -242,7 +242,7 @@ const Firedrive = ({
       // Create the folder structure with a .keep file
       const keepContent = new Blob([
         `# Carpeta de Cliente\n\n` +
-        `Cliente: ${clientData?.contratante || clientData?.nombre_del_asegurado || clientData?.nombre_contratante || 'N/A'}\n` +
+        `Cliente: ${clientData?.nombre_contratante || clientData?.nombre_del_asegurado || clientData?.contratante || 'N/A'}\n` +
         `Póliza: ${clientData?.numero_poliza || 'N/A'}\n` +
         `Creada: ${new Date().toISOString()}\n` +
         `Team: ${userTeam?.name}\n` +
@@ -1080,7 +1080,7 @@ const Firedrive = ({
   // Handle client data and auto-search
   useEffect(() => {
     if (autoNavigateToClient && clientData && userTeam && connectionStatus === 'connected' && !hasNavigatedToClient) {
-      const clientName = clientData.contratante || clientData.nombre_del_asegurado || clientData.nombre_contratante || 'Cliente';
+      const clientName = clientData.nombre_contratante || clientData.nombre_del_asegurado || clientData.contratante || 'Cliente';
       addDebugInfo(`👤 Cliente detectado - iniciando búsqueda: ${clientName}`);
       
       // Add delay to ensure Firebase is ready
@@ -1291,7 +1291,7 @@ const Firedrive = ({
             fontWeight: '500',
             marginLeft: '10px'
           }}>
-            👤 {clientData.contratante || clientData.nombre_del_asegurado || clientData.nombre_contratante || 'Cliente'} 
+            👤 {clientData.nombre_contratante || clientData.nombre_del_asegurado || clientData.contratante || 'Cliente'} 
             {clientData.numero_poliza && ` - Póliza: ${clientData.numero_poliza}`}
           </div>
         )}

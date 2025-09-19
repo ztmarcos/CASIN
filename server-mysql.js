@@ -763,7 +763,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo']
         },
         'gmm': {
           type: 'GMM',
@@ -771,7 +771,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo']
         },
         'rc': {
           type: 'simple',
@@ -787,7 +787,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo']
         },
         'mascotas': {
           type: 'simple',
@@ -795,7 +795,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo']
         },
         'diversos': {
           type: 'simple',

@@ -68,7 +68,7 @@ const EMAIL_TEMPLATES = {
   vida: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -84,7 +84,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -632,7 +632,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     }
     
     // PRIORIDAD 6: Lógica específica para vida (solo si no hay otros indicadores)
-    if (data.contratante && !hasAutoFields && !data.ramo && !data.tipo_poliza) {
+    if (data.nombre_contratante && !hasAutoFields && !data.ramo && !data.tipo_poliza) {
       console.log('✅ Detectando como vida por lógica de exclusión (tiene contratante, no tiene auto/ramo/tipo_poliza)');
       return prefix + 'vida';
     }
@@ -682,7 +682,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         ramo: rowData.ramo,
         tipo_poliza: rowData.tipo_poliza,
         aseguradora: rowData.aseguradora,
-        contratante: rowData.contratante,
+        nombre_contratante: rowData.nombre_contratante,
         rowData
       });
       setEmailType(detectedType);
@@ -746,7 +746,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         // Intentar detectar el ramo basado en los campos disponibles
         if (rowData.descripcion_del_vehiculo || rowData.modelo || rowData.placas) {
           ramo = 'autos';
-        } else if (rowData.contratante && rowData.numero_poliza) {
+        } else if (rowData.nombre_contratante && rowData.numero_poliza) {
           // Intentar detectar si es vida basado en el contexto
           if (rowData.aseguradora && rowData.aseguradora.toLowerCase().includes('vida')) {
             ramo = 'vida';
@@ -773,9 +773,9 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       } else if (emailType === 'renovacion_autos' || (ramo === 'autos' && tipo === 'renovacion')) {
         subject = `Renovación Seguro Auto - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_vida' || (ramo === 'vida' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Seguro Vida - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_vida' || (ramo === 'vida' && tipo === 'renovacion')) {
-        subject = `Renovación Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Seguro Vida - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_gmm' || (ramo === 'gmm' && tipo === 'nueva')) {
         subject = `Nueva Póliza GMM - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_gmm' || (ramo === 'gmm' && tipo === 'renovacion')) {
