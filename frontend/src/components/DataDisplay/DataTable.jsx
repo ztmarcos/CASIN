@@ -53,8 +53,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const getClientName = (rowData) => {
     if (!rowData) return 'Registro';
     
-    // For all tables, try 'nombre_contratante' first, then 'contratante' as fallback
-    return rowData.nombre_contratante || rowData.contratante || 'Registro';
+    // For autos and vida tables, use 'contratante'
+    if (tableName === 'autos' || tableName === 'vida') {
+      return rowData.contratante || 'Registro';
+    }
+    
+    // For all other tables, use 'nombre_contratante'
+    return rowData.nombre_contratante || 'Registro';
   };
 
   // Debug useEffect to monitor state changes
@@ -85,9 +90,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: nombre_contratante/contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
-    const hasNombreContratante = filteredColumns.includes('nombre_contratante');
-    const hasContratante = filteredColumns.includes('contratante');
+    // Ordenamiento personalizado: contratante/nombre_contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
+    const clientNameField = (tableName === 'autos' || tableName === 'vida') ? 'contratante' : 'nombre_contratante';
+    const hasClientName = filteredColumns.includes(clientNameField);
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
@@ -105,10 +110,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'id'
     );
 
-    // Orden final: nombre_contratante (o contratante), numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
+    // Orden final: contratante/nombre_contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
     const finalOrder = [
-      ...(hasNombreContratante ? ['nombre_contratante'] : []),
-      ...(hasContratante && !hasNombreContratante ? ['contratante'] : []), // Solo si no hay nombre_contratante
+      ...(hasClientName ? [clientNameField] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),
