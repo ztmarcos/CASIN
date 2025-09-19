@@ -1,11 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
-import { useTheme } from '../../context/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useTeam } from '../../context/TeamContext';
-import { getCleanTeamName } from '../../utils/teamUtils';
-import { FEATURES } from '../../config/features';
-import logoImage from '/logo.png';
 import { Link } from 'react-router-dom';
 import Weather from '../Weather/Weather';
 import firebaseDashboardService from '../../services/firebaseDashboardService';

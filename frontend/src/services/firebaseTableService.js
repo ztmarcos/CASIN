@@ -76,7 +76,7 @@ class FirebaseTableService {
       // Add more parent-child relationships as needed
       {
         name: 'gruposvida',
-        title: 'Grupos Vida',
+        title: 'gruposvida',
         type: 'parent',
         icon: '🛡️',
         hasChildTable: true,
@@ -84,7 +84,7 @@ class FirebaseTableService {
       },
       {
         name: 'listadovida',
-        title: 'Listado Vida',
+        title: 'listadovida',
         type: 'child',
         icon: '📋',
         parentTable: 'gruposvida'
@@ -92,7 +92,7 @@ class FirebaseTableService {
       // Grupos Autos parent-child relationship
       {
         name: 'gruposautos',
-        title: 'Grupos Autos',
+        title: 'gruposautos',
         type: 'parent',
         icon: '🚗',
         hasChildTable: true,
@@ -100,7 +100,7 @@ class FirebaseTableService {
       },
       {
         name: 'listadoautos',
-        title: 'Listado Autos',
+        title: 'listadoautos',
         type: 'child',
         icon: '📋',
         parentTable: 'gruposautos'

@@ -65,6 +65,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   // Reference to track previous data
   const previousDataRef = useRef([]);
   
+  // Reference to handleDataCaptured to avoid dependency issues
+  const handleDataCapturedRef = useRef();
+  
   // Use column order from ColumnManager if available, otherwise use original order
   const reorderedColumns = useMemo(() => {
     if (!tableColumns || tableColumns.length === 0) return [];
@@ -179,13 +182,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               const allColumns = structure.columns.map(col => col.name);
               console.log('🔧 DataTable: Got complete column structure from API:', allColumns);
               
-              // Check if columns actually changed
-              if (JSON.stringify(allColumns) !== JSON.stringify(tableColumns)) {
-                console.log('🔧 DataTable: Setting NEW table columns from API structure:', allColumns);
-                setTableColumns(allColumns);
-              } else {
-                console.log('🔧 DataTable: Table columns unchanged, keeping API structure');
-              }
+              // Always set columns from API structure
+              console.log('🔧 DataTable: Setting table columns from API structure:', allColumns);
+              setTableColumns(allColumns);
               return; // Exit early - we successfully used API structure
             }
           }
@@ -194,27 +193,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         // Fallback to data columns ONLY if API fails
         console.log('⚠️ API structure failed or unavailable, falling back to data columns');
         const dataColumns = Object.keys(data[0]);
-        console.log('🔧 Checking if data columns changed:', { 
-          dataColumns, 
-          currentTableColumns: tableColumns,
-          hasChanged: JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)
-        });
-        
-        // Only update columns if they actually changed
-        if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
-          console.log('🔧 Setting NEW table columns from data (fallback):', dataColumns);
-          setTableColumns(dataColumns);
-        } else {
-          console.log('🔧 Table columns unchanged, keeping current order');
-        }
+        console.log('🔧 Setting table columns from data (fallback):', dataColumns);
+        setTableColumns(dataColumns);
       } catch (error) {
         console.error('❌ Error getting table structure:', error);
         // Final fallback to data columns
         const dataColumns = Object.keys(data[0]);
-        if (JSON.stringify(dataColumns) !== JSON.stringify(tableColumns)) {
-          console.log('🔧 Setting table columns from data (error fallback):', dataColumns);
-          setTableColumns(dataColumns);
-        }
+        console.log('🔧 Setting table columns from data (error fallback):', dataColumns);
+        setTableColumns(dataColumns);
       }
     };
     
@@ -452,6 +438,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   }, [onRefresh, tableName, isEditingFlag]);
 
+  // Update ref whenever handleDataCaptured changes
+  useEffect(() => {
+    handleDataCapturedRef.current = handleDataCaptured;
+  }, [handleDataCaptured]);
+
   // Enhanced refresh function with loading state
   const refreshData = async () => {
     // Don't refresh if user is currently editing
@@ -496,7 +487,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         
         // Pass shouldCloseModal flag to handleDataCaptured
         const shouldCloseModal = event.detail?.shouldCloseModal === true;
-        handleDataCaptured(event.detail?.tableName, shouldCloseModal);
+        if (handleDataCapturedRef.current) {
+          handleDataCapturedRef.current(event.detail?.tableName, shouldCloseModal);
+        }
       }
     };
 
@@ -513,7 +506,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         
         // Pass shouldCloseModal flag to handleDataCaptured
         const shouldCloseModal = event.detail?.shouldCloseModal === true;
-        handleDataCaptured(event.detail?.table || tableName, shouldCloseModal);
+        if (handleDataCapturedRef.current) {
+          handleDataCapturedRef.current(event.detail?.table || tableName, shouldCloseModal);
+        }
       }
     };
 
@@ -527,7 +522,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           if (updateInfo.tableName === tableName || updateInfo.tableName === 'all') {
             console.log('🔄 Triggering refresh due to storage update');
             const shouldCloseModal = updateInfo.shouldCloseModal === true;
-            handleDataCaptured(updateInfo.tableName, shouldCloseModal);
+            if (handleDataCapturedRef.current) {
+              handleDataCapturedRef.current(updateInfo.tableName, shouldCloseModal);
+            }
             
             // Clear the storage flag
             localStorage.removeItem('dataTableUpdate');
@@ -597,7 +594,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       window.removeEventListener('columnOrderUpdated', handleColumnOrderUpdate);
 
     };
-  }, [tableName]);
+  }, [tableName]); // Removed handleDataCaptured to prevent infinite loop
 
   // Enhanced dropdown rendering with better parent-child navigation
   const renderTableSelector = () => {
@@ -670,19 +667,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
         <div className="table-controls">
           <div className="search-section">
             <button
-              className="refresh-btn"
-              onClick={refreshData}
-              disabled={isRefreshing}
-              title="Actualizar datos"
-            >
-              <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M1 4v6h6" />
-                <path d="M23 20v-6h-6" />
-                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-              </svg>
-              {isRefreshing ? 'Actualizando...' : 'Actualizar'}
-            </button>
-            <button
               className="capturador-btn"
               onClick={() => setShowPDFParser(true)}
               title="Abrir Capturador"
@@ -696,7 +680,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </svg>
               Capturador
             </button>
-
+          </div>
+          <div className="refresh-section">
+            <button
+              className="refresh-btn"
+              onClick={refreshData}
+              disabled={isRefreshing}
+              title="Actualizar datos"
+            >
+              <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M1 4v6h6" />
+                <path d="M23 20v-6h-6" />
+                <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+              </svg>
+              {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+            </button>
           </div>
         </div>
 
@@ -1451,19 +1449,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </button>
           )}
           <button
-            className="refresh-btn"
-            onClick={refreshData}
-            disabled={isRefreshing}
-            title="Actualizar datos"
-          >
-            <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M1 4v6h6" />
-              <path d="M23 20v-6h-6" />
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-            </svg>
-            {isRefreshing ? 'Actualizando...' : 'Actualizar'}
-          </button>
-          <button
             className="capturador-btn"
             onClick={() => setShowPDFParser(true)}
             title="Abrir Capturador"
@@ -1477,7 +1462,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
             </svg>
             Capturador
           </button>
-
+        </div>
+        <div className="refresh-section">
+          <button
+            className="refresh-btn"
+            onClick={refreshData}
+            disabled={isRefreshing}
+            title="Actualizar datos"
+          >
+            <svg className={`refresh-icon ${isRefreshing ? 'spinning' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M1 4v6h6" />
+              <path d="M23 20v-6h-6" />
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+            </svg>
+            {isRefreshing ? 'Actualizando...' : 'Actualizar'}
+          </button>
         </div>
       </div>
 
