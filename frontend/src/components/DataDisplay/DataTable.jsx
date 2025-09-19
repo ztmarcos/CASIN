@@ -1419,7 +1419,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           {tableTitle && (
             <div className="table-title">
               <h2>{tableTitle}</h2>
-              {renderTableSelector()}
             </div>
           )}
           <div className="table-controls">
@@ -1465,6 +1464,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </button>
             </div>
             <div className="refresh-section">
+              {renderTableSelector()}
               <button
                 className="refresh-btn"
                 onClick={refreshData}
