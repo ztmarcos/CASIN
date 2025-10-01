@@ -2116,6 +2116,110 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
   }
 });
 
+// Trigger birthday emails endpoint
+app.post('/api/birthday/check-and-send', async (req, res) => {
+  try {
+    console.log('🎂 Triggering birthday emails check...');
+    
+    // Get today's birthdays
+    const response = await fetch(`http://localhost:${PORT}/api/birthday`);
+    const data = await response.json();
+    const allBirthdays = data.birthdays || [];
+    
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    const todaysBirthdays = allBirthdays.filter(birthday => {
+      const birthDate = new Date(birthday.date);
+      return birthDate.toDateString() === todayString;
+    });
+    
+    console.log(`📧 Found ${todaysBirthdays.length} birthdays for today`);
+    
+    // Send test email if requested
+    if (req.body.testMode) {
+      const testEmail = req.body.testEmail || 'ztmarcos@gmail.com';
+      const testCopy = req.body.testCopy || 'casinseguros@gmail.com';
+      
+      console.log(`📧 Sending test email to ${testEmail} with copy to ${testCopy}`);
+      
+      // Send test email using the existing email service
+      const emailData = {
+        to: testEmail,
+        subject: '🎂 Test - Sistema de Cumpleaños Automático',
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #e74c3c; text-align: center;">🎂 Sistema de Cumpleaños Automático</h2>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; text-align: center;">
+              <h3 style="margin: 0; font-size: 24px;">Test Automático Activado</h3>
+              <p style="font-size: 18px; margin: 20px 0;">El sistema de correos automáticos de cumpleaños está funcionando correctamente.</p>
+              <p style="font-size: 16px; margin: 20px 0;">Se encontraron ${todaysBirthdays.length} cumpleaños para hoy.</p>
+              <div style="margin: 30px 0;">
+                <span style="font-size: 40px;">🎉 🎈 🎁</span>
+              </div>
+              <p style="font-size: 16px; margin: 0;">Con cariño,<br><strong>Equipo CASIN Seguros</strong></p>
+            </div>
+            <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+              <p>Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
+            </div>
+          </div>
+        `,
+        from: process.env.SMTP_USER_CASIN || 'casinseguros@gmail.com',
+        fromPass: process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
+        fromName: 'CASIN Seguros - Sistema Automático',
+        cc: testCopy
+      };
+      
+      // Send the test email
+      const emailResponse = await fetch(`http://localhost:${PORT}/api/email/send-welcome`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData)
+      });
+      
+      const emailResult = await emailResponse.json();
+      
+      if (emailResponse.ok) {
+        console.log('✅ Test email sent successfully');
+        res.json({
+          success: true,
+          message: `Test email sent to ${testEmail} with copy to ${testCopy}`,
+          emailsSent: 1,
+          testMode: true
+        });
+      } else {
+        console.error('❌ Error sending test email:', emailResult);
+        res.status(500).json({
+          success: false,
+          error: 'Error sending test email',
+          details: emailResult
+        });
+      }
+    } else {
+      // Normal birthday email processing
+      res.json({
+        success: true,
+        message: `Se encontraron ${todaysBirthdays.length} cumpleaños para hoy`,
+        emailsSent: todaysBirthdays.length,
+        birthdays: todaysBirthdays.map(b => ({
+          name: b.name,
+          email: b.email || 'Sin email'
+        }))
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error triggering birthday emails:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error triggering birthday emails',
+      details: error.message
+    });
+  }
+});
+
 // Directorio endpoints (Firebase in production, MySQL fallback)
 app.get('/api/directorio', async (req, res) => {
   try {
