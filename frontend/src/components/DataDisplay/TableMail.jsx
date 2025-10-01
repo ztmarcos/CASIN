@@ -384,6 +384,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [sender, setSender] = useState(SENDER_OPTIONS[0]);
   const [sendBccToSender, setSendBccToSender] = useState(true); // Por defecto activado
   const [ccEmails, setCcEmails] = useState(''); // Campo CC manual
+  const [autoBccToCasin, setAutoBccToCasin] = useState(true); // BCC automático a casinseguros@gmail.com
   const [plainTextMessage, setPlainTextMessage] = useState(''); // Mensaje en texto plano para edición
 
   // Función para convertir HTML a texto plano
@@ -653,6 +654,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
       setSendBccToSender(true); // Reset BCC option - SIEMPRE activado por defecto
+      setAutoBccToCasin(true); // Reset BCC automático a CASIN - SIEMPRE activado por defecto
       setCcEmails(''); // Reset CC field
       setPlainTextMessage(''); // Reset plain text message
     }
@@ -995,6 +997,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         formData.append('fromName', sender.name);
         formData.append('fromPass', sender.pass);
         formData.append('sendBccToSender', sendBccToSender.toString());
+        formData.append('autoBccToCasin', autoBccToCasin.toString());
         formData.append('cc', ccEmails);
         
         // Add drive links if any
@@ -1044,6 +1047,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           fromName: sender.name,
           fromPass: sender.pass,
           sendBccToSender: sendBccToSender,
+          autoBccToCasin: autoBccToCasin,
           cc: ccEmails,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,
@@ -1074,7 +1078,15 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         }
       }
 
-      setSuccess(sendBccToSender ? '✅ ¡Correo enviado exitosamente! 📧 Copia BCC enviada al remitente para su archivo personal' : '¡Correo enviado exitosamente!');
+      const bccInfo = [];
+      if (sendBccToSender) bccInfo.push('remitente');
+      if (autoBccToCasin) bccInfo.push('casinseguros@gmail.com');
+      
+      const bccMessage = bccInfo.length > 0 
+        ? ` 📧 Copias BCC enviadas a: ${bccInfo.join(' y ')}`
+        : '';
+      
+      setSuccess(`✅ ¡Correo enviado exitosamente!${bccMessage}`);
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -1142,6 +1154,24 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
             </label>
             <small className="email-type-help" style={{ color: '#2e7d32', fontWeight: '500' }}>
               ✅ RECOMENDADO: El remitente recibirá una copia oculta del correo enviado para su archivo personal
+            </small>
+          </div>
+          
+          <div className="mail-field">
+            <label style={{ display: 'flex', alignItems: 'center', backgroundColor: '#e3f2fd', padding: '10px', borderRadius: '5px', border: '1px solid #2196f3' }}>
+              <input
+                type="checkbox"
+                checked={autoBccToCasin}
+                onChange={(e) => setAutoBccToCasin(e.target.checked)}
+                disabled={isGenerating}
+                style={{ marginRight: '8px', transform: 'scale(1.2)' }}
+              />
+              <span style={{ fontWeight: 'bold', color: '#1565c0' }}>
+                🏢 Enviar copia oculta (BCC) a casinseguros@gmail.com
+              </span>
+            </label>
+            <small className="email-type-help" style={{ color: '#1565c0', fontWeight: '500' }}>
+              ✅ OBLIGATORIO: Todos los correos se envían con copia oculta a la empresa para archivo
             </small>
           </div>
           <div className="mail-field">

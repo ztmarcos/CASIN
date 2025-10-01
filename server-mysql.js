@@ -4712,7 +4712,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -4724,20 +4724,21 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       fromName = req.body.fromName;
       fromPass = req.body.fromPass;
       sendBccToSender = req.body.sendBccToSender === 'true'; // Convert string to boolean
+      autoBccToCasin = req.body.autoBccToCasin === 'true'; // Convert string to boolean
       cc = req.body.cc || '';
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'cc'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'autoBccToCasin', 'cc'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -4804,10 +4805,24 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       }
     }
     
+    // Add BCC recipients
+    const bccRecipients = [];
+    
     // Add BCC to sender if requested
     if (sendBccToSender && smtpUser) {
-      mailOptions.bcc = smtpUser;
+      bccRecipients.push(smtpUser);
       console.log('📧 Adding BCC to sender:', smtpUser);
+    }
+    
+    // Add BCC to casinseguros@gmail.com if requested
+    if (autoBccToCasin) {
+      bccRecipients.push('casinseguros@gmail.com');
+      console.log('📧 Adding BCC to casinseguros@gmail.com');
+    }
+    
+    if (bccRecipients.length > 0) {
+      mailOptions.bcc = bccRecipients;
+      console.log('📧 BCC recipients:', bccRecipients);
     }
     
     // Add file attachments if available
@@ -4822,8 +4837,8 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
 
     console.log('📤 Enviando correo a:', to);
     console.log('📋 Asunto:', subject);
-    if (sendBccToSender && smtpUser) {
-      console.log('📧 Enviando copia BCC al remitente:', smtpUser);
+    if (bccRecipients.length > 0) {
+      console.log('📧 Enviando copias BCC a:', bccRecipients);
     }
 
     // Enviar el correo
@@ -4844,7 +4859,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       messageId: info.messageId,
       recipient: to,
       subject: subject,
-      bccSent: sendBccToSender && smtpUser ? smtpUser : null
+      bccSent: bccRecipients.length > 0 ? bccRecipients : null
     });
 
   } catch (error) {
