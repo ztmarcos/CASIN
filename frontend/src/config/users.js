@@ -12,7 +12,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Lorena Acosta - CASIN Seguros (lorenacasin5@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'klejsbcgpjmwoogg',
+    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'fvjnqfyouyzglzkk',
     name: 'Lorena Acosta - CASIN Seguros',
     email: 'lorenacasin5@gmail.com',
     role: 'user',
