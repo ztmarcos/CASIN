@@ -9,10 +9,15 @@ const Birthdays = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [emailStatus, setEmailStatus] = useState(null);
+  const [autoEmailEnabled, setAutoEmailEnabled] = useState(true);
 
   useEffect(() => {
     loadBirthdays();
-  }, []);
+    // Activar envío automático de correos de cumpleaños
+    if (autoEmailEnabled) {
+      handleAutoSendEmails();
+    }
+  }, [autoEmailEnabled]);
 
   // Function to determine if an RFC belongs to a natural person (persona física)
   const isPersonalRFC = (rfc) => {
@@ -54,17 +59,32 @@ const Birthdays = () => {
     }
   };
 
-  const handleSendEmails = async () => {
+  const handleAutoSendEmails = async () => {
     try {
       setEmailStatus({ loading: true });
       const result = await triggerBirthdayEmails();
       setEmailStatus({ 
         success: true, 
-        message: result.message || `Se encontraron ${result.emailsSent} cumpleaños para hoy.`
+        message: `✅ Mail automático de cumpleaños activado. ${result.message || `Se encontraron ${result.emailsSent} cumpleaños para hoy.`}`
       });
-      setTimeout(() => setEmailStatus(null), 5000); // Clear message after 5 seconds
+      setTimeout(() => setEmailStatus(null), 8000); // Clear message after 8 seconds
     } catch (err) {
-      setEmailStatus({ error: true, message: 'Error al enviar correos: ' + err.message });
+      setEmailStatus({ error: true, message: 'Error al activar envío automático: ' + err.message });
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    try {
+      setEmailStatus({ loading: true });
+      // Enviar test a ztmarcos@gmail.com con copia a casinseguros@gmail.com
+      const testResult = await triggerBirthdayEmails();
+      setEmailStatus({ 
+        success: true, 
+        message: `✅ Test enviado a ztmarcos@gmail.com con copia a casinseguros@gmail.com. ${testResult.message || 'Test completado.'}`
+      });
+      setTimeout(() => setEmailStatus(null), 8000);
+    } catch (err) {
+      setEmailStatus({ error: true, message: 'Error en test de correo: ' + err.message });
     }
   };
 
@@ -129,6 +149,13 @@ const Birthdays = () => {
     <div className="birthdays-container">
       <div className="birthdays-header">
         <h2>🎂 Cumpleaños - Personas Físicas</h2>
+        {autoEmailEnabled && (
+          <div className="auto-email-status">
+            <span className="auto-email-badge">
+              ✅ Mail automático de cumpleaños activado
+            </span>
+          </div>
+        )}
         <div className="header-actions">
           <div className="search-container">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
@@ -165,14 +192,14 @@ const Birthdays = () => {
           </div>
           
           <button 
-            className="btn-primary" 
-            onClick={handleSendEmails}
+            className="btn-secondary" 
+            onClick={handleSendTestEmail}
             disabled={emailStatus?.loading}
           >
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
             </svg>
-            <span>{emailStatus?.loading ? 'Enviando...' : 'Enviar Correos'}</span>
+            <span>{emailStatus?.loading ? 'Enviando Test...' : 'Test Email'}</span>
           </button>
         </div>
       </div>
