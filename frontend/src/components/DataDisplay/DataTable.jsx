@@ -99,6 +99,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
     const hasFormaPago = filteredColumns.includes('forma_de_pago');
+    const hasFechaInicio = filteredColumns.includes('fecha_inicio');
+    const hasFechaFin = filteredColumns.includes('fecha_fin');
     const hasId = filteredColumns.includes('id');
 
     // Quitar los que vamos a reordenar
@@ -109,10 +111,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'primer_pago' && 
       col !== 'pago_parcial' &&
       col !== 'forma_de_pago' &&
+      col !== 'fecha_inicio' &&
+      col !== 'fecha_fin' &&
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, fecha_inicio, fecha_fin, ...resto..., id
     const finalOrder = [
       ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
@@ -120,6 +124,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
       ...(hasFormaPago ? ['forma_de_pago'] : []),
+      ...(hasFechaInicio ? ['fecha_inicio'] : []),
+      ...(hasFechaFin ? ['fecha_fin'] : []),
       ...filteredColumns,
       ...(hasId ? ['id'] : [])
     ];
