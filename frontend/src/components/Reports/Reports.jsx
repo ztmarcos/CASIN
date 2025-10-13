@@ -259,9 +259,27 @@ export default function Reports() {
       }
       
       const statuses = await firebaseReportsService.getPolicyStatuses(forceRefresh);
-      setPolicyStatuses(statuses);
+      
+      // Also load estado_pago from policies themselves for conversion to renewal status
+      const allPolicies = await firebaseReportsService.getAllPolicies(forceRefresh);
+      const policyStatusesFromData = {};
+      
+      allPolicies.forEach(policy => {
+        const policyKey = getPolicyKey(policy);
+        if (policy.estado_pago) {
+          policyStatusesFromData[policyKey] = policy.estado_pago;
+        }
+        if (policy.estado_renovacion) {
+          policyStatusesFromData[`${policyKey}_renovacion`] = policy.estado_renovacion;
+        }
+      });
+      
+      // Merge Firebase statuses with policy data statuses
+      const mergedStatuses = { ...statuses, ...policyStatusesFromData };
+      setPolicyStatuses(mergedStatuses);
       
       console.log(`✅ Policy statuses loaded ${forceRefresh ? 'from Firebase' : '(from cache or Firebase)'}`);
+      console.log(`📊 Loaded ${Object.keys(mergedStatuses).length} policy statuses`);
     } catch (err) {
       console.error('❌ Error loading policy statuses:', err);
       toast.error('Error al cargar estados de pólizas');
@@ -996,6 +1014,14 @@ export default function Reports() {
   const getPolicyRenewalStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
     
+    console.log(`🔍 Getting renewal status for policy ${policy.numero_poliza}:`, {
+      policyKey,
+      renewalStatus: policyStatuses[`${policyKey}_renovacion`],
+      policyRenewalStatus: policy.estado_renovacion,
+      paymentStatus: policyStatuses[policyKey],
+      policyPaymentStatus: policy.estado_pago
+    });
+    
     // First check if we have a specific renewal status
     if (policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion) {
       return policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion;
@@ -1004,12 +1030,15 @@ export default function Reports() {
     // If no renewal status exists, convert from existing payment status
     const paymentStatus = policyStatuses[policyKey] || policy.estado_pago;
     if (paymentStatus === 'Pagado') {
+      console.log(`✅ Converting Pagado to Renovado for policy ${policy.numero_poliza}`);
       return 'Renovado';
     } else if (paymentStatus === 'No Pagado') {
+      console.log(`✅ Converting No Pagado to No Renovado for policy ${policy.numero_poliza}`);
       return 'No Renovado';
     }
     
     // Default fallback
+    console.log(`⚠️ Using default No Renovado for policy ${policy.numero_poliza}`);
     return 'No Renovado';
   };
 
