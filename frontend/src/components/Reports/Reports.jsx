@@ -1015,6 +1015,7 @@ export default function Reports() {
 
   // Open payment modal for partial payments
   const handleOpenPaymentModal = (policy) => {
+    console.log('🔍 Opening payment modal for policy:', policy.numero_poliza);
     setSelectedPolicyForPayment(policy);
     setShowPaymentModal(true);
   };
@@ -1818,6 +1819,7 @@ export default function Reports() {
 
       {/* Payment Modal for Partial Payments */}
       {showPaymentModal && selectedPolicyForPayment && (
+        console.log('🔍 Rendering payment modal for:', selectedPolicyForPayment.numero_poliza),
         <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="payment-modal-header">
