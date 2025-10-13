@@ -53,7 +53,10 @@ const getPolicyTotalAmount = (policy) => {
       availableFields: totalFields.filter(field => policy[field] !== undefined),
       fieldValues: totalFields.reduce((acc, field) => {
         if (policy[field] !== undefined) {
-          acc[field] = policy[field];
+          acc[field] = {
+            value: policy[field],
+            type: typeof policy[field]
+          };
         }
         return acc;
       }, {}),
@@ -92,7 +95,9 @@ const getPolicyTotalAmount = (policy) => {
               console.log('🔍 VIDA Policy using fallback field:', {
                 numero_poliza: policy.numero_poliza,
                 field: field,
-                value: numericValue
+                value: numericValue,
+                originalValue: value,
+                type: typeof value
               });
             }
             return numericValue; // Return prima_neta even if 0, as it's a valid fallback
@@ -119,7 +124,8 @@ const getPolicyTotalAmount = (policy) => {
             console.log('🔍 VIDA Policy using fallback field:', {
               numero_poliza: policy.numero_poliza,
               field: field,
-              value: value
+              value: value,
+              type: typeof value
             });
           }
           return value; // Return prima_neta even if 0, as it's a valid fallback
