@@ -690,6 +690,63 @@ class FirebaseReportsService {
   getCacheStats() {
     return localCacheService.getStats();
   }
+
+  /**
+   * Update any policy field in Firebase
+   * @param {string} tableName - Collection name (ramo)
+   * @param {string} policyId - Policy ID
+   * @param {string} fieldName - Field name to update
+   * @param {any} fieldValue - New field value
+   * @returns {Promise<Object>} Updated document
+   */
+  async updatePolicyField(tableName, policyId, fieldName, fieldValue) {
+    try {
+      console.log(`🔄 Updating policy ${policyId} field ${fieldName} to:`, fieldValue, 'in collection:', tableName);
+      
+      // Ensure tableName is properly encoded for URL
+      const encodedTableName = encodeURIComponent(tableName);
+      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}`;
+      
+      console.log(`🌐 Making request to: ${apiUrl}`);
+      
+      // Update the document in Firebase through backend API
+      const response = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          [fieldName]: fieldValue
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ HTTP Error ${response.status}:`, errorText);
+        
+        if (response.status === 404) {
+          throw new Error(`API endpoint not found. Please ensure the backend server is running and the endpoint /api/data/${tableName} exists.`);
+        } else if (response.status === 500) {
+          throw new Error(`Backend server error: ${errorText}`);
+        } else {
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+      }
+
+      const result = await response.json();
+      console.log('✅ Policy field updated successfully:', result);
+      
+      // Invalidate related caches when field is updated
+      localCacheService.invalidate('reports_policy_statuses');
+      localCacheService.invalidate('reports_all_policies');
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`❌ Error updating field ${fieldName}:`, error);
+      throw error;
+    }
+  }
 }
 
 // Create and export singleton instance

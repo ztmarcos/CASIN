@@ -3,7 +3,7 @@ import './Reports.css';
 import firebaseReportsService from '../../services/firebaseReportsService';
 import policyStatusService from '../../services/policyStatusService';
 import { sendReportEmail } from '../../services/reportEmailService';
-import { formatDate, parseDate, getDateFormatOptions } from '../../utils/dateUtils';
+import { formatDate, parseDate, getDateFormatOptions, toDDMMMYYYY } from '../../utils/dateUtils';
 import { toast } from 'react-hot-toast';
 import VencimientosGraphics from './VencimientosGraphics';
 import MatrixGraphics from './MatrixGraphics';
@@ -164,6 +164,8 @@ export default function Reports() {
   const [isStatusLoading, setIsStatusLoading] = useState(true);
   const [selectedPolicy, setSelectedPolicy] = useState(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPolicyForPayment, setSelectedPolicyForPayment] = useState(null);
 
 
   // New state for collapsible layout and graphics
@@ -268,6 +270,19 @@ export default function Reports() {
     }
   };
 
+  // Helper function to calculate total payments based on forma_pago
+  const calculateTotalPayments = (formaPago) => {
+    const paymentMap = {
+      'MENSUAL': 12,
+      'BIMESTRAL': 6,
+      'TRIMESTRAL': 4,
+      'CUATRIMESTRAL': 3,
+      'SEMESTRAL': 2,
+      'ANUAL': 1
+    };
+    return paymentMap[formaPago?.toUpperCase()] || 12;
+  };
+
   // Function to map display names to collection names
   const mapDisplayNameToCollection = (displayName) => {
     if (!displayName) return 'unknown';
@@ -288,6 +303,84 @@ export default function Reports() {
     
     // If no match, return the original name in lowercase
     return name.replace(/\s+/g, '_').toLowerCase();
+  };
+
+  // Handle renewal status toggle for policies (Vencimientos)
+  const handleToggleRenewalStatus = async (policy) => {
+    try {
+      // Validate policy data
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for renewal status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentStatus = getPolicyRenewalStatus(policy);
+      const newStatus = currentStatus === 'Renovado' ? 'No Renovado' : 'Renovado';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} renewal status from ${currentStatus} to ${newStatus}`);
+      
+      const policyId = policy.id || policy.firebase_doc_id;
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
+      
+      console.log(`🗂️ Policy source table: "${sourceTable}", ramo: "${policy.ramo}" -> collection: "${collectionName}"`);
+      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Renewal Status: ${newStatus}`);
+      
+      // Validate collection name exists
+      if (collectionName === 'unknown') {
+        console.error(`❌ Unknown collection mapping for sourceTable: "${sourceTable}", ramo: "${policy.ramo}"`);
+        toast.error(`Error: No se pudo mapear la tabla "${sourceTable || policy.ramo}" a una colección válida`);
+        return;
+      }
+      
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_renovacion: newStatus } 
+            : p
+        )
+      );
+      
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_renovacion', newStatus);
+      
+      // Update local state
+      const policyKey = getPolicyKey(policy);
+      setPolicyStatuses(prev => ({
+        ...prev,
+        [`${policyKey}_renovacion`]: newStatus
+      }));
+      
+      toast.success(`Póliza ${policy.numero_poliza} renovación actualizada a: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating renewal status:', err);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Error al actualizar el estado de renovación';
+      
+      if (err.message.includes('No se pudo conectar')) {
+        errorMessage = 'No se pudo conectar con el servidor. Verifique que el servidor esté ejecutándose.';
+      } else if (err.message.includes('API endpoint not found')) {
+        errorMessage = 'Error del servidor: endpoint no encontrado. Contacte al administrador.';
+      } else if (err.message.includes('Document with ID')) {
+        errorMessage = 'Póliza no encontrada en la base de datos.';
+      } else if (err.message.includes('Failed to update document')) {
+        errorMessage = 'Error al actualizar en la base de datos.';
+      }
+      
+      toast.error(errorMessage);
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_renovacion: policy.estado_renovacion || 'No Renovado' } 
+            : p
+        )
+      );
+    }
   };
 
   // Handle payment status toggle for policies
@@ -893,6 +986,171 @@ export default function Reports() {
     return policyStatuses[policyKey] || 'No Pagado';
   };
 
+  // Get renewal status for a policy
+  const getPolicyRenewalStatus = (policy) => {
+    const policyKey = getPolicyKey(policy);
+    return policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion || 'No Renovado';
+  };
+
+  // Open payment modal for partial payments
+  const handleOpenPaymentModal = (policy) => {
+    setSelectedPolicyForPayment(policy);
+    setShowPaymentModal(true);
+  };
+
+  // Get partial payment status for a policy
+  const getPartialPaymentStatus = (policy) => {
+    // Check if fecha_proximo_pago has passed and auto-reset to 'No Pagado'
+    if (policy.fecha_proximo_pago) {
+      const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (nextPaymentDate && nextPaymentDate < today) {
+        // Auto-reset to 'No Pagado' if payment date has passed
+        return 'No Pagado';
+      }
+    }
+    
+    return policy.estado_pago_parcial || 'No Pagado';
+  };
+
+  // Handle partial payment status toggle
+  const handleTogglePartialPaymentStatus = async (policy) => {
+    try {
+      // Validate policy data
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for partial payment status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentStatus = getPartialPaymentStatus(policy);
+      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} partial payment status from ${currentStatus} to ${newStatus}`);
+      
+      const policyId = policy.id || policy.firebase_doc_id;
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
+      
+      // Calculate next payment date if marking as paid
+      let updateData = { estado_pago_parcial: newStatus };
+      
+      if (newStatus === 'Pagado') {
+        const totalPayments = policy.total_pagos || calculateTotalPayments(policy.forma_pago);
+        const currentPayment = policy.pago_actual || 1;
+        const nextPayment = currentPayment + 1;
+        
+        // Calculate next payment date based on forma_pago
+        const startDate = parseDate(policy.fecha_inicio);
+        if (startDate) {
+          const nextPaymentDate = new Date(startDate);
+          const paymentInterval = {
+            'MENSUAL': 1,
+            'BIMESTRAL': 2,
+            'TRIMESTRAL': 3,
+            'CUATRIMESTRAL': 4,
+            'SEMESTRAL': 6,
+            'ANUAL': 12
+          };
+          
+          const interval = paymentInterval[policy.forma_pago?.toUpperCase()] || 1;
+          nextPaymentDate.setMonth(nextPaymentDate.getMonth() + (interval * currentPayment));
+          
+          updateData.fecha_proximo_pago = toDDMMMYYYY(nextPaymentDate);
+          updateData.pago_actual = nextPayment;
+          
+          // Update pagos_realizados array
+          const pagosRealizados = policy.pagos_realizados || [];
+          const existingPayment = pagosRealizados.find(p => p.numero === currentPayment);
+          
+          if (existingPayment) {
+            existingPayment.pagado = true;
+            existingPayment.fecha = toDDMMMYYYY(new Date());
+          } else {
+            pagosRealizados.push({
+              numero: currentPayment,
+              fecha: toDDMMMYYYY(new Date()),
+              pagado: true
+            });
+          }
+          
+          updateData.pagos_realizados = pagosRealizados;
+        }
+      }
+      
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, ...updateData } 
+            : p
+        )
+      );
+      
+      // Update Firebase with all changes
+      for (const [fieldName, fieldValue] of Object.entries(updateData)) {
+        await firebaseReportsService.updatePolicyField(collectionName, policyId, fieldName, fieldValue);
+      }
+      
+      toast.success(`Póliza ${policy.numero_poliza} estado de pago parcial actualizado a: ${newStatus}`);
+      
+    } catch (err) {
+      console.error('❌ Error updating partial payment status:', err);
+      toast.error('Error al actualizar el estado de pago parcial');
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, estado_pago_parcial: policy.estado_pago_parcial || 'No Pagado' } 
+            : p
+        )
+      );
+    }
+  };
+
+  // Handle payment checkbox toggle in modal
+  const handlePaymentCheckToggle = async (policy, paymentNumber) => {
+    try {
+      const policyId = policy.id || policy.firebase_doc_id;
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
+      
+      const pagosRealizados = policy.pagos_realizados || [];
+      const existingPayment = pagosRealizados.find(p => p.numero === paymentNumber);
+      
+      if (existingPayment) {
+        existingPayment.pagado = !existingPayment.pagado;
+        if (existingPayment.pagado) {
+          existingPayment.fecha = toDDMMMYYYY(new Date());
+        }
+      } else {
+        pagosRealizados.push({
+          numero: paymentNumber,
+          fecha: toDDMMMYYYY(new Date()),
+          pagado: true
+        });
+      }
+      
+      // Update local state
+      setSelectedPolicyForPayment(prev => ({
+        ...prev,
+        pagos_realizados: pagosRealizados
+      }));
+      
+      // Update Firebase
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'pagos_realizados', pagosRealizados);
+      
+      toast.success(`Pago ${paymentNumber} actualizado`);
+      
+    } catch (err) {
+      console.error('❌ Error updating payment:', err);
+      toast.error('Error al actualizar el pago');
+    }
+  };
+
   // Validate and clean policy data - simplified for matrix
   const validatePolicy = (policy) => {
     return policy && 
@@ -1106,6 +1364,7 @@ export default function Reports() {
                     <th>Prima Total</th>
                     {selectedType === 'Pagos Parciales' && <th>Pago Parcial</th>}
                     <th>Forma de Pago</th>
+                    {selectedType === 'Pagos Parciales' && <th>Pagos</th>}
                     <th>Próximo Pago</th>
                     <th>Status</th>
                     <th>CAP</th>
@@ -1149,17 +1408,52 @@ export default function Reports() {
                           <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
                         )}
                         <td>{policy.forma_pago}</td>
+                        {selectedType === 'Pagos Parciales' && (
+                          <td>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPaymentModal(policy);
+                              }}
+                              className="status-toggle payment-toggle"
+                            >
+                              {policy.pago_actual || '1'}/{policy.total_pagos || calculateTotalPayments(policy.forma_pago)}
+                            </button>
+                          </td>
+                        )}
                         <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                         <td>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleStatus(policy);
-                            }}
-                            className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
-                          >
-                            {getPolicyStatus(policy)}
-                          </button>
+                          {selectedType === 'Vencimientos' ? (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleRenewalStatus(policy);
+                              }}
+                              className={`status-toggle ${getPolicyRenewalStatus(policy).toLowerCase().replace(' ', '-')}`}
+                            >
+                              {getPolicyRenewalStatus(policy)}
+                            </button>
+                          ) : selectedType === 'Pagos Parciales' ? (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePartialPaymentStatus(policy);
+                              }}
+                              className={`status-toggle ${getPartialPaymentStatus(policy).toLowerCase().replace(' ', '-')}`}
+                            >
+                              {getPartialPaymentStatus(policy)}
+                            </button>
+                          ) : (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleStatus(policy);
+                              }}
+                              className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                            >
+                              {getPolicyStatus(policy)}
+                            </button>
+                          )}
                         </td>
                         <td>
                           <button 
@@ -1506,6 +1800,46 @@ export default function Reports() {
               >
                 Cerrar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal for Partial Payments */}
+      {showPaymentModal && selectedPolicyForPayment && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="payment-modal-header">
+              <h3>Historial de Pagos - {selectedPolicyForPayment.numero_poliza}</h3>
+              <button onClick={() => setShowPaymentModal(false)}>×</button>
+            </div>
+            <div className="payment-modal-body">
+              <div className="payment-info">
+                <p><strong>Contratante:</strong> {selectedPolicyForPayment.nombre_contratante}</p>
+                <p><strong>Forma de Pago:</strong> {selectedPolicyForPayment.forma_pago}</p>
+                <p><strong>Total de Pagos:</strong> {selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</p>
+              </div>
+              <div className="payment-checklist">
+                {Array.from({ length: selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago) }).map((_, index) => {
+                  const paymentNumber = index + 1;
+                  const payment = selectedPolicyForPayment.pagos_realizados?.find(p => p.numero === paymentNumber);
+                  const isPaid = payment?.pagado || paymentNumber === 1; // First payment is always paid
+                  const paymentDate = payment?.fecha || (paymentNumber === 1 ? selectedPolicyForPayment.fecha_inicio : null);
+                  
+                  return (
+                    <div key={paymentNumber} className={`payment-item ${isPaid ? 'paid' : 'unpaid'}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={isPaid}
+                        onChange={() => handlePaymentCheckToggle(selectedPolicyForPayment, paymentNumber)}
+                        disabled={paymentNumber === 1}
+                      />
+                      <span className="payment-number">Pago {paymentNumber}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
+                      <span className="payment-date">{paymentDate ? formatDate(paymentDate) : 'Pendiente'}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>

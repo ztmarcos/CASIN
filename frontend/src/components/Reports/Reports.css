@@ -1984,4 +1984,187 @@
   background-color: #78350f;
 }
 
+/* Payment Modal Styles */
+.payment-modal {
+  background: var(--bg-surface);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.payment-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-surface);
+}
+
+.payment-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.payment-modal-header button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.payment-modal-header button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.payment-modal-body {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.payment-info {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.payment-info p {
+  margin: 0.5rem 0;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.payment-info strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.payment-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.payment-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.payment-item.paid {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.payment-item.unpaid {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+[data-theme='dark'] .payment-item.paid {
+  background: #064e3b;
+  border-color: #10b981;
+}
+
+[data-theme='dark'] .payment-item.unpaid {
+  background: #7f1d1d;
+  border-color: #f87171;
+}
+
+.payment-item input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+.payment-item input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.payment-number {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 120px;
+}
+
+.payment-date {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-left: auto;
+}
+
+.payment-toggle {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.payment-toggle:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Status button styles for renewal and partial payment */
+.status-toggle.renovado {
+  background: #22c55e;
+  color: white;
+}
+
+.status-toggle.no-renovado {
+  background: #ef4444;
+  color: white;
+}
+
+.status-toggle.pagado {
+  background: #22c55e;
+  color: white;
+}
+
+.status-toggle.no-pagado {
+  background: #ef4444;
+  color: white;
+}
+
+[data-theme='dark'] .status-toggle.renovado {
+  background: #10b981;
+}
+
+[data-theme='dark'] .status-toggle.no-renovado {
+  background: #f87171;
+}
+
+[data-theme='dark'] .status-toggle.pagado {
+  background: #10b981;
+}
+
+[data-theme='dark'] .status-toggle.no-pagado {
+  background: #f87171;
+}
+
  
