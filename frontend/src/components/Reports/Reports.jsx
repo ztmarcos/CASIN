@@ -44,8 +44,9 @@ const getPolicyTotalAmount = (policy) => {
     'monto_total'
   ];
 
-  // Debug: Log available payment fields for first policy only
-  if (!getPolicyTotalAmount.debugLogged && policy.numero_poliza) {
+  // Debug: Log available payment fields for VIDA policies or first policy
+  if ((!getPolicyTotalAmount.debugLogged && policy.numero_poliza) || 
+      (policy.ramo === 'VIDA' || policy.sourceTable === 'vida')) {
     console.log('🔍 Policy payment fields available:', {
       numero_poliza: policy.numero_poliza,
       ramo: policy.ramo || policy.sourceTable,
@@ -55,25 +56,85 @@ const getPolicyTotalAmount = (policy) => {
           acc[field] = policy[field];
         }
         return acc;
-      }, {})
+      }, {}),
+      finalAmount: 'calculating...'
     });
-    getPolicyTotalAmount.debugLogged = true;
+    if (!getPolicyTotalAmount.debugLogged) {
+      getPolicyTotalAmount.debugLogged = true;
+    }
   }
 
   for (const field of totalFields) {
-    if (policy[field] !== undefined && policy[field] !== null && policy[field] !== 0 && policy[field] !== '') {
+    if (policy[field] !== undefined && policy[field] !== null && policy[field] !== '') {
       const value = policy[field];
       // Handle string values that might contain commas, dollar signs, etc.
       if (typeof value === 'string') {
         const cleanedValue = value.replace(/[\s,$"]/g, ''); // Remove spaces, commas, dollar signs, and quotes
         const numericValue = parseFloat(cleanedValue);
-        if (!isNaN(numericValue) && numericValue > 0) {
-          return numericValue;
+        if (!isNaN(numericValue)) {
+          // For prima_total and pago_total_o_prima_total, only return if > 0
+          // For prima_neta and other fields, return even if 0 (as fallback)
+          if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
+            if (numericValue > 0) {
+              // Debug: Log successful amount found
+              if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
+                console.log('🔍 VIDA Policy amount found:', {
+                  numero_poliza: policy.numero_poliza,
+                  field: field,
+                  value: numericValue
+                });
+              }
+              return numericValue;
+            }
+          } else {
+            // Debug: Log prima_neta fallback
+            if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
+              console.log('🔍 VIDA Policy using fallback field:', {
+                numero_poliza: policy.numero_poliza,
+                field: field,
+                value: numericValue
+              });
+            }
+            return numericValue; // Return prima_neta even if 0, as it's a valid fallback
+          }
         }
-      } else if (typeof value === 'number' && value > 0) {
-        return value;
+      } else if (typeof value === 'number') {
+        // For prima_total and pago_total_o_prima_total, only return if > 0
+        // For prima_neta and other fields, return even if 0 (as fallback)
+        if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
+          if (value > 0) {
+            // Debug: Log successful amount found
+            if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
+              console.log('🔍 VIDA Policy amount found:', {
+                numero_poliza: policy.numero_poliza,
+                field: field,
+                value: value
+              });
+            }
+            return value;
+          }
+        } else {
+          // Debug: Log prima_neta fallback
+          if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
+            console.log('🔍 VIDA Policy using fallback field:', {
+              numero_poliza: policy.numero_poliza,
+              field: field,
+              value: value
+            });
+          }
+          return value; // Return prima_neta even if 0, as it's a valid fallback
+        }
       }
     }
+  }
+  
+  // Debug: Log final result for VIDA policies
+  if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
+    console.log('🔍 VIDA Policy final amount result:', {
+      numero_poliza: policy.numero_poliza,
+      finalAmount: 0,
+      reason: 'No valid amount found in any field'
+    });
   }
   
   return 0;
