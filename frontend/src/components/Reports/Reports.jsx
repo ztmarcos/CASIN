@@ -37,7 +37,7 @@ const getPolicyTotalAmount = (policy) => {
     'pago_total',
     'prima_total', 
     'prima_neta', // Add prima_neta as it's the same value as prima_total in vida table
-    'prima_neta_mx', // Add prima_neta_mx for VIDA table specifically
+    'prima_neta_mxn', // Add prima_neta_mxn for VIDA table specifically (correct field name)
     'importe_total',
     'importe_total_a_pagar',
     'prima',
@@ -77,7 +77,7 @@ const getPolicyTotalAmount = (policy) => {
         const numericValue = parseFloat(cleanedValue);
         if (!isNaN(numericValue)) {
           // For prima_total and pago_total_o_prima_total, only return if > 0
-          // For prima_neta, prima_neta_mx and other fields, return even if 0 (as fallback)
+          // For prima_neta, prima_neta_mxn and other fields, return even if 0 (as fallback)
           if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
             if (numericValue > 0) {
               // Debug: Log successful amount found
@@ -91,7 +91,7 @@ const getPolicyTotalAmount = (policy) => {
               return numericValue;
             }
           } else {
-            // Debug: Log prima_neta/prima_neta_mx fallback
+            // Debug: Log prima_neta/prima_neta_mxn fallback
             if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
               console.log('🔍 VIDA Policy using fallback field:', {
                 numero_poliza: policy.numero_poliza,
@@ -101,12 +101,12 @@ const getPolicyTotalAmount = (policy) => {
                 type: typeof value
               });
             }
-            return numericValue; // Return prima_neta/prima_neta_mx even if 0, as it's a valid fallback
+            return numericValue; // Return prima_neta/prima_neta_mxn even if 0, as it's a valid fallback
           }
         }
       } else if (typeof value === 'number') {
         // For prima_total and pago_total_o_prima_total, only return if > 0
-        // For prima_neta, prima_neta_mx and other fields, return even if 0 (as fallback)
+        // For prima_neta, prima_neta_mxn and other fields, return even if 0 (as fallback)
         if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
           if (value > 0) {
             // Debug: Log successful amount found
@@ -120,7 +120,7 @@ const getPolicyTotalAmount = (policy) => {
             return value;
           }
         } else {
-          // Debug: Log prima_neta/prima_neta_mx fallback
+          // Debug: Log prima_neta/prima_neta_mxn fallback
           if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
             console.log('🔍 VIDA Policy using fallback field:', {
               numero_poliza: policy.numero_poliza,
@@ -129,7 +129,7 @@ const getPolicyTotalAmount = (policy) => {
               type: typeof value
             });
           }
-          return value; // Return prima_neta/prima_neta_mx even if 0, as it's a valid fallback
+          return value; // Return prima_neta/prima_neta_mxn even if 0, as it's a valid fallback
         }
       }
     }
