@@ -3,6 +3,7 @@ import firebaseTableService from '../../services/firebaseTableService';
 import { API_URL, GPT_API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
+import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
 
 
 const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose, onOpenEmailModal }) => {
@@ -441,7 +442,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                                 } else if (column.includes('email') || column.includes('e_mail')) {
                                     cleanData[column] = 'usuario@email.com';
                                 } else if (column.includes('fecha') || column.includes('vigencia')) {
-                                    cleanData[column] = '01/01/2024';
+                                    cleanData[column] = '1/ene/2024';
                                 } else if (column.includes('poliza') || column.includes('numero')) {
                                     cleanData[column] = '123456';
                                 } else if (column.includes('aseguradora')) {
@@ -571,16 +572,12 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     } else if (fieldTypes.date.includes(columnName)) {
                         try {
                             if (typeof value === 'string') {
-                                if (value.includes('/')) {
-                                    // Convert DD/MM/YYYY to YYYY-MM-DD
-                                    const [day, month, year] = value.split('/');
-                                    value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                                } else if (value.includes('-')) {
-                                    // If already in YYYY-MM-DD format, keep it
-                                    value = value;
-                                }
+                                // Convert any date format to DD/MMM/YYYY
+                                const formattedDate = toDDMMMYYYY(value);
+                                value = formattedDate || value; // Keep original if conversion fails
                             } else if (value instanceof Date) {
-                                value = value.toISOString().split('T')[0];
+                                // Convert Date object to DD/MMM/YYYY format
+                                value = toDDMMMYYYY(value);
                             }
                             console.log(`Date field ${columnName} processed:`, value);
                         } catch (e) {

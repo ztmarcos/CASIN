@@ -3,6 +3,7 @@ import tableService from '../../services/data/tableService';
 import { API_URL } from '../../config/api.js';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 import './ListadoAnalysis.css';
+import { toDDMMMYYYY } from '../../utils/dateUtils';
 
 const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose }) => {
     const [analysis, setAnalysis] = useState(null);
@@ -147,16 +148,12 @@ const ListadoAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = f
                     } else if (fieldTypes.date.includes(key)) {
                         try {
                             if (typeof value === 'string') {
-                                if (value.includes('/')) {
-                                    // Convert DD/MM/YYYY to YYYY-MM-DD
-                                    const [day, month, year] = value.split('/');
-                                    cleanItem[key] = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                                } else if (value.includes('-')) {
-                                    // If already in YYYY-MM-DD format, keep it
-                                    cleanItem[key] = value;
-                                }
+                                // Convert any date format to DD/MMM/YYYY
+                                const formattedDate = toDDMMMYYYY(value);
+                                cleanItem[key] = formattedDate || value; // Keep original if conversion fails
                             } else if (value instanceof Date) {
-                                cleanItem[key] = value.toISOString().split('T')[0];
+                                // Convert Date object to DD/MMM/YYYY format
+                                cleanItem[key] = toDDMMMYYYY(value);
                             }
                         } catch (e) {
                             console.warn(`Failed to parse date: ${value}`, e);

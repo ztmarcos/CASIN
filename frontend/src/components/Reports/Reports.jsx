@@ -36,6 +36,7 @@ const getPolicyTotalAmount = (policy) => {
     'pago_total_o_prima_total', // Most common field in Firebase data
     'pago_total',
     'prima_total', 
+    'prima_neta', // Add prima_neta as it's the same value as prima_total in vida table
     'importe_total',
     'importe_total_a_pagar',
     'prima',
@@ -47,6 +48,7 @@ const getPolicyTotalAmount = (policy) => {
   if (!getPolicyTotalAmount.debugLogged && policy.numero_poliza) {
     console.log('🔍 Policy payment fields available:', {
       numero_poliza: policy.numero_poliza,
+      ramo: policy.ramo || policy.sourceTable,
       availableFields: totalFields.filter(field => policy[field] !== undefined),
       fieldValues: totalFields.reduce((acc, field) => {
         if (policy[field] !== undefined) {
@@ -1340,7 +1342,7 @@ export default function Reports() {
                       'email', 'rfc', 'telefono',
                       'fecha_inicio', 'fecha_fin', 'fecha_expedicion',
                       'forma_pago', 'fecha_proximo_pago',
-                      'prima_neta', 'derecho_poliza', 'iva', 'pago_total_o_prima_total',
+                      'prima_neta', 'prima_total', 'derecho_poliza', 'iva', 'pago_total_o_prima_total',
                       'status', 'estado_pago'
                     ];
                     const aIndex = priority.indexOf(a);
@@ -1377,7 +1379,8 @@ export default function Reports() {
                       
                       // Handle monetary values
                       if (key.includes('prima') || key.includes('pago') || key.includes('derecho') || 
-                          key.includes('total') || key.includes('iva') || key.includes('recargo')) {
+                          key.includes('total') || key.includes('iva') || key.includes('recargo') ||
+                          key.includes('importe') || key.includes('monto')) {
                         const numValue = typeof val === 'string' ? 
                           parseFloat(val.replace(/[\s,$"]/g, '')) : 
                           parseFloat(val);

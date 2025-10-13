@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import firebaseClientesService from '../../services/firebaseClientesService';
 import { toast } from 'react-hot-toast';
 import './Clientes.css';
+import { toDDMMMYYYY } from '../../utils/dateUtils';
 
 const Clientes = () => {
   const [clients, setClients] = useState([]);
@@ -121,25 +122,9 @@ const Clientes = () => {
     if (!dateString || dateString === 'N/A') return 'N/A';
     
     try {
-      // Si ya es una fecha ISO (YYYY-MM-DD), formatearla directamente
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [year, month, day] = dateString.split('-');
-        return `${day}/${month}/${year}`;
-      }
-      
-      // Intentar parsear con Date constructor
-      const date = new Date(dateString);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString('es-MX', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-      }
-      
-      // Si no se puede parsear, mostrar el valor original
-      console.warn(`⚠️ No se pudo formatear la fecha: ${dateString}`);
-      return dateString;
+      // Convert to DD/MMM/YYYY format
+      const formattedDate = toDDMMMYYYY(dateString);
+      return formattedDate || dateString;
       
     } catch (error) {
       console.error(`❌ Error formateando fecha ${dateString}:`, error);

@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import firebaseTeamService from './firebaseTeamService';
+import { toDDMMMYYYY } from '../utils/dateUtils';
 
 // Firebase configuration
 const FIREBASE_ENABLED = true; // ✅ Enabled with Blaze plan
@@ -48,9 +49,9 @@ class FirebaseClientesService {
     }
 
     try {
-      // Si ya es una fecha válida, formatearla
+      // Si ya es una fecha válida, formatearla a DD/MMM/YYYY
       if (dateValue instanceof Date) {
-        return dateValue.toISOString().split('T')[0];
+        return toDDMMMYYYY(dateValue);
       }
 
       // Si es un timestamp de Excel/Google Sheets (números como 458924375)
@@ -69,7 +70,7 @@ class FirebaseClientesService {
           const date = new Date(excelEpoch.getTime() + (dateValue * millisecondsPerDay));
           
           if (!isNaN(date.getTime())) {
-            const result = date.toISOString().split('T')[0];
+            const result = toDDMMMYYYY(date);
             console.log(`✅ Timestamp Excel convertido: ${dateValue} -> ${result}`);
             return result;
           } else {
@@ -82,7 +83,7 @@ class FirebaseClientesService {
           console.log(`🔧 Detectado posible timestamp Unix (segundos): ${dateValue}`);
           const date = new Date(dateValue * 1000);
           if (!isNaN(date.getTime())) {
-            const result = date.toISOString().split('T')[0];
+            const result = toDDMMMYYYY(date);
             console.log(`✅ Timestamp Unix (segundos) convertido: ${dateValue} -> ${result}`);
             return result;
           }
@@ -93,7 +94,7 @@ class FirebaseClientesService {
           console.log(`🔧 Detectado posible timestamp Unix (milisegundos): ${dateValue}`);
           const date = new Date(dateValue);
           if (!isNaN(date.getTime())) {
-            const result = date.toISOString().split('T')[0];
+            const result = toDDMMMYYYY(date);
             console.log(`✅ Timestamp Unix (milisegundos) convertido: ${dateValue} -> ${result}`);
             return result;
           }

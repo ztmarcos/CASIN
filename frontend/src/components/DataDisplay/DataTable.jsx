@@ -10,6 +10,7 @@ import './DataTable.css';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
 import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
+import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
 // import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, columnOrder }) => {
@@ -1342,6 +1343,44 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return policyColumns.includes(columnLower);
   };
 
+  // Function to check if a column is a date column
+  const isDateColumn = (column) => {
+    const columnLower = column.toLowerCase();
+    const dateColumns = [
+      'fecha_inicio',
+      'fecha_fin',
+      'fecha_expedicion',
+      'desde_vigencia',
+      'hasta_vigencia',
+      'fecha_pago',
+      'fecha_vencimiento',
+      'fecha_expiracion',
+      'fecha_finalizacion',
+      'fecha_termino',
+      'vencimiento',
+      'expiracion',
+      'created_at',
+      'updated_at',
+      'createdat',
+      'updatedat'
+    ];
+    return dateColumns.includes(columnLower) || columnLower.includes('fecha') || columnLower.includes('vigencia');
+  };
+
+  // Function to format date values
+  const formatDateValue = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+    
+    // If already in DD/MMM/YYYY format, return as is
+    if (typeof value === 'string' && /^\d{1,2}\/[a-z]{3}\/\d{4}$/i.test(value)) {
+      return value;
+    }
+    
+    // Convert to DD/MMM/YYYY format
+    const formattedDate = toDDMMMYYYY(value);
+    return formattedDate || String(value);
+  };
+
   const renderCell = (row, rowIndex, column) => {
     // Debug logging for hogar table
     if (tableName === 'hogar' && column === 'nombre_contratante') {
@@ -1396,6 +1435,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     if (isPolicyNumberColumn(column)) {
       const formattedValue = formatPolicyNumber(row[column]);
       return <span className="policy-number-cell">{formattedValue}</span>;
+    }
+    
+    // Format date columns to DD/MMM/YYYY format
+    if (isDateColumn(column)) {
+      const formattedValue = formatDateValue(row[column]);
+      return <span className="date-cell">{formattedValue}</span>;
     }
     
     // Format money columns with commas
