@@ -1478,7 +1478,7 @@ export default function Reports() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleTogglePartialPaymentStatus(policy);
+                                handleOpenPaymentModal(policy);
                               }}
                               className={`status-toggle ${getPartialPaymentStatus(policy).toLowerCase().replace(' ', '-')}`}
                             >
@@ -1852,7 +1852,7 @@ export default function Reports() {
         <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
           <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="payment-modal-header">
-              <h3>Historial de Pagos - {selectedPolicyForPayment.numero_poliza}</h3>
+              <h3>Gestión de Pagos - {selectedPolicyForPayment.numero_poliza}</h3>
               <button onClick={() => setShowPaymentModal(false)}>×</button>
             </div>
             <div className="payment-modal-body">
@@ -1860,7 +1860,26 @@ export default function Reports() {
                 <p><strong>Contratante:</strong> {selectedPolicyForPayment.nombre_contratante}</p>
                 <p><strong>Forma de Pago:</strong> {selectedPolicyForPayment.forma_pago}</p>
                 <p><strong>Total de Pagos:</strong> {selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</p>
+                <p><strong>Pago Actual:</strong> {selectedPolicyForPayment.pago_actual || 1}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</p>
+                <p><strong>Estado:</strong> <span className={`status-badge ${getPartialPaymentStatus(selectedPolicyForPayment).toLowerCase().replace(' ', '-')}`}>
+                  {getPartialPaymentStatus(selectedPolicyForPayment)}
+                </span></p>
               </div>
+              
+              {/* Quick action for current payment */}
+              <div className="current-payment-action">
+                <h4>Acción Rápida - Pago Actual</h4>
+                <div className="current-payment-info">
+                  <span>Pago {selectedPolicyForPayment.pago_actual || 1}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
+                  <button 
+                    onClick={() => handleTogglePartialPaymentStatus(selectedPolicyForPayment)}
+                    className={`quick-action-btn ${getPartialPaymentStatus(selectedPolicyForPayment).toLowerCase().replace(' ', '-')}`}
+                  >
+                    {getPartialPaymentStatus(selectedPolicyForPayment) === 'Pagado' ? 'Marcar como No Pagado' : 'Marcar como Pagado'}
+                  </button>
+                </div>
+              </div>
+              
               <div className="payment-checklist">
                 {Array.from({ length: selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago) }).map((_, index) => {
                   const paymentNumber = index + 1;

@@ -2167,4 +2167,93 @@
   background: #f87171;
 }
 
+/* Status badge styles */
+.status-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.pagado {
+  background: #22c55e;
+  color: white;
+}
+
+.status-badge.no-pagado {
+  background: #ef4444;
+  color: white;
+}
+
+[data-theme='dark'] .status-badge.pagado {
+  background: #10b981;
+}
+
+[data-theme='dark'] .status-badge.no-pagado {
+  background: #f87171;
+}
+
+/* Current payment action styles */
+.current-payment-action {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-hover);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.current-payment-action h4 {
+  margin: 0 0 0.75rem 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.current-payment-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.current-payment-info span {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.quick-action-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.quick-action-btn.pagado {
+  background: #ef4444;
+  color: white;
+}
+
+.quick-action-btn.no-pagado {
+  background: #22c55e;
+  color: white;
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] .quick-action-btn.pagado {
+  background: #f87171;
+}
+
+[data-theme='dark'] .quick-action-btn.no-pagado {
+  background: #10b981;
+}
+
  
