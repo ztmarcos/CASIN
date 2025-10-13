@@ -343,13 +343,19 @@ export default function Reports() {
         )
       );
       
+      // Update both estado_renovacion and estado_pago for compatibility
       await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_renovacion', newStatus);
+      
+      // Also update estado_pago to maintain compatibility with existing data
+      const paymentStatus = newStatus === 'Renovado' ? 'Pagado' : 'No Pagado';
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_pago', paymentStatus);
       
       // Update local state
       const policyKey = getPolicyKey(policy);
       setPolicyStatuses(prev => ({
         ...prev,
-        [`${policyKey}_renovacion`]: newStatus
+        [`${policyKey}_renovacion`]: newStatus,
+        [policyKey]: paymentStatus // Also update the payment status for compatibility
       }));
       
       toast.success(`Póliza ${policy.numero_poliza} renovación actualizada a: ${newStatus}`);
@@ -989,7 +995,22 @@ export default function Reports() {
   // Get renewal status for a policy
   const getPolicyRenewalStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
-    return policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion || 'No Renovado';
+    
+    // First check if we have a specific renewal status
+    if (policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion) {
+      return policyStatuses[`${policyKey}_renovacion`] || policy.estado_renovacion;
+    }
+    
+    // If no renewal status exists, convert from existing payment status
+    const paymentStatus = policyStatuses[policyKey] || policy.estado_pago;
+    if (paymentStatus === 'Pagado') {
+      return 'Renovado';
+    } else if (paymentStatus === 'No Pagado') {
+      return 'No Renovado';
+    }
+    
+    // Default fallback
+    return 'No Renovado';
   };
 
   // Open payment modal for partial payments
@@ -1423,17 +1444,7 @@ export default function Reports() {
                         )}
                         <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                         <td>
-                          {selectedType === 'Vencimientos' ? (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleRenewalStatus(policy);
-                              }}
-                              className={`status-toggle ${getPolicyRenewalStatus(policy).toLowerCase().replace(' ', '-')}`}
-                            >
-                              {getPolicyRenewalStatus(policy)}
-                            </button>
-                          ) : selectedType === 'Pagos Parciales' ? (
+                          {selectedType === 'Pagos Parciales' ? (
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1447,11 +1458,11 @@ export default function Reports() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleToggleStatus(policy);
+                                handleToggleRenewalStatus(policy);
                               }}
-                              className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
+                              className={`status-toggle ${getPolicyRenewalStatus(policy).toLowerCase().replace(' ', '-')}`}
                             >
-                              {getPolicyStatus(policy)}
+                              {getPolicyRenewalStatus(policy)}
                             </button>
                           )}
                         </td>
