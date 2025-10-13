@@ -2115,7 +2115,7 @@
 
 .payment-toggle {
   background: var(--primary-color);
-  color: white;
+  color: black;
   border: none;
   padding: 0.25rem 0.75rem;
   border-radius: 6px;
