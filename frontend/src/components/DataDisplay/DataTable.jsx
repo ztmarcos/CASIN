@@ -2651,7 +2651,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                         disabled={paymentNumber === 1}
                       />
                       <span className="payment-number">Pago {paymentNumber}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
-                      <span className="payment-date">{paymentDate ? toDDMMMYYYY(paymentDate) : 'Pendiente'}</span>
+                      <span className="payment-date">
+                        {isPaid ? (paymentDate ? toDDMMMYYYY(paymentDate) : 'Pagado') : 'Pendiente'}
+                      </span>
                     </div>
                   );
                 })}
