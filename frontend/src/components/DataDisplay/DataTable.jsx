@@ -2297,6 +2297,36 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '12px'
             }}>
+              {/* Debug info for modal */}
+              {console.log('🔍 MODAL DEBUG - selectedRowForActions:', selectedRowForActions)}
+              {console.log('🔍 MODAL DEBUG - forma_pago:', selectedRowForActions?.forma_pago)}
+              {console.log('🔍 MODAL DEBUG - hasPartialPayments:', selectedRowForActions?.forma_pago ? hasPartialPayments(selectedRowForActions.forma_pago) : 'NO FORMA_PAGO')}
+              {console.log('🔍 MODAL DEBUG - All fields:', selectedRowForActions ? Object.keys(selectedRowForActions) : 'NO DATA')}
+              
+              {/* Debug button to show all fields */}
+              <button
+                onClick={() => {
+                  console.log('🔍 ALL FIELDS:', selectedRowForActions);
+                  alert(`Forma de pago: ${selectedRowForActions?.forma_pago || 'NO ENCONTRADO'}\nCampos disponibles: ${selectedRowForActions ? Object.keys(selectedRowForActions).join(', ') : 'NO DATA'}`);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>🔍</span>
+                DEBUG INFO
+              </button>
               {/* Botón Eliminar */}
               <button
                 onClick={() => {
