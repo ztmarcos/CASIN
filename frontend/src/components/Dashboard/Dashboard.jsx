@@ -11,6 +11,7 @@ import Weather from '../Weather/Weather';
 import firebaseDashboardService from '../../services/firebaseDashboardService';
 import { formatDate } from '../../utils/dateUtils';
 import { runFirebaseTests } from '../../utils/firebaseTest';
+import { triggerBirthdayEmails } from '../../services/firebaseBirthdayService';
 
 import './Dashboard.css';
 
@@ -34,7 +35,19 @@ const Dashboard = () => {
   useEffect(() => {
     loadBirthdays();
     loadExpirations();
+    // Trigger automatic birthday emails when dashboard loads
+    triggerAutomaticBirthdayEmails();
   }, []);
+
+  const triggerAutomaticBirthdayEmails = async () => {
+    try {
+      console.log('🎂 Dashboard: Triggering automatic birthday emails...');
+      await triggerBirthdayEmails();
+      console.log('✅ Dashboard: Birthday emails triggered successfully');
+    } catch (error) {
+      console.error('❌ Dashboard: Error triggering birthday emails:', error);
+    }
+  };
 
   const loadBirthdays = async () => {
     try {

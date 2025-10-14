@@ -586,6 +586,36 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Endpoint for cron job to trigger birthday emails
+app.get('/api/cron/birthday-emails', async (req, res) => {
+  try {
+    console.log('🎂 Cron job: Triggering birthday emails...');
+    
+    // Import the birthday service
+    const { triggerBirthdayEmails } = require('./services/firebaseBirthdayService');
+    
+    const result = await triggerBirthdayEmails();
+    
+    console.log('✅ Cron job: Birthday emails triggered successfully', result);
+    
+    res.json({
+      status: 'success',
+      message: 'Birthday emails triggered successfully',
+      result: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Cron job: Error triggering birthday emails:', error);
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Error triggering birthday emails',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get('/api/test', (req, res) => {
   res.json({
     message: 'Backend API with MySQL is working!',

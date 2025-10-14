@@ -13,11 +13,8 @@ const Birthdays = () => {
 
   useEffect(() => {
     loadBirthdays();
-    // Activar envío automático de correos de cumpleaños
-    if (autoEmailEnabled) {
-      handleAutoSendEmails();
-    }
-  }, [autoEmailEnabled]);
+    // Note: Automatic birthday emails are now triggered from Dashboard
+  }, []);
 
   // Function to determine if an RFC belongs to a natural person (persona física)
   const isPersonalRFC = (rfc) => {

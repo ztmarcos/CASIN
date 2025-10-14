@@ -12,6 +12,7 @@
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "node server-mysql.js",
     "install:all": "npm install && cd frontend && npm install",
+    "cron:birthdays": "node cron.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
