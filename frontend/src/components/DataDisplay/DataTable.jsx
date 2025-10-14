@@ -2297,36 +2297,6 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
               gap: '12px'
             }}>
-              {/* Debug info for modal */}
-              {console.log('🔍 MODAL DEBUG - selectedRowForActions:', selectedRowForActions)}
-              {console.log('🔍 MODAL DEBUG - forma_pago:', selectedRowForActions?.forma_pago)}
-              {console.log('🔍 MODAL DEBUG - hasPartialPayments:', selectedRowForActions?.forma_pago ? hasPartialPayments(selectedRowForActions.forma_pago) : 'NO FORMA_PAGO')}
-              {console.log('🔍 MODAL DEBUG - All fields:', selectedRowForActions ? Object.keys(selectedRowForActions) : 'NO DATA')}
-              
-              {/* Debug button to show all fields */}
-              <button
-                onClick={() => {
-                  console.log('🔍 ALL FIELDS:', selectedRowForActions);
-                  alert(`Forma de pago: ${selectedRowForActions?.forma_pago || 'NO ENCONTRADO'}\nCampos disponibles: ${selectedRowForActions ? Object.keys(selectedRowForActions).join(', ') : 'NO DATA'}`);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  backgroundColor: '#f3f4f6',
-                  color: '#374151',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <span>🔍</span>
-                DEBUG INFO
-              </button>
               {/* Botón Eliminar */}
               <button
                 onClick={() => {
@@ -2501,8 +2471,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 Email
               </button>
 
-              {/* Botón Pagos Parciales - Solo para pólizas no anuales */}
-              {selectedRowForActions.forma_pago && hasPartialPayments(selectedRowForActions.forma_pago) && (
+              {/* Botón Pagos - Siempre visible, con lógica diferente según tipo */}
+              {selectedRowForActions.forma_pago && (
                 <button
                   onClick={() => {
                     handleOpenPaymentModal(selectedRowForActions);
@@ -2511,9 +2481,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   }}
                   style={{
                     padding: '12px 16px',
-                    backgroundColor: '#fef3c7',
-                    color: '#92400e',
-                    border: '1px solid #fde68a',
+                    backgroundColor: hasPartialPayments(selectedRowForActions.forma_pago) ? '#fef3c7' : '#e0e7ff',
+                    color: hasPartialPayments(selectedRowForActions.forma_pago) ? '#92400e' : '#3730a3',
+                    border: `1px solid ${hasPartialPayments(selectedRowForActions.forma_pago) ? '#fde68a' : '#c7d2fe'}`,
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '14px',
@@ -2524,14 +2494,17 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     transition: 'all 0.2s ease'
                   }}
                   onMouseOver={(e) => {
-                    e.target.style.backgroundColor = '#fde68a';
+                    e.target.style.backgroundColor = hasPartialPayments(selectedRowForActions.forma_pago) ? '#fde68a' : '#c7d2fe';
                   }}
                   onMouseOut={(e) => {
-                    e.target.style.backgroundColor = '#fef3c7';
+                    e.target.style.backgroundColor = hasPartialPayments(selectedRowForActions.forma_pago) ? '#fef3c7' : '#e0e7ff';
                   }}
                 >
                   <span>💳</span>
-                  Pagos Parciales
+                  {hasPartialPayments(selectedRowForActions.forma_pago) 
+                    ? `Pagos Parciales (${selectedRowForActions.pago_actual || 1}/${selectedRowForActions.total_pagos || calculateTotalPayments(selectedRowForActions.forma_pago)})`
+                    : 'Pago Único'
+                  }
                 </button>
               )}
 
