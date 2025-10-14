@@ -49,6 +49,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
   const [actionsColumnsCollapsed, setActionsColumnsCollapsed] = useState(true); // State to control actions columns visibility - default collapsed
   const [showActionsModal, setShowActionsModal] = useState(false); // State to control actions modal
   const [selectedRowForActions, setSelectedRowForActions] = useState(null); // Row selected for actions
+  const [showPaymentModal, setShowPaymentModal] = useState(false); // State for payment modal
+  const [selectedPolicyForPayment, setSelectedPolicyForPayment] = useState(null); // Policy for payment management
 
   // Helper function to get client name based on table type
   const getClientName = (rowData) => {
@@ -56,6 +58,175 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     
     // For ALL tables, use 'contratante'
     return rowData.contratante || 'Registro';
+  };
+
+  // Helper function to calculate total payments based on forma_pago
+  const calculateTotalPayments = (formaPago) => {
+    const paymentMap = {
+      'MENSUAL': 12,
+      'BIMESTRAL': 6,
+      'TRIMESTRAL': 4,
+      'CUATRIMESTRAL': 3,
+      'SEMESTRAL': 2,
+      'ANUAL': 1
+    };
+    return paymentMap[formaPago?.toUpperCase()] || 12;
+  };
+
+  // Check if policy has partial payments (not annual)
+  const hasPartialPayments = (formaPago) => {
+    const upperFormaPago = formaPago?.toUpperCase();
+    return upperFormaPago !== 'ANUAL';
+  };
+
+  // Get partial payment status for a policy
+  const getPartialPaymentStatus = (policy) => {
+    // Check if fecha_proximo_pago has passed and auto-reset to 'No Pagado'
+    if (policy.fecha_proximo_pago) {
+      const nextPaymentDate = parseDDMMMYYYY(policy.fecha_proximo_pago);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (nextPaymentDate && nextPaymentDate < today) {
+        // Auto-reset to 'No Pagado' if payment date has passed
+        return 'No Pagado';
+      }
+    }
+    
+    return policy.estado_pago_parcial || 'No Pagado';
+  };
+
+  // Open payment modal for partial payments
+  const handleOpenPaymentModal = (policy) => {
+    console.log('🔍 Opening payment modal for policy:', policy.numero_poliza);
+    setSelectedPolicyForPayment(policy);
+    setShowPaymentModal(true);
+  };
+
+  // Handle partial payment status toggle
+  const handleTogglePartialPaymentStatus = async (policy) => {
+    try {
+      // Validate policy data
+      if (!policy || !policy.id) {
+        console.error('❌ Invalid policy data for partial payment status toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentStatus = getPartialPaymentStatus(policy);
+      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} partial payment status from ${currentStatus} to ${newStatus}`);
+      
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === policy.id ? { ...row, estado_pago_parcial: newStatus } : row
+        )
+      );
+      
+      // Update Firebase
+      await firebaseTableService.updateData(tableName, policy.id, 'estado_pago_parcial', newStatus);
+      
+      // Calculate next payment date if marking as paid
+      if (newStatus === 'Pagado') {
+        const totalPayments = policy.total_pagos || calculateTotalPayments(policy.forma_pago);
+        const currentPayment = policy.pago_actual || 1;
+        const nextPayment = currentPayment + 1;
+        
+        // Calculate next payment date based on forma_pago
+        const startDate = parseDDMMMYYYY(policy.fecha_inicio);
+        if (startDate) {
+          const nextPaymentDate = new Date(startDate);
+          const paymentInterval = {
+            'MENSUAL': 1,
+            'BIMESTRAL': 2,
+            'TRIMESTRAL': 3,
+            'CUATRIMESTRAL': 4,
+            'SEMESTRAL': 6,
+            'ANUAL': 12
+          };
+          
+          const interval = paymentInterval[policy.forma_pago?.toUpperCase()] || 1;
+          nextPaymentDate.setMonth(nextPaymentDate.getMonth() + (interval * currentPayment));
+          
+          // Update next payment date and current payment number
+          await firebaseTableService.updateData(tableName, policy.id, 'fecha_proximo_pago', toDDMMMYYYY(nextPaymentDate));
+          await firebaseTableService.updateData(tableName, policy.id, 'pago_actual', nextPayment);
+          
+          // Update pagos_realizados array
+          const pagosRealizados = policy.pagos_realizados || [];
+          const existingPayment = pagosRealizados.find(p => p.numero === currentPayment);
+          
+          if (existingPayment) {
+            existingPayment.pagado = true;
+            existingPayment.fecha = toDDMMMYYYY(new Date());
+          } else {
+            pagosRealizados.push({
+              numero: currentPayment,
+              fecha: toDDMMMYYYY(new Date()),
+              pagado: true
+            });
+          }
+          
+          await firebaseTableService.updateData(tableName, policy.id, 'pagos_realizados', pagosRealizados);
+        }
+      }
+      
+      toast.success(`Póliza ${policy.numero_poliza} estado de pago parcial actualizado a: ${newStatus}`);
+      
+      // Refresh the data to ensure consistency
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (err) {
+      console.error('❌ Error updating partial payment status:', err);
+      toast.error('Error al actualizar el estado de pago parcial');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === policy.id ? { ...row, estado_pago_parcial: policy.estado_pago_parcial || 'No Pagado' } : row
+        )
+      );
+    }
+  };
+
+  // Handle payment checkbox toggle in modal
+  const handlePaymentCheckToggle = async (policy, paymentNumber) => {
+    try {
+      const pagosRealizados = policy.pagos_realizados || [];
+      const existingPayment = pagosRealizados.find(p => p.numero === paymentNumber);
+      
+      if (existingPayment) {
+        existingPayment.pagado = !existingPayment.pagado;
+        if (existingPayment.pagado) {
+          existingPayment.fecha = toDDMMMYYYY(new Date());
+        }
+      } else {
+        pagosRealizados.push({
+          numero: paymentNumber,
+          fecha: toDDMMMYYYY(new Date()),
+          pagado: true
+        });
+      }
+      
+      // Update local state
+      setSelectedPolicyForPayment(prev => ({
+        ...prev,
+        pagos_realizados: pagosRealizados
+      }));
+      
+      // Update Firebase
+      await firebaseTableService.updateData(tableName, policy.id, 'pagos_realizados', pagosRealizados);
+      
+      toast.success(`Pago ${paymentNumber} actualizado`);
+      
+    } catch (err) {
+      console.error('❌ Error updating payment:', err);
+      toast.error('Error al actualizar el pago');
+    }
   };
 
   // Debug useEffect to monitor state changes
@@ -2227,6 +2398,127 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 <span>📧</span>
                 Email
               </button>
+
+              {/* Botón Pagos Parciales - Solo para pólizas no anuales */}
+              {hasPartialPayments(selectedRowForActions.forma_pago) && (
+                <button
+                  onClick={() => {
+                    handleOpenPaymentModal(selectedRowForActions);
+                    setShowActionsModal(false);
+                    setSelectedRowForActions(null);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    backgroundColor: '#fef3c7',
+                    color: '#92400e',
+                    border: '1px solid #fde68a',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.backgroundColor = '#fde68a';
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.backgroundColor = '#fef3c7';
+                  }}
+                >
+                  <span>💳</span>
+                  Pagos Parciales
+                </button>
+              )}
+
+              {/* Botón Estado Pago Parcial - Solo para pólizas no anuales */}
+              {hasPartialPayments(selectedRowForActions.forma_pago) && (
+                <button
+                  onClick={() => {
+                    handleTogglePartialPaymentStatus(selectedRowForActions);
+                    setShowActionsModal(false);
+                    setSelectedRowForActions(null);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    backgroundColor: (getPartialPaymentStatus(selectedRowForActions) === 'Pagado') ? '#dcfce7' : '#fef2f2',
+                    color: (getPartialPaymentStatus(selectedRowForActions) === 'Pagado') ? '#166534' : '#dc2626',
+                    border: `1px solid ${(getPartialPaymentStatus(selectedRowForActions) === 'Pagado') ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>💰</span>
+                  {getPartialPaymentStatus(selectedRowForActions) === 'Pagado' ? 'PAGADO PARCIAL' : 'NO PAGADO PARCIAL'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Modal for Partial Payments */}
+      {showPaymentModal && selectedPolicyForPayment && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="payment-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="payment-modal-header">
+              <h3>Gestión de Pagos - {selectedPolicyForPayment.numero_poliza}</h3>
+              <button onClick={() => setShowPaymentModal(false)}>×</button>
+            </div>
+            <div className="payment-modal-body">
+              <div className="payment-info">
+                <p><strong>Contratante:</strong> {selectedPolicyForPayment.contratante}</p>
+                <p><strong>Forma de Pago:</strong> {selectedPolicyForPayment.forma_pago}</p>
+                <p><strong>Total de Pagos:</strong> {selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</p>
+                <p><strong>Pago Actual:</strong> {selectedPolicyForPayment.pago_actual || 1}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</p>
+                <p><strong>Estado:</strong> <span className={`status-badge ${getPartialPaymentStatus(selectedPolicyForPayment).toLowerCase().replace(' ', '-')}`}>
+                  {getPartialPaymentStatus(selectedPolicyForPayment)}
+                </span></p>
+              </div>
+              
+              {/* Quick action for current payment */}
+              <div className="current-payment-action">
+                <h4>Acción Rápida - Pago Actual</h4>
+                <div className="current-payment-info">
+                  <span>Pago {selectedPolicyForPayment.pago_actual || 1}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
+                  <button 
+                    onClick={() => handleTogglePartialPaymentStatus(selectedPolicyForPayment)}
+                    className={`quick-action-btn ${getPartialPaymentStatus(selectedPolicyForPayment).toLowerCase().replace(' ', '-')}`}
+                  >
+                    {getPartialPaymentStatus(selectedPolicyForPayment) === 'Pagado' ? 'Marcar como No Pagado' : 'Marcar como Pagado'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="payment-checklist">
+                {Array.from({ length: selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago) }).map((_, index) => {
+                  const paymentNumber = index + 1;
+                  const payment = selectedPolicyForPayment.pagos_realizados?.find(p => p.numero === paymentNumber);
+                  const isPaid = payment?.pagado || paymentNumber === 1; // First payment is always paid
+                  const paymentDate = payment?.fecha || (paymentNumber === 1 ? selectedPolicyForPayment.fecha_inicio : null);
+                  
+                  return (
+                    <div key={paymentNumber} className={`payment-item ${isPaid ? 'paid' : 'unpaid'}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={isPaid}
+                        onChange={() => handlePaymentCheckToggle(selectedPolicyForPayment, paymentNumber)}
+                        disabled={paymentNumber === 1}
+                      />
+                      <span className="payment-number">Pago {paymentNumber}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
+                      <span className="payment-date">{paymentDate ? toDDMMMYYYY(paymentDate) : 'Pendiente'}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
