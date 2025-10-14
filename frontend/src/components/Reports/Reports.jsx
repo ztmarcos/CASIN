@@ -1488,7 +1488,15 @@ export default function Reports() {
                             <span className="annual-payment-indicator">Pago Único</span>
                           </td>
                         )}
-                        <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
+                        <td>
+                          {policy.fecha_proximo_pago 
+                            ? formatDate(policy.fecha_proximo_pago, dateFormat) 
+                            : (hasPartialPayments(policy.forma_pago) 
+                                ? 'N/A' 
+                                : (policy.fecha_fin ? formatDate(policy.fecha_fin, dateFormat) : 'N/A')
+                              )
+                          }
+                        </td>
                         <td>
                           {selectedType === 'Pagos Parciales' ? (
                             hasPartialPayments(policy.forma_pago) ? (
@@ -1657,7 +1665,14 @@ export default function Reports() {
                             {selectedType === 'Pagos Parciales' && policy.pago_parcial && (
                               <p><span>Pago Parcial:</span> ${policy.pago_parcial?.toLocaleString()}</p>
                             )}
-                            <p><span>Próximo Pago:</span> {policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago) : 'N/A'}</p>
+                            <p><span>Próximo Pago:</span> {
+                              policy.fecha_proximo_pago 
+                                ? formatDate(policy.fecha_proximo_pago) 
+                                : (hasPartialPayments(policy.forma_pago) 
+                                    ? 'N/A' 
+                                    : (policy.fecha_fin ? formatDate(policy.fecha_fin) : 'N/A')
+                                  )
+                            }</p>
                           </div>
                         </>
                       )}
