@@ -231,7 +231,12 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
   // Debug useEffect to monitor state changes
   useEffect(() => {
-    console.log('🔧 State changed:', { showActionsModal, selectedRowForActions: getClientName(selectedRowForActions) });
+    console.log('🔧 State changed:', { 
+      showActionsModal, 
+      selectedRowForActions: getClientName(selectedRowForActions),
+      formaPago: selectedRowForActions?.forma_pago,
+      hasPartialPayments: selectedRowForActions?.forma_pago ? hasPartialPayments(selectedRowForActions.forma_pago) : false
+    });
   }, [showActionsModal, selectedRowForActions]);
 
   // Reference to track previous data
@@ -1544,6 +1549,18 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return dateColumns.includes(columnLower) || columnLower.includes('fecha') || columnLower.includes('vigencia');
   };
 
+  // Function to check if a column is a payment column that should be clickeable
+  const isPaymentColumn = (column) => {
+    const columnLower = column.toLowerCase();
+    const paymentColumns = [
+      'pago_actual',
+      'pagos_realizados',
+      'estado_pago_parcial',
+      'fecha_proximo_pago'
+    ];
+    return paymentColumns.includes(columnLower) || columnLower.includes('pago');
+  };
+
   // Function to format date values
   const formatDateValue = (value) => {
     if (value === null || value === undefined || value === '') return '-';
@@ -1624,6 +1641,61 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     if (isMoneyColumn(column)) {
       const formattedValue = formatMoneyAmount(row[column]);
       return <span className="money-cell">{formattedValue}</span>;
+    }
+    
+    // Handle payment columns - make them clickeable for partial payments
+    if (isPaymentColumn(column) && row.forma_pago && hasPartialPayments(row.forma_pago)) {
+      const cellValue = row[column] !== null ? String(row[column]) : '-';
+      
+      // Special handling for pago_actual column
+      if (column.toLowerCase() === 'pago_actual') {
+        const totalPayments = row.total_pagos || calculateTotalPayments(row.forma_pago);
+        const currentPayment = row.pago_actual || 1;
+        return (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenPaymentModal(row);
+            }}
+            className="payment-toggle"
+            style={{
+              background: 'var(--primary-color)',
+              color: 'black',
+              border: 'none',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {currentPayment}/{totalPayments}
+          </button>
+        );
+      }
+      
+      // For other payment columns, make them clickeable
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenPaymentModal(row);
+          }}
+          className="payment-cell-button"
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'inherit',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            padding: '0',
+            fontSize: 'inherit'
+          }}
+        >
+          {cellValue}
+        </button>
+      );
     }
     
     const cellValue = row[column] !== null ? String(row[column]) : '-';
@@ -2400,7 +2472,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </button>
 
               {/* Botón Pagos Parciales - Solo para pólizas no anuales */}
-              {hasPartialPayments(selectedRowForActions.forma_pago) && (
+              {selectedRowForActions.forma_pago && hasPartialPayments(selectedRowForActions.forma_pago) && (
                 <button
                   onClick={() => {
                     handleOpenPaymentModal(selectedRowForActions);
@@ -2434,7 +2506,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               )}
 
               {/* Botón Estado Pago Parcial - Solo para pólizas no anuales */}
-              {hasPartialPayments(selectedRowForActions.forma_pago) && (
+              {selectedRowForActions.forma_pago && hasPartialPayments(selectedRowForActions.forma_pago) && (
                 <button
                   onClick={() => {
                     handleTogglePartialPaymentStatus(selectedRowForActions);

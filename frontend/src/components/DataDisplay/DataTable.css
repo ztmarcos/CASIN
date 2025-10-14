@@ -3506,3 +3506,26 @@ td .edit-cell-input[type="select"] {
 [data-theme='dark'] .payment-date {
   color: #9ca3af;
 }
+
+/* Payment cell button styles */
+.payment-cell-button {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  text-decoration: underline !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+  transition: all 0.2s ease !important;
+}
+
+.payment-cell-button:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
+  text-decoration: none !important;
+  border-radius: 4px !important;
+  padding: 2px 4px !important;
+}
+
+[data-theme='dark'] .payment-cell-button:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
+}
