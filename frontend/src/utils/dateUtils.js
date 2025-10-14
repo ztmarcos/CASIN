@@ -17,21 +17,29 @@ const SHORT_MONTHS = [
 export const parseDate = (dateStr) => {
   if (!dateStr) return null;
   
-  // Try standard date parsing first
-  let date = new Date(dateStr);
-  if (!isNaN(date.getTime())) return date;
-  
-  // Try dd/mm/yyyy format
+  // Try dd/mm/yyyy format first (prioritize European format)
   if (typeof dateStr === 'string') {
     const parts = dateStr.split('/').map(part => part.trim());
     if (parts.length === 3) {
       const [day, month, year] = parts.map(num => parseInt(num, 10));
       if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        date = new Date(year, month - 1, day);
-        if (!isNaN(date.getTime())) return date;
+        // Check if this looks like DD/MM/YYYY (day > 12 or month > 12)
+        if (day > 12 || month > 12) {
+          // Definitely DD/MM/YYYY format
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) return date;
+        } else {
+          // Could be either format, but prioritize DD/MM/YYYY for insurance data
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) return date;
+        }
       }
     }
   }
+  
+  // Try standard date parsing as fallback
+  let date = new Date(dateStr);
+  if (!isNaN(date.getTime())) return date;
   
   return null;
 };
