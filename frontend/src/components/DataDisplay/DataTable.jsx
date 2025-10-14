@@ -312,8 +312,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
       // Prefer forma_pago over forma_de_pago, but show whichever exists
-      ...(filteredColumns.includes('forma_pago') ? ['forma_pago'] : []),
-      ...(filteredColumns.includes('forma_de_pago') && !filteredColumns.includes('forma_pago') ? ['forma_de_pago'] : []),
+      ...(tableColumns.includes('forma_pago') ? ['forma_pago'] : []),
+      ...(tableColumns.includes('forma_de_pago') && !tableColumns.includes('forma_pago') ? ['forma_de_pago'] : []),
       ...(hasPagos ? ['pagos'] : []),
       ...(hasFechaInicio ? ['fecha_inicio'] : []),
       ...(hasFechaFin ? ['fecha_fin'] : []),
