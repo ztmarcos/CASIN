@@ -2256,4 +2256,37 @@
   background: #10b981;
 }
 
+/* Annual payment indicators */
+.annual-payment-indicator {
+  padding: 0.25rem 0.5rem;
+  background: #e5e7eb;
+  color: #374151;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  display: inline-block;
+}
+
+.annual-status-indicator {
+  padding: 0.25rem 0.5rem;
+  background: #22c55e;
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  display: inline-block;
+}
+
+[data-theme='dark'] .annual-payment-indicator {
+  background: #4b5563;
+  color: #d1d5db;
+}
+
+[data-theme='dark'] .annual-status-indicator {
+  background: #10b981;
+  color: white;
+}
+
  

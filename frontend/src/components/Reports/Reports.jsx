@@ -301,6 +301,12 @@ export default function Reports() {
     return paymentMap[formaPago?.toUpperCase()] || 12;
   };
 
+  // Check if policy has partial payments (not annual)
+  const hasPartialPayments = (formaPago) => {
+    const upperFormaPago = formaPago?.toUpperCase();
+    return upperFormaPago !== 'ANUAL';
+  };
+
   // Function to map display names to collection names
   const mapDisplayNameToCollection = (displayName) => {
     if (!displayName) return 'unknown';
@@ -1456,10 +1462,15 @@ export default function Reports() {
                         </td>
                         <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
                         {selectedType === 'Pagos Parciales' && (
-                          <td>${policy.pago_parcial?.toLocaleString() || '0'}</td>
+                          <td>
+                            {hasPartialPayments(policy.forma_pago) 
+                              ? `$${policy.pago_parcial?.toLocaleString() || '0'}`
+                              : `$${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}`
+                            }
+                          </td>
                         )}
                         <td>{policy.forma_pago}</td>
-                        {selectedType === 'Pagos Parciales' && (
+                        {selectedType === 'Pagos Parciales' && hasPartialPayments(policy.forma_pago) && (
                           <td>
                             <button 
                               onClick={(e) => {
@@ -1472,18 +1483,27 @@ export default function Reports() {
                             </button>
                           </td>
                         )}
+                        {selectedType === 'Pagos Parciales' && !hasPartialPayments(policy.forma_pago) && (
+                          <td>
+                            <span className="annual-payment-indicator">Pago Único</span>
+                          </td>
+                        )}
                         <td>{policy.fecha_proximo_pago ? formatDate(policy.fecha_proximo_pago, dateFormat) : 'N/A'}</td>
                         <td>
                           {selectedType === 'Pagos Parciales' ? (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenPaymentModal(policy);
-                              }}
-                              className={`status-toggle ${getPartialPaymentStatus(policy).toLowerCase().replace(' ', '-')}`}
-                            >
-                              {getPartialPaymentStatus(policy)}
-                            </button>
+                            hasPartialPayments(policy.forma_pago) ? (
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenPaymentModal(policy);
+                                }}
+                                className={`status-toggle ${getPartialPaymentStatus(policy).toLowerCase().replace(' ', '-')}`}
+                              >
+                                {getPartialPaymentStatus(policy)}
+                              </button>
+                            ) : (
+                              <span className="annual-status-indicator">Pago Completo</span>
+                            )
                           ) : (
                             <button 
                               onClick={(e) => {
