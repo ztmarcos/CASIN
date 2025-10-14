@@ -13,6 +13,24 @@ import { formatDate } from '../../utils/dateUtils';
 import { runFirebaseTests } from '../../utils/firebaseTest';
 import { triggerBirthdayEmails } from '../../services/firebaseBirthdayService';
 
+// Function to determine if an RFC belongs to a natural person (persona física)
+const isPersonalRFC = (rfc) => {
+  if (!rfc || typeof rfc !== 'string') return false;
+  
+  // Remove spaces and convert to uppercase
+  const cleanRFC = rfc.trim().toUpperCase();
+  
+  // Personal RFC: 13 characters (4 letters + 6 numbers + 3 characters)
+  // Business RFC: 12 characters (3 letters + 6 numbers + 3 characters)
+  if (cleanRFC.length === 13) {
+    // Check pattern: 4 letters + 6 numbers + 3 alphanumeric characters
+    const personalPattern = /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/;
+    return personalPattern.test(cleanRFC);
+  }
+  
+  return false;
+};
+
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -56,8 +74,11 @@ const Dashboard = () => {
       // Use Firebase service to get today's birthdays
       const todaysBirthdays = await firebaseDashboardService.getBirthdaysForPeriod('today');
       
+      // Filter only personal RFCs (personas físicas)
+      const personalBirthdays = todaysBirthdays.filter(birthday => isPersonalRFC(birthday.rfc));
+      
       // Sort by date
-      const sortedBirthdays = todaysBirthdays.sort((a, b) => {
+      const sortedBirthdays = personalBirthdays.sort((a, b) => {
         const dateA = new Date(a.date);
         const dateB = new Date(b.date);
         return dateA.getDate() - dateB.getDate();
@@ -66,7 +87,7 @@ const Dashboard = () => {
       setBirthdays(sortedBirthdays);
       setError(prev => ({ ...prev, birthdays: null }));
       
-      console.log(`🎂 Dashboard: Loaded ${sortedBirthdays.length} birthdays for today`);
+      console.log(`🎂 Dashboard: Loaded ${sortedBirthdays.length} personal birthdays for today (filtered from ${todaysBirthdays.length} total)`);
     } catch (err) {
       console.error('Error loading birthdays:', err);
       setError(prev => ({ ...prev, birthdays: 'Error al cargar los cumpleaños' }));

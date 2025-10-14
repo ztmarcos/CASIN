@@ -34,6 +34,7 @@ const Birthdays = () => {
     return false;
   };
 
+
   const loadBirthdays = async () => {
     try {
       setLoading(true);
