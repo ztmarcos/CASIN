@@ -60,6 +60,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return rowData.contratante || 'Registro';
   };
 
+  // Helper function to get forma_pago value (handles both forma_pago and forma_de_pago)
+  const getFormaPago = (rowData) => {
+    if (!rowData) return null;
+    
+    // Prefer forma_pago, fallback to forma_de_pago
+    return rowData.forma_pago || rowData.forma_de_pago || null;
+  };
+
   // Helper function to calculate total payments based on forma_pago
   const calculateTotalPayments = (formaPago) => {
     const paymentMap = {
@@ -234,8 +242,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     console.log('🔧 State changed:', { 
       showActionsModal, 
       selectedRowForActions: getClientName(selectedRowForActions),
-      formaPago: selectedRowForActions?.forma_pago,
-      hasPartialPayments: selectedRowForActions?.forma_pago ? hasPartialPayments(selectedRowForActions.forma_pago) : false
+      formaPago: getFormaPago(selectedRowForActions),
+      hasPartialPayments: getFormaPago(selectedRowForActions) ? hasPartialPayments(getFormaPago(selectedRowForActions)) : false
     });
   }, [showActionsModal, selectedRowForActions]);
 
@@ -268,19 +276,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, pagos, resto, id
+    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_pago, pagos, resto, id
     const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
-    const hasFormaPago = filteredColumns.includes('forma_de_pago');
+    // Handle both forma_de_pago and forma_pago (prefer forma_pago)
+    const hasFormaPago = filteredColumns.includes('forma_pago') || filteredColumns.includes('forma_de_pago');
     const hasPagos = filteredColumns.includes('pagos');
     const hasFechaInicio = filteredColumns.includes('fecha_inicio');
     const hasFechaFin = filteredColumns.includes('fecha_fin');
     const hasId = filteredColumns.includes('id');
 
-    // Quitar los que vamos a reordenar
+    // Quitar los que vamos a reordenar (including both forma_pago variants)
     filteredColumns = filteredColumns.filter(col => 
       col !== 'contratante' && 
       col !== 'numero_poliza' && 
@@ -288,20 +297,23 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'primer_pago' && 
       col !== 'pago_parcial' &&
       col !== 'forma_de_pago' &&
+      col !== 'forma_pago' &&
       col !== 'pagos' &&
       col !== 'fecha_inicio' &&
       col !== 'fecha_fin' &&
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, pagos, fecha_inicio, fecha_fin, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_pago, pagos, fecha_inicio, fecha_fin, ...resto..., id
     const finalOrder = [
       ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
-      ...(hasFormaPago ? ['forma_de_pago'] : []),
+      // Prefer forma_pago over forma_de_pago, but show whichever exists
+      ...(filteredColumns.includes('forma_pago') ? ['forma_pago'] : []),
+      ...(filteredColumns.includes('forma_de_pago') && !filteredColumns.includes('forma_pago') ? ['forma_de_pago'] : []),
       ...(hasPagos ? ['pagos'] : []),
       ...(hasFechaInicio ? ['fecha_inicio'] : []),
       ...(hasFechaFin ? ['fecha_fin'] : []),
@@ -1648,13 +1660,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
     
     // Handle payment columns - make them clickeable
-    if (isPaymentColumn(column) && row.forma_pago) {
+    if (isPaymentColumn(column) && getFormaPago(row)) {
       const cellValue = row[column] !== null ? String(row[column]) : '-';
       
       // Special handling for "pagos" column - show progress like in Reports
       if (column.toLowerCase() === 'pagos') {
-        if (hasPartialPayments(row.forma_pago)) {
-          const totalPayments = row.total_pagos || calculateTotalPayments(row.forma_pago);
+        const formaPago = getFormaPago(row);
+        if (hasPartialPayments(formaPago)) {
+          const totalPayments = row.total_pagos || calculateTotalPayments(formaPago);
           const currentPayment = row.pago_actual || 1;
           return (
             <button
@@ -1697,7 +1710,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       
       // Special handling for pago_actual column
       if (column.toLowerCase() === 'pago_actual') {
-        const totalPayments = row.total_pagos || calculateTotalPayments(row.forma_pago);
+        const formaPago = getFormaPago(row);
+        const totalPayments = row.total_pagos || calculateTotalPayments(formaPago);
         const currentPayment = row.pago_actual || 1;
         return (
           <button
@@ -2520,7 +2534,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               </button>
 
               {/* Botón Pagos - Siempre visible, con lógica diferente según tipo */}
-              {selectedRowForActions.forma_pago && (
+              {getFormaPago(selectedRowForActions) && (
                 <button
                   onClick={() => {
                     handleOpenPaymentModal(selectedRowForActions);
@@ -2529,9 +2543,9 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   }}
                   style={{
                     padding: '12px 16px',
-                    backgroundColor: hasPartialPayments(selectedRowForActions.forma_pago) ? '#fef3c7' : '#e0e7ff',
-                    color: hasPartialPayments(selectedRowForActions.forma_pago) ? '#92400e' : '#3730a3',
-                    border: `1px solid ${hasPartialPayments(selectedRowForActions.forma_pago) ? '#fde68a' : '#c7d2fe'}`,
+                    backgroundColor: hasPartialPayments(getFormaPago(selectedRowForActions)) ? '#fef3c7' : '#e0e7ff',
+                    color: hasPartialPayments(getFormaPago(selectedRowForActions)) ? '#92400e' : '#3730a3',
+                    border: `1px solid ${hasPartialPayments(getFormaPago(selectedRowForActions)) ? '#fde68a' : '#c7d2fe'}`,
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '14px',
@@ -2542,22 +2556,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                     transition: 'all 0.2s ease'
                   }}
                   onMouseOver={(e) => {
-                    e.target.style.backgroundColor = hasPartialPayments(selectedRowForActions.forma_pago) ? '#fde68a' : '#c7d2fe';
+                    e.target.style.backgroundColor = hasPartialPayments(getFormaPago(selectedRowForActions)) ? '#fde68a' : '#c7d2fe';
                   }}
                   onMouseOut={(e) => {
-                    e.target.style.backgroundColor = hasPartialPayments(selectedRowForActions.forma_pago) ? '#fef3c7' : '#e0e7ff';
+                    e.target.style.backgroundColor = hasPartialPayments(getFormaPago(selectedRowForActions)) ? '#fef3c7' : '#e0e7ff';
                   }}
                 >
                   <span>💳</span>
-                  {hasPartialPayments(selectedRowForActions.forma_pago) 
-                    ? `Pagos Parciales (${selectedRowForActions.pago_actual || 1}/${selectedRowForActions.total_pagos || calculateTotalPayments(selectedRowForActions.forma_pago)})`
+                  {hasPartialPayments(getFormaPago(selectedRowForActions)) 
+                    ? `Pagos Parciales (${selectedRowForActions.pago_actual || 1}/${selectedRowForActions.total_pagos || calculateTotalPayments(getFormaPago(selectedRowForActions))})`
                     : 'Pago Único'
                   }
                 </button>
               )}
 
               {/* Botón Estado Pago Parcial - Solo para pólizas no anuales */}
-              {selectedRowForActions.forma_pago && hasPartialPayments(selectedRowForActions.forma_pago) && (
+              {getFormaPago(selectedRowForActions) && hasPartialPayments(getFormaPago(selectedRowForActions)) && (
                 <button
                   onClick={() => {
                     handleTogglePartialPaymentStatus(selectedRowForActions);
