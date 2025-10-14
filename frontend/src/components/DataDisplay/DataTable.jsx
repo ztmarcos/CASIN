@@ -268,13 +268,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, resto, id
+    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, pagos, resto, id
     const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
     const hasFormaPago = filteredColumns.includes('forma_de_pago');
+    const hasPagos = filteredColumns.includes('pagos');
     const hasFechaInicio = filteredColumns.includes('fecha_inicio');
     const hasFechaFin = filteredColumns.includes('fecha_fin');
     const hasId = filteredColumns.includes('id');
@@ -287,12 +288,13 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'primer_pago' && 
       col !== 'pago_parcial' &&
       col !== 'forma_de_pago' &&
+      col !== 'pagos' &&
       col !== 'fecha_inicio' &&
       col !== 'fecha_fin' &&
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, fecha_inicio, fecha_fin, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, forma_de_pago, pagos, fecha_inicio, fecha_fin, ...resto..., id
     const finalOrder = [
       ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
@@ -300,6 +302,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
       ...(hasFormaPago ? ['forma_de_pago'] : []),
+      ...(hasPagos ? ['pagos'] : []),
       ...(hasFechaInicio ? ['fecha_inicio'] : []),
       ...(hasFechaFin ? ['fecha_fin'] : []),
       ...filteredColumns,
@@ -1556,7 +1559,8 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       'pago_actual',
       'pagos_realizados',
       'estado_pago_parcial',
-      'fecha_proximo_pago'
+      'fecha_proximo_pago',
+      'pagos' // New column for payment progress
     ];
     return paymentColumns.includes(columnLower) || columnLower.includes('pago');
   };
@@ -1643,9 +1647,53 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return <span className="money-cell">{formattedValue}</span>;
     }
     
-    // Handle payment columns - make them clickeable for partial payments
-    if (isPaymentColumn(column) && row.forma_pago && hasPartialPayments(row.forma_pago)) {
+    // Handle payment columns - make them clickeable
+    if (isPaymentColumn(column) && row.forma_pago) {
       const cellValue = row[column] !== null ? String(row[column]) : '-';
+      
+      // Special handling for "pagos" column - show progress like in Reports
+      if (column.toLowerCase() === 'pagos') {
+        if (hasPartialPayments(row.forma_pago)) {
+          const totalPayments = row.total_pagos || calculateTotalPayments(row.forma_pago);
+          const currentPayment = row.pago_actual || 1;
+          return (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenPaymentModal(row);
+              }}
+              className="payment-toggle"
+              style={{
+                background: 'var(--primary-color)',
+                color: 'black',
+                border: 'none',
+                padding: '0.25rem 0.75rem',
+                borderRadius: '6px',
+                fontSize: '0.75rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {currentPayment}/{totalPayments}
+            </button>
+          );
+        } else {
+          // For annual policies, show "Pago Único"
+          return (
+            <span className="annual-payment-indicator" style={{
+              padding: '0.25rem 0.75rem',
+              backgroundColor: '#e0e7ff',
+              color: '#3730a3',
+              borderRadius: '6px',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              Pago Único
+            </span>
+          );
+        }
+      }
       
       // Special handling for pago_actual column
       if (column.toLowerCase() === 'pago_actual') {
