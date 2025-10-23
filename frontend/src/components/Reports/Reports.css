@@ -2130,14 +2130,14 @@
   transform: translateY(-1px);
 }
 
-/* Status button styles for renewal and partial payment */
-.status-toggle.renovado {
-  background: #22c55e;
+/* Status button styles for expiration, primer pago, and partial payment */
+.status-toggle.vencido {
+  background: #ef4444;
   color: white;
 }
 
-.status-toggle.no-renovado {
-  background: #ef4444;
+.status-toggle.activo {
+  background: #22c55e;
   color: white;
 }
 
@@ -2151,12 +2151,17 @@
   color: white;
 }
 
-[data-theme='dark'] .status-toggle.renovado {
-  background: #10b981;
+.status-toggle.pendiente {
+  background: #f59e0b;
+  color: white;
 }
 
-[data-theme='dark'] .status-toggle.no-renovado {
+[data-theme='dark'] .status-toggle.vencido {
   background: #f87171;
+}
+
+[data-theme='dark'] .status-toggle.activo {
+  background: #10b981;
 }
 
 [data-theme='dark'] .status-toggle.pagado {
@@ -2165,6 +2170,10 @@
 
 [data-theme='dark'] .status-toggle.no-pagado {
   background: #f87171;
+}
+
+[data-theme='dark'] .status-toggle.pendiente {
+  background: #fbbf24;
 }
 
 /* Status badge styles */

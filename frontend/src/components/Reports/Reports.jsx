@@ -18,6 +18,11 @@ const REPORT_TYPES = ['Vencimientos', 'Pagos Parciales', 'Matriz de Productos'];
 
 // Utility function to check if a policy is expired
 const isPolicyExpired = (policy) => {
+  // Check for manual override first
+  if (policy.expiration_override === 'activo') return false;
+  if (policy.expiration_override === 'vencido') return true;
+  
+  // Otherwise, check fecha_fin
   if (!policy.fecha_fin) return false;
   
   const policyEndDate = parseDate(policy.fecha_fin);
@@ -329,27 +334,27 @@ export default function Reports() {
     return name.replace(/\s+/g, '_').toLowerCase();
   };
 
-  // Handle renewal status toggle for policies (Vencimientos)
-  const handleToggleRenewalStatus = async (policy) => {
+  // Handle primer pago toggle for policies
+  const handleTogglePrimerPago = async (policy) => {
     try {
       // Validate policy data
       if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
-        console.error('❌ Invalid policy data for renewal status toggle:', policy);
+        console.error('❌ Invalid policy data for primer pago toggle:', policy);
         toast.error('Error: datos de póliza inválidos');
         return;
       }
 
-      const currentStatus = getPolicyRenewalStatus(policy);
-      const newStatus = currentStatus === 'Renovado' ? 'No Renovado' : 'Renovado';
+      const currentStatus = policy.primer_pago_realizado || false;
+      const newStatus = !currentStatus;
       
-      console.log(`🔄 Updating policy ${policy.numero_poliza} renewal status from ${currentStatus} to ${newStatus}`);
+      console.log(`🔄 Updating policy ${policy.numero_poliza} primer pago from ${currentStatus} to ${newStatus}`);
       
       const policyId = policy.id || policy.firebase_doc_id;
       const sourceTable = policy.sourceTable || policy.table;
       const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
       
       console.log(`🗂️ Policy source table: "${sourceTable}", ramo: "${policy.ramo}" -> collection: "${collectionName}"`);
-      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Renewal Status: ${newStatus}`);
+      console.log(`📋 Policy ID: ${policyId}, Collection: ${collectionName}, New Primer Pago Status: ${newStatus}`);
       
       // Validate collection name exists
       if (collectionName === 'unknown') {
@@ -362,51 +367,89 @@ export default function Reports() {
       setFilteredPolicies(prevPolicies => 
         prevPolicies.map(p => 
           (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
-            ? { ...p, estado_renovacion: newStatus } 
+            ? { ...p, primer_pago_realizado: newStatus } 
             : p
         )
       );
       
-      // Update both estado_renovacion and estado_pago for compatibility
-      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_renovacion', newStatus);
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'primer_pago_realizado', newStatus);
       
-      // Also update estado_pago to maintain compatibility with existing data
-      const paymentStatus = newStatus === 'Renovado' ? 'Pagado' : 'No Pagado';
-      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'estado_pago', paymentStatus);
+      const statusText = policy.forma_pago?.toUpperCase() === 'ANUAL' 
+        ? (newStatus ? 'Pago Único ✓' : 'No Pagado')
+        : (newStatus ? 'Primer Pago ✓' : 'No Pagado');
       
-      // Update local state
-      const policyKey = getPolicyKey(policy);
-      setPolicyStatuses(prev => ({
-        ...prev,
-        [`${policyKey}_renovacion`]: newStatus,
-        [policyKey]: paymentStatus // Also update the payment status for compatibility
-      }));
-      
-      toast.success(`Póliza ${policy.numero_poliza} renovación actualizada a: ${newStatus}`);
+      toast.success(`Póliza ${policy.numero_poliza} actualizada a: ${statusText}`);
       
     } catch (err) {
-      console.error('❌ Error updating renewal status:', err);
-      
-      // Provide more specific error messages
-      let errorMessage = 'Error al actualizar el estado de renovación';
-      
-      if (err.message.includes('No se pudo conectar')) {
-        errorMessage = 'No se pudo conectar con el servidor. Verifique que el servidor esté ejecutándose.';
-      } else if (err.message.includes('API endpoint not found')) {
-        errorMessage = 'Error del servidor: endpoint no encontrado. Contacte al administrador.';
-      } else if (err.message.includes('Document with ID')) {
-        errorMessage = 'Póliza no encontrada en la base de datos.';
-      } else if (err.message.includes('Failed to update document')) {
-        errorMessage = 'Error al actualizar en la base de datos.';
-      }
-      
-      toast.error(errorMessage);
+      console.error('❌ Error updating primer pago status:', err);
+      toast.error('Error al actualizar el estado de primer pago');
       
       // Revert local state on error
       setFilteredPolicies(prevPolicies => 
         prevPolicies.map(p => 
           (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
-            ? { ...p, estado_renovacion: policy.estado_renovacion || 'No Renovado' } 
+            ? { ...p, primer_pago_realizado: policy.primer_pago_realizado || false } 
+            : p
+        )
+      );
+    }
+  };
+
+  // Handle policy expiration toggle (Vencido/Activo) - This is informational only
+  const handleTogglePolicyExpiration = async (policy) => {
+    // This is informational based on fecha_fin, but we can allow manual override
+    try {
+      if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
+        console.error('❌ Invalid policy data for expiration toggle:', policy);
+        toast.error('Error: datos de póliza inválidos');
+        return;
+      }
+
+      const currentOverride = policy.expiration_override || null;
+      // Toggle: null -> 'activo' -> 'vencido' -> null
+      let newOverride;
+      if (currentOverride === null || currentOverride === undefined) {
+        newOverride = 'activo';
+      } else if (currentOverride === 'activo') {
+        newOverride = 'vencido';
+      } else {
+        newOverride = null;
+      }
+      
+      console.log(`🔄 Updating policy ${policy.numero_poliza} expiration override from ${currentOverride} to ${newOverride}`);
+      
+      const policyId = policy.id || policy.firebase_doc_id;
+      const sourceTable = policy.sourceTable || policy.table;
+      const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
+      
+      if (collectionName === 'unknown') {
+        console.error(`❌ Unknown collection mapping for sourceTable: "${sourceTable}", ramo: "${policy.ramo}"`);
+        toast.error(`Error: No se pudo mapear la tabla "${sourceTable || policy.ramo}" a una colección válida`);
+        return;
+      }
+      
+      // Update local state immediately for better UX
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, expiration_override: newOverride } 
+            : p
+        )
+      );
+      
+      await firebaseReportsService.updatePolicyField(collectionName, policyId, 'expiration_override', newOverride);
+      
+      toast.success(`Estado de vencimiento actualizado`);
+      
+    } catch (err) {
+      console.error('❌ Error updating expiration status:', err);
+      toast.error('Error al actualizar el estado de vencimiento');
+      
+      // Revert local state on error
+      setFilteredPolicies(prevPolicies => 
+        prevPolicies.map(p => 
+          (p.id === policy.id || p.firebase_doc_id === policy.firebase_doc_id) 
+            ? { ...p, expiration_override: policy.expiration_override } 
             : p
         )
       );
@@ -1055,21 +1098,45 @@ export default function Reports() {
     setShowPaymentModal(true);
   };
 
-  // Get partial payment status for a policy
+  // Get partial payment status for a policy (shows progress like "1/4")
   const getPartialPaymentStatus = (policy) => {
-    // Check if fecha_proximo_pago has passed and auto-reset to 'No Pagado'
-    if (policy.fecha_proximo_pago) {
-      const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+    // For partial payments, show current progress
+    if (hasPartialPayments(policy.forma_pago)) {
+      const currentPayment = policy.pago_actual || 1;
+      const totalPayments = policy.total_pagos || calculateTotalPayments(policy.forma_pago);
+      return `${currentPayment}/${totalPayments}`;
+    }
+    
+    // For annual payments, check estado_pago_parcial or primer_pago_realizado
+    const status = policy.estado_pago_parcial || policy.primer_pago_realizado;
+    if (status === 'Pagado' || status === true) {
+      return 'Pagado';
+    } else {
+      return 'Pendiente';
+    }
+  };
+
+  // Get partial payment status for styling (Pagado/Pendiente)
+  const getPartialPaymentStatusForStyling = (policy) => {
+    if (hasPartialPayments(policy.forma_pago)) {
+      const currentPayment = policy.pago_actual || 1;
+      const pagosRealizados = policy.pagos_realizados || [];
+      const currentPaymentData = pagosRealizados.find(p => p.numero === currentPayment);
       
-      if (nextPaymentDate && nextPaymentDate < today) {
-        // Auto-reset to 'No Pagado' if payment date has passed
-        return 'No Pagado';
+      if (currentPaymentData && currentPaymentData.pagado) {
+        return 'pagado';
+      } else {
+        return 'pendiente';
       }
     }
     
-    return policy.estado_pago_parcial || 'No Pagado';
+    // For annual payments
+    const status = policy.estado_pago_parcial || policy.primer_pago_realizado;
+    if (status === 'Pagado' || status === true) {
+      return 'pagado';
+    } else {
+      return 'pendiente';
+    }
   };
 
   // Handle partial payment status toggle
@@ -1082,8 +1149,8 @@ export default function Reports() {
         return;
       }
 
-      const currentStatus = getPartialPaymentStatus(policy);
-      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      const currentStatus = getPartialPaymentStatusForStyling(policy);
+      const newStatus = currentStatus === 'pagado' ? 'pendiente' : 'pagado';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} partial payment status from ${currentStatus} to ${newStatus}`);
       
@@ -1091,50 +1158,57 @@ export default function Reports() {
       const sourceTable = policy.sourceTable || policy.table;
       const collectionName = sourceTable || mapDisplayNameToCollection(policy.ramo);
       
-      // Calculate next payment date if marking as paid
-      let updateData = { estado_pago_parcial: newStatus };
+      let updateData = {};
       
-      if (newStatus === 'Pagado') {
-        const totalPayments = policy.total_pagos || calculateTotalPayments(policy.forma_pago);
+      if (hasPartialPayments(policy.forma_pago)) {
+        // For partial payments, update the pagos_realizados array
         const currentPayment = policy.pago_actual || 1;
-        const nextPayment = currentPayment + 1;
+        const pagosRealizados = policy.pagos_realizados || [];
+        const existingPayment = pagosRealizados.find(p => p.numero === currentPayment);
         
-        // Calculate next payment date based on forma_pago
-        const startDate = parseDate(policy.fecha_inicio);
-        if (startDate) {
-          const nextPaymentDate = new Date(startDate);
-          const paymentInterval = {
-            'MENSUAL': 1,
-            'BIMESTRAL': 2,
-            'TRIMESTRAL': 3,
-            'CUATRIMESTRAL': 4,
-            'SEMESTRAL': 6,
-            'ANUAL': 12
-          };
-          
-          const interval = paymentInterval[policy.forma_pago?.toUpperCase()] || 1;
-          nextPaymentDate.setMonth(nextPaymentDate.getMonth() + (interval * currentPayment));
-          
-          updateData.fecha_proximo_pago = toDDMMMYYYY(nextPaymentDate);
-          updateData.pago_actual = nextPayment;
-          
-          // Update pagos_realizados array
-          const pagosRealizados = policy.pagos_realizados || [];
-          const existingPayment = pagosRealizados.find(p => p.numero === currentPayment);
-          
-          if (existingPayment) {
-            existingPayment.pagado = true;
+        if (existingPayment) {
+          existingPayment.pagado = newStatus === 'pagado';
+          if (newStatus === 'pagado') {
             existingPayment.fecha = toDDMMMYYYY(new Date());
-          } else {
-            pagosRealizados.push({
-              numero: currentPayment,
-              fecha: toDDMMMYYYY(new Date()),
-              pagado: true
-            });
           }
-          
-          updateData.pagos_realizados = pagosRealizados;
+        } else {
+          pagosRealizados.push({
+            numero: currentPayment,
+            fecha: newStatus === 'pagado' ? toDDMMMYYYY(new Date()) : null,
+            pagado: newStatus === 'pagado'
+          });
         }
+        
+        updateData.pagos_realizados = pagosRealizados;
+        
+        // If marking as paid, calculate next payment
+        if (newStatus === 'pagado') {
+          const totalPayments = policy.total_pagos || calculateTotalPayments(policy.forma_pago);
+          const nextPayment = currentPayment + 1;
+          
+          // Calculate next payment date based on forma_pago
+          const startDate = parseDate(policy.fecha_inicio);
+          if (startDate) {
+            const nextPaymentDate = new Date(startDate);
+            const paymentInterval = {
+              'MENSUAL': 1,
+              'BIMESTRAL': 2,
+              'TRIMESTRAL': 3,
+              'CUATRIMESTRAL': 4,
+              'SEMESTRAL': 6,
+              'ANUAL': 12
+            };
+            
+            const interval = paymentInterval[policy.forma_pago?.toUpperCase()] || 1;
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + (interval * currentPayment));
+            
+            updateData.fecha_proximo_pago = toDDMMMYYYY(nextPaymentDate);
+            updateData.pago_actual = nextPayment;
+          }
+        }
+      } else {
+        // For annual payments, update estado_pago_parcial
+        updateData.estado_pago_parcial = newStatus === 'pagado' ? 'Pagado' : 'Pendiente';
       }
       
       // Update local state immediately for better UX
@@ -1423,7 +1497,8 @@ export default function Reports() {
                     <th>Forma de Pago</th>
                     {selectedType === 'Pagos Parciales' && <th>Pagos</th>}
                     <th>Próximo Pago</th>
-                    <th>Status</th>
+                    <th>Vencimiento</th>
+                    {selectedType === 'Vencimientos' && <th>Primer Pago</th>}
                     <th>CAP</th>
                     <th>CFP</th>
                   </tr>
@@ -1477,9 +1552,9 @@ export default function Reports() {
                                 e.stopPropagation();
                                 handleOpenPaymentModal(policy);
                               }}
-                              className="status-toggle payment-toggle"
+                              className={`status-toggle ${getPartialPaymentStatusForStyling(policy)}`}
                             >
-                              {policy.pago_actual || '1'}/{policy.total_pagos || calculateTotalPayments(policy.forma_pago)}
+                              {getPartialPaymentStatus(policy)}
                             </button>
                           </td>
                         )}
@@ -1498,32 +1573,32 @@ export default function Reports() {
                           }
                         </td>
                         <td>
-                          {selectedType === 'Pagos Parciales' ? (
-                            hasPartialPayments(policy.forma_pago) ? (
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenPaymentModal(policy);
-                                }}
-                                className={`status-toggle ${getPartialPaymentStatus(policy).toLowerCase().replace(' ', '-')}`}
-                              >
-                                {getPartialPaymentStatus(policy)}
-                              </button>
-                            ) : (
-                              <span className="annual-status-indicator">Pago Completo</span>
-                            )
-                          ) : (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTogglePolicyExpiration(policy);
+                            }}
+                            className={`status-toggle ${isPolicyExpired(policy) ? 'vencido' : 'activo'}`}
+                          >
+                            {isPolicyExpired(policy) ? 'Vencido' : 'Activo'}
+                          </button>
+                        </td>
+                        {selectedType === 'Vencimientos' && (
+                          <td>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleToggleRenewalStatus(policy);
+                                handleTogglePrimerPago(policy);
                               }}
-                              className={`status-toggle ${getPolicyRenewalStatus(policy).toLowerCase().replace(' ', '-')}`}
+                              className={`status-toggle ${policy.primer_pago_realizado ? 'pagado' : 'no-pagado'}`}
                             >
-                              {getPolicyRenewalStatus(policy)}
+                              {policy.forma_pago?.toUpperCase() === 'ANUAL' 
+                                ? (policy.primer_pago_realizado ? 'Pago Único ✓' : 'No Pagado')
+                                : (policy.primer_pago_realizado ? 'Primer Pago ✓' : 'No Pagado')
+                              }
                             </button>
-                          )}
-                        </td>
+                          </td>
+                        )}
                         <td>
                           <button 
                             onClick={(e) => {
@@ -1910,7 +1985,7 @@ export default function Reports() {
                     onClick={() => handleTogglePartialPaymentStatus(selectedPolicyForPayment)}
                     className={`quick-action-btn ${getPartialPaymentStatus(selectedPolicyForPayment).toLowerCase().replace(' ', '-')}`}
                   >
-                    {getPartialPaymentStatus(selectedPolicyForPayment) === 'Pagado' ? 'Marcar como No Pagado' : 'Marcar como Pagado'}
+                    {getPartialPaymentStatus(selectedPolicyForPayment) === 'Pagado' ? 'Marcar como Pendiente' : 'Marcar como Pagado'}
                   </button>
                 </div>
               </div>
@@ -1919,8 +1994,8 @@ export default function Reports() {
                 {Array.from({ length: selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago) }).map((_, index) => {
                   const paymentNumber = index + 1;
                   const payment = selectedPolicyForPayment.pagos_realizados?.find(p => p.numero === paymentNumber);
-                  const isPaid = payment?.pagado || paymentNumber === 1; // First payment is always paid
-                  const paymentDate = payment?.fecha || (paymentNumber === 1 ? selectedPolicyForPayment.fecha_inicio : null);
+                  const isPaid = payment?.pagado || false; // Allow modification of first payment
+                  const paymentDate = payment?.fecha || null;
                   
                   return (
                     <div key={paymentNumber} className={`payment-item ${isPaid ? 'paid' : 'unpaid'}`}>
@@ -1928,7 +2003,6 @@ export default function Reports() {
                         type="checkbox" 
                         checked={isPaid}
                         onChange={() => handlePaymentCheckToggle(selectedPolicyForPayment, paymentNumber)}
-                        disabled={paymentNumber === 1}
                       />
                       <span className="payment-number">Pago {paymentNumber}/{selectedPolicyForPayment.total_pagos || calculateTotalPayments(selectedPolicyForPayment.forma_pago)}</span>
                       <span className="payment-date">{paymentDate ? formatDate(paymentDate) : 'Pendiente'}</span>

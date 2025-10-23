@@ -68,6 +68,24 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return rowData.forma_pago || rowData.forma_de_pago || null;
   };
 
+  // Helper function to check if policy is expired
+  const isPolicyExpired = (policy) => {
+    // Check for manual override first
+    if (policy.expiration_override === 'activo') return false;
+    if (policy.expiration_override === 'vencido') return true;
+    
+    // Otherwise, check fecha_fin
+    if (!policy.fecha_fin) return false;
+    
+    const policyEndDate = parseDDMMMYYYY(policy.fecha_fin);
+    if (!policyEndDate || isNaN(policyEndDate.getTime())) return false;
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return policyEndDate < today;
+  };
+
   // Helper function to calculate total payments based on forma_pago
   const calculateTotalPayments = (formaPago) => {
     const paymentMap = {
@@ -89,19 +107,25 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
   // Get partial payment status for a policy
   const getPartialPaymentStatus = (policy) => {
-    // Check if fecha_proximo_pago has passed and auto-reset to 'No Pagado'
+    // Check if fecha_proximo_pago has passed and auto-reset to 'Pendiente'
     if (policy.fecha_proximo_pago) {
       const nextPaymentDate = parseDDMMMYYYY(policy.fecha_proximo_pago);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
       if (nextPaymentDate && nextPaymentDate < today) {
-        // Auto-reset to 'No Pagado' if payment date has passed
-        return 'No Pagado';
+        // Auto-reset to 'Pendiente' if payment date has passed
+        return 'Pendiente';
       }
     }
     
-    return policy.estado_pago_parcial || 'No Pagado';
+    // Map estado_pago_parcial to display values
+    const status = policy.estado_pago_parcial;
+    if (status === 'Pagado') {
+      return 'Pagado';
+    } else {
+      return 'Pendiente';
+    }
   };
 
   // Open payment modal for partial payments
@@ -122,7 +146,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       }
 
       const currentStatus = getPartialPaymentStatus(policy);
-      const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
+      const newStatus = currentStatus === 'Pagado' ? 'Pendiente' : 'Pagado';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} partial payment status from ${currentStatus} to ${newStatus}`);
       
@@ -1385,6 +1409,99 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   };
 
+  // Handle primer pago toggle
+  const handlePrimerPagoToggle = async (record) => {
+    try {
+      const currentStatus = record.primer_pago_realizado || false;
+      const newStatus = !currentStatus;
+      
+      console.log(`🔄 Updating primer pago for record ${record.id} from ${currentStatus} to ${newStatus}`);
+      
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, primer_pago_realizado: newStatus } : row
+        )
+      );
+      
+      await firebaseTableService.updateData(tableName, record.id, 'primer_pago_realizado', newStatus);
+      
+      const formaPago = getFormaPago(record);
+      const statusText = formaPago?.toUpperCase() === 'ANUAL' 
+        ? (newStatus ? 'Pago Único ✓' : 'No Pagado')
+        : (newStatus ? 'Primer Pago ✓' : 'No Pagado');
+      
+      toast.success(`Primer pago actualizado a: ${statusText}`);
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
+      
+      // Refresh the data to ensure consistency
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (error) {
+      console.error('Error updating primer pago:', error);
+      toast.error('Error al actualizar el primer pago');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, primer_pago_realizado: record.primer_pago_realizado || false } : row
+        )
+      );
+    }
+  };
+
+  // Handle expiration status toggle
+  const handleExpirationToggle = async (record) => {
+    try {
+      const currentOverride = record.expiration_override || null;
+      // Toggle: null -> 'activo' -> 'vencido' -> null
+      let newOverride;
+      if (currentOverride === null || currentOverride === undefined) {
+        newOverride = 'activo';
+      } else if (currentOverride === 'activo') {
+        newOverride = 'vencido';
+      } else {
+        newOverride = null;
+      }
+      
+      console.log(`🔄 Updating expiration override for record ${record.id} from ${currentOverride} to ${newOverride}`);
+      
+      // Update local state immediately for better UX
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, expiration_override: newOverride } : row
+        )
+      );
+      
+      await firebaseTableService.updateData(tableName, record.id, 'expiration_override', newOverride);
+      
+      toast.success(`Estado de vencimiento actualizado`);
+      
+      // Notify other components about the edit
+      notifyDataEdit(tableName);
+      
+      // Refresh the data to ensure consistency
+      if (onRefresh) {
+        await onRefresh();
+      }
+      
+    } catch (error) {
+      console.error('Error updating expiration status:', error);
+      toast.error('Error al actualizar el estado de vencimiento');
+      
+      // Revert local state on error
+      setFilteredData(prevData => 
+        prevData.map(row => 
+          row.id === record.id ? { ...row, expiration_override: record.expiration_override } : row
+        )
+      );
+    }
+  };
+
   const handleStatusChange = async (rowId, newValue) => {
     try {
       console.log('Status change initiated:', { rowId, newValue });
@@ -2423,18 +2540,18 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                 Drive
               </button>
 
-              {/* Botón Pago */}
+              {/* Botón Vencimiento (Vencido/Activo) */}
               <button
                 onClick={() => {
-                  handlePaymentStatusToggle(selectedRowForActions);
+                  handleExpirationToggle(selectedRowForActions);
                   setShowActionsModal(false);
                   setSelectedRowForActions(null);
                 }}
                 style={{
                   padding: '12px 16px',
-                  backgroundColor: (selectedRowForActions.estado_pago === 'Pagado') ? '#dcfce7' : '#fef2f2',
-                  color: (selectedRowForActions.estado_pago === 'Pagado') ? '#166534' : '#dc2626',
-                  border: `1px solid ${(selectedRowForActions.estado_pago === 'Pagado') ? '#bbf7d0' : '#fecaca'}`,
+                  backgroundColor: isPolicyExpired(selectedRowForActions) ? '#fef2f2' : '#dcfce7',
+                  color: isPolicyExpired(selectedRowForActions) ? '#dc2626' : '#166534',
+                  border: `1px solid ${isPolicyExpired(selectedRowForActions) ? '#fecaca' : '#bbf7d0'}`,
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '14px',
@@ -2445,9 +2562,40 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span>💰</span>
-                {(selectedRowForActions.estado_pago === 'Pagado') ? 'PAGADO' : 'NO PAGADO'}
+                <span>⏰</span>
+                {isPolicyExpired(selectedRowForActions) ? 'VENCIDO' : 'ACTIVO'}
               </button>
+
+              {/* Botón Primer Pago */}
+              {getFormaPago(selectedRowForActions) && (
+                <button
+                  onClick={() => {
+                    handlePrimerPagoToggle(selectedRowForActions);
+                    setShowActionsModal(false);
+                    setSelectedRowForActions(null);
+                  }}
+                  style={{
+                    padding: '12px 16px',
+                    backgroundColor: selectedRowForActions.primer_pago_realizado ? '#dcfce7' : '#fef2f2',
+                    color: selectedRowForActions.primer_pago_realizado ? '#166534' : '#dc2626',
+                    border: `1px solid ${selectedRowForActions.primer_pago_realizado ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <span>💰</span>
+                  {getFormaPago(selectedRowForActions)?.toUpperCase() === 'ANUAL' 
+                    ? (selectedRowForActions.primer_pago_realizado ? 'PAGO ÚNICO ✓' : 'NO PAGADO')
+                    : (getPartialPaymentStatus(selectedRowForActions) === 'Pagado' ? 'PRIMER PAGO ✓' : 'PENDIENTE')
+                  }
+                </button>
+              )}
 
               {/* Botón CAP */}
               <button
