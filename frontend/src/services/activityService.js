@@ -222,6 +222,15 @@ class ActivityService {
       // Contar actualizaciones de datos
       const dataUpdates = activities.filter(act => act.action === 'data_updated').length;
       
+      // Obtener pólizas capturadas (con detalles)
+      const capturedPolicies = await this.getCapturedPolicies(startDate, endDate);
+      
+      // Obtener pólizas canceladas (CAP/CFP)
+      const cancelledPolicies = await this.getCancelledPolicies();
+      
+      // Obtener pagos realizados
+      const paymentsMade = await this.getPaymentsMade(startDate, endDate);
+      
       const summaryData = {
         dateRange: {
           start: typeof startDate === 'string' ? startDate : startDate.toISOString(),
@@ -244,6 +253,19 @@ class ActivityService {
         },
         userActivity: userStats.byUser,
         teamActivities: teamActivities, // Actividades de la sección Actividad
+        capturedPolicies: {
+          total: capturedPolicies.length,
+          policies: capturedPolicies.slice(0, 10) // Top 10 most recent
+        },
+        cancelledPolicies: {
+          total: cancelledPolicies.length,
+          policies: cancelledPolicies.slice(0, 10) // Top 10 most recent
+        },
+        paymentsMade: {
+          total: paymentsMade.length,
+          payments: paymentsMade.slice(0, 10), // Top 10 most recent
+          totalAmount: this.calculateTotalAmount(paymentsMade)
+        },
         summary: {
           totalActivities: activities.length,
           totalExpiring: expiringPolicies.length,
@@ -412,6 +434,167 @@ class ActivityService {
     endDate.setHours(23, 59, 59, 999);
     
     return { startDate, endDate };
+  }
+
+  /**
+   * Get captured policies from activities
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Array>} Array of captured policies
+   */
+  async getCapturedPolicies(startDate, endDate) {
+    try {
+      console.log('📋 Fetching captured policies...');
+      
+      const activities = await this.getActivitiesForDateRange(startDate, endDate);
+      const capturedActivities = activities.filter(act => act.action === 'data_captured');
+      
+      console.log(`📊 Found ${capturedActivities.length} captured activities`);
+      
+      // Get policy details from Firebase using the recordId
+      const capturedPolicies = [];
+      
+      for (const act of capturedActivities) {
+        try {
+          const recordId = act.details?.recordId;
+          const tableName = act.tableName;
+          
+          if (recordId && tableName) {
+            console.log(`🔍 Looking up policy ${recordId} in table ${tableName}`);
+            
+            // Get the policy details from Firebase
+            const policyDoc = await this.firebaseService.getDocument(tableName, recordId);
+            
+            if (policyDoc) {
+              capturedPolicies.push({
+                id: recordId,
+                numero_poliza: policyDoc.numero_poliza || act.details?.dataPreview?.[0] || 'N/A',
+                contratante: policyDoc.nombre_contratante || policyDoc.contratante || 'N/A',
+                aseguradora: policyDoc.aseguradora || 'N/A',
+                ramo: policyDoc.ramo || tableName,
+                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza || 'N/A',
+                tableName: tableName,
+                capturedBy: act.userName,
+                capturedAt: act.timestamp,
+                fieldCount: act.details?.fieldCount || 0
+              });
+              console.log(`✅ Found policy details for ${recordId}`);
+            } else {
+              console.log(`⚠️ Policy ${recordId} not found in ${tableName}`);
+              // Fallback to activity data if policy not found
+              capturedPolicies.push({
+                id: recordId,
+                numero_poliza: act.details?.dataPreview?.[0] || 'N/A',
+                contratante: 'N/A',
+                aseguradora: 'N/A',
+                ramo: tableName,
+                fecha_inicio: 'N/A',
+                tableName: tableName,
+                capturedBy: act.userName,
+                capturedAt: act.timestamp,
+                fieldCount: act.details?.fieldCount || 0
+              });
+            }
+          } else {
+            console.log(`⚠️ Missing recordId or tableName for activity:`, act);
+          }
+        } catch (policyError) {
+          console.error(`❌ Error fetching policy details for activity ${act.id}:`, policyError);
+          // Fallback to activity data
+          capturedPolicies.push({
+            id: act.details?.recordId || 'unknown',
+            numero_poliza: act.details?.dataPreview?.[0] || 'N/A',
+            contratante: 'N/A',
+            aseguradora: 'N/A',
+            ramo: act.tableName || 'General',
+            fecha_inicio: 'N/A',
+            tableName: act.tableName,
+            capturedBy: act.userName,
+            capturedAt: act.timestamp,
+            fieldCount: act.details?.fieldCount || 0
+          });
+        }
+      }
+      
+      console.log(`✅ Found ${capturedPolicies.length} captured policies with details`);
+      return capturedPolicies;
+    } catch (error) {
+      console.error('❌ Error fetching captured policies:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get cancelled policies (CAP/CFP inactive)
+   * @returns {Promise<Array>} Array of cancelled policies
+   */
+  async getCancelledPolicies() {
+    try {
+      console.log('📋 Fetching cancelled policies...');
+      
+      // Get all policies from Firebase
+      const allPolicies = await this.reportsService.getAllPolicies();
+      
+      // Filter policies with CAP or CFP inactive
+      const cancelledPolicies = allPolicies.filter(policy => 
+        policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo'
+      ).map(policy => ({
+        id: policy.id || policy.firebase_doc_id,
+        numero_poliza: policy.numero_poliza,
+        contratante: policy.nombre_contratante || policy.contratante,
+        aseguradora: policy.aseguradora,
+        ramo: policy.ramo || policy.sourceTable,
+        estado_cap: policy.estado_cap,
+        estado_cfp: policy.estado_cfp,
+        fecha_fin: policy.fecha_fin
+      }));
+      
+      console.log(`✅ Found ${cancelledPolicies.length} cancelled policies`);
+      return cancelledPolicies;
+    } catch (error) {
+      console.error('❌ Error fetching cancelled policies:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get payments made from activities
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Array>} Array of payments made
+   */
+  async getPaymentsMade(startDate, endDate) {
+    try {
+      console.log('📋 Fetching payments made...');
+      
+      const activities = await this.getActivitiesForDateRange(startDate, endDate);
+      
+      // Filter payment-related activities
+      const paymentActivities = activities.filter(act => 
+        (act.action === 'data_updated' && 
+         act.details && 
+         (act.details.field === 'estado_pago' && act.details.newValue === 'Pagado')) ||
+        (act.action === 'data_updated' && 
+         act.details && 
+         act.details.field === 'primer_pago_realizado' && act.details.newValue === true)
+      );
+      
+      // Get policy details for payments
+      const paymentsMade = paymentActivities.map(act => ({
+        id: act.details?.recordId || 'unknown',
+        numero_poliza: act.details?.dataPreview?.[0] || 'N/A',
+        tableName: act.tableName,
+        paidBy: act.userName,
+        paidAt: act.timestamp,
+        paymentType: act.details?.field === 'estado_pago' ? 'Pago Completo' : 'Primer Pago'
+      }));
+      
+      console.log(`✅ Found ${paymentsMade.length} payments made`);
+      return paymentsMade;
+    } catch (error) {
+      console.error('❌ Error fetching payments made:', error);
+      return [];
+    }
   }
 }
 

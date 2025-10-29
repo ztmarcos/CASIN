@@ -309,6 +309,7 @@ const Resumen = () => {
                     <thead>
                       <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de Inicio</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Capturado por</th>
@@ -318,8 +319,9 @@ const Resumen = () => {
                       ${summaryData.capturedPolicies.policies.slice(0, 5).map(policy => `
                         <tr style="border-bottom: 1px solid #e5e5e5;">
                           <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
-                          <td style="padding: 10px; font-size: 13px;">${policy.tableName || 'General'}</td>
-                          <td style="padding: 10px; font-size: 13px;">${policy.capturedAt && !isNaN(new Date(policy.capturedAt).getTime()) ? new Date(policy.capturedAt).toLocaleDateString('es-MX') : 'N/A'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.fecha_inicio && policy.fecha_inicio !== 'N/A' ? new Date(policy.fecha_inicio).toLocaleDateString('es-MX') : 'N/A'}</td>
                           <td style="padding: 10px; font-size: 13px;">${policy.capturedBy || '-'}</td>
                         </tr>
                       `).join('')}
@@ -629,6 +631,7 @@ const Resumen = () => {
                   <thead>
                     <tr>
                       <th>Póliza</th>
+                      <th>Contratante</th>
                       <th>Ramo</th>
                       <th>Fecha de Inicio</th>
                       <th>Capturado por</th>
@@ -638,10 +641,11 @@ const Resumen = () => {
                     {summaryData.capturedPolicies.policies.map((policy, idx) => (
                       <tr key={idx}>
                         <td>{policy.numero_poliza}</td>
-                        <td>{policy.tableName || 'General'}</td>
+                        <td>{policy.contratante}</td>
+                        <td>{policy.ramo}</td>
                         <td>
-                          {policy.capturedAt && !isNaN(new Date(policy.capturedAt).getTime()) 
-                            ? new Date(policy.capturedAt).toLocaleDateString('es-MX')
+                          {policy.fecha_inicio && policy.fecha_inicio !== 'N/A' 
+                            ? new Date(policy.fecha_inicio).toLocaleDateString('es-MX')
                             : 'N/A'}
                         </td>
                         <td>{policy.capturedBy}</td>
