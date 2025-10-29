@@ -4480,12 +4480,22 @@ app.post('/api/gpt/analyze-activity', async (req, res) => {
     // Create comprehensive prompt for GPT
     const prompt = `Eres un analista de datos para un CRM de seguros. Genera un resumen ejecutivo en español de las siguientes métricas y actividades del equipo:
 
+**ACTIVIDADES DEL EQUIPO (Sección Actividad - Ordenadas por más reciente):**
+${summaryData.teamActivities && summaryData.teamActivities.length > 0
+  ? summaryData.teamActivities.slice(0, 10).map(act => {
+      const statusText = act.status === 'pending' ? 'Pendiente' : 
+                        act.status === 'in_progress' ? 'En Proceso' : 
+                        act.status === 'completed' ? 'Completada' : act.status;
+      return `- ${act.userName}: "${act.title}" [${statusText}] - ${new Date(act.createdAt).toLocaleDateString('es-MX')}`;
+    }).join('\n')
+  : 'No hay actividades registradas.'
+}
+
 **MÉTRICAS CLAVE:**
-- Total de actividades registradas: ${summaryData.summary.totalActivities}
-- Actividades diarias del equipo: ${summaryData.summary.totalDailyActivities || 0}
+- Pólizas capturadas en el periodo: ${summaryData.summary.policiesCaptured || 0}
 - Pólizas por vencer (próximos 7 días): ${summaryData.summary.totalExpiring}
 - Pagos parciales pendientes: ${summaryData.summary.totalPartialPayments}
-- Usuarios Activos: ${summaryData.summary.activeUsers}
+- Usuarios activos: ${summaryData.summary.activeUsers}
 
 ACTIVIDADES POR TIPO:
 ${Object.entries(summaryData.activities.byAction || {}).map(([action, count]) => `- ${action}: ${count}`).join('\n')}
@@ -4509,12 +4519,13 @@ ${summaryData.partialPayments.total > 5 ? `... y ${summaryData.partialPayments.t
 Total estimado de pagos: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX')}
 
 INSTRUCCIONES:
-1. Proporciona un resumen ejecutivo de 3-4 párrafos en español
-2. Destaca los puntos más importantes y urgentes
-3. Menciona tendencias positivas en la actividad del equipo
-4. Identifica áreas que requieren atención inmediata
-5. Usa un tono profesional pero amigable
-6. Enfócate en insights accionables, no solo en repetir los números
+1. EMPIEZA describiendo las actividades del equipo (sección Actividad), mencionando las más recientes primero con su estado
+2. Menciona específicamente qué hizo cada usuario y el estado de sus actividades
+3. AL FINAL menciona cuántas pólizas se capturaron en el periodo
+4. Para vencimientos y pagos, menciona el RAMO y el nombre del contratante
+5. Sé específico con nombres de usuarios, ramos y estados
+6. Usa un tono profesional y objetivo
+7. Proporciona 2-3 párrafos bien estructurados
 
 NO incluyas encabezados HTML ni markdown, solo texto con saltos de línea.`;
 
