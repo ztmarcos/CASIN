@@ -49,7 +49,7 @@ const Actividad = () => {
       
     } catch (err) {
       console.error('Error loading tasks:', err);
-      setError('Error al cargar las tareas');
+      setError('Error al cargar las actividades');
     } finally {
       setLoading(false);
     }
@@ -94,13 +94,13 @@ const Actividad = () => {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
       try {
         await actividadService.deleteTask(taskId);
         await loadTasks();
       } catch (err) {
         console.error('Error deleting task:', err);
-        alert('Error al eliminar la tarea');
+        alert('Error al eliminar la actividad');
       }
     }
   };
@@ -159,7 +159,7 @@ const Actividad = () => {
       
     } catch (err) {
       console.error('Error saving task:', err);
-      alert('Error al guardar la tarea');
+      alert('Error al guardar la actividad');
     }
   };
 
@@ -196,17 +196,17 @@ const Actividad = () => {
       await loadTasks();
     } catch (err) {
       console.error('Error updating task status:', err);
-      alert('Error al actualizar el estado de la tarea');
+      alert('Error al actualizar el estado de la actividad');
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return '#f39c12';
-      case 'in_progress': return '#3498db';
-      case 'completed': return '#27ae60';
-      case 'cancelled': return '#e74c3c';
-      default: return '#95a5a6';
+      case 'pending': return '#666666';
+      case 'in_progress': return '#000000';
+      case 'completed': return '#333333';
+      case 'cancelled': return '#999999';
+      default: return '#cccccc';
     }
   };
 
@@ -225,7 +225,7 @@ const Actividad = () => {
       <div className="firebase-tasks-container">
         <div className="loading-spinner">
           <div className="spinner"></div>
-          <p>Cargando tareas...</p>
+          <p>Cargando actividades...</p>
         </div>
       </div>
     );
@@ -260,7 +260,7 @@ const Actividad = () => {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Nueva Tarea
+          Agregar Actividad
         </button>
       </div>
 
@@ -274,7 +274,7 @@ const Actividad = () => {
           </svg>
           <input
             type="text"
-            placeholder="Buscar tareas..."
+            placeholder="Buscar actividades..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -311,9 +311,9 @@ const Actividad = () => {
             <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.5">
               <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
             </svg>
-            <p>No hay tareas que mostrar</p>
+            <p>No hay actividades que mostrar</p>
             <button onClick={handleCreateTask} className="create-first-task-btn">
-              Crear primera tarea
+              Crear primera actividad
             </button>
           </div>
         ) : (
