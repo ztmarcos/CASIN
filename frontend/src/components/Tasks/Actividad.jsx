@@ -128,6 +128,12 @@ const Actividad = () => {
     setEditingTask(null);
     setShowModal(true);
   };
+  
+  const handleCreateTaskForUser = () => {
+    // Pasar null para nueva actividad
+    setEditingTask(null);
+    setShowModal(true);
+  };
 
   const handleEditTask = (task) => {
     setEditingTask(task);
@@ -351,7 +357,7 @@ const Actividad = () => {
         </div>
         <button 
           className="create-task-btn"
-          onClick={handleCreateTask}
+          onClick={handleCreateTaskForUser}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
@@ -379,9 +385,9 @@ const Actividad = () => {
                 <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
               </svg>
               <p>{selectedUser.name} no tiene actividades registradas</p>
-              <button onClick={handleCreateTask} className="create-first-activity-btn">
-                Crear primera actividad
-              </button>
+            <button onClick={handleCreateTaskForUser} className="create-first-activity-btn">
+              Crear primera actividad
+            </button>
             </div>
           ) : (
             userActivities.map(task => (
@@ -441,6 +447,7 @@ const Actividad = () => {
       {showModal && (
         <ActivityModal
           activity={editingTask}
+          selectedUserName={selectedUser?.name}
           onSave={handleTaskSave}
           onClose={() => {
             setShowModal(false);

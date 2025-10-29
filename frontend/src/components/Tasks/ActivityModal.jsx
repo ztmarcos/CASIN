@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import activityLogger from '../../utils/activityLogger';
 import './ActivityModal.css';
 
-const ActivityModal = ({ activity, onSave, onClose }) => {
+const ActivityModal = ({ activity, selectedUserName, onSave, onClose }) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('pending');
@@ -42,8 +42,9 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
       status: status,
       priority: 'medium',
       createdAt: activity?.createdAt || new Date().toISOString(),
-      createdBy: activity?.createdBy || user?.displayName || user?.name || user?.email || 'Usuario',
-      userName: activity?.userName || user?.displayName || user?.name || user?.email || 'Usuario',
+      // USAR EL NOMBRE DEL USUARIO SELECCIONADO, NO EL AUTENTICADO
+      createdBy: activity?.createdBy || selectedUserName || 'Usuario',
+      userName: activity?.userName || selectedUserName || 'Usuario',
       tags: [],
       assignedUsers: [],
       comments: []
