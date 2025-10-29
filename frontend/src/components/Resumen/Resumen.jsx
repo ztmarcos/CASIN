@@ -300,6 +300,74 @@ const Resumen = () => {
             </div>
             ` : ''}
             
+            <!-- Captured Policies -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas Capturadas (${summaryData.capturedPolicies?.total || 0})</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+                ${summaryData.capturedPolicies?.policies && summaryData.capturedPolicies.policies.length > 0 ? `
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de Inicio</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Capturado por</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${summaryData.capturedPolicies.policies.slice(0, 5).map(policy => `
+                        <tr style="border-bottom: 1px solid #e5e5e5;">
+                          <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.tableName || 'General'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.capturedAt && !isNaN(new Date(policy.capturedAt).getTime()) ? new Date(policy.capturedAt).toLocaleDateString('es-MX') : 'N/A'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.capturedBy || '-'}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                ` : `
+                  <p style="text-align: center; color: #666666; font-style: italic; margin: 20px 0;">No hay pólizas capturadas en este período</p>
+                `}
+              </div>
+            </div>
+            
+            <!-- Cancelled Policies -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas Canceladas (${summaryData.cancelledPolicies?.total || 0})</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+                ${summaryData.cancelledPolicies?.policies && summaryData.cancelledPolicies.policies.length > 0 ? `
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Estado CAP</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Estado CFP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${summaryData.cancelledPolicies.policies.slice(0, 5).map(policy => `
+                        <tr style="border-bottom: 1px solid #e5e5e5;">
+                          <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">
+                            <span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; text-transform: uppercase; ${policy.estado_cap === 'Inactivo' ? 'background-color: #fee2e2; color: #dc2626;' : 'background-color: #dcfce7; color: #166534;'}">${policy.estado_cap || '-'}</span>
+                          </td>
+                          <td style="padding: 10px; font-size: 13px;">
+                            <span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; text-transform: uppercase; ${policy.estado_cfp === 'Inactivo' ? 'background-color: #fee2e2; color: #dc2626;' : 'background-color: #dcfce7; color: #166534;'}">${policy.estado_cfp || '-'}</span>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                ` : `
+                  <p style="text-align: center; color: #666666; font-style: italic; margin: 20px 0;">No hay pólizas canceladas</p>
+                `}
+              </div>
+            </div>
+            
             <!-- User Activity Stats -->
             <div style="margin-bottom: 30px;">
               <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Estadísticas por Usuario</h2>
@@ -551,6 +619,86 @@ const Resumen = () => {
               </div>
             </div>
           )}
+
+          {/* Captured Policies */}
+          <div className="section-card">
+            <h2>Pólizas Capturadas ({summaryData.capturedPolicies?.total || 0})</h2>
+            {summaryData.capturedPolicies?.policies && summaryData.capturedPolicies.policies.length > 0 ? (
+              <div className="policies-table-container">
+                <table className="policies-table">
+                  <thead>
+                    <tr>
+                      <th>Póliza</th>
+                      <th>Ramo</th>
+                      <th>Fecha de Inicio</th>
+                      <th>Capturado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryData.capturedPolicies.policies.map((policy, idx) => (
+                      <tr key={idx}>
+                        <td>{policy.numero_poliza}</td>
+                        <td>{policy.tableName || 'General'}</td>
+                        <td>
+                          {policy.capturedAt && !isNaN(new Date(policy.capturedAt).getTime()) 
+                            ? new Date(policy.capturedAt).toLocaleDateString('es-MX')
+                            : 'N/A'}
+                        </td>
+                        <td>{policy.capturedBy}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="no-data-message">
+                <p>No hay pólizas capturadas en este período</p>
+              </div>
+            )}
+          </div>
+
+          {/* Cancelled Policies */}
+          <div className="section-card">
+            <h2>Pólizas Canceladas ({summaryData.cancelledPolicies?.total || 0})</h2>
+            {summaryData.cancelledPolicies?.policies && summaryData.cancelledPolicies.policies.length > 0 ? (
+              <div className="policies-table-container">
+                <table className="policies-table">
+                  <thead>
+                    <tr>
+                      <th>Póliza</th>
+                      <th>Contratante</th>
+                      <th>Ramo</th>
+                      <th>Estado CAP</th>
+                      <th>Estado CFP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryData.cancelledPolicies.policies.map((policy, idx) => (
+                      <tr key={idx}>
+                        <td>{policy.numero_poliza}</td>
+                        <td>{policy.contratante}</td>
+                        <td>{policy.ramo}</td>
+                        <td>
+                          <span className={`status-badge ${policy.estado_cap === 'Inactivo' ? 'inactive' : 'active'}`}>
+                            {policy.estado_cap}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-badge ${policy.estado_cfp === 'Inactivo' ? 'inactive' : 'active'}`}>
+                            {policy.estado_cfp}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="no-data-message">
+                <p>No hay pólizas canceladas</p>
+              </div>
+            )}
+          </div>
 
         </div>
       )}
