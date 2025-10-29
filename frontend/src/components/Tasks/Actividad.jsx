@@ -377,18 +377,35 @@ const Actividad = () => {
             </div>
           ) : (
             userActivities.map(task => (
-              <div key={task.id} className="activity-item">
-                <div className="activity-date-badge">
-                  {new Date(task.createdAt).toLocaleDateString('es-MX', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                  })}
+              <div key={task.id} className={`activity-item ${task.status === 'completed' ? 'completed' : ''}`}>
+                <div className="activity-status-section">
+                  <button 
+                    className={`status-toggle ${task.status === 'completed' ? 'completed' : 'pending'}`}
+                    onClick={() => toggleTaskStatus(task.id, task.status)}
+                    title={task.status === 'completed' ? 'Marcar como pendiente' : 'Marcar como completada'}
+                  >
+                    {task.status === 'completed' ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                      </svg>
+                    )}
+                  </button>
+                  <div className="activity-date-badge">
+                    {new Date(task.createdAt).toLocaleDateString('es-MX', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    })}
+                  </div>
                 </div>
                 <div className="activity-content">
-                  <h3>{task.title}</h3>
+                  <h3 className={task.status === 'completed' ? 'completed-text' : ''}>{task.title}</h3>
                   {task.description && task.description !== task.title && (
-                    <p>{task.description}</p>
+                    <p className={task.status === 'completed' ? 'completed-text' : ''}>{task.description}</p>
                   )}
                 </div>
                 <button 
