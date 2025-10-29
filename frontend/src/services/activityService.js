@@ -291,6 +291,69 @@ class ActivityService {
   }
 
   /**
+   * Get team activities from Firebase tasks collection
+   * Excludes cancelled activities and orders by most recent
+   */
+  async getTeamActivities(startDate, endDate) {
+    try {
+      console.log('📋 Fetching team activities from Firebase');
+      
+      // Dynamic import to avoid circular dependencies
+      const firebaseModule = await import('firebase/firestore');
+      const { getFirestore, collection, query, where, orderBy, getDocs } = firebaseModule;
+      
+      const db = getFirestore();
+      const tasksRef = collection(db, 'tasks');
+      
+      const startISO = typeof startDate === 'string' ? startDate : startDate.toISOString();
+      const endISO = typeof endDate === 'string' ? endDate : endDate.toISOString();
+      
+      console.log('📅 Querying tasks from', startISO, 'to', endISO);
+      
+      // Query tasks within date range
+      const q = query(
+        tasksRef,
+        where('createdAt', '>=', startISO),
+        where('createdAt', '<=', endISO),
+        orderBy('createdAt', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      const activities = [];
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        // Solo incluir actividades que NO estén canceladas
+        if (data.status !== 'cancelled') {
+          activities.push({
+            id: doc.id,
+            userName: data.userName || data.createdBy,
+            title: data.title,
+            description: data.description,
+            status: data.status,
+            createdAt: data.createdAt,
+            updatedAt: data.updatedAt || data.createdAt
+          });
+        }
+      });
+      
+      console.log(`✅ Found ${activities.length} team activities (excluding cancelled)`);
+      
+      // Ordenar por última actualización o creación (más reciente primero)
+      activities.sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt);
+        const dateB = new Date(b.updatedAt || b.createdAt);
+        return dateB - dateA;
+      });
+      
+      return activities;
+    } catch (error) {
+      console.error('❌ Error fetching team activities:', error);
+      return [];
+    }
+  }
+
+  /**
    * Get last week's date range (previous Monday to Sunday)
    * @returns {Object} {startDate, endDate}
    */
