@@ -250,7 +250,8 @@ class ActivityService {
    */
   calculateTotalAmount(policies) {
     return policies.reduce((sum, policy) => {
-      const amount = policy.pago_parcial || policy.prima || policy.pago_total_o_prima_total || 0;
+      // Prioritize pago_parcial for partial payments (same as Reports component)
+      const amount = policy.pago_parcial || 0;
       return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
     }, 0);
   }

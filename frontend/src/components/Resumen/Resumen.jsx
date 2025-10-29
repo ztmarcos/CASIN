@@ -11,7 +11,7 @@ const Resumen = () => {
   const [dateRange, setDateRange] = useState('last7days');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
-  const [autoGenerate, setAutoGenerate] = useState(false);
+  const [autoGenerate, setAutoGenerate] = useState(true);
   const [sendingEmail, setSendingEmail] = useState(false);
 
   // Load auto-generate setting from Firebase
@@ -249,16 +249,16 @@ const Resumen = () => {
                     <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma Pago</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Próximo Pago</th>
                     </tr>
                   </thead>
                   <tbody>
-                    ${summaryData.partialPayments.payments.slice(0, 5).map(policy => `
+                    $                    ${summaryData.partialPayments.payments.slice(0, 5).map(policy => `
                       <tr style="border-bottom: 1px solid #e5e5e5;">
                         <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.forma_pago || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">$${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>
                     `).join('')}
@@ -463,7 +463,7 @@ const Resumen = () => {
                     <tr>
                       <th>Contratante</th>
                       <th>Póliza</th>
-                      <th>Forma Pago</th>
+                      <th>Monto</th>
                       <th>Próximo Pago</th>
                     </tr>
                   </thead>
@@ -472,7 +472,7 @@ const Resumen = () => {
                       <tr key={idx}>
                         <td>{policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td>{policy.numero_poliza || '-'}</td>
-                        <td>{policy.forma_pago || '-'}</td>
+                        <td>${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         <td>{policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>
                     ))}
