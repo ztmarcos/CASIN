@@ -4520,12 +4520,14 @@ Total estimado de pagos: $${summaryData.partialPayments.totalAmount.toLocaleStri
 
 INSTRUCCIONES:
 1. EMPIEZA describiendo las actividades del equipo (sección Actividad), mencionando las más recientes primero con su estado
-2. Menciona específicamente qué hizo cada usuario y el estado de sus actividades
+2. Menciona específicamente QUÉ HIZO cada usuario, NO cuántas actividades hizo
 3. AL FINAL menciona cuántas pólizas se capturaron en el periodo
 4. Para vencimientos y pagos, menciona el RAMO y el nombre del contratante
 5. Sé específico con nombres de usuarios, ramos y estados
 6. Usa un tono profesional y objetivo
 7. Proporciona 2-3 párrafos bien estructurados
+8. NO menciones cantidades de actividades por usuario, solo describe QUÉ HICIERON
+9. Enfócate en la DATA y el CONTENIDO, no en los números
 
 NO incluyas encabezados HTML ni markdown, solo texto con saltos de línea.`;
 
