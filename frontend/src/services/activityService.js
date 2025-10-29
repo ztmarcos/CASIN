@@ -313,35 +313,11 @@ class ActivityService {
       const allTasks = await actividadService.getAllTasks(false); // Don't use cache
       console.log(`📊 Found ${allTasks.length} total tasks from actividadService`);
       
-      // Filter by date range and exclude cancelled
+      // Filter by date range and exclude cancelled - SIMPLE VERSION
       const activities = allTasks
         .filter(task => {
-          // Debug: Log each task to see what's happening
-          console.log('🔍 Checking task:', {
-            id: task.id,
-            title: task.title,
-            createdAt: task.createdAt,
-            status: task.status,
-            userName: task.userName || task.createdBy
-          });
-          
-          const taskDate = new Date(task.createdAt);
-          const startDateObj = new Date(startISO);
-          const endDateObj = new Date(endISO);
-          
-          const isInRange = taskDate >= startDateObj && taskDate <= endDateObj;
-          const isNotCancelled = task.status !== 'cancelled';
-          
-          console.log('📅 Date check:', {
-            taskDate: taskDate.toISOString(),
-            startDate: startDateObj.toISOString(),
-            endDate: endDateObj.toISOString(),
-            isInRange,
-            isNotCancelled,
-            willInclude: isInRange && isNotCancelled
-          });
-          
-          return isInRange && isNotCancelled;
+          // Solo excluir canceladas, no filtrar por fecha por ahora
+          return task.status !== 'cancelled';
         })
         .map(task => ({
           id: task.id,
