@@ -6,6 +6,7 @@ import './ActivityModal.css';
 const ActivityModal = ({ activity, onSave, onClose }) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
+  const [status, setStatus] = useState('pending');
   const textareaRef = useRef(null);
   
   const today = new Date();
@@ -18,6 +19,10 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
   useEffect(() => {
     if (activity) {
       setContent(activity.description || activity.title || '');
+      setStatus(activity.status || 'pending');
+    } else {
+      setContent('');
+      setStatus('pending');
     }
     // Auto focus textarea
     if (textareaRef.current) {
