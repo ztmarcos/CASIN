@@ -206,21 +206,21 @@ class ActivityService {
       console.log('📊 Team activities fetched:', teamActivities.length);
       
       // Contar pólizas capturadas
-      const policiesCaptured = activities.filter(act => act.activityType === 'data_captured').length;
+      const policiesCaptured = activities.filter(act => act.action === 'data_captured').length;
       
       // Contar pólizas pagadas (basado en estado_pago)
       const policiesPaid = activities.filter(act => 
-        act.activityType === 'data_updated' && 
+        act.action === 'data_updated' && 
         act.details && 
         act.details.field === 'estado_pago' && 
         act.details.newValue === 'Pagado'
       ).length;
       
       // Contar emails enviados
-      const emailsSent = activities.filter(act => act.activityType === 'email_sent').length;
+      const emailsSent = activities.filter(act => act.action === 'email_sent').length;
       
       // Contar actualizaciones de datos
-      const dataUpdates = activities.filter(act => act.activityType === 'data_updated').length;
+      const dataUpdates = activities.filter(act => act.action === 'data_updated').length;
       
       const summaryData = {
         dateRange: {
