@@ -298,46 +298,46 @@ class ActivityService {
     try {
       console.log('📋 Fetching team activities from Firebase');
       
-      // Dynamic import to avoid circular dependencies
-      const firebaseModule = await import('firebase/firestore');
-      const { getFirestore, collection, query, where, orderBy, getDocs } = firebaseModule;
-      
-      const db = getFirestore();
-      const tasksRef = collection(db, 'tasks');
+      // Use the team data service to get activities from the correct team database
+      const { teamDataService } = await import('./teamDataService');
       
       const startISO = typeof startDate === 'string' ? startDate : startDate.toISOString();
       const endISO = typeof endDate === 'string' ? endDate : endDate.toISOString();
       
-      console.log('📅 Querying tasks from', startISO, 'to', endISO);
+      console.log('📅 Querying team tasks from', startISO, 'to', endISO);
       
-      // Query tasks within date range
-      const q = query(
-        tasksRef,
-        where('createdAt', '>=', startISO),
-        where('createdAt', '<=', endISO),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const snapshot = await getDocs(q);
-      const activities = [];
-      
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        // Solo incluir actividades que NO estén canceladas
-        if (data.status !== 'cancelled') {
-          activities.push({
-            id: doc.id,
-            userName: data.userName || data.createdBy,
-            title: data.title,
-            description: data.description,
-            status: data.status,
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt || data.createdAt
-          });
-        }
+      // Get all tasks from the team database
+      const result = await teamDataService.queryDocuments('tasks', {
+        limit: 100, // Get more tasks to filter by date
+        orderBy: 'createdAt',
+        orderDirection: 'desc'
       });
       
-      console.log(`✅ Found ${activities.length} team activities (excluding cancelled)`);
+      const allTasks = result.documents || [];
+      console.log(`📊 Found ${allTasks.length} total tasks in team database`);
+      
+      // Filter by date range and exclude cancelled
+      const activities = allTasks
+        .filter(task => {
+          const taskDate = new Date(task.createdAt);
+          const startDateObj = new Date(startISO);
+          const endDateObj = new Date(endISO);
+          
+          return taskDate >= startDateObj && 
+                 taskDate <= endDateObj && 
+                 task.status !== 'cancelled';
+        })
+        .map(task => ({
+          id: task.id,
+          userName: task.userName || task.createdBy,
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          createdAt: task.createdAt,
+          updatedAt: task.updatedAt || task.createdAt
+        }));
+      
+      console.log(`✅ Found ${activities.length} team activities in date range (excluding cancelled)`);
       
       // Ordenar por última actualización o creación (más reciente primero)
       activities.sort((a, b) => {
