@@ -20,24 +20,38 @@ const Actividad = () => {
   const [error, setError] = useState(null);
 
   
+  // Estados para vista de usuarios
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userActivities, setUserActivities] = useState([]);
+  
   // Estados para filtros y modal
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  
+  // Lista de usuarios predefinidos
+  const teamUsers = [
+    { name: 'Lore', email: 'lore@casin.com', initials: 'L' },
+    { name: 'Mich', email: 'mich@casin.com', initials: 'M' },
+    { name: 'Marcos', email: 'marcos@casin.com', initials: 'MA' },
+    { name: 'MarcosJr', email: 'marcosjr@casin.com', initials: 'MJ' }
+  ];
 
   // Cargar tareas al montar el componente
   useEffect(() => {
-    if (userTeam) {
+    if (userTeam && selectedUser) {
       loadTasks();
     }
-  }, [userTeam]);
+  }, [userTeam, selectedUser]);
 
-  // Filtrar tareas cuando cambien los filtros
+  // Filtrar actividades del usuario seleccionado
   useEffect(() => {
-    filterTasks();
-  }, [tasks, statusFilter, priorityFilter, searchTerm]);
+    if (selectedUser) {
+      filterUserActivities();
+    }
+  }, [tasks, selectedUser]);
 
   const loadTasks = async () => {
     try {
@@ -57,30 +71,28 @@ const Actividad = () => {
 
 
 
-  const filterTasks = () => {
-    let filtered = [...tasks];
+  const filterUserActivities = () => {
+    if (!selectedUser) return;
+    
+    // Filtrar tareas del usuario seleccionado
+    const filtered = tasks.filter(task => 
+      task.createdBy === selectedUser.email || 
+      task.userName === selectedUser.name
+    );
+    
+    setUserActivities(filtered);
+  };
 
-    // Filtrar por estado
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(task => task.status === statusFilter);
-    }
+  const handleUserSelect = (userObj) => {
+    setSelectedUser(userObj);
+    setUserActivities([]);
+    setLoading(true);
+  };
 
-    // Filtrar por prioridad
-    if (priorityFilter !== 'all') {
-      filtered = filtered.filter(task => task.priority === priorityFilter);
-    }
-
-    // Filtrar por término de búsqueda
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(task => 
-        task.title.toLowerCase().includes(term) ||
-        task.description.toLowerCase().includes(term) ||
-        task.tags.some(tag => tag.toLowerCase().includes(term))
-      );
-    }
-
-    setFilteredTasks(filtered);
+  const handleBackToUsers = () => {
+    setSelectedUser(null);
+    setUserActivities([]);
+    setTasks([]);
   };
 
   const handleCreateTask = () => {
@@ -245,13 +257,58 @@ const Actividad = () => {
     );
   }
 
+  // Vista de selección de usuarios
+  if (!selectedUser) {
+    return (
+      <div className={`firebase-tasks-container ${isDark ? 'dark' : 'light'}`}>
+        <div className="tasks-header">
+          <div className="header-left">
+            <h1>Actividad del Equipo</h1>
+            <p>Selecciona un usuario para ver sus actividades</p>
+          </div>
+        </div>
+
+        <div className="users-grid">
+          {teamUsers.map((userObj) => (
+            <div 
+              key={userObj.email}
+              className="user-card"
+              onClick={() => handleUserSelect(userObj)}
+            >
+              <div className="user-avatar">
+                {userObj.initials}
+              </div>
+              <div className="user-info-card">
+                <h3>{userObj.name}</h3>
+                <p>{userObj.email}</p>
+              </div>
+              <div className="arrow-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Vista de actividades del usuario seleccionado
   return (
     <div className={`firebase-tasks-container ${isDark ? 'dark' : 'light'}`}>
       {/* Header */}
       <div className="tasks-header">
         <div className="header-left">
-          <h1>Actividad del Equipo</h1>
-          <p>{userTeam?.name || 'Equipo Actual'}</p>
+          <button className="back-button" onClick={handleBackToUsers}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+            </svg>
+          </button>
+          <div>
+            <h1>Actividades de {selectedUser.name}</h1>
+            <p>{selectedUser.email}</p>
+          </div>
         </div>
         <button 
           className="create-task-btn"
@@ -260,73 +317,49 @@ const Actividad = () => {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
           </svg>
-          Agregar Actividad
+          Nueva Actividad
         </button>
       </div>
 
 
 
-      {/* Filters */}
-      <div className="filters-row">
-        <div className="search-box">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar actividades..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <select 
-          value={statusFilter} 
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="all">Todos los estados</option>
-          <option value="pending">Pendientes</option>
-          <option value="in_progress">En Progreso</option>
-          <option value="completed">Completadas</option>
-          <option value="cancelled">Canceladas</option>
-        </select>
-
-        <select 
-          value={priorityFilter} 
-          onChange={(e) => setPriorityFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="all">Todas las prioridades</option>
-          <option value="high">Alta</option>
-          <option value="medium">Media</option>
-          <option value="low">Baja</option>
-        </select>
-      </div>
-
-      {/* Tasks Grid */}
-      <div className="tasks-grid">
-        {filteredTasks.length === 0 ? (
-          <div className="no-tasks">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.5">
+      {/* Activities List */}
+      <div className="activities-list">
+        {userActivities.length === 0 && !loading ? (
+          <div className="no-activities">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
               <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
             </svg>
-            <p>No hay actividades que mostrar</p>
-            <button onClick={handleCreateTask} className="create-first-task-btn">
+            <p>{selectedUser.name} no tiene actividades registradas</p>
+            <button onClick={handleCreateTask} className="create-first-activity-btn">
               Crear primera actividad
             </button>
           </div>
         ) : (
-          filteredTasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              onEdit={handleEditTask}
-              onStatusChange={handleStatusChange}
-              getStatusColor={getStatusColor}
-              getStatusText={getStatusText}
-              isDark={isDark}
-            />
+          userActivities.map(task => (
+            <div key={task.id} className="activity-item">
+              <div className="activity-date-badge">
+                {new Date(task.createdAt).toLocaleDateString('es-MX', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </div>
+              <div className="activity-content">
+                <h3>{task.title}</h3>
+                {task.description && task.description !== task.title && (
+                  <p>{task.description}</p>
+                )}
+              </div>
+              <button 
+                className="activity-edit-btn"
+                onClick={() => handleEditTask(task)}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                </svg>
+              </button>
+            </div>
           ))
         )}
       </div>
