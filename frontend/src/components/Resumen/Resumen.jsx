@@ -275,9 +275,32 @@ const Resumen = () => {
             </div>
             ` : ''}
             
-            <!-- User Activity -->
+            <!-- Daily Activities -->
+            ${summaryData.dailyActivities && summaryData.dailyActivities.length > 0 ? `
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Actividad por Usuario</h2>
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Actividades Diarias del Equipo</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+                ${summaryData.dailyActivities.map(activity => `
+                  <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 3px solid #000000; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="font-weight: bold; color: #000000;">${activity.user}</span>
+                      <span style="font-size: 12px; color: #666666;">${new Date(activity.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: #333333; margin-bottom: 5px;">${activity.title}</div>
+                    ${activity.description && activity.description !== activity.title ? `
+                      <div style="font-size: 13px; color: #666666; line-height: 1.5;">
+                        ${activity.description.length > 200 ? activity.description.substring(0, 200) + '...' : activity.description}
+                      </div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            ` : ''}
+            
+            <!-- User Activity Stats -->
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Estadísticas por Usuario</h2>
               <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
                 ${Object.entries(summaryData.userActivity).map(([user, stats]) => `
                   <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e5e5e5;">
@@ -286,7 +309,7 @@ const Resumen = () => {
                       Emails: ${stats.email_sent || 0} | 
                       Capturas: ${stats.data_captured || 0} | 
                       Actualizaciones: ${stats.data_updated || 0} |
-                      PDFs: ${stats.pdf_analyzed || 0}
+                      Actividades Diarias: ${stats.daily_activity || 0}
                     </div>
                   </div>
                 `).join('')}
@@ -494,9 +517,40 @@ const Resumen = () => {
             </div>
           )}
 
-          {/* User Activity */}
+          {/* Daily Activities */}
+          {summaryData.dailyActivities && summaryData.dailyActivities.length > 0 && (
+            <div className="section-card">
+              <h2>Actividades Diarias del Equipo</h2>
+              <div className="daily-activities-list">
+                {summaryData.dailyActivities.map((activity, idx) => (
+                  <div key={idx} className="daily-activity-item">
+                    <div className="activity-header">
+                      <span className="activity-user">{activity.user}</span>
+                      <span className="activity-date">
+                        {new Date(activity.date).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                    <div className="activity-title">{activity.title}</div>
+                    {activity.description && activity.description !== activity.title && (
+                      <div className="activity-description">
+                        {activity.description.length > 200 
+                          ? `${activity.description.substring(0, 200)}...` 
+                          : activity.description}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* User Activity Stats */}
           <div className="section-card success">
-            <h2>Actividad por Usuario</h2>
+            <h2>Estadísticas por Usuario</h2>
             <div className="user-activity-list">
               {Object.entries(summaryData.userActivity).map(([user, stats]) => (
                 <div key={user} className="user-activity-item">
@@ -505,7 +559,7 @@ const Resumen = () => {
                     <span>Emails: {stats.email_sent || 0}</span>
                     <span>Capturas: {stats.data_captured || 0}</span>
                     <span>Actualizaciones: {stats.data_updated || 0}</span>
-                    <span>PDFs: {stats.pdf_analyzed || 0}</span>
+                    <span>Actividades Diarias: {stats.daily_activity || 0}</span>
                   </div>
                 </div>
               ))}

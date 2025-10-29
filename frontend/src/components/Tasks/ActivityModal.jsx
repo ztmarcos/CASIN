@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import activityLogger from '../../utils/activityLogger';
 import './ActivityModal.css';
 
 const ActivityModal = ({ activity, onSave, onClose }) => {
@@ -24,7 +25,7 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
     }
   }, [activity]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!content.trim()) {
       alert('Por favor escribe algo en la actividad');
       return;
@@ -42,6 +43,21 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
       assignedUsers: [],
       comments: []
     };
+
+    // Log daily activity to activity logs
+    try {
+      await activityLogger.logDailyActivity(
+        activityData.title,
+        activityData.description,
+        {
+          createdAt: activityData.createdAt,
+          date: formattedDate
+        }
+      );
+      console.log('✅ Daily activity logged');
+    } catch (error) {
+      console.error('❌ Error logging daily activity:', error);
+    }
 
     onSave(activityData);
   };

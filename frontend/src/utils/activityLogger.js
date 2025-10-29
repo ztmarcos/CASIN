@@ -218,6 +218,22 @@ class ActivityLogger {
       }
     );
   }
+
+  /**
+   * Log daily activity entry
+   */
+  async logDailyActivity(activityTitle, activityDescription, metadata = {}) {
+    return this.logActivity(
+      'daily_activity',
+      null,
+      {
+        title: activityTitle,
+        description: activityDescription,
+        createdAt: new Date().toISOString()
+      },
+      metadata
+    );
+  }
 }
 
 // Create and export singleton instance

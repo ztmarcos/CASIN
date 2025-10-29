@@ -137,7 +137,8 @@ class ActivityService {
       const stats = {
         byUser: {},
         byAction: {},
-        total: activities.length
+        total: activities.length,
+        dailyActivities: []
       };
       
       activities.forEach(activity => {
@@ -151,12 +152,24 @@ class ActivityService {
             email_sent: 0,
             data_captured: 0,
             data_updated: 0,
-            pdf_analyzed: 0
+            pdf_analyzed: 0,
+            daily_activity: 0
           };
         }
         stats.byUser[user].total++;
         if (stats.byUser[user][action] !== undefined) {
           stats.byUser[user][action]++;
+        }
+        
+        // Collect daily activities
+        if (action === 'daily_activity') {
+          stats.dailyActivities.push({
+            user: user,
+            title: activity.details?.title || 'Actividad sin título',
+            description: activity.details?.description || '',
+            date: activity.timestamp,
+            metadata: activity.metadata || {}
+          });
         }
         
         // Count by action
@@ -170,7 +183,7 @@ class ActivityService {
       return stats;
     } catch (error) {
       console.error('❌ Error calculating user activity stats:', error);
-      return { byUser: {}, byAction: {}, total: 0 };
+      return { byUser: {}, byAction: {}, total: 0, dailyActivities: [] };
     }
   }
 
@@ -217,11 +230,13 @@ class ActivityService {
           totalAmount: this.calculateTotalAmount(partialPayments)
         },
         userActivity: userStats.byUser,
+        dailyActivities: userStats.dailyActivities || [],
         summary: {
           totalActivities: activities.length,
           totalExpiring: expiringPolicies.length,
           totalPartialPayments: partialPayments.length,
-          activeUsers: Object.keys(userStats.byUser).length
+          activeUsers: Object.keys(userStats.byUser).length,
+          totalDailyActivities: userStats.dailyActivities?.length || 0
         }
       };
       
