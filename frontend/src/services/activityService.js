@@ -316,13 +316,32 @@ class ActivityService {
       // Filter by date range and exclude cancelled
       const activities = allTasks
         .filter(task => {
+          // Debug: Log each task to see what's happening
+          console.log('🔍 Checking task:', {
+            id: task.id,
+            title: task.title,
+            createdAt: task.createdAt,
+            status: task.status,
+            userName: task.userName || task.createdBy
+          });
+          
           const taskDate = new Date(task.createdAt);
           const startDateObj = new Date(startISO);
           const endDateObj = new Date(endISO);
           
-          return taskDate >= startDateObj && 
-                 taskDate <= endDateObj && 
-                 task.status !== 'cancelled';
+          const isInRange = taskDate >= startDateObj && taskDate <= endDateObj;
+          const isNotCancelled = task.status !== 'cancelled';
+          
+          console.log('📅 Date check:', {
+            taskDate: taskDate.toISOString(),
+            startDate: startDateObj.toISOString(),
+            endDate: endDateObj.toISOString(),
+            isInRange,
+            isNotCancelled,
+            willInclude: isInRange && isNotCancelled
+          });
+          
+          return isInRange && isNotCancelled;
         })
         .map(task => ({
           id: task.id,
