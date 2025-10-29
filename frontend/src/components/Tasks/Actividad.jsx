@@ -31,12 +31,12 @@ const Actividad = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   
-  // Lista de usuarios predefinidos
+  // Lista de usuarios del equipo
   const teamUsers = [
-    { name: 'Lore', email: 'lore@casin.com', initials: 'L' },
-    { name: 'Mich', email: 'mich@casin.com', initials: 'M' },
-    { name: 'Marcos', email: 'marcos@casin.com', initials: 'MA' },
-    { name: 'MarcosJr', email: 'marcosjr@casin.com', initials: 'MJ' }
+    { name: 'Lore', initials: 'L' },
+    { name: 'Mich', initials: 'M' },
+    { name: 'Marcos', initials: 'MA' },
+    { name: 'MarcosJr', initials: 'MJ' }
   ];
 
   // Cargar todas las tareas al inicio
@@ -285,9 +285,9 @@ const Actividad = () => {
         </div>
 
         <div className="users-grid">
-          {teamUsers.map((userObj) => (
+          {teamUsers.map((userObj, idx) => (
             <div 
-              key={userObj.email}
+              key={idx}
               className="user-card"
               onClick={() => handleUserSelect(userObj)}
             >
@@ -296,7 +296,6 @@ const Actividad = () => {
               </div>
               <div className="user-info-card">
                 <h3>{userObj.name}</h3>
-                <p>{userObj.email}</p>
               </div>
               <div className="arrow-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">

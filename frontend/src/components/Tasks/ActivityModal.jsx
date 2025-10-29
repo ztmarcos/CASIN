@@ -143,6 +143,16 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
             </span>
           </div>
 
+          <div className="status-selector">
+            <label>Estado:</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="pending">Pendiente</option>
+              <option value="in_progress">En Proceso</option>
+              <option value="completed">Completado</option>
+              <option value="cancelled">Cancelado</option>
+            </select>
+          </div>
+
           <textarea
             ref={textareaRef}
             className="activity-textarea"
