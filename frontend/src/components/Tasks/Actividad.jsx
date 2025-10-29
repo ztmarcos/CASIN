@@ -77,7 +77,6 @@ const Actividad = () => {
     console.log('🔍 Filtering activities for user:', selectedUser.name);
     console.log('📊 Total tasks:', tasks.length);
     
-    // TEMPORALMENTE: Mostrar TODAS las tareas para este usuario
     // Log all tasks to debug
     console.log('📋 ALL TASKS:');
     tasks.forEach((task, idx) => {
@@ -85,17 +84,32 @@ const Actividad = () => {
         id: task.id,
         userName: task.userName,
         createdBy: task.createdBy,
-        title: task.title,
-        description: task.description?.substring(0, 50)
+        title: task.title
       });
     });
     
-    // Por ahora, mostrar TODAS las actividades sin filtrar
-    // para que puedas ver qué hay en Firebase
-    setUserActivities(tasks);
-    setLoading(false);
+    // Filtrar actividades del usuario seleccionado
+    const selectedNameLower = selectedUser.name.toLowerCase();
     
-    console.log('✅ Showing ALL activities (no filter):', tasks.length);
+    const filtered = tasks.filter(task => {
+      const userName = (task.userName || '').toLowerCase();
+      const createdBy = (task.createdBy || '').toLowerCase();
+      
+      // Buscar coincidencias en userName o createdBy
+      const matches = 
+        userName.includes(selectedNameLower) || 
+        createdBy.includes(selectedNameLower) ||
+        selectedNameLower.includes(userName) ||
+        selectedNameLower.includes(createdBy);
+      
+      console.log(`Task "${task.title}": userName="${userName}", createdBy="${createdBy}", selected="${selectedNameLower}", matches=${matches}`);
+      
+      return matches;
+    });
+    
+    console.log(`✅ Filtered ${filtered.length} activities for ${selectedUser.name}`);
+    setUserActivities(filtered);
+    setLoading(false);
   };
 
   const handleUserSelect = (userObj) => {
