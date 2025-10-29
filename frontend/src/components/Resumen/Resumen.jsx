@@ -127,9 +127,8 @@ const Resumen = () => {
       // Create email HTML
       const emailHTML = createEmailHTML(gptSummary, summaryData, dateRangeText);
       
-      // Send email (TEST: solo a ztmarcos por ahora)
-      // PRODUCCIÓN: ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com']
-      const recipients = ['ztmarcos@gmail.com']; // TEST
+      // Send email to both recipients
+      const recipients = ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com'];
       
       const response = await fetch(`${API_URL}/email/send-welcome`, {
         method: 'POST',
