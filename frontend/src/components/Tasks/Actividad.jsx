@@ -74,39 +74,14 @@ const Actividad = () => {
   const filterUserActivities = () => {
     if (!selectedUser) return;
     
-    console.log('🔍 Filtering activities for user:', selectedUser.name, selectedUser.email);
+    console.log('🔍 Filtering activities for user:', selectedUser.name);
     console.log('📊 Total tasks:', tasks.length);
     
-    // Log all tasks to see their structure
-    tasks.forEach((task, idx) => {
-      console.log(`Task ${idx}:`, {
-        id: task.id,
-        createdBy: task.createdBy,
-        userName: task.userName,
-        title: task.title
-      });
-    });
-    
-    // Filtrar tareas del usuario seleccionado
-    // Comparar tanto por email como por userName
-    const filtered = tasks.filter(task => {
-      const matchByEmail = task.createdBy === selectedUser.email;
-      const matchByName = task.userName === selectedUser.name;
-      const matchByCreatedByName = task.createdBy === selectedUser.name;
-      
-      console.log(`Checking task "${task.title}":`, {
-        taskCreatedBy: task.createdBy,
-        taskUserName: task.userName,
-        selectedEmail: selectedUser.email,
-        selectedName: selectedUser.name,
-        matchByEmail,
-        matchByName,
-        matchByCreatedByName,
-        matches: matchByEmail || matchByName || matchByCreatedByName
-      });
-      
-      return matchByEmail || matchByName || matchByCreatedByName;
-    });
+    // Filtrar tareas del usuario seleccionado por nombre
+    const filtered = tasks.filter(task => 
+      task.userName === selectedUser.name || 
+      task.createdBy === selectedUser.name
+    );
     
     console.log('✅ Filtered activities:', filtered.length);
     setUserActivities(filtered);
@@ -174,8 +149,23 @@ const Actividad = () => {
     }
   };
 
-  const toggleTaskStatus = async (taskId, currentStatus) => {
-    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+  const handleStatusCycle = async (taskId, currentStatus) => {
+    // Cycle: pending -> in_progress -> completed -> pending
+    let newStatus;
+    switch (currentStatus) {
+      case 'pending':
+        newStatus = 'in_progress';
+        break;
+      case 'in_progress':
+        newStatus = 'completed';
+        break;
+      case 'completed':
+      case 'cancelled':
+        newStatus = 'pending';
+        break;
+      default:
+        newStatus = 'pending';
+    }
     await handleStatusChange(taskId, newStatus);
   };
 
@@ -372,22 +362,14 @@ const Actividad = () => {
             </div>
           ) : (
             userActivities.map(task => (
-              <div key={task.id} className={`activity-item ${task.status === 'completed' ? 'completed' : ''}`}>
+              <div key={task.id} className={`activity-item status-${task.status || 'pending'}`}>
                 <div className="activity-status-section">
                   <button 
-                    className={`status-toggle ${task.status === 'completed' ? 'completed' : 'pending'}`}
-                    onClick={() => toggleTaskStatus(task.id, task.status)}
-                    title={task.status === 'completed' ? 'Marcar como pendiente' : 'Marcar como completada'}
+                    className={`status-badge status-${task.status || 'pending'}`}
+                    onClick={() => handleStatusCycle(task.id, task.status)}
+                    title="Clic para cambiar estado"
                   >
-                    {task.status === 'completed' ? (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                      </svg>
-                    ) : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                      </svg>
-                    )}
+                    {getStatusText(task.status || 'pending')}
                   </button>
                   <div className="activity-date-badge">
                     {new Date(task.createdAt).toLocaleDateString('es-MX', {
@@ -398,9 +380,9 @@ const Actividad = () => {
                   </div>
                 </div>
                 <div className="activity-content">
-                  <h3 className={task.status === 'completed' ? 'completed-text' : ''}>{task.title}</h3>
+                  <h3>{task.title}</h3>
                   {task.description && task.description !== task.title && (
-                    <p className={task.status === 'completed' ? 'completed-text' : ''}>{task.description}</p>
+                    <p>{task.description}</p>
                   )}
                 </div>
                 <button 

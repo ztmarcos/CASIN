@@ -34,11 +34,11 @@ const ActivityModal = ({ activity, onSave, onClose }) => {
     const activityData = {
       title: content.substring(0, 100), // First 100 chars as title
       description: content,
-      status: 'pending',
+      status: status,
       priority: 'medium',
-      createdAt: new Date().toISOString(),
-      createdBy: user?.email || 'unknown',
-      userName: user?.name || user?.displayName || user?.email || 'Usuario',
+      createdAt: activity?.createdAt || new Date().toISOString(),
+      createdBy: activity?.createdBy || user?.displayName || user?.name || user?.email || 'Usuario',
+      userName: activity?.userName || user?.displayName || user?.name || user?.email || 'Usuario',
       tags: [],
       assignedUsers: [],
       comments: []

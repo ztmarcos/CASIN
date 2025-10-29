@@ -359,20 +359,30 @@
   transition: all 0.3s ease;
 }
 
-.activity-item.completed {
-  background-color: #fafafa;
+.activity-item.status-pending {
+  border-left-color: #999999;
+}
+
+.activity-item.status-in_progress {
+  border-left-color: #000000;
+}
+
+.activity-item.status-completed {
   border-left-color: #666666;
-  opacity: 0.75;
+  background-color: #fafafa;
+  opacity: 0.85;
+}
+
+.activity-item.status-cancelled {
+  border-left-color: #cccccc;
+  background-color: #f9f9f9;
+  opacity: 0.7;
 }
 
 .activity-item:hover {
   border-color: #000000;
   transform: translateX(5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.activity-item.completed:hover {
-  background-color: #f5f5f5;
 }
 
 /* Activity Status Section */
@@ -383,41 +393,59 @@
   gap: 0.75rem;
 }
 
-.status-toggle {
-  width: 36px;
-  height: 36px;
+.status-badge {
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
   border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: #ffffff;
-  border: 2px solid #cccccc;
-  flex-shrink: 0;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.status-toggle.pending {
-  border-color: #999999;
-  color: #999999;
+.status-badge.status-pending {
+  background-color: #f5f5f5;
+  color: #666666;
+  border: 2px solid #999999;
 }
 
-.status-toggle.pending:hover {
-  background-color: #000000;
-  border-color: #000000;
+.status-badge.status-pending:hover {
+  background-color: #999999;
   color: #ffffff;
 }
 
-.status-toggle.completed {
+.status-badge.status-in_progress {
   background-color: #000000;
-  border-color: #000000;
   color: #ffffff;
+  border: 2px solid #000000;
 }
 
-.status-toggle.completed:hover {
+.status-badge.status-in_progress:hover {
   background-color: #333333;
-  border-color: #333333;
+}
+
+.status-badge.status-completed {
+  background-color: #666666;
+  color: #ffffff;
+  border: 2px solid #666666;
+}
+
+.status-badge.status-completed:hover {
+  background-color: #888888;
+}
+
+.status-badge.status-cancelled {
+  background-color: #f5f5f5;
+  color: #999999;
+  border: 2px solid #cccccc;
+  text-decoration: line-through;
+}
+
+.status-badge.status-cancelled:hover {
+  background-color: #e0e0e0;
 }
 
 .activity-date-badge {
