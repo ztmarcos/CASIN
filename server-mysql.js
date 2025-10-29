@@ -4482,7 +4482,7 @@ app.post('/api/gpt/analyze-activity', async (req, res) => {
 
 **ACTIVIDADES DEL EQUIPO:**
 ${summaryData.teamActivities && summaryData.teamActivities.length > 0
-  ? summaryData.teamActivities.slice(0, 8).map(act => {
+  ? summaryData.teamActivities.slice(0, 6).map(act => {
       const statusText = act.status === 'pending' ? 'Pendiente' : 
                         act.status === 'in_progress' ? 'En Proceso' : 
                         act.status === 'completed' ? 'Completada' : act.status;
@@ -4491,10 +4491,13 @@ ${summaryData.teamActivities && summaryData.teamActivities.length > 0
   : 'No hay actividades registradas.'
 }
 
-**MÉTRICAS:**
+**MÉTRICAS CLAVE:**
 • Pólizas capturadas: ${summaryData.summary.policiesCaptured || 0}
+• Pólizas pagadas: ${summaryData.summary.policiesPaid || 0}
 • Por vencer (7 días): ${summaryData.summary.totalExpiring}
 • Pagos pendientes: ${summaryData.summary.totalPartialPayments}
+• Emails enviados: ${summaryData.summary.emailsSent || 0}
+• Actualizaciones: ${summaryData.summary.dataUpdates || 0}
 
 **PÓLIZAS POR VENCER:**
 ${summaryData.expiringPolicies.policies.slice(0, 3).map(p => 
@@ -4510,8 +4513,8 @@ INSTRUCCIONES:
 1. Responde SOLO con listas concisas
 2. NO uses párrafos largos ni comentarios
 3. Menciona QUÉ hizo cada usuario, no cantidades
-4. Máximo 10 líneas total
-5. Enfócate en acciones específicas, no estadísticas
+4. Máximo 12 líneas total
+5. Enfócate en acciones específicas y métricas clave
 
 Formato: Solo listas con viñetas (•)`;
 

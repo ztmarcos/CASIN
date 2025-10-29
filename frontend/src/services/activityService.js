@@ -208,6 +208,20 @@ class ActivityService {
       // Contar pólizas capturadas
       const policiesCaptured = activities.filter(act => act.activityType === 'data_captured').length;
       
+      // Contar pólizas pagadas (basado en estado_pago)
+      const policiesPaid = activities.filter(act => 
+        act.activityType === 'data_updated' && 
+        act.details && 
+        act.details.field === 'estado_pago' && 
+        act.details.newValue === 'Pagado'
+      ).length;
+      
+      // Contar emails enviados
+      const emailsSent = activities.filter(act => act.activityType === 'email_sent').length;
+      
+      // Contar actualizaciones de datos
+      const dataUpdates = activities.filter(act => act.activityType === 'data_updated').length;
+      
       const summaryData = {
         dateRange: {
           start: typeof startDate === 'string' ? startDate : startDate.toISOString(),
@@ -236,7 +250,10 @@ class ActivityService {
           totalPartialPayments: partialPayments.length,
           activeUsers: Object.keys(userStats.byUser).length,
           totalDailyActivities: teamActivities.length,
-          policiesCaptured: policiesCaptured
+          policiesCaptured: policiesCaptured,
+          policiesPaid: policiesPaid,
+          emailsSent: emailsSent,
+          dataUpdates: dataUpdates
         }
       };
       
@@ -255,7 +272,11 @@ class ActivityService {
           totalActivities: 0,
           totalExpiring: 0,
           totalPartialPayments: 0,
-          activeUsers: 0
+          activeUsers: 0,
+          policiesCaptured: 0,
+          policiesPaid: 0,
+          emailsSent: 0,
+          dataUpdates: 0
         }
       };
     }

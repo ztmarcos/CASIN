@@ -550,23 +550,6 @@ const Resumen = () => {
             </div>
           )}
 
-          {/* User Activity Stats */}
-          <div className="section-card success">
-            <h2>Estadísticas por Usuario</h2>
-            <div className="user-activity-list">
-              {Object.entries(summaryData.userActivity).map(([user, stats]) => (
-                <div key={user} className="user-activity-item">
-                  <div className="user-name">{user}</div>
-                  <div className="user-stats">
-                    <span>Emails: {stats.email_sent || 0}</span>
-                    <span>Capturas: {stats.data_captured || 0}</span>
-                    <span>Actualizaciones: {stats.data_updated || 0}</span>
-                    <span>Actividades Diarias: {summaryData.teamActivities.filter(act => act.userName === user).length}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
 
