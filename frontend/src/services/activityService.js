@@ -316,8 +316,9 @@ class ActivityService {
       // Filter by date range and exclude cancelled - CLEAN VERSION
       const activities = allTasks
         .filter(task => {
-          // Solo excluir canceladas y vacías
+          // Solo excluir canceladas, vacías y con status 'deleted'
           return task.status !== 'cancelled' && 
+                 task.status !== 'deleted' &&
                  task.title && 
                  task.title.trim() !== '' &&
                  task.description && 
@@ -332,13 +333,20 @@ class ActivityService {
           createdAt: task.createdAt,
           updatedAt: task.updatedAt || task.createdAt
         }))
-        // Eliminar duplicados por título y usuario
+        // Eliminar duplicados por título, usuario y fecha - MÁS ESTRICTO
         .filter((task, index, array) => {
-          return array.findIndex(t => 
+          const isDuplicate = array.findIndex(t => 
             t.title === task.title && 
             t.userName === task.userName &&
+            t.description === task.description &&
             t.createdAt === task.createdAt
-          ) === index;
+          ) !== index;
+          
+          if (isDuplicate) {
+            console.log('🗑️ Removing duplicate:', task.title, 'by', task.userName);
+          }
+          
+          return !isDuplicate;
         });
       
       console.log(`✅ Found ${activities.length} team activities in date range (excluding cancelled)`);
