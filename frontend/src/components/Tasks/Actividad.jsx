@@ -74,14 +74,39 @@ const Actividad = () => {
   const filterUserActivities = () => {
     if (!selectedUser) return;
     
-    console.log('🔍 Filtering activities for user:', selectedUser.name);
+    console.log('🔍 Filtering activities for user:', selectedUser.name, selectedUser.email);
     console.log('📊 Total tasks:', tasks.length);
     
+    // Log all tasks to see their structure
+    tasks.forEach((task, idx) => {
+      console.log(`Task ${idx}:`, {
+        id: task.id,
+        createdBy: task.createdBy,
+        userName: task.userName,
+        title: task.title
+      });
+    });
+    
     // Filtrar tareas del usuario seleccionado
-    const filtered = tasks.filter(task => 
-      task.createdBy === selectedUser.email || 
-      task.userName === selectedUser.name
-    );
+    // Comparar tanto por email como por userName
+    const filtered = tasks.filter(task => {
+      const matchByEmail = task.createdBy === selectedUser.email;
+      const matchByName = task.userName === selectedUser.name;
+      const matchByCreatedByName = task.createdBy === selectedUser.name;
+      
+      console.log(`Checking task "${task.title}":`, {
+        taskCreatedBy: task.createdBy,
+        taskUserName: task.userName,
+        selectedEmail: selectedUser.email,
+        selectedName: selectedUser.name,
+        matchByEmail,
+        matchByName,
+        matchByCreatedByName,
+        matches: matchByEmail || matchByName || matchByCreatedByName
+      });
+      
+      return matchByEmail || matchByName || matchByCreatedByName;
+    });
     
     console.log('✅ Filtered activities:', filtered.length);
     setUserActivities(filtered);
