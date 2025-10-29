@@ -220,6 +220,7 @@ const Resumen = () => {
                     <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Aseguradora</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Vencimiento</th>
                     </tr>
@@ -229,6 +230,7 @@ const Resumen = () => {
                       <tr style="border-bottom: 1px solid #e5e5e5;">
                         <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.tabla || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${new Date(policy.fecha_fin).toLocaleDateString('es-MX')}</td>
                       </tr>
@@ -249,15 +251,17 @@ const Resumen = () => {
                     <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto</th>
                       <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Próximo Pago</th>
                     </tr>
                   </thead>
                   <tbody>
-                    $                    ${summaryData.partialPayments.payments.slice(0, 5).map(policy => `
+                    ${summaryData.partialPayments.payments.slice(0, 5).map(policy => `
                       <tr style="border-bottom: 1px solid #e5e5e5;">
                         <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.tabla || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">$${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>
@@ -434,6 +438,7 @@ const Resumen = () => {
                     <tr>
                       <th>Contratante</th>
                       <th>Póliza</th>
+                      <th>Ramo</th>
                       <th>Aseguradora</th>
                       <th>Vencimiento</th>
                     </tr>
@@ -443,6 +448,7 @@ const Resumen = () => {
                       <tr key={idx}>
                         <td>{policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td>{policy.numero_poliza || '-'}</td>
+                        <td>{policy.tabla || '-'}</td>
                         <td>{policy.aseguradora || '-'}</td>
                         <td>{new Date(policy.fecha_fin).toLocaleDateString('es-MX')}</td>
                       </tr>
@@ -463,6 +469,7 @@ const Resumen = () => {
                     <tr>
                       <th>Contratante</th>
                       <th>Póliza</th>
+                      <th>Ramo</th>
                       <th>Monto</th>
                       <th>Próximo Pago</th>
                     </tr>
@@ -472,6 +479,7 @@ const Resumen = () => {
                       <tr key={idx}>
                         <td>{policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td>{policy.numero_poliza || '-'}</td>
+                        <td>{policy.tabla || '-'}</td>
                         <td>${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                         <td>{policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>

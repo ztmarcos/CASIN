@@ -616,14 +616,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 setMessage('Datos insertados exitosamente');
                 setError(null);
 
-                // Log activity
+                // Log activity (data capture includes PDF analysis)
                 await activityLogger.logDataCapture(tableName, result.id, cleanData);
-                
-                // Also log PDF analysis
-                await activityLogger.logPDFAnalysis(tableName, Object.keys(cleanData).length, {
-                    source: 'GPTAnalysis',
-                    fieldsExtracted: Object.keys(cleanData)
-                });
 
                 // Data will be sent via custom event to TableMail
 

@@ -45,7 +45,7 @@ class ActivityService {
   /**
    * Get expiring policies (next N days)
    * @param {number} daysAhead - Number of days to look ahead
-   * @returns {Promise<Array>} Array of expiring policies
+   * @returns {Promise<Array>} Array of expiring policies with table/ramo info
    */
   async getExpiringPolicies(daysAhead = 7) {
     try {
@@ -63,8 +63,14 @@ class ActivityService {
         return endDate >= today && endDate <= futureDate;
       });
       
-      console.log(`✅ Found ${expiringPolicies.length} policies expiring soon`);
-      return expiringPolicies;
+      // Add table/ramo name to each policy
+      const policiesWithTable = expiringPolicies.map(policy => ({
+        ...policy,
+        tabla: policy.sourceTable || policy.ramo || 'General'
+      }));
+      
+      console.log(`✅ Found ${policiesWithTable.length} policies expiring soon`);
+      return policiesWithTable;
     } catch (error) {
       console.error('❌ Error fetching expiring policies:', error);
       return [];
@@ -75,7 +81,7 @@ class ActivityService {
    * Get partial payments due in date range
    * @param {Date|string} startDate - Start date
    * @param {Date|string} endDate - End date
-   * @returns {Promise<Array>} Array of policies with partial payments due
+   * @returns {Promise<Array>} Array of policies with partial payments due and table info
    */
   async getPartialPaymentsDue(startDate, endDate) {
     try {
@@ -102,8 +108,14 @@ class ActivityService {
         return false;
       });
       
-      console.log(`✅ Found ${partialPayments.length} partial payments due`);
-      return partialPayments;
+      // Add table/ramo name to each policy
+      const paymentsWithTable = partialPayments.map(policy => ({
+        ...policy,
+        tabla: policy.sourceTable || policy.ramo || 'General'
+      }));
+      
+      console.log(`✅ Found ${paymentsWithTable.length} partial payments due`);
+      return paymentsWithTable;
     } catch (error) {
       console.error('❌ Error fetching partial payments:', error);
       return [];
