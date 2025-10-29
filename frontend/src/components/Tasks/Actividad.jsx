@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import actividadService from '../../services/actividadService';
 import taskEmailService from '../../services/taskEmailService';
 import TaskCard from './TaskCard';
-import TaskModal from './TaskModal';
+import ActivityModal from './ActivityModal';
 import './Actividad.css';
 
 const Actividad = () => {
@@ -333,15 +333,13 @@ const Actividad = () => {
 
       {/* Modal */}
       {showModal && (
-        <TaskModal
-          task={editingTask}
+        <ActivityModal
+          activity={editingTask}
           onSave={handleTaskSave}
-          onDelete={handleDeleteTask}
           onClose={() => {
             setShowModal(false);
             setEditingTask(null);
           }}
-          isDark={isDark}
         />
       )}
     </div>
