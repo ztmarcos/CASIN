@@ -372,7 +372,7 @@ const Actividad = () => {
           ) : (
             userActivities.map(task => (
               <div key={task.id} className={`activity-item status-${task.status || 'pending'}`}>
-                <div className="activity-status-section">
+                <div className="activity-header-section">
                   <button 
                     className={`status-badge status-${task.status || 'pending'}`}
                     onClick={() => handleStatusCycle(task.id, task.status)}
@@ -383,25 +383,40 @@ const Actividad = () => {
                   <div className="activity-date-badge">
                     {new Date(task.createdAt).toLocaleDateString('es-MX', {
                       day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
+                      month: 'short'
                     })}
                   </div>
                 </div>
+                
                 <div className="activity-content">
                   <h3>{task.title}</h3>
                   {task.description && task.description !== task.title && (
-                    <p>{task.description}</p>
+                    <p>{task.description.length > 150 ? task.description.substring(0, 150) + '...' : task.description}</p>
                   )}
                 </div>
-                <button 
-                  className="activity-edit-btn"
-                  onClick={() => handleEditTask(task)}
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                  </svg>
-                </button>
+                
+                <div className="activity-actions">
+                  <button 
+                    className="activity-edit-btn"
+                    onClick={() => handleEditTask(task)}
+                    title="Editar"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                    </svg>
+                    Editar
+                  </button>
+                  <button 
+                    className="activity-delete-btn"
+                    onClick={() => handleDeleteTask(task.id)}
+                    title="Eliminar"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                    </svg>
+                    Borrar
+                  </button>
+                </div>
               </div>
             ))
           )}
