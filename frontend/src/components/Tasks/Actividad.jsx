@@ -77,11 +77,38 @@ const Actividad = () => {
     console.log('🔍 Filtering activities for user:', selectedUser.name);
     console.log('📊 Total tasks:', tasks.length);
     
+    // Log all tasks to debug
+    tasks.forEach((task, idx) => {
+      console.log(`Task ${idx}:`, {
+        id: task.id,
+        userName: task.userName,
+        createdBy: task.createdBy,
+        title: task.title
+      });
+    });
+    
     // Filtrar tareas del usuario seleccionado por nombre
-    const filtered = tasks.filter(task => 
-      task.userName === selectedUser.name || 
-      task.createdBy === selectedUser.name
-    );
+    // Buscar coincidencias flexibles
+    const filtered = tasks.filter(task => {
+      const taskUserName = (task.userName || '').toLowerCase();
+      const taskCreatedBy = (task.createdBy || '').toLowerCase();
+      const selectedName = (selectedUser.name || '').toLowerCase();
+      
+      // Match exact, includes, or any part of the name
+      const matchUserName = taskUserName.includes(selectedName) || selectedName.includes(taskUserName);
+      const matchCreatedBy = taskCreatedBy.includes(selectedName) || selectedName.includes(taskCreatedBy);
+      
+      console.log(`Checking task "${task.title}":`, {
+        taskUserName,
+        taskCreatedBy,
+        selectedName,
+        matchUserName,
+        matchCreatedBy,
+        matches: matchUserName || matchCreatedBy
+      });
+      
+      return matchUserName || matchCreatedBy;
+    });
     
     console.log('✅ Filtered activities:', filtered.length);
     setUserActivities(filtered);
