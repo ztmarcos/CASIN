@@ -139,12 +139,44 @@ const Actividad = () => {
     if (window.confirm('¿Estás seguro de que quieres eliminar esta actividad?')) {
       try {
         await actividadService.deleteTask(taskId);
+        
+        // Remove from local state immediately
+        setUserActivities(prevActivities => 
+          prevActivities.filter(task => task.id !== taskId)
+        );
+        
         await loadTasks();
       } catch (err) {
         console.error('Error deleting task:', err);
         alert('Error al eliminar la actividad');
       }
     }
+  };
+
+  const handleStatusChange = async (taskId, newStatus) => {
+    try {
+      console.log(`🔄 Changing status of task ${taskId} to ${newStatus}`);
+      await actividadService.updateTask(taskId, { status: newStatus });
+      
+      // Update local state immediately for better UX
+      setUserActivities(prevActivities => 
+        prevActivities.map(task => 
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      );
+      
+      // Reload all tasks to sync
+      await loadTasks();
+      console.log('✅ Status updated successfully');
+    } catch (err) {
+      console.error('❌ Error updating task status:', err);
+      alert('Error al actualizar el estado de la actividad');
+    }
+  };
+
+  const toggleTaskStatus = async (taskId, currentStatus) => {
+    const newStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+    await handleStatusChange(taskId, newStatus);
   };
 
   const handleTaskSave = async (taskData) => {
