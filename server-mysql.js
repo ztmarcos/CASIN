@@ -4478,14 +4478,13 @@ app.post('/api/gpt/analyze-activity', async (req, res) => {
     });
 
     // Create comprehensive prompt for GPT
-    const prompt = `Eres un asistente inteligente para un CRM de seguros. Analiza el siguiente resumen de actividad semanal y proporciona un análisis conciso y profesional en español.
+    const prompt = `Eres un analista de datos para un CRM de seguros. Genera un resumen ejecutivo en español de las siguientes métricas y actividades del equipo:
 
-DATOS DEL RESUMEN (${summaryData.dateRange.start} a ${summaryData.dateRange.end}):
-
-MÉTRICAS GENERALES:
-- Total de Actividades: ${summaryData.summary.totalActivities}
-- Pólizas por Vencer (próximos 7 días): ${summaryData.summary.totalExpiring}
-- Pagos Parciales Pendientes: ${summaryData.summary.totalPartialPayments}
+**MÉTRICAS CLAVE:**
+- Total de actividades registradas: ${summaryData.summary.totalActivities}
+- Actividades diarias del equipo: ${summaryData.summary.totalDailyActivities || 0}
+- Pólizas por vencer (próximos 7 días): ${summaryData.summary.totalExpiring}
+- Pagos parciales pendientes: ${summaryData.summary.totalPartialPayments}
 - Usuarios Activos: ${summaryData.summary.activeUsers}
 
 ACTIVIDADES POR TIPO:
