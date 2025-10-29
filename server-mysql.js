@@ -4478,58 +4478,42 @@ app.post('/api/gpt/analyze-activity', async (req, res) => {
     });
 
     // Create comprehensive prompt for GPT
-    const prompt = `Eres un analista de datos para un CRM de seguros. Genera un resumen ejecutivo en español de las siguientes métricas y actividades del equipo:
+    const prompt = `Genera un resumen conciso en español de las actividades del equipo de seguros. Usa formato de lista, sin comentarios extensos.
 
-**ACTIVIDADES DEL EQUIPO (Sección Actividad - Ordenadas por más reciente):**
+**ACTIVIDADES DEL EQUIPO:**
 ${summaryData.teamActivities && summaryData.teamActivities.length > 0
-  ? summaryData.teamActivities.slice(0, 10).map(act => {
+  ? summaryData.teamActivities.slice(0, 8).map(act => {
       const statusText = act.status === 'pending' ? 'Pendiente' : 
                         act.status === 'in_progress' ? 'En Proceso' : 
                         act.status === 'completed' ? 'Completada' : act.status;
-      return `- ${act.userName}: "${act.title}" [${statusText}] - ${new Date(act.createdAt).toLocaleDateString('es-MX')}`;
+      return `• ${act.userName}: ${act.title} [${statusText}]`;
     }).join('\n')
   : 'No hay actividades registradas.'
 }
 
-**MÉTRICAS CLAVE:**
-- Pólizas capturadas en el periodo: ${summaryData.summary.policiesCaptured || 0}
-- Pólizas por vencer (próximos 7 días): ${summaryData.summary.totalExpiring}
-- Pagos parciales pendientes: ${summaryData.summary.totalPartialPayments}
-- Usuarios activos: ${summaryData.summary.activeUsers}
+**MÉTRICAS:**
+• Pólizas capturadas: ${summaryData.summary.policiesCaptured || 0}
+• Por vencer (7 días): ${summaryData.summary.totalExpiring}
+• Pagos pendientes: ${summaryData.summary.totalPartialPayments}
 
-ACTIVIDADES POR TIPO:
-${Object.entries(summaryData.activities.byAction || {}).map(([action, count]) => `- ${action}: ${count}`).join('\n')}
-
-ACTIVIDAD POR USUARIO:
-${Object.entries(summaryData.userActivity || {}).map(([user, stats]) => 
-  `- ${user}: Total=${stats.total}, Emails=${stats.email_sent || 0}, Capturas=${stats.data_captured || 0}, Actualizaciones=${stats.data_updated || 0}`
+**PÓLIZAS POR VENCER:**
+${summaryData.expiringPolicies.policies.slice(0, 3).map(p => 
+  `• ${p.nombre_contratante || p.contratante} (${p.tabla || 'General'}) - ${p.aseguradora} - ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
 ).join('\n')}
 
-PÓLIZAS POR VENCER:
-${summaryData.expiringPolicies.policies.slice(0, 5).map(p => 
-  `- ${p.nombre_contratante || p.contratante} | Ramo: ${p.tabla || 'General'} | Póliza: ${p.numero_poliza} | Aseguradora: ${p.aseguradora} | Vence: ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
+**PAGOS PARCIALES:**
+${summaryData.partialPayments.payments.slice(0, 3).map(p => 
+  `• ${p.nombre_contratante || p.contratante} (${p.tabla || 'General'}) - $${(p.pago_parcial || 0).toLocaleString('es-MX')}`
 ).join('\n')}
-${summaryData.expiringPolicies.total > 5 ? `... y ${summaryData.expiringPolicies.total - 5} más` : ''}
-
-PAGOS PARCIALES PENDIENTES:
-${summaryData.partialPayments.payments.slice(0, 5).map(p => 
-  `- ${p.nombre_contratante || p.contratante} | Ramo: ${p.tabla || 'General'} | Póliza: ${p.numero_poliza} | Monto: $${(p.pago_parcial || 0).toLocaleString('es-MX')} | Próximo: ${p.fecha_proximo_pago ? new Date(p.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}`
-).join('\n')}
-${summaryData.partialPayments.total > 5 ? `... y ${summaryData.partialPayments.total - 5} más` : ''}
-Total estimado de pagos: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX')}
 
 INSTRUCCIONES:
-1. EMPIEZA describiendo las actividades del equipo (sección Actividad), mencionando las más recientes primero con su estado
-2. Menciona específicamente QUÉ HIZO cada usuario, NO cuántas actividades hizo
-3. AL FINAL menciona cuántas pólizas se capturaron en el periodo
-4. Para vencimientos y pagos, menciona el RAMO y el nombre del contratante
-5. Sé específico con nombres de usuarios, ramos y estados
-6. Usa un tono profesional y objetivo
-7. Proporciona 2-3 párrafos bien estructurados
-8. NO menciones cantidades de actividades por usuario, solo describe QUÉ HICIERON
-9. Enfócate en la DATA y el CONTENIDO, no en los números
+1. Responde SOLO con listas concisas
+2. NO uses párrafos largos ni comentarios
+3. Menciona QUÉ hizo cada usuario, no cantidades
+4. Máximo 10 líneas total
+5. Enfócate en acciones específicas, no estadísticas
 
-NO incluyas encabezados HTML ni markdown, solo texto con saltos de línea.`;
+Formato: Solo listas con viñetas (•)`;
 
     console.log('🤖 Sending to OpenAI...');
 
@@ -4545,15 +4529,15 @@ NO incluyas encabezados HTML ni markdown, solo texto con saltos de línea.`;
         messages: [
           {
             role: 'system',
-            content: 'Eres un analista experto de CRM de seguros que proporciona insights profesionales y accionables en español.'
+            content: 'Eres un analista de CRM de seguros. Responde SOLO con listas concisas en español, sin párrafos largos ni comentarios extensos.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.7,
-        max_tokens: 800
+        temperature: 0.3,
+        max_tokens: 300
       })
     });
 
@@ -6469,16 +6453,19 @@ app.get('*', (req, res) => {
 });
 
 // Friday Weekly Report Scheduler
-// Runs every Friday at 9:00 AM
+// Runs every Friday at 5:00 PM CST (17:00)
 const scheduleFridayReport = () => {
+  let lastExecutionDate = null; // Track last execution to avoid duplicates
+  
   // Simple setInterval-based scheduler (for production, consider using node-cron)
   const checkAndRunReport = async () => {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
     const hour = now.getHours();
+    const today = now.toDateString(); // YYYY-MM-DD format
     
-    // Check if it's Friday at 9 AM
-    if (dayOfWeek === 5 && hour === 9) {
+    // Check if it's Friday at 5 PM CST (17:00) and we haven't run today
+    if (dayOfWeek === 5 && hour === 17 && lastExecutionDate !== today) {
       try {
         console.log('📊 Running scheduled Friday report...');
         
@@ -6496,28 +6483,54 @@ const scheduleFridayReport = () => {
         const startDate = new Date();
         startDate.setDate(endDate.getDate() - 7);
         
-        // Generate summary data (you would need to implement this server-side aggregation)
-        // For now, we'll just log that the scheduler triggered
-        console.log('✅ Friday report scheduled - would generate and send email here');
+        // Generate and send the weekly report
+        console.log('📊 Generating weekly report for date range:', startDate.toISOString(), 'to', endDate.toISOString());
         
-        // Log the scheduled execution
-        await db.collection('activity_logs').add({
-          timestamp: new Date().toISOString(),
-          userId: 'system',
-          userEmail: 'system',
-          userName: 'Automated System',
-          action: 'report_generated',
-          tableName: null,
-          details: {
-            reportType: 'weekly_summary',
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString(),
-            automated: true
-          },
-          metadata: {
-            scheduledExecution: true
+        try {
+          // Call the GPT analysis endpoint to generate the report
+          const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/gpt/analyze-activity`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              automated: true
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Weekly report generated and sent successfully');
+            
+            // Log successful execution
+            await db.collection('activity_logs').add({
+              timestamp: new Date().toISOString(),
+              userId: 'system',
+              userEmail: 'system',
+              userName: 'Automated System',
+              action: 'report_generated',
+              tableName: null,
+              details: {
+                reportType: 'weekly_summary',
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                automated: true,
+                emailSent: true,
+                recipients: ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com']
+              },
+              metadata: {
+                scheduledExecution: true,
+                executionTime: new Date().toISOString()
+              }
+            });
+          } else {
+            console.error('❌ Failed to generate weekly report:', response.status, response.statusText);
           }
-        });
+        } catch (error) {
+          console.error('❌ Error generating weekly report:', error);
+        }
         
       } catch (error) {
         console.error('❌ Error running scheduled Friday report:', error);
