@@ -211,6 +211,8 @@ class ActivityService {
         this.getTeamActivities(startDate, endDate)
       ]);
       
+      console.log('📊 Team activities fetched:', teamActivities.length);
+      
       // Contar pólizas capturadas
       const policiesCaptured = activities.filter(act => act.activityType === 'data_captured').length;
       
@@ -248,6 +250,7 @@ class ActivityService {
       };
       
       console.log('✅ Summary data generated successfully');
+      console.log('📋 Team activities in summary:', summaryData.teamActivities?.length || 0);
       return summaryData;
     } catch (error) {
       console.error('❌ Error generating summary data:', error);
@@ -298,23 +301,17 @@ class ActivityService {
     try {
       console.log('📋 Fetching team activities from Firebase');
       
-      // Use the team data service to get activities from the correct team database
-      const { teamDataService } = await import('./teamDataService');
+      // Use the actividadService directly to get tasks
+      const { default: actividadService } = await import('./actividadService');
       
       const startISO = typeof startDate === 'string' ? startDate : startDate.toISOString();
       const endISO = typeof endDate === 'string' ? endDate : endDate.toISOString();
       
-      console.log('📅 Querying team tasks from', startISO, 'to', endISO);
+      console.log('📅 Querying tasks from', startISO, 'to', endISO);
       
-      // Get all tasks from the team database
-      const result = await teamDataService.queryDocuments('tasks', {
-        limit: 100, // Get more tasks to filter by date
-        orderBy: 'createdAt',
-        orderDirection: 'desc'
-      });
-      
-      const allTasks = result.documents || [];
-      console.log(`📊 Found ${allTasks.length} total tasks in team database`);
+      // Get all tasks from the actividad service
+      const allTasks = await actividadService.getAllTasks(false); // Don't use cache
+      console.log(`📊 Found ${allTasks.length} total tasks from actividadService`);
       
       // Filter by date range and exclude cancelled
       const activities = allTasks
