@@ -201,13 +201,18 @@ class ActivityService {
         activities,
         expiringPolicies,
         partialPayments,
-        userStats
+        userStats,
+        teamActivities
       ] = await Promise.all([
         this.getActivitiesForDateRange(startDate, endDate),
         this.getExpiringPolicies(7),
         this.getPartialPaymentsDue(new Date(), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
-        this.getUserActivityStats(startDate, endDate)
+        this.getUserActivityStats(startDate, endDate),
+        this.getTeamActivities(startDate, endDate)
       ]);
+      
+      // Contar pólizas capturadas
+      const policiesCaptured = activities.filter(act => act.activityType === 'data_captured').length;
       
       const summaryData = {
         dateRange: {
@@ -231,12 +236,14 @@ class ActivityService {
         },
         userActivity: userStats.byUser,
         dailyActivities: userStats.dailyActivities || [],
+        teamActivities: teamActivities, // Actividades de la sección Actividad
         summary: {
           totalActivities: activities.length,
           totalExpiring: expiringPolicies.length,
           totalPartialPayments: partialPayments.length,
           activeUsers: Object.keys(userStats.byUser).length,
-          totalDailyActivities: userStats.dailyActivities?.length || 0
+          totalDailyActivities: userStats.dailyActivities?.length || 0,
+          policiesCaptured: policiesCaptured
         }
       };
       

@@ -4507,13 +4507,13 @@ ${Object.entries(summaryData.userActivity || {}).map(([user, stats]) =>
 
 PÓLIZAS POR VENCER:
 ${summaryData.expiringPolicies.policies.slice(0, 5).map(p => 
-  `- ${p.nombre_contratante} | Póliza: ${p.numero_poliza} | Aseguradora: ${p.aseguradora} | Vence: ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
+  `- ${p.nombre_contratante || p.contratante} | Ramo: ${p.tabla || 'General'} | Póliza: ${p.numero_poliza} | Aseguradora: ${p.aseguradora} | Vence: ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
 ).join('\n')}
 ${summaryData.expiringPolicies.total > 5 ? `... y ${summaryData.expiringPolicies.total - 5} más` : ''}
 
-PAGOS PENDIENTES:
+PAGOS PARCIALES PENDIENTES:
 ${summaryData.partialPayments.payments.slice(0, 5).map(p => 
-  `- ${p.nombre_contratante} | Póliza: ${p.numero_poliza} | Forma: ${p.forma_pago} | Próximo: ${p.fecha_proximo_pago ? new Date(p.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}`
+  `- ${p.nombre_contratante || p.contratante} | Ramo: ${p.tabla || 'General'} | Póliza: ${p.numero_poliza} | Monto: $${(p.pago_parcial || 0).toLocaleString('es-MX')} | Próximo: ${p.fecha_proximo_pago ? new Date(p.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}`
 ).join('\n')}
 ${summaryData.partialPayments.total > 5 ? `... y ${summaryData.partialPayments.total - 5} más` : ''}
 Total estimado de pagos: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX')}
