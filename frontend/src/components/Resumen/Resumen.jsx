@@ -277,16 +277,16 @@ const Resumen = () => {
             </div>
             ` : ''}
             
-            <!-- Daily Activities -->
-            ${summaryData.dailyActivities && summaryData.dailyActivities.length > 0 ? `
+            <!-- Team Activities -->
+            ${summaryData.teamActivities && summaryData.teamActivities.length > 0 ? `
             <div style="margin-bottom: 30px;">
               <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Actividades Diarias del Equipo</h2>
               <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
-                ${summaryData.dailyActivities.map(activity => `
+                ${summaryData.teamActivities.map(activity => `
                   <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 3px solid #000000; border-radius: 4px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                      <span style="font-weight: bold; color: #000000;">${activity.user}</span>
-                      <span style="font-size: 12px; color: #666666;">${new Date(activity.date).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      <span style="font-weight: bold; color: #000000;">${activity.userName}</span>
+                      <span style="font-size: 12px; color: #666666;">${new Date(activity.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                     </div>
                     <div style="font-size: 14px; font-weight: 600; color: #333333; margin-bottom: 5px;">${activity.title}</div>
                     ${activity.description && activity.description !== activity.title ? `
@@ -519,17 +519,17 @@ const Resumen = () => {
             </div>
           )}
 
-          {/* Daily Activities */}
-          {summaryData.dailyActivities && summaryData.dailyActivities.length > 0 && (
+          {/* Team Activities */}
+          {summaryData.teamActivities && summaryData.teamActivities.length > 0 && (
             <div className="section-card">
               <h2>Actividades Diarias del Equipo</h2>
               <div className="daily-activities-list">
-                {summaryData.dailyActivities.map((activity, idx) => (
+                {summaryData.teamActivities.map((activity, idx) => (
                   <div key={idx} className="daily-activity-item">
                     <div className="activity-header">
-                      <span className="activity-user">{activity.user}</span>
+                      <span className="activity-user">{activity.userName}</span>
                       <span className="activity-date">
-                        {new Date(activity.date).toLocaleDateString('es-MX', {
+                        {new Date(activity.createdAt).toLocaleDateString('es-MX', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric'
@@ -561,7 +561,7 @@ const Resumen = () => {
                     <span>Emails: {stats.email_sent || 0}</span>
                     <span>Capturas: {stats.data_captured || 0}</span>
                     <span>Actualizaciones: {stats.data_updated || 0}</span>
-                    <span>Actividades Diarias: {stats.daily_activity || 0}</span>
+                    <span>Actividades Diarias: {summaryData.teamActivities.filter(act => act.userName === user).length}</span>
                   </div>
                 </div>
               ))}

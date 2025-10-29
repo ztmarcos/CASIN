@@ -161,16 +161,8 @@ class ActivityService {
           stats.byUser[user][action]++;
         }
         
-        // Collect daily activities
-        if (action === 'daily_activity') {
-          stats.dailyActivities.push({
-            user: user,
-            title: activity.details?.title || 'Actividad sin título',
-            description: activity.details?.description || '',
-            date: activity.timestamp,
-            metadata: activity.metadata || {}
-          });
-        }
+        // Collect daily activities - REMOVED to avoid duplication with teamActivities
+        // Daily activities are now handled by teamActivities from the tasks collection
         
         // Count by action
         if (!stats.byAction[action]) {
@@ -237,14 +229,13 @@ class ActivityService {
           totalAmount: this.calculateTotalAmount(partialPayments)
         },
         userActivity: userStats.byUser,
-        dailyActivities: userStats.dailyActivities || [],
         teamActivities: teamActivities, // Actividades de la sección Actividad
         summary: {
           totalActivities: activities.length,
           totalExpiring: expiringPolicies.length,
           totalPartialPayments: partialPayments.length,
           activeUsers: Object.keys(userStats.byUser).length,
-          totalDailyActivities: userStats.dailyActivities?.length || 0,
+          totalDailyActivities: teamActivities.length,
           policiesCaptured: policiesCaptured
         }
       };
