@@ -237,43 +237,6 @@ const Actividad = () => {
     }
   };
 
-  const handleStatusChange = async (taskId, newStatus) => {
-    try {
-      // Encontrar la tarea actual para comparar cambios
-      const currentTask = tasks.find(t => t.id === taskId);
-      
-      if (currentTask && currentTask.status !== newStatus) {
-        // Actualizar tarea
-        const updatedTaskData = { ...currentTask, status: newStatus };
-        await actividadService.updateTask(taskId, { status: newStatus });
-        
-        // Enviar notificaciones de cambio de estado
-        const participants = taskEmailService.getTaskParticipants(currentTask);
-        const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
-        
-        if (filteredParticipants.length > 0) {
-          const changes = [{ 
-            field: 'Estado', 
-            oldValue: taskEmailService.getStatusText(currentTask.status), 
-            newValue: taskEmailService.getStatusText(newStatus) 
-          }];
-          
-          try {
-            await taskEmailService.notifyTaskUpdated(currentTask, updatedTaskData, filteredParticipants, changes);
-            console.log('✅ Notificaciones de cambio de estado enviadas');
-          } catch (emailError) {
-            console.warn('⚠️ Error enviando notificaciones:', emailError);
-          }
-        }
-      }
-      
-      await loadTasks();
-    } catch (err) {
-      console.error('Error updating task status:', err);
-      alert('Error al actualizar el estado de la actividad');
-    }
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#666666';

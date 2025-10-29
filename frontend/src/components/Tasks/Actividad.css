@@ -359,10 +359,65 @@
   transition: all 0.3s ease;
 }
 
+.activity-item.completed {
+  background-color: #fafafa;
+  border-left-color: #666666;
+  opacity: 0.75;
+}
+
 .activity-item:hover {
   border-color: #000000;
   transform: translateX(5px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.activity-item.completed:hover {
+  background-color: #f5f5f5;
+}
+
+/* Activity Status Section */
+.activity-status-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-toggle {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #ffffff;
+  border: 2px solid #cccccc;
+  flex-shrink: 0;
+}
+
+.status-toggle.pending {
+  border-color: #999999;
+  color: #999999;
+}
+
+.status-toggle.pending:hover {
+  background-color: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.status-toggle.completed {
+  background-color: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.status-toggle.completed:hover {
+  background-color: #333333;
+  border-color: #333333;
 }
 
 .activity-date-badge {
@@ -387,6 +442,12 @@
   font-weight: 700;
   color: #000000;
   line-height: 1.4;
+  transition: all 0.2s ease;
+}
+
+.activity-content h3.completed-text {
+  text-decoration: line-through;
+  color: #666666;
 }
 
 .activity-content p {
@@ -394,6 +455,12 @@
   font-size: 0.95rem;
   color: #666666;
   line-height: 1.6;
+  transition: all 0.2s ease;
+}
+
+.activity-content p.completed-text {
+  text-decoration: line-through;
+  color: #999999;
 }
 
 .activity-edit-btn {
