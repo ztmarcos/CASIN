@@ -4353,6 +4353,267 @@ No incluyas explicaciones adicionales, solo el objeto JSON.`;
   }
 });
 
+// Activity Logs endpoint - Store user activities in Firebase
+app.post('/api/activity-logs', async (req, res) => {
+  try {
+    console.log('📝 Activity log request:', req.body);
+    
+    const { timestamp, userId, userEmail, userName, action, tableName, details, metadata } = req.body;
+    
+    if (!action) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: action'
+      });
+    }
+
+    // Create activity log document
+    const activityLog = {
+      timestamp: timestamp || new Date().toISOString(),
+      userId: userId || 'unknown',
+      userEmail: userEmail || 'unknown',
+      userName: userName || 'Unknown User',
+      action: action,
+      tableName: tableName || null,
+      details: details || {},
+      metadata: metadata || {}
+    };
+
+    // Store in Firebase
+    const docRef = await db.collection('activity_logs').add(activityLog);
+    
+    console.log('✅ Activity logged with ID:', docRef.id);
+    
+    res.json({
+      success: true,
+      id: docRef.id,
+      message: 'Activity logged successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error logging activity:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to log activity',
+      details: error.message
+    });
+  }
+});
+
+// Get activity logs endpoint
+app.get('/api/activity-logs', async (req, res) => {
+  try {
+    const { startDate, endDate, userId, action, limit = 100 } = req.query;
+    
+    console.log('📊 Fetching activity logs with filters:', { startDate, endDate, userId, action, limit });
+    
+    let query = db.collection('activity_logs');
+    
+    // Apply filters
+    if (startDate) {
+      query = query.where('timestamp', '>=', startDate);
+    }
+    if (endDate) {
+      query = query.where('timestamp', '<=', endDate);
+    }
+    if (userId) {
+      query = query.where('userId', '==', userId);
+    }
+    if (action) {
+      query = query.where('action', '==', action);
+    }
+    
+    // Order by timestamp descending and limit
+    query = query.orderBy('timestamp', 'desc').limit(parseInt(limit));
+    
+    const snapshot = await query.get();
+    const logs = [];
+    
+    snapshot.forEach(doc => {
+      logs.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    console.log(`✅ Found ${logs.length} activity logs`);
+    
+    res.json({
+      success: true,
+      data: logs,
+      count: logs.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching activity logs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activity logs',
+      details: error.message
+    });
+  }
+});
+
+// GPT Activity Analysis endpoint - Analyze weekly activity summary
+app.post('/api/gpt/analyze-activity', async (req, res) => {
+  try {
+    console.log('🤖 GPT Activity Analysis request');
+    
+    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    
+    if (!openaiApiKey) {
+      return res.status(500).json({
+        error: 'OpenAI API key not configured',
+        details: 'Please set OPENAI_API_KEY in environment variables'
+      });
+    }
+
+    const summaryData = req.body;
+    
+    console.log('📊 Summary data received:', {
+      totalActivities: summaryData.summary?.totalActivities,
+      totalExpiring: summaryData.summary?.totalExpiring,
+      totalPartialPayments: summaryData.summary?.totalPartialPayments,
+      activeUsers: summaryData.summary?.activeUsers
+    });
+
+    // Create comprehensive prompt for GPT
+    const prompt = `Eres un asistente inteligente para un CRM de seguros. Analiza el siguiente resumen de actividad semanal y proporciona un análisis conciso y profesional en español.
+
+DATOS DEL RESUMEN (${summaryData.dateRange.start} a ${summaryData.dateRange.end}):
+
+MÉTRICAS GENERALES:
+- Total de Actividades: ${summaryData.summary.totalActivities}
+- Pólizas por Vencer (próximos 7 días): ${summaryData.summary.totalExpiring}
+- Pagos Parciales Pendientes: ${summaryData.summary.totalPartialPayments}
+- Usuarios Activos: ${summaryData.summary.activeUsers}
+
+ACTIVIDADES POR TIPO:
+${Object.entries(summaryData.activities.byAction || {}).map(([action, count]) => `- ${action}: ${count}`).join('\n')}
+
+ACTIVIDAD POR USUARIO:
+${Object.entries(summaryData.userActivity || {}).map(([user, stats]) => 
+  `- ${user}: Total=${stats.total}, Emails=${stats.email_sent || 0}, Capturas=${stats.data_captured || 0}, Actualizaciones=${stats.data_updated || 0}`
+).join('\n')}
+
+PÓLIZAS POR VENCER:
+${summaryData.expiringPolicies.policies.slice(0, 5).map(p => 
+  `- ${p.nombre_contratante} | Póliza: ${p.numero_poliza} | Aseguradora: ${p.aseguradora} | Vence: ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
+).join('\n')}
+${summaryData.expiringPolicies.total > 5 ? `... y ${summaryData.expiringPolicies.total - 5} más` : ''}
+
+PAGOS PENDIENTES:
+${summaryData.partialPayments.payments.slice(0, 5).map(p => 
+  `- ${p.nombre_contratante} | Póliza: ${p.numero_poliza} | Forma: ${p.forma_pago} | Próximo: ${p.fecha_proximo_pago ? new Date(p.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}`
+).join('\n')}
+${summaryData.partialPayments.total > 5 ? `... y ${summaryData.partialPayments.total - 5} más` : ''}
+Total estimado de pagos: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX')}
+
+INSTRUCCIONES:
+1. Proporciona un resumen ejecutivo de 3-4 párrafos en español
+2. Destaca los puntos más importantes y urgentes
+3. Menciona tendencias positivas en la actividad del equipo
+4. Identifica áreas que requieren atención inmediata
+5. Usa un tono profesional pero amigable
+6. Enfócate en insights accionables, no solo en repetir los números
+
+NO incluyas encabezados HTML ni markdown, solo texto con saltos de línea.`;
+
+    console.log('🤖 Sending to OpenAI...');
+
+    // Call OpenAI API
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Eres un analista experto de CRM de seguros que proporciona insights profesionales y accionables en español.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 800
+      })
+    });
+
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.json();
+      console.error('❌ OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || openaiResponse.status}`);
+    }
+
+    const openaiResult = await openaiResponse.json();
+    const analysis = openaiResult.choices[0].message.content;
+
+    console.log('✅ GPT analysis generated successfully');
+    console.log('📝 Analysis length:', analysis.length, 'characters');
+
+    res.json({
+      success: true,
+      summary: analysis,
+      highlights: extractHighlights(summaryData),
+      metrics: summaryData.summary,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error in GPT activity analysis:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to analyze activity',
+      details: error.message
+    });
+  }
+});
+
+// Helper function to extract key highlights from summary data
+function extractHighlights(summaryData) {
+  const highlights = [];
+  
+  // Most active user
+  const userActivities = Object.entries(summaryData.userActivity || {});
+  if (userActivities.length > 0) {
+    const mostActive = userActivities.reduce((max, [user, stats]) => 
+      stats.total > (max.stats?.total || 0) ? { user, stats } : max
+    , {});
+    if (mostActive.user) {
+      highlights.push(`Usuario más activo: ${mostActive.user} (${mostActive.stats.total} actividades)`);
+    }
+  }
+  
+  // Most common action
+  const actions = Object.entries(summaryData.activities.byAction || {});
+  if (actions.length > 0) {
+    const mostCommon = actions.reduce((max, [action, count]) => 
+      count > (max.count || 0) ? { action, count } : max
+    , {});
+    if (mostCommon.action) {
+      highlights.push(`Actividad principal: ${mostCommon.action} (${mostCommon.count} veces)`);
+    }
+  }
+  
+  // Urgent expirations
+  if (summaryData.summary.totalExpiring > 0) {
+    highlights.push(`⚠️ ${summaryData.summary.totalExpiring} pólizas vencen en los próximos 7 días`);
+  }
+  
+  // Pending payments
+  if (summaryData.summary.totalPartialPayments > 0) {
+    highlights.push(`💰 ${summaryData.summary.totalPartialPayments} pagos parciales pendientes`);
+  }
+  
+  return highlights;
+}
+
 // Helper function to analyze column patterns
 function analyzeColumnPatterns(columnData, columnName) {
   const patterns = {
@@ -6195,6 +6456,68 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
 });
 
+// Friday Weekly Report Scheduler
+// Runs every Friday at 9:00 AM
+const scheduleFridayReport = () => {
+  // Simple setInterval-based scheduler (for production, consider using node-cron)
+  const checkAndRunReport = async () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
+    const hour = now.getHours();
+    
+    // Check if it's Friday at 9 AM
+    if (dayOfWeek === 5 && hour === 9) {
+      try {
+        console.log('📊 Running scheduled Friday report...');
+        
+        // Check if auto-generate is enabled
+        const configSnapshot = await db.collection('app_config').doc('resumen-auto-generate').get();
+        const config = configSnapshot.exists ? configSnapshot.data() : {};
+        
+        if (!config.enabled) {
+          console.log('⏭️  Auto-generate disabled, skipping report');
+          return;
+        }
+        
+        // Calculate last week's date range
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 7);
+        
+        // Generate summary data (you would need to implement this server-side aggregation)
+        // For now, we'll just log that the scheduler triggered
+        console.log('✅ Friday report scheduled - would generate and send email here');
+        
+        // Log the scheduled execution
+        await db.collection('activity_logs').add({
+          timestamp: new Date().toISOString(),
+          userId: 'system',
+          userEmail: 'system',
+          userName: 'Automated System',
+          action: 'report_generated',
+          tableName: null,
+          details: {
+            reportType: 'weekly_summary',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            automated: true
+          },
+          metadata: {
+            scheduledExecution: true
+          }
+        });
+        
+      } catch (error) {
+        console.error('❌ Error running scheduled Friday report:', error);
+      }
+    }
+  };
+  
+  // Check every hour
+  setInterval(checkAndRunReport, 60 * 60 * 1000);
+  console.log('📅 Friday report scheduler initialized');
+};
+
 // Start server for Heroku (only if not in Vercel environment)
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
@@ -6203,6 +6526,9 @@ if (!process.env.VERCEL) {
     console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);
     console.log(`📧 Notion enabled: ${isNotionEnabled}`);
+    
+    // Initialize Friday report scheduler
+    scheduleFridayReport();
   });
 }
 

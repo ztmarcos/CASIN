@@ -4,6 +4,7 @@ import { API_URL, GPT_API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
 import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
+import activityLogger from '../../utils/activityLogger';
 
 
 const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose, onOpenEmailModal }) => {
@@ -614,6 +615,15 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 
                 setMessage('Datos insertados exitosamente');
                 setError(null);
+
+                // Log activity
+                await activityLogger.logDataCapture(tableName, result.id, cleanData);
+                
+                // Also log PDF analysis
+                await activityLogger.logPDFAnalysis(tableName, Object.keys(cleanData).length, {
+                    source: 'GPTAnalysis',
+                    fieldsExtracted: Object.keys(cleanData)
+                });
 
                 // Data will be sent via custom event to TableMail
 

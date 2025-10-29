@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
 import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
 import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
+import activityLogger from '../../utils/activityLogger';
 // import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, columnOrder }) => {
@@ -1103,6 +1104,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       if (!result || result.success === false) {
         throw new Error(result?.message || 'Failed to update cell');
       }
+
+      // Log activity
+      await activityLogger.logDataUpdate(
+        tableName,
+        rowId,
+        column,
+        row[column],
+        editValue
+      );
 
       // Show success message first
       toast.success('✅ Celda actualizada correctamente');

@@ -1,0 +1,299 @@
+import { API_URL } from '../config/api.js';
+import firebaseReportsService from './firebaseReportsService';
+
+/**
+ * Activity Service
+ * Service for aggregating and querying activity data for the Resumen component
+ */
+
+class ActivityService {
+  constructor() {
+    this.reportsService = firebaseReportsService;
+  }
+
+  /**
+   * Get activities for a date range
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Array>} Array of activity logs
+   */
+  async getActivitiesForDateRange(startDate, endDate) {
+    try {
+      const start = typeof startDate === 'string' ? startDate : startDate.toISOString();
+      const end = typeof endDate === 'string' ? endDate : endDate.toISOString();
+      
+      console.log('📊 Fetching activities from', start, 'to', end);
+      
+      const response = await fetch(
+        `${API_URL}/activity-logs?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}&limit=500`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activities: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log(`✅ Found ${result.data.length} activities`);
+      
+      return result.data || [];
+    } catch (error) {
+      console.error('❌ Error fetching activities:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get expiring policies (next N days)
+   * @param {number} daysAhead - Number of days to look ahead
+   * @returns {Promise<Array>} Array of expiring policies
+   */
+  async getExpiringPolicies(daysAhead = 7) {
+    try {
+      console.log(`📅 Fetching policies expiring in next ${daysAhead} days`);
+      
+      const allPolicies = await this.reportsService.getAllPolicies();
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + daysAhead);
+      
+      const expiringPolicies = allPolicies.filter(policy => {
+        if (!policy.fecha_fin) return false;
+        
+        const endDate = new Date(policy.fecha_fin);
+        return endDate >= today && endDate <= futureDate;
+      });
+      
+      console.log(`✅ Found ${expiringPolicies.length} policies expiring soon`);
+      return expiringPolicies;
+    } catch (error) {
+      console.error('❌ Error fetching expiring policies:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get partial payments due in date range
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Array>} Array of policies with partial payments due
+   */
+  async getPartialPaymentsDue(startDate, endDate) {
+    try {
+      console.log('💰 Fetching partial payments due');
+      
+      const allPolicies = await this.reportsService.getAllPolicies();
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      const partialPayments = allPolicies.filter(policy => {
+        // Check if policy has partial payment form
+        const hasPartialPayments = policy.forma_pago && [
+          'MENSUAL', 'BIMESTRAL', 'TRIMESTRAL', 'CUATRIMESTRAL', 'SEMESTRAL'
+        ].some(form => policy.forma_pago.toUpperCase().includes(form));
+        
+        if (!hasPartialPayments) return false;
+        
+        // Check if next payment is in range
+        if (policy.fecha_proximo_pago) {
+          const nextPayment = new Date(policy.fecha_proximo_pago);
+          return nextPayment >= start && nextPayment <= end;
+        }
+        
+        return false;
+      });
+      
+      console.log(`✅ Found ${partialPayments.length} partial payments due`);
+      return partialPayments;
+    } catch (error) {
+      console.error('❌ Error fetching partial payments:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get user activity statistics
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Object>} User activity stats
+   */
+  async getUserActivityStats(startDate, endDate) {
+    try {
+      console.log('📈 Calculating user activity statistics');
+      
+      const activities = await this.getActivitiesForDateRange(startDate, endDate);
+      
+      const stats = {
+        byUser: {},
+        byAction: {},
+        total: activities.length
+      };
+      
+      activities.forEach(activity => {
+        const user = activity.userName || activity.userEmail || 'Unknown';
+        const action = activity.action;
+        
+        // Count by user
+        if (!stats.byUser[user]) {
+          stats.byUser[user] = {
+            total: 0,
+            email_sent: 0,
+            data_captured: 0,
+            data_updated: 0,
+            pdf_analyzed: 0
+          };
+        }
+        stats.byUser[user].total++;
+        if (stats.byUser[user][action] !== undefined) {
+          stats.byUser[user][action]++;
+        }
+        
+        // Count by action
+        if (!stats.byAction[action]) {
+          stats.byAction[action] = 0;
+        }
+        stats.byAction[action]++;
+      });
+      
+      console.log('✅ User activity stats calculated:', stats);
+      return stats;
+    } catch (error) {
+      console.error('❌ Error calculating user activity stats:', error);
+      return { byUser: {}, byAction: {}, total: 0 };
+    }
+  }
+
+  /**
+   * Generate comprehensive summary data for GPT analysis
+   * @param {Date|string} startDate - Start date
+   * @param {Date|string} endDate - End date
+   * @returns {Promise<Object>} Summary data object
+   */
+  async generateSummaryData(startDate, endDate) {
+    try {
+      console.log('📊 Generating comprehensive summary data');
+      
+      const [
+        activities,
+        expiringPolicies,
+        partialPayments,
+        userStats
+      ] = await Promise.all([
+        this.getActivitiesForDateRange(startDate, endDate),
+        this.getExpiringPolicies(7),
+        this.getPartialPaymentsDue(new Date(), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        this.getUserActivityStats(startDate, endDate)
+      ]);
+      
+      const summaryData = {
+        dateRange: {
+          start: typeof startDate === 'string' ? startDate : startDate.toISOString(),
+          end: typeof endDate === 'string' ? endDate : endDate.toISOString()
+        },
+        activities: {
+          total: activities.length,
+          byAction: userStats.byAction,
+          recent: activities.slice(0, 10) // Most recent 10
+        },
+        expiringPolicies: {
+          total: expiringPolicies.length,
+          policies: expiringPolicies.slice(0, 10), // Top 10 most urgent
+          byInsurer: this.groupByField(expiringPolicies, 'aseguradora')
+        },
+        partialPayments: {
+          total: partialPayments.length,
+          payments: partialPayments.slice(0, 10), // Top 10 most urgent
+          totalAmount: this.calculateTotalAmount(partialPayments)
+        },
+        userActivity: userStats.byUser,
+        summary: {
+          totalActivities: activities.length,
+          totalExpiring: expiringPolicies.length,
+          totalPartialPayments: partialPayments.length,
+          activeUsers: Object.keys(userStats.byUser).length
+        }
+      };
+      
+      console.log('✅ Summary data generated successfully');
+      return summaryData;
+    } catch (error) {
+      console.error('❌ Error generating summary data:', error);
+      return {
+        dateRange: { start: startDate, end: endDate },
+        activities: { total: 0, byAction: {}, recent: [] },
+        expiringPolicies: { total: 0, policies: [], byInsurer: {} },
+        partialPayments: { total: 0, payments: [], totalAmount: 0 },
+        userActivity: {},
+        summary: {
+          totalActivities: 0,
+          totalExpiring: 0,
+          totalPartialPayments: 0,
+          activeUsers: 0
+        }
+      };
+    }
+  }
+
+  /**
+   * Helper: Group array by field
+   */
+  groupByField(array, field) {
+    return array.reduce((acc, item) => {
+      const key = item[field] || 'Unknown';
+      if (!acc[key]) acc[key] = 0;
+      acc[key]++;
+      return acc;
+    }, {});
+  }
+
+  /**
+   * Helper: Calculate total amount from policies
+   */
+  calculateTotalAmount(policies) {
+    return policies.reduce((sum, policy) => {
+      const amount = policy.pago_parcial || policy.prima || policy.pago_total_o_prima_total || 0;
+      return sum + (typeof amount === 'number' ? amount : parseFloat(amount) || 0);
+    }, 0);
+  }
+
+  /**
+   * Get last week's date range (previous Monday to Sunday)
+   * @returns {Object} {startDate, endDate}
+   */
+  getLastWeekRange() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysToLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 + 7;
+    
+    const lastMonday = new Date(today);
+    lastMonday.setDate(today.getDate() - daysToLastMonday);
+    lastMonday.setHours(0, 0, 0, 0);
+    
+    const lastSunday = new Date(lastMonday);
+    lastSunday.setDate(lastMonday.getDate() + 6);
+    lastSunday.setHours(23, 59, 59, 999);
+    
+    return {
+      startDate: lastMonday,
+      endDate: lastSunday
+    };
+  }
+
+  /**
+   * Get last 7 days date range
+   * @returns {Object} {startDate, endDate}
+   */
+  getLast7DaysRange() {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    return { startDate, endDate };
+  }
+}
+
+// Create and export singleton instance
+const activityService = new ActivityService();
+export default activityService;
+

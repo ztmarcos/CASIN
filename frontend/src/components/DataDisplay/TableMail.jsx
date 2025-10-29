@@ -3,6 +3,7 @@ import { API_URL } from '../../config/api.js';
 import DriveSelector from '../Drive/DriveSelector.jsx';
 import { getSenderOptions } from '../../config/users.js';
 import './TableMail.css';
+import activityLogger from '../../utils/activityLogger';
 
 const SENDER_OPTIONS = getSenderOptions();
 
@@ -1033,6 +1034,19 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
         
+        // Log email activity
+        await activityLogger.logEmailSent(
+          emailAddress,
+          emailContent.subject,
+          rowData.sourceTable || rowData.table || 'unknown',
+          {
+            hasAttachments: true,
+            attachmentCount: attachments.length,
+            hasDriveLinks: uploadedFiles.length > 0,
+            messageId: result.messageId
+          }
+        );
+        
         // Show BCC info if sent
         if (result.bccSent) {
           console.log('📧 Copia BCC enviada a:', result.bccSent);
@@ -1071,6 +1085,17 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
 
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
+        
+        // Log email activity
+        await activityLogger.logEmailSent(
+          emailAddress,
+          emailContent.subject,
+          rowData.sourceTable || rowData.table || 'unknown',
+          {
+            hasAttachments: false,
+            messageId: result.messageId
+          }
+        );
         
         // Show BCC info if sent
         if (result.bccSent) {
