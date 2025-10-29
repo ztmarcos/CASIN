@@ -341,41 +341,42 @@ const Actividad = () => {
       {!loading && (
         <div className="activities-list">
           {userActivities.length === 0 ? (
-          <div className="no-activities">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
-              <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-            </svg>
-            <p>{selectedUser.name} no tiene actividades registradas</p>
-            <button onClick={handleCreateTask} className="create-first-activity-btn">
-              Crear primera actividad
-            </button>
-          </div>
-        ) : (
-          userActivities.map(task => (
-            <div key={task.id} className="activity-item">
-              <div className="activity-date-badge">
-                {new Date(task.createdAt).toLocaleDateString('es-MX', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric'
-                })}
-              </div>
-              <div className="activity-content">
-                <h3>{task.title}</h3>
-                {task.description && task.description !== task.title && (
-                  <p>{task.description}</p>
-                )}
-              </div>
-              <button 
-                className="activity-edit-btn"
-                onClick={() => handleEditTask(task)}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                </svg>
+            <div className="no-activities">
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" opacity="0.3">
+                <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+              </svg>
+              <p>{selectedUser.name} no tiene actividades registradas</p>
+              <button onClick={handleCreateTask} className="create-first-activity-btn">
+                Crear primera actividad
               </button>
             </div>
-          ))}
+          ) : (
+            userActivities.map(task => (
+              <div key={task.id} className="activity-item">
+                <div className="activity-date-badge">
+                  {new Date(task.createdAt).toLocaleDateString('es-MX', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                  })}
+                </div>
+                <div className="activity-content">
+                  <h3>{task.title}</h3>
+                  {task.description && task.description !== task.title && (
+                    <p>{task.description}</p>
+                  )}
+                </div>
+                <button 
+                  className="activity-edit-btn"
+                  onClick={() => handleEditTask(task)}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                  </svg>
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
