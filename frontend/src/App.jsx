@@ -356,9 +356,7 @@ function AppRoutes() {
 
       <Route path="/resumen" element={
         <ProtectedRoute requireAdminAccess>
-          <Layout>
-            <Resumen />
-          </Layout>
+          <Resumen />
         </ProtectedRoute>
       } />
       

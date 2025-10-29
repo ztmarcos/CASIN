@@ -50,8 +50,13 @@ const Resumen = () => {
     switch (dateRange) {
       case 'last7days':
         return activityService.getLast7DaysRange();
-      case 'lastweek':
-        return activityService.getLastWeekRange();
+      case 'last15days':
+        const endDate15 = new Date();
+        const startDate15 = new Date();
+        startDate15.setDate(endDate15.getDate() - 15);
+        startDate15.setHours(0, 0, 0, 0);
+        endDate15.setHours(23, 59, 59, 999);
+        return { startDate: startDate15, endDate: endDate15 };
       case 'custom':
         return {
           startDate: new Date(customStartDate),
@@ -166,41 +171,41 @@ const Resumen = () => {
         <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           
           <!-- Header -->
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-            <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 700;">📊 Resumen de Actividad</h1>
-            <p style="color: #e0e7ff; margin: 0; font-size: 18px;">${dateRangeText}</p>
+          <div style="background: #000000; padding: 40px 30px; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 700;">Resumen de Actividad</h1>
+            <p style="color: #cccccc; margin: 0; font-size: 18px;">${dateRangeText}</p>
           </div>
           
           <!-- Summary Stats -->
           <div style="padding: 30px;">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
               
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 20px; text-align: center; color: white;">
+              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
                 <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalActivities}</div>
-                <div style="font-size: 14px; opacity: 0.9;">Total Actividades</div>
+                <div style="font-size: 14px; opacity: 0.8;">Total Actividades</div>
               </div>
               
-              <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 12px; padding: 20px; text-align: center; color: white;">
+              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
                 <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalExpiring}</div>
-                <div style="font-size: 14px; opacity: 0.9;">Pólizas por Vencer</div>
+                <div style="font-size: 14px; opacity: 0.8;">Pólizas por Vencer</div>
               </div>
               
-              <div style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; padding: 20px; text-align: center; color: white;">
+              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
                 <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalPartialPayments}</div>
-                <div style="font-size: 14px; opacity: 0.9;">Pagos Pendientes</div>
+                <div style="font-size: 14px; opacity: 0.8;">Pagos Pendientes</div>
               </div>
               
-              <div style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); border-radius: 12px; padding: 20px; text-align: center; color: white;">
+              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
                 <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.activeUsers}</div>
-                <div style="font-size: 14px; opacity: 0.9;">Usuarios Activos</div>
+                <div style="font-size: 14px; opacity: 0.8;">Usuarios Activos</div>
               </div>
               
             </div>
             
             <!-- GPT Analysis -->
-            <div style="background-color: #f8fafc; border-radius: 12px; padding: 25px; margin-bottom: 30px; border-left: 4px solid #667eea;">
-              <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 22px;">🤖 Análisis Inteligente</h2>
-              <div style="color: #475569; line-height: 1.8; font-size: 15px;">
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 25px; margin-bottom: 30px; border: 1px solid #e5e5e5;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Análisis</h2>
+              <div style="color: #333333; line-height: 1.8; font-size: 15px;">
                 ${gptSummary.summary ? gptSummary.summary.replace(/\n/g, '<br>') : 'No hay análisis disponible'}
               </div>
             </div>
@@ -208,23 +213,23 @@ const Resumen = () => {
             <!-- Expiring Policies -->
             ${summaryData.expiringPolicies.total > 0 ? `
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pólizas por Vencer (Próximos 7 días)</h2>
-              <div style="background-color: #fff7ed; border-radius: 8px; padding: 20px; border: 1px solid #fed7aa;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas por Vencer (Próximos 7 días)</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
-                    <tr style="background-color: #fef3c7; border-bottom: 2px solid #fbbf24;">
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Contratante</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Póliza</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Aseguradora</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Vencimiento</th>
+                    <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Aseguradora</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Vencimiento</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${summaryData.expiringPolicies.policies.slice(0, 5).map(policy => `
-                      <tr style="border-bottom: 1px solid #fed7aa;">
-                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || 'N/A'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || 'N/A'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || 'N/A'}</td>
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${new Date(policy.fecha_fin).toLocaleDateString('es-MX')}</td>
                       </tr>
                     `).join('')}
@@ -237,29 +242,29 @@ const Resumen = () => {
             <!-- Partial Payments -->
             ${summaryData.partialPayments.total > 0 ? `
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 22px;">💰 Pagos Parciales Pendientes</h2>
-              <div style="background-color: #eff6ff; border-radius: 8px; padding: 20px; border: 1px solid #bfdbfe;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pagos Parciales Pendientes</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
                 <table style="width: 100%; border-collapse: collapse;">
                   <thead>
-                    <tr style="background-color: #dbeafe; border-bottom: 2px solid #3b82f6;">
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Contratante</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Póliza</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Forma Pago</th>
-                      <th style="padding: 10px; text-align: left; font-size: 14px;">Próximo Pago</th>
+                    <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma Pago</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Próximo Pago</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${summaryData.partialPayments.payments.slice(0, 5).map(policy => `
-                      <tr style="border-bottom: 1px solid #bfdbfe;">
-                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || 'N/A'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || 'N/A'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.forma_pago || 'N/A'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}</td>
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.forma_pago || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>
                     `).join('')}
                   </tbody>
                 </table>
-                <p style="margin: 15px 0 0 0; color: #1e40af; font-weight: bold;">
+                <p style="margin: 15px 0 0 0; color: #000000; font-weight: bold;">
                   Total estimado: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                 </p>
               </div>
@@ -268,16 +273,16 @@ const Resumen = () => {
             
             <!-- User Activity -->
             <div style="margin-bottom: 30px;">
-              <h2 style="color: #1e293b; margin: 0 0 15px 0; font-size: 22px;">👥 Actividad por Usuario</h2>
-              <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; border: 1px solid #bbf7d0;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Actividad por Usuario</h2>
+              <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
                 ${Object.entries(summaryData.userActivity).map(([user, stats]) => `
-                  <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #bbf7d0;">
-                    <div style="font-weight: bold; color: #166534; margin-bottom: 8px;">${user}</div>
-                    <div style="font-size: 13px; color: #15803d;">
-                      📧 Emails: ${stats.email_sent || 0} | 
-                      📝 Capturas: ${stats.data_captured || 0} | 
-                      ✏️ Actualizaciones: ${stats.data_updated || 0} |
-                      📄 PDFs: ${stats.pdf_analyzed || 0}
+                  <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e5e5e5;">
+                    <div style="font-weight: bold; color: #000000; margin-bottom: 8px;">${user}</div>
+                    <div style="font-size: 13px; color: #666666;">
+                      Emails: ${stats.email_sent || 0} | 
+                      Capturas: ${stats.data_captured || 0} | 
+                      Actualizaciones: ${stats.data_updated || 0} |
+                      PDFs: ${stats.pdf_analyzed || 0}
                     </div>
                   </div>
                 `).join('')}
@@ -287,9 +292,9 @@ const Resumen = () => {
           </div>
           
           <!-- Footer -->
-          <div style="background-color: #f8fafc; padding: 25px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
-            <p style="color: #64748b; margin: 0 0 10px 0; font-size: 14px;">Generado automáticamente por CASIN Seguros CRM</p>
-            <p style="color: #94a3b8; margin: 0; font-size: 12px;">${new Date().toLocaleString('es-MX')}</p>
+          <div style="background-color: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
+            <p style="color: #666666; margin: 0 0 10px 0; font-size: 14px;">Generado por CASIN Seguros CRM</p>
+            <p style="color: #999999; margin: 0; font-size: 12px;">${new Date().toLocaleString('es-MX')}</p>
           </div>
           
         </div>
@@ -305,8 +310,8 @@ const Resumen = () => {
   return (
     <div className="resumen-container">
       <div className="resumen-header">
-        <h1>📊 Resumen de Actividad</h1>
-        <p className="subtitle">Análisis inteligente de actividades y métricas clave</p>
+        <h1>Resumen de Actividad</h1>
+        <p className="subtitle">Análisis de actividades y métricas clave</p>
       </div>
 
       <div className="resumen-controls">
@@ -318,7 +323,7 @@ const Resumen = () => {
             disabled={loading}
           >
             <option value="last7days">Últimos 7 días</option>
-            <option value="lastweek">Semana anterior (Lun-Dom)</option>
+            <option value="last15days">Últimos 15 días</option>
             <option value="custom">Personalizado</option>
           </select>
         </div>
@@ -352,7 +357,7 @@ const Resumen = () => {
             onClick={generateResumen}
             disabled={loading || (dateRange === 'custom' && (!customStartDate || !customEndDate))}
           >
-            {loading ? '⏳ Generando...' : '🔄 Generar Resumen'}
+            {loading ? 'Generando...' : 'Generar Resumen'}
           </button>
 
           {gptSummary && (
@@ -361,7 +366,7 @@ const Resumen = () => {
               onClick={sendEmailReport}
               disabled={sendingEmail}
             >
-              {sendingEmail ? '📤 Enviando...' : '📧 Enviar Email'}
+              {sendingEmail ? 'Enviando...' : 'Enviar Email'}
             </button>
           )}
         </div>
@@ -409,7 +414,7 @@ const Resumen = () => {
 
           {/* GPT Analysis */}
           <div className="gpt-analysis-card">
-            <h2>🤖 Análisis Inteligente</h2>
+            <h2>Análisis Inteligente</h2>
             <div className="analysis-content">
               {gptSummary.summary ? (
                 <p>{gptSummary.summary}</p>
@@ -422,7 +427,7 @@ const Resumen = () => {
           {/* Expiring Policies */}
           {summaryData.expiringPolicies.total > 0 && (
             <div className="section-card warning">
-              <h2>⚠️ Pólizas por Vencer (Próximos 7 días)</h2>
+              <h2>Pólizas por Vencer (Próximos 7 días)</h2>
               <div className="table-container">
                 <table className="data-table">
                   <thead>
@@ -436,9 +441,9 @@ const Resumen = () => {
                   <tbody>
                     {summaryData.expiringPolicies.policies.slice(0, 10).map((policy, idx) => (
                       <tr key={idx}>
-                        <td>{policy.nombre_contratante || 'N/A'}</td>
-                        <td>{policy.numero_poliza || 'N/A'}</td>
-                        <td>{policy.aseguradora || 'N/A'}</td>
+                        <td>{policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td>{policy.numero_poliza || '-'}</td>
+                        <td>{policy.aseguradora || '-'}</td>
                         <td>{new Date(policy.fecha_fin).toLocaleDateString('es-MX')}</td>
                       </tr>
                     ))}
@@ -451,7 +456,7 @@ const Resumen = () => {
           {/* Partial Payments */}
           {summaryData.partialPayments.total > 0 && (
             <div className="section-card info">
-              <h2>💰 Pagos Parciales Pendientes</h2>
+              <h2>Pagos Parciales Pendientes</h2>
               <div className="table-container">
                 <table className="data-table">
                   <thead>
@@ -465,10 +470,10 @@ const Resumen = () => {
                   <tbody>
                     {summaryData.partialPayments.payments.slice(0, 10).map((policy, idx) => (
                       <tr key={idx}>
-                        <td>{policy.nombre_contratante || 'N/A'}</td>
-                        <td>{policy.numero_poliza || 'N/A'}</td>
-                        <td>{policy.forma_pago || 'N/A'}</td>
-                        <td>{policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : 'N/A'}</td>
+                        <td>{policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td>{policy.numero_poliza || '-'}</td>
+                        <td>{policy.forma_pago || '-'}</td>
+                        <td>{policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -483,16 +488,16 @@ const Resumen = () => {
 
           {/* User Activity */}
           <div className="section-card success">
-            <h2>👥 Actividad por Usuario</h2>
+            <h2>Actividad por Usuario</h2>
             <div className="user-activity-list">
               {Object.entries(summaryData.userActivity).map(([user, stats]) => (
                 <div key={user} className="user-activity-item">
                   <div className="user-name">{user}</div>
                   <div className="user-stats">
-                    <span>📧 Emails: {stats.email_sent || 0}</span>
-                    <span>📝 Capturas: {stats.data_captured || 0}</span>
-                    <span>✏️ Actualizaciones: {stats.data_updated || 0}</span>
-                    <span>📄 PDFs: {stats.pdf_analyzed || 0}</span>
+                    <span>Emails: {stats.email_sent || 0}</span>
+                    <span>Capturas: {stats.data_captured || 0}</span>
+                    <span>Actualizaciones: {stats.data_updated || 0}</span>
+                    <span>PDFs: {stats.pdf_analyzed || 0}</span>
                   </div>
                 </div>
               ))}
@@ -503,7 +508,6 @@ const Resumen = () => {
 
       {!loading && !gptSummary && (
         <div className="empty-state">
-          <div className="empty-icon">📊</div>
           <h3>No hay resumen generado</h3>
           <p>Selecciona un rango de fechas y haz clic en "Generar Resumen" para comenzar</p>
         </div>

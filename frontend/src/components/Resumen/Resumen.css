@@ -2,7 +2,7 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 30px;
-  background-color: #f8fafc;
+  background-color: #ffffff;
   min-height: 100vh;
 }
 
@@ -10,10 +10,10 @@
   text-align: center;
   margin-bottom: 40px;
   padding: 30px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
+  background: #000000;
+  border-radius: 8px;
   color: white;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+  border: 1px solid #333333;
 }
 
 .resumen-header h1 {
@@ -25,14 +25,14 @@
 .resumen-header .subtitle {
   margin: 0;
   font-size: 18px;
-  opacity: 0.9;
+  opacity: 0.7;
 }
 
 .resumen-controls {
-  background: white;
+  background: #ffffff;
   padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
   margin-bottom: 30px;
 }
 
@@ -126,25 +126,23 @@
 }
 
 .action-buttons button.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
   color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  border: 1px solid #333333;
 }
 
 .action-buttons button.primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  background: #333333;
 }
 
 .action-buttons button.secondary {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .action-buttons button.secondary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
+  background: #f5f5f5;
 }
 
 .action-buttons button:disabled {
@@ -231,19 +229,23 @@
 }
 
 .stat-card.purple {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000000;
+  border: 1px solid #333333;
 }
 
 .stat-card.pink {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: #000000;
+  border: 1px solid #333333;
 }
 
 .stat-card.blue {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  background: #000000;
+  border: 1px solid #333333;
 }
 
 .stat-card.green {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: #000000;
+  border: 1px solid #333333;
 }
 
 .stat-value {
@@ -259,11 +261,10 @@
 }
 
 .gpt-analysis-card {
-  background: white;
+  background: #ffffff;
   padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  border-left: 5px solid #667eea;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
 }
 
 .gpt-analysis-card h2 {
@@ -284,31 +285,31 @@
 }
 
 .section-card {
-  background: white;
+  background: #ffffff;
   padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
 }
 
 .section-card h2 {
   margin: 0 0 20px 0;
-  color: #1e293b;
+  color: #000000;
   font-size: 24px;
 }
 
 .section-card.warning {
-  border-left: 5px solid #f59e0b;
-  background: #fffbeb;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
 }
 
 .section-card.info {
-  border-left: 5px solid #3b82f6;
-  background: #eff6ff;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
 }
 
 .section-card.success {
-  border-left: 5px solid #10b981;
-  background: #f0fdf4;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
 }
 
 .table-container {
