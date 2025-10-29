@@ -286,7 +286,7 @@ const Resumen = () => {
                   <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 3px solid #000000; border-radius: 4px;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                       <span style="font-weight: bold; color: #000000;">${activity.userName}</span>
-                      <span style="font-size: 12px; color: #666666;">${new Date(activity.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      <span style="font-size: 12px; color: #666666;">${activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) ? new Date(activity.createdAt).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Hoy'}</span>
                     </div>
                     <div style="font-size: 14px; font-weight: 600; color: #333333; margin-bottom: 5px;">${activity.title}</div>
                     ${activity.description && activity.description !== activity.title ? `
@@ -529,11 +529,13 @@ const Resumen = () => {
                     <div className="activity-header">
                       <span className="activity-user">{activity.userName}</span>
                       <span className="activity-date">
-                        {new Date(activity.createdAt).toLocaleDateString('es-MX', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
+                        {activity.createdAt && !isNaN(new Date(activity.createdAt).getTime()) 
+                          ? new Date(activity.createdAt).toLocaleDateString('es-MX', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })
+                          : 'Hoy'}
                       </span>
                     </div>
                     <div className="activity-title">{activity.title}</div>
