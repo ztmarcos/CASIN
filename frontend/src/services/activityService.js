@@ -313,11 +313,15 @@ class ActivityService {
       const allTasks = await actividadService.getAllTasks(false); // Don't use cache
       console.log(`📊 Found ${allTasks.length} total tasks from actividadService`);
       
-      // Filter by date range and exclude cancelled - SIMPLE VERSION
+      // Filter by date range and exclude cancelled - CLEAN VERSION
       const activities = allTasks
         .filter(task => {
-          // Solo excluir canceladas, no filtrar por fecha por ahora
-          return task.status !== 'cancelled';
+          // Solo excluir canceladas y vacías
+          return task.status !== 'cancelled' && 
+                 task.title && 
+                 task.title.trim() !== '' &&
+                 task.description && 
+                 task.description.trim() !== '';
         })
         .map(task => ({
           id: task.id,
@@ -327,7 +331,15 @@ class ActivityService {
           status: task.status,
           createdAt: task.createdAt,
           updatedAt: task.updatedAt || task.createdAt
-        }));
+        }))
+        // Eliminar duplicados por título y usuario
+        .filter((task, index, array) => {
+          return array.findIndex(t => 
+            t.title === task.title && 
+            t.userName === task.userName &&
+            t.createdAt === task.createdAt
+          ) === index;
+        });
       
       console.log(`✅ Found ${activities.length} team activities in date range (excluding cancelled)`);
       
