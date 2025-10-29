@@ -6505,7 +6505,44 @@ const scheduleFridayReport = () => {
           
           if (response.ok) {
             const result = await response.json();
-            console.log('✅ Weekly report generated and sent successfully');
+            console.log('✅ Weekly report generated successfully');
+            
+            // Now send the email with the generated report
+            try {
+              const emailResponse = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/email/send-welcome`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  to: 'ztmarcos@gmail.com,marcoszavala09@gmail.com',
+                  subject: `Resumen Semanal - ${new Date().toLocaleDateString('es-MX')}`,
+                  htmlContent: `
+                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+                      <h1 style="color: #000000; text-align: center; margin-bottom: 30px;">Resumen Semanal de Actividades</h1>
+                      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h2 style="color: #000000; margin-top: 0;">Análisis Inteligente</h2>
+                        <div style="white-space: pre-line; line-height: 1.6;">${result.summary}</div>
+                      </div>
+                      <div style="text-align: center; margin-top: 30px; color: #666666; font-size: 12px;">
+                        Generado automáticamente el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}
+                      </div>
+                    </div>
+                  `,
+                  from: 'casinseguros@gmail.com',
+                  fromPass: 'espajcgariyhsboq',
+                  fromName: 'CASIN Seguros - Resumen Automático'
+                })
+              });
+              
+              if (emailResponse.ok) {
+                console.log('✅ Weekly report email sent successfully');
+              } else {
+                console.error('❌ Failed to send weekly report email:', emailResponse.status);
+              }
+            } catch (emailError) {
+              console.error('❌ Error sending weekly report email:', emailError);
+            }
             
             // Log successful execution
             await db.collection('activity_logs').add({
