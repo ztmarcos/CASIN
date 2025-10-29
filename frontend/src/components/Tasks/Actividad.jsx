@@ -401,10 +401,12 @@ const Actividad = () => {
                     {getStatusText(task.status || 'pending')}
                   </button>
                   <div className="activity-date-badge">
-                    {new Date(task.createdAt).toLocaleDateString('es-MX', {
-                      day: '2-digit',
-                      month: 'short'
-                    })}
+                    {task.createdAt && !isNaN(new Date(task.createdAt).getTime()) 
+                      ? new Date(task.createdAt).toLocaleDateString('es-MX', {
+                          day: '2-digit',
+                          month: 'short'
+                        })
+                      : 'Hoy'}
                   </div>
                 </div>
                 
