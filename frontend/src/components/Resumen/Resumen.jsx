@@ -127,12 +127,15 @@ const Resumen = () => {
       // Create email HTML
       const emailHTML = createEmailHTML(gptSummary, summaryData, dateRangeText);
       
-      // Send email
+      // Send email (TEST: solo a ztmarcos por ahora)
+      // PRODUCCIÓN: ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com']
+      const recipients = ['ztmarcos@gmail.com']; // TEST
+      
       const response = await fetch(`${API_URL}/email/send-welcome`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'ztmarcos@gmail.com',
+          to: recipients.join(','), // Multiple recipients separated by comma
           subject: `Resumen Semanal de Actividad - ${dateRangeText}`,
           htmlContent: emailHTML,
           from: 'casinseguros@gmail.com',
@@ -148,7 +151,7 @@ const Resumen = () => {
       const result = await response.json();
       console.log('✅ Email sent:', result);
       
-      toast.success('Email enviado exitosamente a ztmarcos@gmail.com');
+      toast.success(`Email enviado exitosamente a ${recipients.join(', ')}`);
       
     } catch (error) {
       console.error('❌ Error sending email:', error);
