@@ -375,8 +375,7 @@ const Actividad = () => {
                 </svg>
               </button>
             </div>
-          ))
-          }
+          ))}
         </div>
       )}
 
