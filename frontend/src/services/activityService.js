@@ -461,11 +461,25 @@ class ActivityService {
           
           if (recordId && tableName) {
             console.log(`🔍 Looking up policy ${recordId} in table ${tableName}`);
+            console.log(`📊 Activity details:`, {
+              recordId,
+              tableName,
+              dataPreview: act.details?.dataPreview,
+              userName: act.userName
+            });
             
             // Get the policy details from Firebase
             const policyDoc = await this.firebaseService.getDocument(tableName, recordId);
             
             if (policyDoc) {
+              console.log(`✅ Policy document found:`, {
+                numero_poliza: policyDoc.numero_poliza,
+                contratante: policyDoc.nombre_contratante || policyDoc.contratante,
+                aseguradora: policyDoc.aseguradora,
+                ramo: policyDoc.ramo,
+                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza
+              });
+              
               capturedPolicies.push({
                 id: recordId,
                 numero_poliza: policyDoc.numero_poliza || act.details?.dataPreview?.[0] || 'N/A',
@@ -478,9 +492,9 @@ class ActivityService {
                 capturedAt: act.timestamp,
                 fieldCount: act.details?.fieldCount || 0
               });
-              console.log(`✅ Found policy details for ${recordId}`);
+              console.log(`✅ Added policy details for ${recordId}`);
             } else {
-              console.log(`⚠️ Policy ${recordId} not found in ${tableName}`);
+              console.log(`⚠️ Policy ${recordId} not found in ${tableName}, using fallback data`);
               // Fallback to activity data if policy not found
               capturedPolicies.push({
                 id: recordId,
@@ -525,7 +539,7 @@ class ActivityService {
   }
 
   /**
-   * Get cancelled policies (CAP/CFP inactive)
+   * Get cancelled policies (both CAP and CFP inactive)
    * @returns {Promise<Array>} Array of cancelled policies
    */
   async getCancelledPolicies() {
@@ -535,9 +549,9 @@ class ActivityService {
       // Get all policies from Firebase
       const allPolicies = await this.reportsService.getAllPolicies();
       
-      // Filter policies with CAP or CFP inactive
+      // Filter policies with BOTH CAP and CFP inactive (truly cancelled)
       const cancelledPolicies = allPolicies.filter(policy => 
-        policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo'
+        policy.estado_cap === 'Inactivo' && policy.estado_cfp === 'Inactivo'
       ).map(policy => ({
         id: policy.id || policy.firebase_doc_id,
         numero_poliza: policy.numero_poliza,
@@ -549,7 +563,7 @@ class ActivityService {
         fecha_fin: policy.fecha_fin
       }));
       
-      console.log(`✅ Found ${cancelledPolicies.length} cancelled policies`);
+      console.log(`✅ Found ${cancelledPolicies.length} truly cancelled policies (both CAP and CFP inactive)`);
       return cancelledPolicies;
     } catch (error) {
       console.error('❌ Error fetching cancelled policies:', error);
