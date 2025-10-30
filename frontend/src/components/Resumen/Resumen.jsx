@@ -180,29 +180,6 @@ const Resumen = () => {
           
           <!-- Summary Stats -->
           <div style="padding: 30px;">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-              
-              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
-                <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalActivities}</div>
-                <div style="font-size: 14px; opacity: 0.8;">Total Actividades</div>
-              </div>
-              
-              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
-                <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalExpiring}</div>
-                <div style="font-size: 14px; opacity: 0.8;">Pólizas por Vencer</div>
-              </div>
-              
-              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
-                <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.totalPartialPayments}</div>
-                <div style="font-size: 14px; opacity: 0.8;">Pagos Pendientes</div>
-              </div>
-              
-              <div style="background: #000000; border-radius: 8px; padding: 20px; text-align: center; color: white; border: 1px solid #333333;">
-                <div style="font-size: 36px; font-weight: bold; margin-bottom: 5px;">${summaryData.summary.activeUsers}</div>
-                <div style="font-size: 14px; opacity: 0.8;">Usuarios Activos</div>
-              </div>
-              
-            </div>
             
             <!-- GPT Analysis -->
             <div style="background-color: #ffffff; border-radius: 8px; padding: 25px; margin-bottom: 30px; border: 1px solid #e5e5e5;">
@@ -491,25 +468,6 @@ const Resumen = () => {
 
       {gptSummary && summaryData && !loading && (
         <div className="resumen-content">
-          {/* Summary Stats Cards */}
-          <div className="stats-grid">
-            <div className="stat-card purple">
-              <div className="stat-value">{summaryData.summary.totalActivities}</div>
-              <div className="stat-label">Total Actividades</div>
-            </div>
-            <div className="stat-card pink">
-              <div className="stat-value">{summaryData.summary.totalExpiring}</div>
-              <div className="stat-label">Pólizas por Vencer</div>
-            </div>
-            <div className="stat-card blue">
-              <div className="stat-value">{summaryData.summary.totalPartialPayments}</div>
-              <div className="stat-label">Pagos Pendientes</div>
-            </div>
-            <div className="stat-card green">
-              <div className="stat-value">{summaryData.summary.activeUsers}</div>
-              <div className="stat-label">Usuarios Activos</div>
-            </div>
-          </div>
 
           {/* GPT Analysis */}
           <div className="gpt-analysis-card">
