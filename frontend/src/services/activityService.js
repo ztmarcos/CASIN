@@ -489,10 +489,15 @@ class ActivityService {
                 ramo: policyDoc.ramo
               });
               console.log(`📅 All date fields found:`, dateFields.map(key => `${key}: ${policyDoc[key]}`));
+              console.log(`📅 Date fields details:`, dateFields.reduce((acc, key) => {
+                acc[key] = policyDoc[key];
+                return acc;
+              }, {}));
               console.log(`🔍 Full policy document:`, policyDoc);
               
               // Buscar la fecha de inicio en varios campos posibles
-              const fechaInicio = policyDoc.fecha_inicio || 
+              const fechaInicio = policyDoc.vigencia_inicio || 
+                                policyDoc.fecha_inicio || 
                                 policyDoc.fecha_inicio_poliza || 
                                 policyDoc.fecha_inicio_vigencia ||
                                 policyDoc.fecha_vigencia ||
