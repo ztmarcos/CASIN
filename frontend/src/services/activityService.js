@@ -474,19 +474,22 @@ class ActivityService {
             const policyDoc = await this.firebaseService.getDocumentById(tableName, recordId);
             
             if (policyDoc) {
-              console.log(`✅ Policy document found:`, {
+              // Debug: mostrar todos los campos de fecha disponibles
+              const dateFields = Object.keys(policyDoc).filter(key => 
+                key.toLowerCase().includes('fecha') || 
+                key.toLowerCase().includes('date') ||
+                key.toLowerCase().includes('inicio')
+              );
+              
+              console.log(`✅ Policy document found for ${recordId}:`);
+              console.log(`📋 Basic info:`, {
                 numero_poliza: policyDoc.numero_poliza,
                 contratante: policyDoc.nombre_contratante || policyDoc.contratante,
                 aseguradora: policyDoc.aseguradora,
-                ramo: policyDoc.ramo,
-                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza,
-                // Debug: mostrar todos los campos de fecha disponibles
-                allDateFields: Object.keys(policyDoc).filter(key => 
-                  key.toLowerCase().includes('fecha') || 
-                  key.toLowerCase().includes('date') ||
-                  key.toLowerCase().includes('inicio')
-                ).map(key => `${key}: ${policyDoc[key]}`)
+                ramo: policyDoc.ramo
               });
+              console.log(`📅 All date fields found:`, dateFields.map(key => `${key}: ${policyDoc[key]}`));
+              console.log(`🔍 Full policy document:`, policyDoc);
               
               // Buscar la fecha de inicio en varios campos posibles
               const fechaInicio = policyDoc.fecha_inicio || 
