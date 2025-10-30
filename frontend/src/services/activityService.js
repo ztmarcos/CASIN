@@ -479,8 +479,25 @@ class ActivityService {
                 contratante: policyDoc.nombre_contratante || policyDoc.contratante,
                 aseguradora: policyDoc.aseguradora,
                 ramo: policyDoc.ramo,
-                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza
+                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza,
+                // Debug: mostrar todos los campos de fecha disponibles
+                allDateFields: Object.keys(policyDoc).filter(key => 
+                  key.toLowerCase().includes('fecha') || 
+                  key.toLowerCase().includes('date') ||
+                  key.toLowerCase().includes('inicio')
+                ).map(key => `${key}: ${policyDoc[key]}`)
               });
+              
+              // Buscar la fecha de inicio en varios campos posibles
+              const fechaInicio = policyDoc.fecha_inicio || 
+                                policyDoc.fecha_inicio_poliza || 
+                                policyDoc.fecha_inicio_vigencia ||
+                                policyDoc.fecha_vigencia ||
+                                policyDoc.fecha_inicio_contrato ||
+                                policyDoc.fecha_contrato ||
+                                policyDoc.fecha_emision ||
+                                policyDoc.fecha_efecto ||
+                                'N/A';
               
               capturedPolicies.push({
                 id: recordId,
@@ -488,13 +505,13 @@ class ActivityService {
                 contratante: policyDoc.nombre_contratante || policyDoc.contratante || 'N/A',
                 aseguradora: policyDoc.aseguradora || 'N/A',
                 ramo: policyDoc.ramo || tableName,
-                fecha_inicio: policyDoc.fecha_inicio || policyDoc.fecha_inicio_poliza || 'N/A',
+                fecha_inicio: fechaInicio,
                 tableName: tableName,
                 capturedBy: act.userName,
                 capturedAt: act.timestamp,
                 fieldCount: act.details?.fieldCount || 0
               });
-              console.log(`✅ Added policy details for ${recordId}`);
+              console.log(`✅ Added policy details for ${recordId} with fecha_inicio: ${fechaInicio}`);
             } else {
               console.log(`⚠️ Policy ${recordId} not found in ${tableName}, using fallback data`);
               // Fallback to activity data if policy not found
