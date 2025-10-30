@@ -1,5 +1,6 @@
 import { API_URL } from '../config/api.js';
 import firebaseReportsService from './firebaseReportsService';
+import firebaseService from './firebaseService';
 
 /**
  * Activity Service
@@ -9,6 +10,7 @@ import firebaseReportsService from './firebaseReportsService';
 class ActivityService {
   constructor() {
     this.reportsService = firebaseReportsService;
+    this.firebaseService = firebaseService;
   }
 
   /**
@@ -469,7 +471,7 @@ class ActivityService {
             });
             
             // Get the policy details from Firebase
-            const policyDoc = await this.firebaseService.getDocument(tableName, recordId);
+            const policyDoc = await this.firebaseService.getDocumentById(tableName, recordId);
             
             if (policyDoc) {
               console.log(`✅ Policy document found:`, {
