@@ -102,11 +102,18 @@ class FirebaseTaskService {
       const q = query(tasksCollection, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       
-      const tasks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        firebase_doc_id: doc.id
-      }));
+      const tasks = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firebase Timestamps to JavaScript Date objects
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
+          firebase_doc_id: doc.id
+        };
+      });
 
       if (useCache) {
         this.setCacheData(cacheKey, tasks);
@@ -160,12 +167,17 @@ class FirebaseTaskService {
       // Clean the input data
       const cleanTaskData = this.cleanDataForFirebase(taskData);
 
+      // Use the provided createdAt if available, otherwise use current time
+      const createdAtDate = cleanTaskData.createdAt 
+        ? (cleanTaskData.createdAt instanceof Date ? cleanTaskData.createdAt : new Date(cleanTaskData.createdAt))
+        : now;
+
       const newTask = this.cleanDataForFirebase({
         ...cleanTaskData,
         status: cleanTaskData.status || 'pending',
         priority: cleanTaskData.priority || 'medium',
         tags: cleanTaskData.tags || [],
-        createdAt: Timestamp.fromDate(now),
+        createdAt: Timestamp.fromDate(createdAtDate),
         updatedAt: Timestamp.fromDate(now),
         dueDate: cleanTaskData.dueDate ? Timestamp.fromDate(new Date(cleanTaskData.dueDate)) : null
       });
@@ -202,11 +214,23 @@ class FirebaseTaskService {
       const cleanUpdateData = this.cleanDataForFirebase(updateData);
 
       const taskRef = doc(db, this.collectionName, taskId);
-      const updatedData = this.cleanDataForFirebase({
+      
+      // Prepare update data
+      const dataToUpdate = {
         ...cleanUpdateData,
         updatedAt: Timestamp.fromDate(new Date()),
         dueDate: cleanUpdateData.dueDate ? Timestamp.fromDate(new Date(cleanUpdateData.dueDate)) : null
-      });
+      };
+
+      // If createdAt is provided, convert it to Timestamp
+      if (cleanUpdateData.createdAt) {
+        const createdAtDate = cleanUpdateData.createdAt instanceof Date 
+          ? cleanUpdateData.createdAt 
+          : new Date(cleanUpdateData.createdAt);
+        dataToUpdate.createdAt = Timestamp.fromDate(createdAtDate);
+      }
+
+      const updatedData = this.cleanDataForFirebase(dataToUpdate);
 
       console.log('🧹 Cleaned update data:', updatedData);
 
@@ -259,9 +283,14 @@ class FirebaseTaskService {
       const docSnapshot = await getDoc(taskRef);
 
       if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
         const task = {
           id: docSnapshot.id,
-          ...docSnapshot.data(),
+          ...data,
+          // Convert Firebase Timestamps to JavaScript Date objects
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
           firebase_doc_id: docSnapshot.id
         };
         
@@ -293,11 +322,18 @@ class FirebaseTaskService {
       );
       
       const snapshot = await getDocs(q);
-      const tasks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        firebase_doc_id: doc.id
-      }));
+      const tasks = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firebase Timestamps to JavaScript Date objects
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
+          firebase_doc_id: doc.id
+        };
+      });
 
       console.log(`✅ Found ${tasks.length} tasks with status: ${status}`);
       return tasks;
@@ -323,11 +359,18 @@ class FirebaseTaskService {
       );
       
       const snapshot = await getDocs(q);
-      const tasks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        firebase_doc_id: doc.id
-      }));
+      const tasks = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firebase Timestamps to JavaScript Date objects
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : data.createdAt,
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : data.updatedAt,
+          dueDate: data.dueDate?.toDate ? data.dueDate.toDate() : data.dueDate,
+          firebase_doc_id: doc.id
+        };
+      });
 
       console.log(`✅ Found ${tasks.length} tasks with priority: ${priority}`);
       return tasks;

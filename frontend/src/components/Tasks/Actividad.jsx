@@ -401,12 +401,22 @@ const Actividad = () => {
                     {getStatusText(task.status || 'pending')}
                   </button>
                   <div className="activity-date-badge">
-                    {task.createdAt && !isNaN(new Date(task.createdAt).getTime()) 
-                      ? new Date(task.createdAt).toLocaleDateString('es-MX', {
+                    {(() => {
+                      if (!task.createdAt) return 'Hoy';
+                      
+                      try {
+                        const date = task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt);
+                        if (isNaN(date.getTime())) return 'Hoy';
+                        
+                        return date.toLocaleDateString('es-MX', {
                           day: '2-digit',
                           month: 'short'
-                        })
-                      : 'Hoy'}
+                        });
+                      } catch (error) {
+                        console.error('Error formatting date:', error, task.createdAt);
+                        return 'Hoy';
+                      }
+                    })()}
                   </div>
                 </div>
                 
