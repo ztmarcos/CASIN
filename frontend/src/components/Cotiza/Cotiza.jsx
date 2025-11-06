@@ -614,7 +614,10 @@ INSTRUCCIÓN FINAL CRÍTICA:
       setDetectedPolicyType(policyType);
       
       console.log('📋 Tipo de póliza detectado:', policyType);
-      toast.info(`📋 Tipo detectado: ${policyType === 'gmm' ? 'Gastos Médicos Mayores' : policyType === 'hogar' ? 'Hogar' : 'Autos'}`);
+      toast(`📋 Tipo detectado: ${policyType === 'gmm' ? 'Gastos Médicos Mayores' : policyType === 'hogar' ? 'Hogar' : 'Autos'}`, {
+        icon: '📋',
+        duration: 3000
+      });
 
       // Obtener prompt específico según el tipo de póliza
       const dynamicPrompt = getPolicyTypePrompt(policyType, fileNames, fileCount, combinedText);
