@@ -138,7 +138,7 @@ const Resumen = () => {
           subject: `Resumen Semanal de Actividad - ${dateRangeText}`,
           htmlContent: emailHTML,
           from: 'casinseguros@gmail.com',
-          fromPass: process.env.GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+          fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
           fromName: 'CASIN Seguros - Resumen Automático'
         })
       });

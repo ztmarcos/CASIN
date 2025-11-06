@@ -44,7 +44,24 @@ const GoogleLogin = () => {
       
     } catch (error) {
       console.error('❌ Login error:', error);
-      setError('Error al iniciar sesión: ' + error.message);
+      
+      // Detectar error específico de API key restrictions
+      const isApiKeyBlocked = 
+        error.code === 'auth/requests-from-referer-are-blocked' ||
+        error.message?.includes('are blocked') ||
+        error.message?.includes('API_KEY_HTTP_REFERRER_BLOCKED') ||
+        error.message?.includes('PERMISSION_DENIED');
+      
+      if (isApiKeyBlocked) {
+        const currentDomain = window.location.origin;
+        setError(
+          `Error de configuración de Firebase: El dominio ${currentDomain} no está permitido en las restricciones del API key. ` +
+          `Por favor, agrega este dominio en la consola de Firebase (Credentials → API Key → HTTP referrers). ` +
+          `Consulta la documentación FIREBASE_API_KEY_SETUP.md para más detalles.`
+        );
+      } else {
+        setError('Error al iniciar sesión: ' + error.message);
+      }
     } finally {
       setLoading(false);
     }
