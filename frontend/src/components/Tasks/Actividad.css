@@ -475,6 +475,13 @@
   background-color: #e0e0e0;
 }
 
+.activity-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-end;
+}
+
 .activity-date-badge {
   background-color: #000000;
   color: #ffffff;
@@ -484,6 +491,23 @@
   font-weight: 600;
   white-space: nowrap;
   text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.activity-date-badge.created {
+  background-color: #000000;
+}
+
+.activity-date-badge.updated {
+  background-color: #666666;
+}
+
+.activity-date-badge .date-label {
+  font-size: 0.65rem;
+  opacity: 0.8;
+  font-weight: 500;
 }
 
 .activity-content {

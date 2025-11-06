@@ -7,14 +7,29 @@ const ActivityModal = ({ activity, selectedUser, onSave, onClose }) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('pending');
+  const [showHistory, setShowHistory] = useState(false);
   const textareaRef = useRef(null);
   
-  const today = new Date();
-  const formattedDate = today.toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
+  // Obtener historial de la actividad
+  const history = activity?.history || [];
+
+  // Formatear fecha de la actividad
+  const getActivityDate = () => {
+    if (!activity?.createdAt) return 'Nueva Actividad';
+    
+    try {
+      const date = activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt);
+      if (isNaN(date.getTime())) return 'Actividad';
+      
+      return date.toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return 'Actividad';
+    }
+  };
 
   useEffect(() => {
     if (activity) {
@@ -59,12 +74,18 @@ const ActivityModal = ({ activity, selectedUser, onSave, onClose }) => {
 
     // Log daily activity to activity logs
     try {
+      const logDate = new Date(activityData.createdAt).toLocaleDateString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+      
       await activityLogger.logDailyActivity(
         activityData.title,
         activityData.description,
         {
           createdAt: activityData.createdAt,
-          date: formattedDate
+          date: logDate
         }
       );
       console.log('✅ Daily activity logged');
@@ -129,7 +150,7 @@ const ActivityModal = ({ activity, selectedUser, onSave, onClose }) => {
     <div className="activity-modal-overlay" onClick={onClose}>
       <div className="activity-modal-container" onClick={(e) => e.stopPropagation()}>
         <div className="activity-modal-header">
-          <h2>Actividad de {formattedDate}</h2>
+          <h2>{activity ? `Actividad del ${getActivityDate()}` : 'Nueva Actividad'}</h2>
           <button className="activity-modal-close" onClick={onClose}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -169,6 +190,63 @@ const ActivityModal = ({ activity, selectedUser, onSave, onClose }) => {
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
           />
+
+          {/* Historial de Actividad */}
+          {activity && history.length > 0 && (
+            <div className="activity-history-section">
+              <button 
+                className="history-toggle-btn"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+                </svg>
+                Historial ({history.length})
+                <svg 
+                  width="12" 
+                  height="12" 
+                  viewBox="0 0 24 24" 
+                  fill="currentColor"
+                  style={{ transform: showHistory ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}
+                >
+                  <path d="M7 10l5 5 5-5z"/>
+                </svg>
+              </button>
+
+              {showHistory && (
+                <div className="activity-history-list">
+                  {history.map((entry, index) => (
+                    <div key={index} className="history-entry">
+                      <div className="history-entry-header">
+                        <span className="history-action">{entry.action}</span>
+                        <span className="history-date">
+                          {new Date(entry.timestamp).toLocaleString('es-MX', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      {entry.changes && (
+                        <div className="history-changes">
+                          {entry.changes.map((change, idx) => (
+                            <div key={idx} className="history-change-item">
+                              <strong>{change.field}:</strong> {change.oldValue} → {change.newValue}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {entry.user && (
+                        <div className="history-user">Por: {entry.user}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="activity-modal-footer">

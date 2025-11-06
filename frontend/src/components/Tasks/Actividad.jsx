@@ -177,12 +177,38 @@ const Actividad = () => {
   const handleStatusChange = async (taskId, newStatus) => {
     try {
       console.log(`🔄 Changing status of task ${taskId} to ${newStatus}`);
-      await actividadService.updateTask(taskId, { status: newStatus });
+      
+      // Encontrar la tarea actual para obtener el estado anterior
+      const currentTask = userActivities.find(task => task.id === taskId);
+      const oldStatus = currentTask?.status || 'pending';
+      const currentUser = user?.email || user?.name || 'Usuario';
+      
+      // Crear entrada de historial para el cambio de estado
+      const historyEntry = {
+        action: 'Estado cambiado',
+        timestamp: new Date().toISOString(),
+        user: currentUser,
+        changes: [{
+          field: 'Estado',
+          oldValue: getStatusText(oldStatus),
+          newValue: getStatusText(newStatus)
+        }]
+      };
+
+      // Actualizar con el nuevo estado y agregar al historial
+      await actividadService.updateTask(taskId, { 
+        status: newStatus,
+        history: [...(currentTask?.history || []), historyEntry]
+      });
       
       // Update local state immediately for better UX
       setUserActivities(prevActivities => 
         prevActivities.map(task => 
-          task.id === taskId ? { ...task, status: newStatus } : task
+          task.id === taskId ? { 
+            ...task, 
+            status: newStatus,
+            history: [...(task.history || []), historyEntry]
+          } : task
         )
       );
       
@@ -218,20 +244,52 @@ const Actividad = () => {
   const handleTaskSave = async (taskData) => {
     try {
       let savedTask;
+      const currentUser = user?.email || user?.name || 'Usuario';
       
       if (editingTask) {
+        // Detectar cambios para el historial
+        const changes = [];
+        if (editingTask.description !== taskData.description) {
+          changes.push({
+            field: 'Descripción',
+            oldValue: editingTask.description?.substring(0, 50) + '...' || 'Sin descripción',
+            newValue: taskData.description?.substring(0, 50) + '...' || 'Sin descripción'
+          });
+        }
+        if (editingTask.status !== taskData.status) {
+          changes.push({
+            field: 'Estado',
+            oldValue: getStatusText(editingTask.status),
+            newValue: getStatusText(taskData.status)
+          });
+        }
+
+        // Agregar entrada al historial
+        const historyEntry = {
+          action: 'Actividad editada',
+          timestamp: new Date().toISOString(),
+          user: currentUser,
+          changes: changes
+        };
+
+        // Agregar historial a los datos de la tarea
+        const updatedTaskData = {
+          ...taskData,
+          history: [...(editingTask.history || []), historyEntry]
+        };
+
         // Actualizar tarea existente
-        savedTask = await actividadService.updateTask(editingTask.id, taskData);
+        savedTask = await actividadService.updateTask(editingTask.id, updatedTaskData);
         
         // Detectar cambios y enviar notificaciones
         const participants = taskEmailService.getTaskParticipants(taskData);
         const filteredParticipants = taskEmailService.filterParticipants(participants, user?.email);
         
         if (filteredParticipants.length > 0) {
-          const changes = taskEmailService.detectTaskChanges(editingTask, taskData);
-          if (changes.length > 0) {
+          const emailChanges = taskEmailService.detectTaskChanges(editingTask, taskData);
+          if (emailChanges.length > 0) {
             try {
-              await taskEmailService.notifyTaskUpdated(editingTask, taskData, filteredParticipants, changes);
+              await taskEmailService.notifyTaskUpdated(editingTask, taskData, filteredParticipants, emailChanges);
               console.log('✅ Notificaciones de actualización enviadas');
             } catch (emailError) {
               console.warn('⚠️ Error enviando notificaciones:', emailError);
@@ -239,8 +297,21 @@ const Actividad = () => {
           }
         }
       } else {
+        // Agregar entrada inicial al historial para nueva tarea
+        const historyEntry = {
+          action: 'Actividad creada',
+          timestamp: new Date().toISOString(),
+          user: currentUser
+        };
+
+        // Agregar historial a los datos de la tarea
+        const newTaskData = {
+          ...taskData,
+          history: [historyEntry]
+        };
+
         // Crear nueva tarea
-        savedTask = await actividadService.createTask(taskData);
+        savedTask = await actividadService.createTask(newTaskData);
         
         // Enviar notificaciones de creación
         const participants = taskEmailService.getTaskParticipants(taskData);
@@ -416,23 +487,44 @@ const Actividad = () => {
                   >
                     {getStatusText(task.status || 'pending')}
                   </button>
-                  <div className="activity-date-badge">
-                    {(() => {
-                      if (!task.createdAt) return 'Hoy';
-                      
-                      try {
-                        const date = task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt);
-                        if (isNaN(date.getTime())) return 'Hoy';
+                  <div className="activity-dates">
+                    <div className="activity-date-badge created">
+                      <span className="date-label">Creada:</span>
+                      {(() => {
+                        if (!task.createdAt) return 'Hoy';
                         
-                        return date.toLocaleDateString('es-MX', {
-                          day: '2-digit',
-                          month: 'short'
-                        });
-                      } catch (error) {
-                        console.error('Error formatting date:', error, task.createdAt);
-                        return 'Hoy';
-                      }
-                    })()}
+                        try {
+                          const date = task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt);
+                          if (isNaN(date.getTime())) return 'Hoy';
+                          
+                          return date.toLocaleDateString('es-MX', {
+                            day: '2-digit',
+                            month: 'short'
+                          });
+                        } catch (error) {
+                          console.error('Error formatting date:', error, task.createdAt);
+                          return 'Hoy';
+                        }
+                      })()}
+                    </div>
+                    {task.updatedAt && task.updatedAt !== task.createdAt && (
+                      <div className="activity-date-badge updated">
+                        <span className="date-label">Actualizada:</span>
+                        {(() => {
+                          try {
+                            const date = task.updatedAt instanceof Date ? task.updatedAt : new Date(task.updatedAt);
+                            if (isNaN(date.getTime())) return '';
+                            
+                            return date.toLocaleDateString('es-MX', {
+                              day: '2-digit',
+                              month: 'short'
+                            });
+                          } catch (error) {
+                            return '';
+                          }
+                        })()}
+                      </div>
+                    )}
                   </div>
                 </div>
                 
