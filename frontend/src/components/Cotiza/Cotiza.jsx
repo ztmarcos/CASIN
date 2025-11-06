@@ -792,13 +792,37 @@ INSTRUCCIÓN FINAL CRÍTICA:
       let cotizacionData = {};
       
       if (cotizaciones && !cotizaciones.isText) {
-        // Extraer información del vehículo
+        // Agregar tipo de póliza
+        cotizacionData.tipo_poliza = cotizaciones.tipo_poliza || detectedPolicyType || 'autos';
+        
+        // Extraer información del vehículo (para autos)
         if (cotizaciones.vehiculo) {
           cotizacionData.vehiculo = {
             marca: cotizaciones.vehiculo.marca || 'N/A',
             modelo: cotizaciones.vehiculo.modelo || 'N/A',
             anio: cotizaciones.vehiculo.anio || 'N/A',
             cp: cotizaciones.vehiculo.cp || 'N/A'
+          };
+        }
+
+        // Extraer información del titular (para GMM)
+        if (cotizaciones.titular) {
+          cotizacionData.titular = {
+            nombre: cotizaciones.titular.nombre || 'N/A',
+            edad: cotizaciones.titular.edad || 'N/A',
+            genero: cotizaciones.titular.genero || 'N/A',
+            lugar_residencia: cotizaciones.titular.lugar_residencia || 'N/A',
+            num_integrantes: cotizaciones.titular.num_integrantes || 'N/A'
+          };
+        }
+
+        // Extraer información de la propiedad (para hogar)
+        if (cotizaciones.propiedad) {
+          cotizacionData.propiedad = {
+            direccion: cotizaciones.propiedad.direccion || 'N/A',
+            tipo: cotizaciones.propiedad.tipo || 'N/A',
+            valor_edificio: cotizaciones.propiedad.valor_edificio || 'N/A',
+            valor_contenido: cotizaciones.propiedad.valor_contenido || 'N/A'
           };
         }
 
@@ -844,6 +868,34 @@ INSTRUCCIÓN FINAL CRÍTICA:
         tamaño: `${Math.round(et.text.length/1000)}k caracteres`
       }));
 
+      // Determinar tipo de póliza y preparar contexto específico
+      const tipoPoliza = cotizacionData.tipo_poliza || 'autos';
+      let tipoPolizaTexto = 'Seguro de Autos';
+      let contextoEspecifico = '';
+      
+      if (tipoPoliza === 'gmm') {
+        tipoPolizaTexto = 'Gastos Médicos Mayores';
+        contextoEspecifico = cotizacionData.titular 
+          ? `- Titular: ${cotizacionData.titular.nombre} (${cotizacionData.titular.edad} años, ${cotizacionData.titular.genero})
+- Ubicación: ${cotizacionData.titular.lugar_residencia}
+- Integrantes: ${cotizacionData.titular.num_integrantes}`
+          : '- Información del titular disponible en la cotización';
+      } else if (tipoPoliza === 'hogar') {
+        tipoPolizaTexto = 'Seguro de Hogar';
+        contextoEspecifico = cotizacionData.propiedad
+          ? `- Tipo de propiedad: ${cotizacionData.propiedad.tipo}
+- Dirección: ${cotizacionData.propiedad.direccion}
+- Valor edificio: ${cotizacionData.propiedad.valor_edificio}`
+          : '- Información de la propiedad disponible en la cotización';
+      } else {
+        tipoPolizaTexto = 'Seguro de Autos';
+        contextoEspecifico = cotizacionData.vehiculo
+          ? `- Vehículo: ${cotizacionData.vehiculo.marca} ${cotizacionData.vehiculo.modelo} ${cotizacionData.vehiculo.anio}
+- Código Postal: ${cotizacionData.vehiculo.cp}
+- Cobertura: AMPLIA`
+          : '- Información del vehículo disponible en la cotización';
+      }
+
       const response = await fetch('/api/generate-quote', {
         method: 'POST',
         headers: {
@@ -854,6 +906,8 @@ INSTRUCCIÓN FINAL CRÍTICA:
           prompt: `
 Eres un asesor de seguros profesional. Genera un correo electrónico HTML profesional para enviar al cliente con el análisis de cotización de seguros.
 
+TIPO DE PÓLIZA: ${tipoPolizaTexto}
+
 DATOS DEL CLIENTE:
 - Nombre: ${clientData.nombre}
 - Email: ${clientData.email}
@@ -861,17 +915,21 @@ DATOS DEL CLIENTE:
 - Empresa: ${clientData.empresa || 'Particular'}
 
 DATOS DE LA COTIZACIÓN:
+- Tipo de seguro: ${tipoPolizaTexto}
 - Archivos analizados: ${archivosInfo.map(a => a.nombre).join(', ')}
-- Vehículo: ${cotizacionData.vehiculo ? `${cotizacionData.vehiculo.marca} ${cotizacionData.vehiculo.modelo} ${cotizacionData.vehiculo.anio}` : 'Información del vehículo disponible'}
+${contextoEspecifico}
 - Aseguradoras cotizadas: ${cotizacionData.aseguradoras ? cotizacionData.aseguradoras.join(', ') : 'Múltiples aseguradoras'}
 - Precios disponibles: ${cotizacionData.precios ? 'Sí' : 'Información de precios disponible'}
 
 ESTRUCTURA DEL CORREO:
 1. **Encabezado profesional** con título CASIN Seguros (SIN LOGO)
 2. **Saludo personalizado** al cliente
-3. **Resumen ejecutivo** del análisis realizado
+3. **Resumen ejecutivo** del análisis realizado para ${tipoPolizaTexto}
 4. **Tabla comparativa** con las principales coberturas y precios (si están disponibles)
-5. **Recomendaciones profesionales** basadas en el análisis
+   ${tipoPoliza === 'gmm' ? '- Para GMM: incluir deducible, coaseguro, tabulador médico, acceso hospitalario' : ''}
+   ${tipoPoliza === 'autos' ? '- Para Autos: incluir suma asegurada, daños materiales, robo total, RC' : ''}
+   ${tipoPoliza === 'hogar' ? '- Para Hogar: incluir edificio, contenido, RC familiar' : ''}
+5. **Recomendaciones profesionales** basadas en el análisis específico de ${tipoPolizaTexto}
 6. **Próximos pasos** sugeridos
 7. **Firma profesional** con datos de contacto
 
@@ -882,13 +940,14 @@ REQUISITOS:
 - Incluir toda la información de cotización de forma organizada
 - Destacar los precios más competitivos
 - Mencionar específicamente las aseguradoras analizadas
+- Usar terminología apropiada para ${tipoPolizaTexto}
 - Incluir llamadas a la acción claras
 - Todo el contenido en ESPAÑOL
 - Usar colores corporativos azules (#007bff, #0056b3)
 - Tabla responsive y fácil de leer
 - Información de contacto: CASIN Seguros, Tel: [Tu número de teléfono], Email: contacto@casin.com.mx
 
-Genera un correo completo y profesional listo para enviar.
+Genera un correo completo y profesional listo para enviar, adaptado específicamente para una cotización de ${tipoPolizaTexto}.
           `
         })
       });
@@ -1827,7 +1886,46 @@ Genera un correo completo y profesional listo para enviar.
               </div>
             ) : (
               <div className="cotizacion-tables">
-                {cotizaciones.vehiculo && (
+                {/* Información específica según tipo de póliza */}
+                {cotizaciones.vehiculo && cotizaciones.tipo_poliza === 'autos' && (
+                  <div className="vehiculo-info">
+                    <h4>
+                      🚗 {cotizaciones.vehiculo.marca} {cotizaciones.vehiculo.modelo} {cotizaciones.vehiculo.anio}
+                    </h4>
+                    <p>C.P. {cotizaciones.vehiculo.cp} | AMPLIA</p>
+                  </div>
+                )}
+                
+                {cotizaciones.titular && cotizaciones.tipo_poliza === 'gmm' && (
+                  <div className="vehiculo-info">
+                    <h4>
+                      🏥 Gastos Médicos Mayores - {cotizaciones.titular.nombre || 'Titular'}
+                    </h4>
+                    <p>
+                      {cotizaciones.titular.edad && `Edad: ${cotizaciones.titular.edad} años`}
+                      {cotizaciones.titular.genero && ` | Género: ${cotizaciones.titular.genero}`}
+                      {cotizaciones.titular.lugar_residencia && ` | ${cotizaciones.titular.lugar_residencia}`}
+                    </p>
+                    {cotizaciones.titular.num_integrantes && (
+                      <p>Integrantes cotizados: {cotizaciones.titular.num_integrantes}</p>
+                    )}
+                  </div>
+                )}
+                
+                {cotizaciones.propiedad && cotizaciones.tipo_poliza === 'hogar' && (
+                  <div className="vehiculo-info">
+                    <h4>
+                      🏠 Seguro de Hogar - {cotizaciones.propiedad.tipo || 'Propiedad'}
+                    </h4>
+                    <p>
+                      {cotizaciones.propiedad.direccion && `${cotizaciones.propiedad.direccion}`}
+                      {cotizaciones.propiedad.valor_edificio && ` | Edificio: ${cotizaciones.propiedad.valor_edificio}`}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Si no hay tipo específico pero hay vehiculo (backward compatibility) */}
+                {cotizaciones.vehiculo && !cotizaciones.tipo_poliza && (
                   <div className="vehiculo-info">
                     <h4>
                       {cotizaciones.vehiculo.marca} {cotizaciones.vehiculo.modelo} {cotizaciones.vehiculo.anio}

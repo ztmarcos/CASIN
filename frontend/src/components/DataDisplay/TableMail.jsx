@@ -387,6 +387,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [ccEmails, setCcEmails] = useState(''); // Campo CC manual
   const [autoBccToCasin, setAutoBccToCasin] = useState(true); // BCC automático a casinseguros@gmail.com
   const [plainTextMessage, setPlainTextMessage] = useState(''); // Mensaje en texto plano para edición
+  const [isMinimized, setIsMinimized] = useState(false); // Estado de minimización
 
   // Función para convertir HTML a texto plano
   const htmlToPlainText = (html) => {
@@ -658,6 +659,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setAutoBccToCasin(true); // Reset BCC automático a CASIN - SIEMPRE activado por defecto
       setCcEmails(''); // Reset CC field
       setPlainTextMessage(''); // Reset plain text message
+      setIsMinimized(false); // Reset minimized state
     }
   }, [isOpen]);
 
@@ -954,6 +956,16 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     return uploadedFiles;
   };
 
+  // Función para minimizar el modal
+  const handleMinimize = () => {
+    setIsMinimized(true);
+  };
+
+  // Función para restaurar el modal desde minimizado
+  const handleRestore = () => {
+    setIsMinimized(false);
+  };
+
   const handleSendEmail = async () => {
     const emailAddress = extractEmail(rowData);
     if (!emailAddress) {
@@ -1123,17 +1135,40 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
 
   if (!isOpen) return null;
 
+  // Si está minimizado, mostrar solo el indicador flotante
+  if (isMinimized) {
+    return (
+      <div className="mail-minimized-indicator" onClick={handleRestore}>
+        <div className="minimized-content">
+          <span className="minimized-icon">📧</span>
+          <span className="minimized-text">Borrador de Email</span>
+          <span className="minimized-recipient">{extractEmail(rowData) || 'Sin destinatario'}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="mail-modal-overlay" onClick={onClose}>
+    <div className="mail-modal-overlay">
       <div className="mail-modal-content" onClick={e => e.stopPropagation()}>
         <div className="mail-modal-header">
           <h3>📧 Enviar Correo Electrónico</h3>
-          <button 
-            className="close-modal-btn"
-            onClick={onClose}
-          >
-            ×
-          </button>
+          <div className="mail-modal-header-actions">
+            <button 
+              className="minimize-modal-btn"
+              onClick={handleMinimize}
+              title="Minimizar"
+            >
+              −
+            </button>
+            <button 
+              className="close-modal-btn"
+              onClick={onClose}
+              title="Cerrar"
+            >
+              ×
+            </button>
+          </div>
         </div>
         <div className="mail-modal-body">
           {error && (
@@ -1413,12 +1448,6 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           </div>
         </div>
         <div className="mail-modal-footer">
-          <button 
-            className="cancel-btn"
-            onClick={onClose}
-          >
-            Cancelar
-          </button>
           <button 
             className="send-btn"
             onClick={handleSendEmail}
