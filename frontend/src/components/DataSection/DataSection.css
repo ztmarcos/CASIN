@@ -373,6 +373,86 @@
   color: #6b7280;
 }
 
+/* Table Selection View */
+.table-selection-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.selection-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.selection-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.5rem 0;
+}
+
+.selection-header p {
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1000px;
+}
+
+.table-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  min-height: 140px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.table-card:hover:not(:disabled) {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.table-card:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.table-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-card-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.table-card-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  text-align: center;
+  text-transform: capitalize;
+}
+
 /* Error Message */
 .error-message {
   background: #fef2f2;
@@ -655,6 +735,33 @@
 
 [data-theme='dark'] .empty-state-subtext {
   color: #9ca3af;
+}
+
+/* Dark theme for Table Selection View */
+[data-theme='dark'] .table-selection-view {
+  background: transparent;
+}
+
+[data-theme='dark'] .selection-header h2 {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .selection-header p {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .table-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .table-card:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #293548;
+}
+
+[data-theme='dark'] .table-card-name {
+  color: #f1f5f9;
 }
 
 [data-theme='dark'] .error-message {

@@ -198,68 +198,55 @@ const DataSection = () => {
 
   return (
     <div className="data-section excel-layout">
-      {/* Simple Toolbar */}
-      <div className="excel-toolbar">
-        {/* Left Section - Team Info */}
-        <div className="toolbar-left">
-          {team && (
-            <span className="team-badge">🏢 {getCleanTeamName(team.name)}</span>
-          )}
-        </div>
+      {/* Toolbar - Only show when table is selected */}
+      {selectedTable && (
+        <div className="excel-toolbar">
+          {/* Left Section - Team Info */}
+          <div className="toolbar-left">
+            {team && (
+              <span className="team-badge">🏢 {getCleanTeamName(team.name)}</span>
+            )}
+          </div>
 
-        {/* Center Section - Table Selection */}
-        <div className="toolbar-center">
-          <div className="table-selector-compact">
-            {/* Simple Dropdown */}
-            <div className="dropdown-container">
-              <select
-                className="table-select-dropdown"
-                value={selectedTable ? selectedTable.name : ''}
-                onChange={e => {
-                  const tableName = e.target.value;
-                  if (tableName) handleTableSelect(tableName);
-                }}
-              >
-                <option value="" disabled>📋 Selecciona una tabla</option>
-                {tables.map(table => (
-                  <option key={table.name} value={table.name}>
-                    {table.name}
-                  </option>
-                ))}
-              </select>
-              <div className="dropdown-arrow">▼</div>
+          {/* Center Section - Table Selection */}
+          <div className="toolbar-center">
+            <div className="table-selector-compact">
+              {/* Simple Dropdown */}
+              <div className="dropdown-container">
+                <select
+                  className="table-select-dropdown"
+                  value={selectedTable ? selectedTable.name : ''}
+                  onChange={e => {
+                    const tableName = e.target.value;
+                    if (tableName) handleTableSelect(tableName);
+                  }}
+                >
+                  <option value="" disabled>📋 Selecciona una tabla</option>
+                  {tables.map(table => (
+                    <option key={table.name} value={table.name}>
+                      {table.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="dropdown-arrow">▼</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Section - Actions */}
-        <div className="toolbar-right">
-          {selectedTable && (
-            <>
-              <button 
-                className="toolbar-btn add-btn" 
-                onClick={() => setShowAddEntryModal(true)}
-                disabled={isLoading}
-                title="Captura Manual"
-              >
-                <span className="btn-icon">➕</span>
-                <span className="btn-text">Captura Manual</span>
-              </button>
-
-              {/* Export button hidden */}
-              {/* <button 
-                className="toolbar-btn export-btn" 
-                onClick={handleExport}
-                title="Exportar como CSV"
-                disabled={!selectedTable || isLoading || !tableData.length}
-              >
-                <span className="btn-icon">📤</span>
-                <span className="btn-text">Exportar</span>
-              </button> */}
-            </>
-          )}
+          {/* Right Section - Actions */}
+          <div className="toolbar-right">
+            <button 
+              className="toolbar-btn add-btn" 
+              onClick={() => setShowAddEntryModal(true)}
+              disabled={isLoading}
+              title="Captura Manual"
+            >
+              <span className="btn-icon">➕</span>
+              <span className="btn-text">Captura Manual</span>
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="main-content">
@@ -282,10 +269,25 @@ const DataSection = () => {
             />
           </div>
         ) : (
-          <div className="empty-state">
-            <div className="empty-state-icon">📊</div>
-            <div className="empty-state-text">Selecciona una tabla para comenzar</div>
-            <div className="empty-state-subtext">Usa el dropdown de arriba para elegir una tabla</div>
+          <div className="table-selection-view">
+            <div className="selection-header">
+              <h2>Selecciona una Tabla</h2>
+              <p>Elige la tabla con la que deseas trabajar</p>
+            </div>
+            
+            <div className="tables-grid">
+              {tables.map(table => (
+                <button
+                  key={table.name}
+                  className="table-card"
+                  onClick={() => handleTableSelect(table.name)}
+                  disabled={isLoading}
+                >
+                  <div className="table-card-icon">📊</div>
+                  <div className="table-card-name">{table.name}</div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
