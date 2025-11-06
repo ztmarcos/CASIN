@@ -21,6 +21,7 @@ const Cotiza = () => {
   const [isGeneratingMail, setIsGeneratingMail] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [detectedPolicyType, setDetectedPolicyType] = useState(null);
 
   const supportedTypes = {
     'application/pdf': 'PDF',
@@ -216,26 +217,279 @@ Proporciona el texto extraído de manera estructurada, manteniendo la organizaci
     });
   };
 
-  const generateCotizaciones = async () => {
-    if (extractedTexts.length === 0) {
-      toast.error('Primero extrae el texto de los archivos');
-      return;
+  // Función para detectar el tipo de póliza basado en el texto extraído
+  const detectPolicyType = (combinedText) => {
+    const textLower = combinedText.toLowerCase();
+    
+    // Contadores de palabras clave por tipo
+    const scores = {
+      autos: 0,
+      gmm: 0,
+      hogar: 0
+    };
+
+    // Palabras clave para AUTOS
+    const autosKeywords = [
+      'vehículo', 'vehiculo', 'auto', 'automóvil', 'automovil', 'coche',
+      'daños materiales', 'danos materiales', 'robo total', 
+      'responsabilidad civil', 'gastos médicos ocupantes',
+      'marca', 'modelo', 'año del vehículo', 'placas',
+      'amplia', 'limitada', 'rc', 'cobertura amplia'
+    ];
+
+    // Palabras clave para GMM (Gastos Médicos Mayores)
+    const gmmKeywords = [
+      'gastos médicos mayores', 'gastos medicos mayores', 'gmm',
+      'suma asegurada', 'deducible', 'coaseguro',
+      'tabulador médico', 'tabulador medico', 'omnia',
+      'acceso hospitalario', 'hospital', 'hospitalización',
+      'emergencia médica', 'asistencia en viajes',
+      'membresía médica', 'membresia medica',
+      'titular', 'cónyuge', 'conyugue', 'dependientes',
+      'edad', 'género', 'genero', 'sexo',
+      'prima del asegurado', 'prima cónyuge', 'prima hijo'
+    ];
+
+    // Palabras clave para HOGAR
+    const hogarKeywords = [
+      'hogar', 'casa', 'vivienda', 'inmueble', 'propiedad',
+      'contenido', 'edificio', 'construcción', 'construccion',
+      'responsabilidad civil familiar', 'daños a terceros',
+      'robo de contenido', 'incendio', 'terremoto',
+      'cristales', 'jardín', 'jardin'
+    ];
+
+    // Contar coincidencias
+    autosKeywords.forEach(keyword => {
+      if (textLower.includes(keyword)) scores.autos++;
+    });
+
+    gmmKeywords.forEach(keyword => {
+      if (textLower.includes(keyword)) scores.gmm++;
+    });
+
+    hogarKeywords.forEach(keyword => {
+      if (textLower.includes(keyword)) scores.hogar++;
+    });
+
+    console.log('🔍 Scores de detección de tipo:', scores);
+
+    // Determinar el tipo con mayor score
+    const maxScore = Math.max(scores.autos, scores.gmm, scores.hogar);
+    
+    if (maxScore === 0) {
+      console.log('⚠️ No se detectó tipo específico, usando "autos" por defecto');
+      return 'autos';
     }
 
-    console.log('🚀 Iniciando generación de cotización...');
-    setIsGeneratingTable(true);
+    if (scores.gmm === maxScore) {
+      console.log('✅ Tipo detectado: GMM (Gastos Médicos Mayores)');
+      return 'gmm';
+    } else if (scores.autos === maxScore) {
+      console.log('✅ Tipo detectado: AUTOS');
+      return 'autos';
+    } else if (scores.hogar === maxScore) {
+      console.log('✅ Tipo detectado: HOGAR');
+      return 'hogar';
+    }
 
-    try {
-      const combinedText = extractedTexts.map(et => 
-        `Archivo: ${et.fileName}\n${et.text}`
-      ).join('\n\n---\n\n');
+    return 'autos'; // Default
+  };
 
-      const fileNames = extractedTexts.map(et => et.fileName).join(', ');
-      const fileCount = extractedTexts.length;
+  // Función para obtener el prompt específico según el tipo de póliza
+  const getPolicyTypePrompt = (policyType, fileNames, fileCount, combinedText) => {
+    const baseInstructions = `Eres un experto analista de seguros. Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
 
-      const dynamicPrompt = `Eres un experto analista de seguros. Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
+IDENTIFICACIÓN DE ASEGURADORAS:
+- Busca nombres como: ANA, HDI, QUALITAS, GNP, ZURICH, MAPFRE, AXA, SEGUROS MONTERREY, BUPA, METLIFE, ALLIANZ
+- Si ves abreviaciones, usa el nombre completo de la aseguradora
 
-ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN:
+CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
+
+DOCUMENTOS A ANALIZAR:
+Cantidad: ${fileCount} archivos
+Nombres: ${fileNames}`;
+
+    if (policyType === 'gmm') {
+      return `${baseInstructions}
+
+TIPO DE PÓLIZA DETECTADO: GASTOS MÉDICOS MAYORES (GMM)
+
+ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN GMM:
+${fileNames.includes('Cotizacion_Tabla') || fileNames.includes('Comparativo') ? `
+🔍 DETECCIÓN ESPECIAL: Documento contiene tabla comparativa de GMM
+INSTRUCCIONES ESPECÍFICAS:
+- Busca patrones como "COBERTURAS", "Suma Asegurada", "Deducible", "Coaseguro"
+- Las aseguradoras suelen estar en columnas (GNP, BUPA, METLIFE, etc.)
+- Identifica filas de coberturas principales
+` : ''}
+
+EXTRACCIÓN DE VALORES - CRÍTICO PARA GMM:
+- SUMA ASEGURADA: Busca valores como "$50,000,000", "SIN LIMITE", "ILIMITADA"
+- DEDUCIBLE: Busca valores como "$94,000 pesos", "$75,000", "$151,000 pesos"
+- COASEGURO: Busca porcentajes como "20%", "15%", "10%"
+- TABULADOR MÉDICO: Busca "Omnia", "Premier", "Estándar", "Red Hospitalaria"
+- ACCESO HOSPITALARIO: Busca "No Aplica", "Directo", "Con referencia"
+- COSTO ANUAL/TOTAL: Busca el precio total anual (ej: "$466,607.27", "$356,506.64")
+
+INFORMACIÓN DEL TITULAR:
+- Nombre del titular
+- Edad (ej: 70 años)
+- Género (M/F/Masculino/Femenino)
+- Lugar de residencia (Ciudad, Estado, Zona)
+- Número de integrantes cotizados
+
+COBERTURAS ADICIONALES A BUSCAR:
+- Emergencia Médica en el Extranjero
+- Asistencia en Viajes
+- Membresía Médica Móvil
+- Maternidad (Titular/Cónyuge)
+
+FORMATO DE RESPUESTA EXACTO:
+{
+  "tipo_poliza": "gmm",
+  "titular": {
+    "nombre": "[EXTRAER: Nombre del titular]",
+    "edad": "[EXTRAER: Edad en años]",
+    "genero": "[EXTRAER: M/F]",
+    "lugar_residencia": "[EXTRAER: Ciudad y zona]",
+    "num_integrantes": "[EXTRAER: Número de personas cotizadas]"
+  },
+  "tabla_comparativa": {
+    "coberturas": [
+      {
+        "cobertura": "SUMA ASEGURADA",
+        "[ASEGURADORA_1]": "[VALOR - puede ser SIN LIMITE o valor numérico]",
+        "[ASEGURADORA_2]": "[VALOR]",
+        "[ASEGURADORA_3]": "[VALOR]"
+      },
+      {
+        "cobertura": "DEDUCIBLE",
+        "[ASEGURADORA_1]": "[VALOR en pesos]",
+        "[ASEGURADORA_2]": "[VALOR en pesos]",
+        "[ASEGURADORA_3]": "[VALOR en pesos]"
+      },
+      {
+        "cobertura": "COASEGURO",
+        "[ASEGURADORA_1]": "[PORCENTAJE]",
+        "[ASEGURADORA_2]": "[PORCENTAJE]",
+        "[ASEGURADORA_3]": "[PORCENTAJE]"
+      },
+      {
+        "cobertura": "NIVEL DE TABULADOR MÉDICO",
+        "[ASEGURADORA_1]": "[Omnia/Premier/Estándar]",
+        "[ASEGURADORA_2]": "[Omnia/Premier/Estándar]",
+        "[ASEGURADORA_3]": "[Omnia/Premier/Estándar]"
+      },
+      {
+        "cobertura": "ACCESO HOSPITALARIO",
+        "[ASEGURADORA_1]": "[No Aplica/Directo/etc]",
+        "[ASEGURADORA_2]": "[No Aplica/Directo/etc]",
+        "[ASEGURADORA_3]": "[No Aplica/Directo/etc]"
+      },
+      {
+        "cobertura": "EMERGENCIA MÉDICA EN EL EXTRANJERO",
+        "[ASEGURADORA_1]": "[Incluido/Amparado/No aplica]",
+        "[ASEGURADORA_2]": "[Incluido/Amparado/No aplica]",
+        "[ASEGURADORA_3]": "[Incluido/Amparado/No aplica]"
+      },
+      {
+        "cobertura": "ASISTENCIA EN VIAJES",
+        "[ASEGURADORA_1]": "[Incluido/No aplica]",
+        "[ASEGURADORA_2]": "[Incluido/No aplica]",
+        "[ASEGURADORA_3]": "[Incluido/No aplica]"
+      },
+      {
+        "cobertura": "MEMBRESÍA MÉDICA MÓVIL",
+        "[ASEGURADORA_1]": "[Incluido/No aplica]",
+        "[ASEGURADORA_2]": "[Incluido/No aplica]",
+        "[ASEGURADORA_3]": "[Incluido/No aplica]"
+      },
+      {
+        "cobertura": "COSTO ANUAL",
+        "[ASEGURADORA_1]": "[PRECIO_TOTAL]",
+        "[ASEGURADORA_2]": "[PRECIO_TOTAL]",
+        "[ASEGURADORA_3]": "[PRECIO_TOTAL]"
+      }
+    ]
+  },
+  "recomendaciones": [
+    {
+      "aseguradora": "[NOMBRE_ASEGURADORA_MEJOR_OPCIÓN]",
+      "razon": "[ANÁLISIS: Por qué es la mejor opción considerando precio, coberturas, deducible, coaseguro]",
+      "precio": "[PRECIO_MÁS_COMPETITIVO]"
+    }
+  ]
+}
+
+INSTRUCCIÓN FINAL CRÍTICA: 
+1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
+2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
+3. Para GMM, presta especial atención a deducibles y coaseguros
+4. Si hay múltiples planes (Premier 100, Premier 200), identifícalos claramente
+5. El costo anual debe ser el valor total más grande por aseguradora`;
+
+    } else if (policyType === 'hogar') {
+      return `${baseInstructions}
+
+TIPO DE PÓLIZA DETECTADO: SEGURO DE HOGAR
+
+ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN HOGAR:
+- Busca información de la propiedad (dirección, tipo, valor)
+- Identifica coberturas de edificio y contenido
+- Busca responsabilidad civil familiar
+- Identifica coberturas adicionales (robo, incendio, fenómenos naturales)
+
+FORMATO DE RESPUESTA EXACTO:
+{
+  "tipo_poliza": "hogar",
+  "propiedad": {
+    "direccion": "[EXTRAER]",
+    "tipo": "[Casa/Departamento/etc]",
+    "valor_edificio": "[VALOR]",
+    "valor_contenido": "[VALOR]"
+  },
+  "tabla_comparativa": {
+    "coberturas": [
+      {
+        "cobertura": "EDIFICIO",
+        "[ASEGURADORA_1]": "[VALOR]",
+        "[ASEGURADORA_2]": "[VALOR]"
+      },
+      {
+        "cobertura": "CONTENIDO",
+        "[ASEGURADORA_1]": "[VALOR]",
+        "[ASEGURADORA_2]": "[VALOR]"
+      },
+      {
+        "cobertura": "RESPONSABILIDAD CIVIL FAMILIAR",
+        "[ASEGURADORA_1]": "[VALOR]",
+        "[ASEGURADORA_2]": "[VALOR]"
+      },
+      {
+        "cobertura": "COSTO ANUAL",
+        "[ASEGURADORA_1]": "[PRECIO]",
+        "[ASEGURADORA_2]": "[PRECIO]"
+      }
+    ]
+  },
+  "recomendaciones": [
+    {
+      "aseguradora": "[NOMBRE]",
+      "razon": "[ANÁLISIS]",
+      "precio": "[PRECIO]"
+    }
+  ]
+}
+
+INSTRUCCIÓN FINAL: Extrae solo información real de los documentos.`;
+
+    } else { // autos (default)
+      return `${baseInstructions}
+
+TIPO DE PÓLIZA DETECTADO: SEGURO DE AUTOS
+
+ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN AUTOS:
 ${fileNames.includes('Cotizacion_Tabla') ? `
 🔍 DETECCIÓN ESPECIAL: Documento contiene "Cotizacion_Tabla" - Este es un PDF generado con estructura tabular.
 INSTRUCCIONES ESPECÍFICAS PARA PDFs TABULARES:
@@ -245,13 +499,6 @@ INSTRUCCIONES ESPECÍFICAS PARA PDFs TABULARES:
 - Identifica filas de "SUMA ASEGURADA", "DAÑOS MATERIALES", "ROBO TOTAL", "RESPONSABILIDAD CIVIL", "GASTOS MÉDICOS", "COSTO ANUAL"
 - Los valores pueden estar sin formato (ej: "446,400.00", "483,000.00", "503,000.00")
 ` : ''}
-
-IDENTIFICACIÓN DE ASEGURADORAS:
-- Busca nombres como: ANA, HDI, QUALITAS, GNP, ZURICH, MAPFRE, AXA, SEGUROS MONTERREY, QUÁLITAS
-- Si ves abreviaciones como "ANA" = "ANA Seguros"
-- Si ves "HDI" = "HDI Seguros" 
-- Si ves "QUALITAS" = "Quálitas Seguros"
-- Si ves "GNP" = "GNP Seguros"
 
 EXTRACCIÓN DE VALORES - CRÍTICO PARA DEDUCIBLES:
 - Para SUMA ASEGURADA: busca números grandes (400,000+)
@@ -272,10 +519,9 @@ IDENTIFICACIÓN DE DEDUCIBLES VS IMPORTES:
 - Importe de prima: Costo del seguro por cobertura (valor menor)
 - Si no encuentras deducible explícito, calcula: suma_asegurada * 0.05 para Qualitas
 
-CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
-
 FORMATO DE RESPUESTA EXACTO:
 {
+  "tipo_poliza": "autos",
   "vehiculo": {
     "marca": "[EXTRAER: Busca Hyundai, Toyota, Nissan, etc.]",
     "modelo": "[EXTRAER: Busca Tucson, Corolla, Sentra, etc.]", 
@@ -337,16 +583,43 @@ FORMATO DE RESPUESTA EXACTO:
   ]
 }
 
-DOCUMENTOS A ANALIZAR:
-Cantidad: ${fileCount} archivos
-Nombres: ${fileNames}
-
 INSTRUCCIÓN FINAL CRÍTICA: 
 1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
 2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
 3. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
 4. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
 5. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
+    }
+  };
+
+  const generateCotizaciones = async () => {
+    if (extractedTexts.length === 0) {
+      toast.error('Primero extrae el texto de los archivos');
+      return;
+    }
+
+    console.log('🚀 Iniciando generación de cotización...');
+    setIsGeneratingTable(true);
+
+    try {
+      const combinedText = extractedTexts.map(et => 
+        `Archivo: ${et.fileName}\n${et.text}`
+      ).join('\n\n---\n\n');
+
+      const fileNames = extractedTexts.map(et => et.fileName).join(', ');
+      const fileCount = extractedTexts.length;
+
+      // Detectar tipo de póliza automáticamente
+      const policyType = detectPolicyType(combinedText);
+      setDetectedPolicyType(policyType);
+      
+      console.log('📋 Tipo de póliza detectado:', policyType);
+      toast.info(`📋 Tipo detectado: ${policyType === 'gmm' ? 'Gastos Médicos Mayores' : policyType === 'hogar' ? 'Hogar' : 'Autos'}`);
+
+      // Obtener prompt específico según el tipo de póliza
+      const dynamicPrompt = getPolicyTypePrompt(policyType, fileNames, fileCount, combinedText);
+
+      console.log('📝 Usando prompt para tipo:', policyType);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
