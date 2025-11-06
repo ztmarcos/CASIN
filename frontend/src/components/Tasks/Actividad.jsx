@@ -33,10 +33,10 @@ const Actividad = () => {
   
   // Lista de usuarios del equipo
   const teamUsers = [
-    { name: 'Lore', initials: 'L' },
-    { name: 'Mich', initials: 'M' },
-    { name: 'Marcos', initials: 'MA' },
-    { name: 'MarcosJr', initials: 'MJ' }
+    { name: 'Lore', initials: 'L', email: 'lore@example.com' },
+    { name: 'Mich', initials: 'M', email: 'mich@example.com' },
+    { name: 'Marcos', initials: 'MA', email: 'marcoszavala09@gmail.com' },
+    { name: 'MarcosJr', initials: 'MJ', email: 'ztmarcos@gmail.com' }
   ];
 
   // Cargar todas las tareas al inicio
@@ -74,7 +74,7 @@ const Actividad = () => {
   const filterUserActivities = () => {
     if (!selectedUser) return;
     
-    console.log('🔍 Filtering activities for user:', selectedUser.name);
+    console.log('🔍 Filtering activities for user:', selectedUser.name, selectedUser.email);
     console.log('📊 Total tasks:', tasks.length);
     
     // Log all tasks to debug
@@ -83,6 +83,7 @@ const Actividad = () => {
       console.log(`Task ${idx}:`, {
         id: task.id,
         userName: task.userName,
+        userEmail: task.userEmail,
         createdBy: task.createdBy,
         title: task.title
       });
@@ -90,21 +91,36 @@ const Actividad = () => {
     
     // Filtrar actividades del usuario seleccionado
     const selectedNameLower = selectedUser.name.toLowerCase();
+    const selectedEmail = selectedUser.email?.toLowerCase();
     
     const filtered = tasks.filter(task => {
       const userName = (task.userName || '').toLowerCase();
+      const userEmail = (task.userEmail || '').toLowerCase();
       const createdBy = (task.createdBy || '').toLowerCase();
       
-      // Buscar coincidencias en userName o createdBy
-      const matches = 
-        userName.includes(selectedNameLower) || 
-        createdBy.includes(selectedNameLower) ||
-        selectedNameLower.includes(userName) ||
-        selectedNameLower.includes(createdBy);
+      // Primero intentar match exacto por email si está disponible
+      if (selectedEmail) {
+        // Buscar en userEmail (campo nuevo) o en createdBy/userName (por si contienen email)
+        const emailMatch = 
+          userEmail === selectedEmail ||
+          createdBy === selectedEmail ||
+          createdBy.includes(selectedEmail) || 
+          userName.includes(selectedEmail);
+        if (emailMatch) {
+          console.log(`Task "${task.title}": MATCHED by email (${selectedEmail})`);
+          return true;
+        }
+      }
       
-      console.log(`Task "${task.title}": userName="${userName}", createdBy="${createdBy}", selected="${selectedNameLower}", matches=${matches}`);
+      // Si no hay match por email, usar match exacto por nombre
+      // Importante: usar === para evitar que "marcos" matchee con "marcosjr"
+      const exactNameMatch = 
+        userName === selectedNameLower || 
+        createdBy === selectedNameLower;
       
-      return matches;
+      console.log(`Task "${task.title}": userName="${userName}", createdBy="${createdBy}", selected="${selectedNameLower}", matches=${exactNameMatch}`);
+      
+      return exactNameMatch;
     });
     
     console.log(`✅ Filtered ${filtered.length} activities for ${selectedUser.name}`);
@@ -459,7 +475,7 @@ const Actividad = () => {
       {showModal && (
         <ActivityModal
           activity={editingTask}
-          selectedUserName={selectedUser?.name}
+          selectedUser={selectedUser}
           onSave={handleTaskSave}
           onClose={() => {
             setShowModal(false);

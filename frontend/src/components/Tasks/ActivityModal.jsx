@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import activityLogger from '../../utils/activityLogger';
 import './ActivityModal.css';
 
-const ActivityModal = ({ activity, selectedUserName, onSave, onClose }) => {
+const ActivityModal = ({ activity, selectedUser, onSave, onClose }) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('pending');
@@ -36,15 +36,22 @@ const ActivityModal = ({ activity, selectedUserName, onSave, onClose }) => {
       return;
     }
 
+    // Determinar el nombre y email del usuario
+    const userName = selectedUser?.name || activity?.userName || 'Usuario';
+    const userEmail = selectedUser?.email || activity?.userEmail || '';
+    
+    // Para createdBy, usar el email si está disponible, sino el nombre
+    const createdBy = activity?.createdBy || userEmail || userName;
+
     const activityData = {
       title: content.substring(0, 100), // First 100 chars as title
       description: content,
       status: status,
       priority: 'medium',
       createdAt: activity?.createdAt || new Date().toISOString(),
-      // USAR EL NOMBRE DEL USUARIO SELECCIONADO, NO EL AUTENTICADO
-      createdBy: activity?.createdBy || selectedUserName || 'Usuario',
-      userName: activity?.userName || selectedUserName || 'Usuario',
+      createdBy: createdBy,
+      userName: userName,
+      userEmail: userEmail, // Guardar el email también
       tags: [],
       assignedUsers: [],
       comments: []
