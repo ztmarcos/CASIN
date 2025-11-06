@@ -8,24 +8,38 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Short month names for DD/MMM/YYYY format
+const SHORT_MONTHS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+];
+
 export const parseDate = (dateStr) => {
   if (!dateStr) return null;
   
-  // Try standard date parsing first
-  let date = new Date(dateStr);
-  if (!isNaN(date.getTime())) return date;
-  
-  // Try dd/mm/yyyy format
+  // Try dd/mm/yyyy format first (prioritize European format)
   if (typeof dateStr === 'string') {
     const parts = dateStr.split('/').map(part => part.trim());
     if (parts.length === 3) {
       const [day, month, year] = parts.map(num => parseInt(num, 10));
       if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-        date = new Date(year, month - 1, day);
-        if (!isNaN(date.getTime())) return date;
+        // Check if this looks like DD/MM/YYYY (day > 12 or month > 12)
+        if (day > 12 || month > 12) {
+          // Definitely DD/MM/YYYY format
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) return date;
+        } else {
+          // Could be either format, but prioritize DD/MM/YYYY for insurance data
+          const date = new Date(year, month - 1, day);
+          if (!isNaN(date.getTime())) return date;
+        }
       }
     }
   }
+  
+  // Try standard date parsing as fallback
+  let date = new Date(dateStr);
+  if (!isNaN(date.getTime())) return date;
   
   return null;
 };
@@ -54,9 +68,49 @@ export const formatDate = (date, format = 'long-es') => {
       const monthStr = (month + 1).toString().padStart(2, '0');
       const dayStr = day.toString().padStart(2, '0');
       return `${year}-${monthStr}-${dayStr}`;
+    case 'dd-mmm-yyyy':
+      return `${day}/${SHORT_MONTHS[month]}/${year}`;
     default:
       return `${day}/${month + 1}/${year}`;
   }
+};
+
+// Function to convert DD/MMM/YYYY format to Date object
+export const parseDDMMMYYYY = (dateStr) => {
+  if (!dateStr) return null;
+  
+  // Handle DD/MMM/YYYY format (like "31/mar/2025")
+  if (typeof dateStr === 'string' && dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1].toLowerCase();
+      const year = parseInt(parts[2], 10);
+      
+      // Find month index
+      const monthIndex = SHORT_MONTHS.findIndex(month => month === monthStr);
+      if (monthIndex !== -1 && !isNaN(day) && !isNaN(year)) {
+        const date = new Date(year, monthIndex, day);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+  }
+  
+  return null;
+};
+
+// Function to convert any date format to DD/MMM/YYYY
+export const toDDMMMYYYY = (date) => {
+  if (!date) return null;
+  
+  const parsedDate = typeof date === 'string' ? parseDate(date) : new Date(date);
+  if (!parsedDate || isNaN(parsedDate.getTime())) return null;
+  
+  const day = parsedDate.getDate();
+  const month = parsedDate.getMonth();
+  const year = parsedDate.getFullYear();
+  
+  return `${day}/${SHORT_MONTHS[month]}/${year}`;
 };
 
 export const getDateFormatOptions = () => [
@@ -64,5 +118,6 @@ export const getDateFormatOptions = () => [
   { value: 'long-en', label: 'Largo (English) - 15 January 2024' },
   { value: 'short', label: 'Corto - 15/1/24' },
   { value: 'medium', label: 'Medio - 15/1/2024' },
-  { value: 'iso', label: 'ISO - 2024-01-15' }
+  { value: 'iso', label: 'ISO - 2024-01-15' },
+  { value: 'dd-mmm-yyyy', label: 'DD/MMM/YYYY - 31/mar/2025' }
 ]; 

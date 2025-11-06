@@ -586,6 +586,36 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
+// Endpoint for cron job to trigger birthday emails
+app.get('/api/cron/birthday-emails', async (req, res) => {
+  try {
+    console.log('🎂 Cron job: Triggering birthday emails...');
+    
+    // Import the birthday service
+    const { triggerBirthdayEmails } = require('./services/firebaseBirthdayService');
+    
+    const result = await triggerBirthdayEmails();
+    
+    console.log('✅ Cron job: Birthday emails triggered successfully', result);
+    
+    res.json({
+      status: 'success',
+      message: 'Birthday emails triggered successfully',
+      result: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('❌ Cron job: Error triggering birthday emails:', error);
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Error triggering birthday emails',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 app.get('/api/test', (req, res) => {
   res.json({
     message: 'Backend API with MySQL is working!',
@@ -763,7 +793,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_a_pagar_mxn', 'prima_neta_mxn', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva', 'email', 'tipo_de_poliza', 'tipo_de_plan', 'rfc', 'direccion', 'telefono', 'fecha_expedicion', 'beneficiarios', 'edad_de_contratacion', 'tipo_de_riesgo', 'fumador', 'coberturas', 'pdf', 'responsable', 'cobrar_a', 'ramo']
         },
         'gmm': {
           type: 'GMM',
@@ -771,7 +801,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'nombre_del_asegurado', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'fecha_nacimiento_asegurado', 'version', 'renovacion', 'pdf', 'responsable', 'ramo']
         },
         'rc': {
           type: 'simple',
@@ -787,7 +817,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo']
         },
         'mascotas': {
           type: 'simple',
@@ -795,7 +825,7 @@ app.get('/api/data/table-types', async (req, res) => {
           childTable: null,
           isMainTable: true,
           isSecondaryTable: false,
-          fields: ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo']
+          fields: ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo']
         },
         'diversos': {
           type: 'simple',
@@ -2116,6 +2146,110 @@ app.get('/api/birthdays/upcoming', async (req, res) => {
   }
 });
 
+// Trigger birthday emails endpoint
+app.post('/api/birthday/check-and-send', async (req, res) => {
+  try {
+    console.log('🎂 Triggering birthday emails check...');
+    
+    // Get today's birthdays
+    const response = await fetch(`http://localhost:${PORT}/api/birthday`);
+    const data = await response.json();
+    const allBirthdays = data.birthdays || [];
+    
+    const today = new Date();
+    const todayString = today.toDateString();
+    
+    const todaysBirthdays = allBirthdays.filter(birthday => {
+      const birthDate = new Date(birthday.date);
+      return birthDate.toDateString() === todayString;
+    });
+    
+    console.log(`📧 Found ${todaysBirthdays.length} birthdays for today`);
+    
+    // Send test email if requested
+    if (req.body.testMode) {
+      const testEmail = req.body.testEmail || 'ztmarcos@gmail.com';
+      const testCopy = req.body.testCopy || 'casinseguros@gmail.com';
+      
+      console.log(`📧 Sending test email to ${testEmail} with copy to ${testCopy}`);
+      
+      // Send test email using the existing email service
+      const emailData = {
+        to: testEmail,
+        subject: '🎂 Test - Sistema de Cumpleaños Automático',
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2 style="color: #e74c3c; text-align: center;">🎂 Sistema de Cumpleaños Automático</h2>
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; text-align: center;">
+              <h3 style="margin: 0; font-size: 24px;">Test Automático Activado</h3>
+              <p style="font-size: 18px; margin: 20px 0;">El sistema de correos automáticos de cumpleaños está funcionando correctamente.</p>
+              <p style="font-size: 16px; margin: 20px 0;">Se encontraron ${todaysBirthdays.length} cumpleaños para hoy.</p>
+              <div style="margin: 30px 0;">
+                <span style="font-size: 40px;">🎉 🎈 🎁</span>
+              </div>
+              <p style="font-size: 16px; margin: 0;">Con cariño,<br><strong>Equipo CASIN Seguros</strong></p>
+            </div>
+            <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+              <p>Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
+            </div>
+          </div>
+        `,
+        from: process.env.SMTP_USER_CASIN || 'casinseguros@gmail.com',
+        fromPass: process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
+        fromName: 'CASIN Seguros - Sistema Automático',
+        cc: testCopy
+      };
+      
+      // Send the test email
+      const emailResponse = await fetch(`http://localhost:${PORT}/api/email/send-welcome`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailData)
+      });
+      
+      const emailResult = await emailResponse.json();
+      
+      if (emailResponse.ok) {
+        console.log('✅ Test email sent successfully');
+        res.json({
+          success: true,
+          message: `Test email sent to ${testEmail} with copy to ${testCopy}`,
+          emailsSent: 1,
+          testMode: true
+        });
+      } else {
+        console.error('❌ Error sending test email:', emailResult);
+        res.status(500).json({
+          success: false,
+          error: 'Error sending test email',
+          details: emailResult
+        });
+      }
+    } else {
+      // Normal birthday email processing
+      res.json({
+        success: true,
+        message: `Se encontraron ${todaysBirthdays.length} cumpleaños para hoy`,
+        emailsSent: todaysBirthdays.length,
+        birthdays: todaysBirthdays.map(b => ({
+          name: b.name,
+          email: b.email || 'Sin email'
+        }))
+      });
+    }
+    
+  } catch (error) {
+    console.error('❌ Error triggering birthday emails:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error triggering birthday emails',
+      details: error.message
+    });
+  }
+});
+
 // Directorio endpoints (Firebase in production, MySQL fallback)
 app.get('/api/directorio', async (req, res) => {
   try {
@@ -2719,7 +2853,7 @@ app.get('/api/directorio-relationships', async (req, res) => {
       'autos': ['nombre_contratante'],
       'gmm': ['nombre_contratante', 'nombre_del_asegurado'], 
       'hogar': ['nombre_contratante'],
-      'negocio': ['nombre_contratante'],
+      'negocio': ['contratante'],
       'vida': ['nombre_contratante', 'nombre_del_asegurado'],
       'diversos': ['nombre_contratante'],
       'mascotas': ['nombre_contratante'],
@@ -4001,7 +4135,7 @@ app.post('/api/gpt/analyze', async (req, res) => {
           'transporte': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'rfc', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'descripcion_del_movimiento', 'version_renovacion', 'ubicacion', 'duracion', 'direccion', 'pagos_fraccionados', 'monto_parcial', 'no_de_pago', 'telefono', 'tipo_de_poliza', 'giro_del_negocio_asegurado', 'esquema_de_contratacion', 'medio_de_transporte', 'territorialidad', 'origen', 'destino', 'valor_del_embarque', 'mercancia', 'tipo_de_empaque', 'valor_mercancia', 'responsable', 'cobrar_a', 'ramo'],
           'mascotas': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'nombre_asegurado', 'nombre_de_mascota', 'direccion', 'telefono', 'codigo_cliente', 'duracion', 'fecha_expedicion', 'version', 'renovacion', 'tipo_de_mascota', 'raza', 'edad', 'categoria_de_mascota', 'sexo', 'responsable', 'cobrar_a', 'pdf', 'ramo'],
           'diversos': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'codigo_cliente', 'version', 'duracion', 'moneda', 'fecha_expedicion', 'renovacion', 'responsable', 'cobrar_a', 'ramo'],
-          'negocio': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo'],
+          'negocio': ['contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion_del_contratante', 'version', 'ubicaciones', 'moneda', 'responsable', 'cobrar_a', 'ramo'],
           'hogar': ['nombre_contratante', 'numero_poliza', 'aseguradora', 'fecha_inicio', 'fecha_fin', 'forma_pago', 'importe_total_a_pagar', 'prima_neta', 'derecho_poliza', 'recargo_pago_fraccionado', 'iva_16', 'email', 'rfc', 'direccion', 'telefono', 'duracion', 'version', 'renovacion', 'fecha_expedicion', 'pdf', 'responsable', 'cobrar_a', 'ramo'],
           'gruposgmm': [],
           'directorio_contactos': ['origen', 'comentario', 'nombre_completo', 'nombre_completo_oficial', 'nickname', 'apellido', 'display_name', 'empresa', 'telefono_oficina', 'telefono_casa', 'telefono_asistente', 'telefono_movil', 'telefonos_corregidos', 'email', 'entidad', 'genero', 'status_social', 'ocupacion', 'pais', 'status', 'created_at', 'updated_at']
@@ -4084,6 +4218,11 @@ REGLAS ESPECÍFICAS POR CAMPO:
    - EXTRAE SOLO EL NÚMERO sin símbolos de moneda ($, comas, etc.)
    - NO uses "Prima Neta" - usa el TOTAL FINAL que incluye todos los cargos
    - Si hay múltiples montos, usa el etiquetado como total o importe final a pagar
+10. Para el campo contratante:
+    - Busca el nombre de la empresa o persona que aparece después de "CONTRATANTE" o "Nombre" en el documento
+    - Patrón típico: "CONTRATANTE Código de Cliente Nombre [código] [NOMBRE_EMPRESA]"
+    - Ejemplo: "CONTRATANTE Código de Cliente Nombre 177754884 IMPORTADORA DE VEHICULOS ORIENTALES SA D" → contratante = "IMPORTADORA DE VEHICULOS ORIENTALES SA D"
+    - Extrae solo el nombre de la empresa/persona, no códigos numéricos
 
 FORMATO DE RESPUESTA:
 Responde ÚNICAMENTE con un objeto JSON válido con esta estructura exacta:
@@ -4221,6 +4360,266 @@ No incluyas explicaciones adicionales, solo el objeto JSON.`;
     });
   }
 });
+
+// Activity Logs endpoint - Store user activities in Firebase
+app.post('/api/activity-logs', async (req, res) => {
+  try {
+    console.log('📝 Activity log request:', req.body);
+    
+    const { timestamp, userId, userEmail, userName, action, tableName, details, metadata } = req.body;
+    
+    if (!action) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required field: action'
+      });
+    }
+
+    // Create activity log document
+    const activityLog = {
+      timestamp: timestamp || new Date().toISOString(),
+      userId: userId || 'unknown',
+      userEmail: userEmail || 'unknown',
+      userName: userName || 'Unknown User',
+      action: action,
+      tableName: tableName || null,
+      details: details || {},
+      metadata: metadata || {}
+    };
+
+    // Store in Firebase
+    const docRef = await db.collection('activity_logs').add(activityLog);
+    
+    console.log('✅ Activity logged with ID:', docRef.id);
+    
+    res.json({
+      success: true,
+      id: docRef.id,
+      message: 'Activity logged successfully'
+    });
+    
+  } catch (error) {
+    console.error('❌ Error logging activity:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to log activity',
+      details: error.message
+    });
+  }
+});
+
+// Get activity logs endpoint
+app.get('/api/activity-logs', async (req, res) => {
+  try {
+    const { startDate, endDate, userId, action, limit = 100 } = req.query;
+    
+    console.log('📊 Fetching activity logs with filters:', { startDate, endDate, userId, action, limit });
+    
+    let query = db.collection('activity_logs');
+    
+    // Apply filters
+    if (startDate) {
+      query = query.where('timestamp', '>=', startDate);
+    }
+    if (endDate) {
+      query = query.where('timestamp', '<=', endDate);
+    }
+    if (userId) {
+      query = query.where('userId', '==', userId);
+    }
+    if (action) {
+      query = query.where('action', '==', action);
+    }
+    
+    // Order by timestamp descending and limit
+    query = query.orderBy('timestamp', 'desc').limit(parseInt(limit));
+    
+    const snapshot = await query.get();
+    const logs = [];
+    
+    snapshot.forEach(doc => {
+      logs.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    console.log(`✅ Found ${logs.length} activity logs`);
+    
+    res.json({
+      success: true,
+      data: logs,
+      count: logs.length
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching activity logs:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activity logs',
+      details: error.message
+    });
+  }
+});
+
+// GPT Activity Analysis endpoint - Analyze weekly activity summary
+app.post('/api/gpt/analyze-activity', async (req, res) => {
+  try {
+    console.log('🤖 GPT Activity Analysis request');
+    
+    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    
+    if (!openaiApiKey) {
+      return res.status(500).json({
+        error: 'OpenAI API key not configured',
+        details: 'Please set OPENAI_API_KEY in environment variables'
+      });
+    }
+
+    const summaryData = req.body;
+    
+    console.log('📊 Summary data received:', {
+      totalActivities: summaryData.summary?.totalActivities,
+      totalExpiring: summaryData.summary?.totalExpiring,
+      totalPartialPayments: summaryData.summary?.totalPartialPayments,
+      activeUsers: summaryData.summary?.activeUsers
+    });
+
+    // Create comprehensive prompt for GPT
+    const prompt = `Genera un resumen conciso en español de las actividades del equipo de seguros. Usa formato de lista, sin comentarios extensos.
+
+**ACTIVIDADES DEL EQUIPO:**
+${summaryData.teamActivities && summaryData.teamActivities.length > 0
+  ? summaryData.teamActivities.slice(0, 6).map(act => {
+      const statusText = act.status === 'pending' ? 'Pendiente' : 
+                        act.status === 'in_progress' ? 'En Proceso' : 
+                        act.status === 'completed' ? 'Completada' : act.status;
+      return `• ${act.userName}: ${act.title} [${statusText}]`;
+    }).join('\n')
+  : 'No hay actividades registradas.'
+}
+
+**MÉTRICAS CLAVE:**
+• Pólizas capturadas: ${summaryData.summary.policiesCaptured || 0}
+• Pólizas pagadas: ${summaryData.summary.policiesPaid || 0}
+• Por vencer (7 días): ${summaryData.summary.totalExpiring}
+• Pagos pendientes: ${summaryData.summary.totalPartialPayments}
+• Emails enviados: ${summaryData.summary.emailsSent || 0}
+• Actualizaciones: ${summaryData.summary.dataUpdates || 0}
+
+**PÓLIZAS POR VENCER:**
+${summaryData.expiringPolicies.policies.slice(0, 3).map(p => 
+  `• ${p.nombre_contratante || p.contratante} (${p.tabla || 'General'}) - ${p.aseguradora} - ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
+).join('\n')}
+
+**PAGOS PARCIALES:**
+${summaryData.partialPayments.payments.slice(0, 3).map(p => 
+  `• ${p.nombre_contratante || p.contratante} (${p.tabla || 'General'}) - $${(p.pago_parcial || 0).toLocaleString('es-MX')}`
+).join('\n')}
+
+INSTRUCCIONES:
+1. Responde SOLO con listas concisas
+2. NO uses párrafos largos ni comentarios
+3. Menciona QUÉ hizo cada usuario, no cantidades
+4. Máximo 12 líneas total
+5. Enfócate en acciones específicas y métricas clave
+
+Formato: Solo listas con viñetas (•)`;
+
+    console.log('🤖 Sending to OpenAI...');
+
+    // Call OpenAI API
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Eres un analista de CRM de seguros. Responde SOLO con listas concisas en español, sin párrafos largos ni comentarios extensos.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 300
+      })
+    });
+
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.json();
+      console.error('❌ OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || openaiResponse.status}`);
+    }
+
+    const openaiResult = await openaiResponse.json();
+    const analysis = openaiResult.choices[0].message.content;
+
+    console.log('✅ GPT analysis generated successfully');
+    console.log('📝 Analysis length:', analysis.length, 'characters');
+
+    res.json({
+      success: true,
+      summary: analysis,
+      highlights: extractHighlights(summaryData),
+      metrics: summaryData.summary,
+      generatedAt: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error in GPT activity analysis:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to analyze activity',
+      details: error.message
+    });
+  }
+});
+
+// Helper function to extract key highlights from summary data
+function extractHighlights(summaryData) {
+  const highlights = [];
+  
+  // Most active user
+  const userActivities = Object.entries(summaryData.userActivity || {});
+  if (userActivities.length > 0) {
+    const mostActive = userActivities.reduce((max, [user, stats]) => 
+      stats.total > (max.stats?.total || 0) ? { user, stats } : max
+    , {});
+    if (mostActive.user) {
+      highlights.push(`Usuario más activo: ${mostActive.user} (${mostActive.stats.total} actividades)`);
+    }
+  }
+  
+  // Most common action
+  const actions = Object.entries(summaryData.activities.byAction || {});
+  if (actions.length > 0) {
+    const mostCommon = actions.reduce((max, [action, count]) => 
+      count > (max.count || 0) ? { action, count } : max
+    , {});
+    if (mostCommon.action) {
+      highlights.push(`Actividad principal: ${mostCommon.action} (${mostCommon.count} veces)`);
+    }
+  }
+  
+  // Urgent expirations
+  if (summaryData.summary.totalExpiring > 0) {
+    highlights.push(`⚠️ ${summaryData.summary.totalExpiring} pólizas vencen en los próximos 7 días`);
+  }
+  
+  // Pending payments
+  if (summaryData.summary.totalPartialPayments > 0) {
+    highlights.push(`💰 ${summaryData.summary.totalPartialPayments} pagos parciales pendientes`);
+  }
+  
+  return highlights;
+}
 
 // Helper function to analyze column patterns
 function analyzeColumnPatterns(columnData, columnName) {
@@ -4611,7 +5010,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -4623,20 +5022,21 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       fromName = req.body.fromName;
       fromPass = req.body.fromPass;
       sendBccToSender = req.body.sendBccToSender === 'true'; // Convert string to boolean
+      autoBccToCasin = req.body.autoBccToCasin === 'true'; // Convert string to boolean
       cc = req.body.cc || '';
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'cc'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'autoBccToCasin', 'cc'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, cc } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -4703,10 +5103,24 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       }
     }
     
+    // Add BCC recipients
+    const bccRecipients = [];
+    
     // Add BCC to sender if requested
     if (sendBccToSender && smtpUser) {
-      mailOptions.bcc = smtpUser;
+      bccRecipients.push(smtpUser);
       console.log('📧 Adding BCC to sender:', smtpUser);
+    }
+    
+    // Add BCC to casinseguros@gmail.com if requested
+    if (autoBccToCasin) {
+      bccRecipients.push('casinseguros@gmail.com');
+      console.log('📧 Adding BCC to casinseguros@gmail.com');
+    }
+    
+    if (bccRecipients.length > 0) {
+      mailOptions.bcc = bccRecipients;
+      console.log('📧 BCC recipients:', bccRecipients);
     }
     
     // Add file attachments if available
@@ -4721,8 +5135,8 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
 
     console.log('📤 Enviando correo a:', to);
     console.log('📋 Asunto:', subject);
-    if (sendBccToSender && smtpUser) {
-      console.log('📧 Enviando copia BCC al remitente:', smtpUser);
+    if (bccRecipients.length > 0) {
+      console.log('📧 Enviando copias BCC a:', bccRecipients);
     }
 
     // Enviar el correo
@@ -4743,7 +5157,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       messageId: info.messageId,
       recipient: to,
       subject: subject,
-      bccSent: sendBccToSender && smtpUser ? smtpUser : null
+      bccSent: bccRecipients.length > 0 ? bccRecipients : null
     });
 
   } catch (error) {
@@ -6049,6 +6463,134 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/dist/index.html'));
 });
 
+// Friday Weekly Report Scheduler
+// Runs every Friday at 5:00 PM CST (17:00)
+const scheduleFridayReport = () => {
+  let lastExecutionDate = null; // Track last execution to avoid duplicates
+  
+  // Simple setInterval-based scheduler (for production, consider using node-cron)
+  const checkAndRunReport = async () => {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
+    const hour = now.getHours();
+    const today = now.toDateString(); // YYYY-MM-DD format
+    
+    // Check if it's Friday at 5 PM CST (17:00) and we haven't run today
+    if (dayOfWeek === 5 && hour === 17 && lastExecutionDate !== today) {
+      try {
+        console.log('📊 Running scheduled Friday report...');
+        
+        // Check if auto-generate is enabled
+        const configSnapshot = await db.collection('app_config').doc('resumen-auto-generate').get();
+        const config = configSnapshot.exists ? configSnapshot.data() : {};
+        
+        if (!config.enabled) {
+          console.log('⏭️  Auto-generate disabled, skipping report');
+          return;
+        }
+        
+        // Calculate last week's date range
+        const endDate = new Date();
+        const startDate = new Date();
+        startDate.setDate(endDate.getDate() - 7);
+        
+        // Generate and send the weekly report
+        console.log('📊 Generating weekly report for date range:', startDate.toISOString(), 'to', endDate.toISOString());
+        
+        try {
+          // Call the GPT analysis endpoint to generate the report
+          const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/gpt/analyze-activity`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              automated: true
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('✅ Weekly report generated successfully');
+            
+            // Now send the email with the generated report
+            try {
+              const emailResponse = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/email/send-welcome`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  to: 'ztmarcos@gmail.com,marcoszavala09@gmail.com',
+                  subject: `Resumen Semanal - ${new Date().toLocaleDateString('es-MX')}`,
+                  htmlContent: `
+                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
+                      <h1 style="color: #000000; text-align: center; margin-bottom: 30px;">Resumen Semanal de Actividades</h1>
+                      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h2 style="color: #000000; margin-top: 0;">Análisis Inteligente</h2>
+                        <div style="white-space: pre-line; line-height: 1.6;">${result.summary}</div>
+                      </div>
+                      <div style="text-align: center; margin-top: 30px; color: #666666; font-size: 12px;">
+                        Generado automáticamente el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}
+                      </div>
+                    </div>
+                  `,
+                  from: 'casinseguros@gmail.com',
+                  fromPass: 'espajcgariyhsboq',
+                  fromName: 'CASIN Seguros - Resumen Automático'
+                })
+              });
+              
+              if (emailResponse.ok) {
+                console.log('✅ Weekly report email sent successfully');
+              } else {
+                console.error('❌ Failed to send weekly report email:', emailResponse.status);
+              }
+            } catch (emailError) {
+              console.error('❌ Error sending weekly report email:', emailError);
+            }
+            
+            // Log successful execution
+            await db.collection('activity_logs').add({
+              timestamp: new Date().toISOString(),
+              userId: 'system',
+              userEmail: 'system',
+              userName: 'Automated System',
+              action: 'report_generated',
+              tableName: null,
+              details: {
+                reportType: 'weekly_summary',
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+                automated: true,
+                emailSent: true,
+                recipients: ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com']
+              },
+              metadata: {
+                scheduledExecution: true,
+                executionTime: new Date().toISOString()
+              }
+            });
+          } else {
+            console.error('❌ Failed to generate weekly report:', response.status, response.statusText);
+          }
+        } catch (error) {
+          console.error('❌ Error generating weekly report:', error);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error running scheduled Friday report:', error);
+      }
+    }
+  };
+  
+  // Check every hour
+  setInterval(checkAndRunReport, 60 * 60 * 1000);
+  console.log('📅 Friday report scheduler initialized');
+};
+
 // Start server for Heroku (only if not in Vercel environment)
 if (!process.env.VERCEL) {
   const PORT = process.env.PORT || 3000;
@@ -6057,6 +6599,9 @@ if (!process.env.VERCEL) {
     console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);
     console.log(`📧 Notion enabled: ${isNotionEnabled}`);
+    
+    // Initialize Friday report scheduler
+    scheduleFridayReport();
   });
 }
 

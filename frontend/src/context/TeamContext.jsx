@@ -93,7 +93,7 @@ export const TeamProvider = ({ children }) => {
       console.log('🔍 Loading team for user:', user.email);
       
       // Para usuarios específicos, FORZAR el uso del equipo CASIN específico
-      if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com' || user.email === 'lorenacasin5@gmail.com' || user.email === 'michelldiaz.casinseguros@gmail.com') {
+      if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com' || user.email === 'lorenacasin5@gmail.com' || user.email === 'michelldiaz.casinseguros@gmail.com' || user.email === 'marcoszavala09@gmail.com') {
         console.log('🎯 Special user detected, forcing CASIN team 4JlUqhAvfJMlCDhQ4vgH');
         
         const forcedTeamId = '4JlUqhAvfJMlCDhQ4vgH';
@@ -159,7 +159,7 @@ export const TeamProvider = ({ children }) => {
             await addDoc(collection(db, 'team_members'), {
               userId: user.uid || user.email.replace(/[@.]/g, '_'),
               email: user.email,
-              name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marquitos' : user.email === 'lorenacasin5@gmail.com' ? 'Lorena CASIN' : user.email === 'michelldiaz.casinseguros@gmail.com' ? 'Michelle Díaz' : '2012 Solitario'),
+              name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marquitos' : user.email === 'lorenacasin5@gmail.com' ? 'Lorena CASIN' : user.email === 'michelldiaz.casinseguros@gmail.com' ? 'Michelle Díaz' : user.email === 'marcoszavala09@gmail.com' ? 'Marcos Zavala' : '2012 Solitario'),
               teamId: forcedTeamId,
               role: 'admin',
               invitedBy: user.email,

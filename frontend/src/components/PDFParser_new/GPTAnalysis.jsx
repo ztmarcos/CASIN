@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import firebaseTableService from '../../services/firebaseTableService';
-import { API_URL } from '../../config/api.js';
+import { API_URL, GPT_API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
+import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
+import activityLogger from '../../utils/activityLogger';
 
 
 const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose, onOpenEmailModal }) => {
@@ -33,6 +35,83 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         status: ['status']
     };
 
+    // Insurance company name normalization function
+    const normalizeInsuranceCompany = (companyName) => {
+        if (!companyName || typeof companyName !== 'string') return companyName;
+        
+        const companyNormalizations = {
+            // GNP variations
+            'GNP': [
+                /grupo\s+nacional\s+provincial\s*,?\s*s\.a\.b\.?/gi,
+                /grupo\s+naci[oó]n\s+aprovincial/gi,
+                /grupo\s+nacional\s+aprovincial/gi,
+                /gnp\s+seguros/gi,
+                /g\.n\.p\.?/gi,
+                /grupo\s+nacion\s+aprovincial/gi,
+                /grupo\s+nacional\s+provincial/gi
+            ],
+            // Qualitas variations
+            'Qualitas': [
+                /quálitas\s+compañía\s+de\s+seguros\s*,?\s*s\.a\.\s*de\s*c\.v\.?/gi,
+                /quálitas\s+compañía\s+de\s+seguros/gi,
+                /quálitas\s+seguros/gi,
+                /quálitas/gi
+            ],
+            // SURA variations
+            'SURA': [
+                /seguros\s+sura\s*,?\s*s\.a\.\s*de\s*c\.v\.?/gi,
+                /seguros\s+sura/gi,
+                /sura\s+seguros/gi,
+                /sura/gi
+            ],
+            // AXA variations
+            'AXA': [
+                /axa\s+seguros/gi,
+                /axa\s+assistance/gi,
+                /axa/gi
+            ],
+            // Metlife variations
+            'Metlife': [
+                /metlife\s+seguros/gi,
+                /metlife/gi
+            ],
+            // Mapfre variations
+            'Mapfre': [
+                /mapfre\s+seguros/gi,
+                /mapfre/gi
+            ],
+            // HDI variations
+            'HDI': [
+                /hdi\s+seguros/gi,
+                /hdi/gi
+            ],
+            // Zurich variations
+            'Zurich': [
+                /zurich\s+seguros/gi,
+                /zurich/gi
+            ],
+            // BBVA Bancomer variations
+            'BBVA Bancomer': [
+                /bbva\s+bancomer\s+seguros/gi,
+                /bbva\s+seguros/gi,
+                /bancomer\s+seguros/gi
+            ]
+        };
+        
+        let normalized = companyName.trim();
+        
+        // Apply all company normalizations
+        Object.entries(companyNormalizations).forEach(([normalizedName, patterns]) => {
+            patterns.forEach(pattern => {
+                if (pattern.test(normalized)) {
+                    normalized = normalized.replace(pattern, normalizedName);
+                }
+            });
+        });
+        
+        return normalized;
+    };
+
     // Comprehensive text normalization function
     const normalizeText = (text, fieldType = 'general') => {
         if (!text || typeof text !== 'string') return text;
@@ -45,19 +124,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
         // Basic cleanup
         normalized = normalized.trim();
         
-        // Company name normalization - GNP variations
-        const gnpVariations = [
-            /grupo\s+nacional\s+provincial\s*,?\s*s\.a\.b\.?/gi,
-            /grupo\s+naci[oó]n\s+aprovincial/gi,
-            /grupo\s+nacional\s+aprovincial/gi,
-            /gnp\s+seguros/gi,
-            /g\.n\.p\.?/gi,
-            /grupo\s+nacion\s+aprovincial/gi
-        ];
-        
-        gnpVariations.forEach(pattern => {
-            normalized = normalized.replace(pattern, 'GNP');
-        });
+        // Apply insurance company normalization
+        normalized = normalizeInsuranceCompany(normalized);
         
         // Name normalization (for person names)
         if (fieldType === 'name' || fieldType === 'contratante') {
@@ -260,6 +328,9 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             console.log('🔍 PROMPT DEBUG:');
             console.log('- Using backend default prompt (no custom instructions)');
             console.log('- Target columns:', columns.length);
+            console.log('- Target columns list:', columns);
+            console.log('- Table name:', tableName);
+            console.log('- Has contratante column:', columns.includes('contratante'));
             
             const prompt = {
                 text: parsedData.text,
@@ -268,10 +339,12 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 targetColumns: columns,
                 tableName: tableName,
                 tableType: tableInfo.type || 'simple'
-                // No instructions - let backend use its simpler prompt
+                // No custom instructions - use backend default
             };
 
-            const response = await fetch(`${API_URL}/gpt/analyze`, {
+            console.log('- Full prompt being sent:', JSON.stringify(prompt, null, 2));
+
+            const response = await fetch(`${GPT_API_URL}/gpt/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -370,7 +443,7 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                                 } else if (column.includes('email') || column.includes('e_mail')) {
                                     cleanData[column] = 'usuario@email.com';
                                 } else if (column.includes('fecha') || column.includes('vigencia')) {
-                                    cleanData[column] = '01/01/2024';
+                                    cleanData[column] = '1/ene/2024';
                                 } else if (column.includes('poliza') || column.includes('numero')) {
                                     cleanData[column] = '123456';
                                 } else if (column.includes('aseguradora')) {
@@ -486,6 +559,10 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                             value = normalizeText(value, 'name');
                         } else if (columnName.toLowerCase().includes('direccion') || columnName.toLowerCase().includes('address')) {
                             value = normalizeText(value, 'address');
+                        } else if (columnName.toLowerCase().includes('aseguradora') || columnName.toLowerCase().includes('compañía') || columnName.toLowerCase().includes('company')) {
+                            // Special handling for insurance company fields
+                            value = normalizeInsuranceCompany(value);
+                            console.log(`Insurance company field ${columnName} normalized:`, value);
                         } else {
                             value = normalizeText(value, 'general');
                         }
@@ -500,16 +577,12 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     } else if (fieldTypes.date.includes(columnName)) {
                         try {
                             if (typeof value === 'string') {
-                                if (value.includes('/')) {
-                                    // Convert DD/MM/YYYY to YYYY-MM-DD
-                                    const [day, month, year] = value.split('/');
-                                    value = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                                } else if (value.includes('-')) {
-                                    // If already in YYYY-MM-DD format, keep it
-                                    value = value;
-                                }
+                                // Convert any date format to DD/MMM/YYYY
+                                const formattedDate = toDDMMMYYYY(value);
+                                value = formattedDate || value; // Keep original if conversion fails
                             } else if (value instanceof Date) {
-                                value = value.toISOString().split('T')[0];
+                                // Convert Date object to DD/MMM/YYYY format
+                                value = toDDMMMYYYY(value);
                             }
                             console.log(`Date field ${columnName} processed:`, value);
                         } catch (e) {
@@ -530,6 +603,13 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 }
             });
 
+            // Transform nombre_contratante to contratante for all tables
+            if (cleanData.nombre_contratante) {
+                cleanData.contratante = cleanData.nombre_contratante;
+                delete cleanData.nombre_contratante;
+                console.log('Transformed nombre_contratante to contratante');
+            }
+
             console.log('Final clean data before insertion:', cleanData);
             console.log('Clean data structure:', Object.keys(cleanData));
             
@@ -539,6 +619,9 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 
                 setMessage('Datos insertados exitosamente');
                 setError(null);
+
+                // Log activity (data capture includes PDF analysis)
+                await activityLogger.logDataCapture(tableName, result.id, cleanData);
 
                 // Data will be sent via custom event to TableMail
 
@@ -616,6 +699,9 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 processedValue = normalizeText(processedValue, 'name');
             } else if (column.toLowerCase().includes('direccion') || column.toLowerCase().includes('address')) {
                 processedValue = normalizeText(processedValue, 'address');
+            } else if (column.toLowerCase().includes('aseguradora') || column.toLowerCase().includes('compañía') || column.toLowerCase().includes('company')) {
+                // Special handling for insurance company fields
+                processedValue = normalizeInsuranceCompany(processedValue);
             } else {
                 processedValue = normalizeText(processedValue, 'general');
             }

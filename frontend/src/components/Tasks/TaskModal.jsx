@@ -5,6 +5,7 @@ import firebaseTaskService from '../../services/firebaseTaskService';
 import taskEmailService from '../../services/taskEmailService';
 import { getTaskUsers } from '../../config/users.js';
 import './TaskModal.css';
+import { toDDMMMYYYY } from '../../utils/dateUtils';
 
 const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
   const { user } = useAuth();
@@ -226,26 +227,9 @@ const TaskModal = ({ task, onSave, onClose, onDelete, isDark }) => {
     if (!date) return 'Sin fecha';
     
     try {
-      let dateObj;
-      
-      if (date.toDate && typeof date.toDate === 'function') {
-        dateObj = date.toDate();
-      } else if (date instanceof Date) {
-        dateObj = date;
-      } else if (typeof date === 'string' || typeof date === 'number') {
-        dateObj = new Date(date);
-      } else {
-        return 'Sin fecha';
-      }
-      
-      if (isNaN(dateObj.getTime())) return 'Sin fecha';
-      
-      return dateObj.toLocaleDateString('es-ES', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+      // Convert to DD/MMM/YYYY format
+      const formattedDate = toDDMMMYYYY(date);
+      return formattedDate || 'Sin fecha';
     } catch (error) {
       console.error('Error formatting date for display:', error);
       return 'Sin fecha';

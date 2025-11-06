@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_URL, BASE_URL } from '../../config/api.js';
+import { toDDMMMYYYY } from '../../utils/dateUtils';
 
 class TableService {
   constructor() {
@@ -217,7 +218,7 @@ class TableService {
             } else if (typeof value === 'object' && !(value instanceof Date)) {
               value = JSON.stringify(value);
             } else if (value instanceof Date) {
-              value = value.toISOString().split('T')[0];
+              value = toDDMMMYYYY(value);
             } else if (typeof value === 'string' && value.trim() !== '') {
               // 🔄 AUTO-NORMALIZE TEXT DATA BASED ON COLUMN NAME
               console.log(`🔄 Auto-normalizing field "${key}" with value: "${value}"`);

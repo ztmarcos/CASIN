@@ -3,6 +3,7 @@ import { API_URL } from '../../config/api.js';
 import DriveSelector from '../Drive/DriveSelector.jsx';
 import { getSenderOptions } from '../../config/users.js';
 import './TableMail.css';
+import activityLogger from '../../utils/activityLogger';
 
 const SENDER_OPTIONS = getSenderOptions();
 
@@ -68,7 +69,7 @@ const EMAIL_TEMPLATES = {
   vida: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -84,7 +85,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -384,6 +385,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [sender, setSender] = useState(SENDER_OPTIONS[0]);
   const [sendBccToSender, setSendBccToSender] = useState(true); // Por defecto activado
   const [ccEmails, setCcEmails] = useState(''); // Campo CC manual
+  const [autoBccToCasin, setAutoBccToCasin] = useState(true); // BCC automático a casinseguros@gmail.com
   const [plainTextMessage, setPlainTextMessage] = useState(''); // Mensaje en texto plano para edición
 
   // Función para convertir HTML a texto plano
@@ -632,7 +634,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     }
     
     // PRIORIDAD 6: Lógica específica para vida (solo si no hay otros indicadores)
-    if (data.contratante && !hasAutoFields && !data.ramo && !data.tipo_poliza) {
+    if (data.nombre_contratante && !hasAutoFields && !data.ramo && !data.tipo_poliza) {
       console.log('✅ Detectando como vida por lógica de exclusión (tiene contratante, no tiene auto/ramo/tipo_poliza)');
       return prefix + 'vida';
     }
@@ -653,6 +655,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setEmailType('nueva_autos');
       setSender(SENDER_OPTIONS[0]); // Reset sender on close
       setSendBccToSender(true); // Reset BCC option - SIEMPRE activado por defecto
+      setAutoBccToCasin(true); // Reset BCC automático a CASIN - SIEMPRE activado por defecto
       setCcEmails(''); // Reset CC field
       setPlainTextMessage(''); // Reset plain text message
     }
@@ -682,7 +685,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         ramo: rowData.ramo,
         tipo_poliza: rowData.tipo_poliza,
         aseguradora: rowData.aseguradora,
-        contratante: rowData.contratante,
+        nombre_contratante: rowData.nombre_contratante,
         rowData
       });
       setEmailType(detectedType);
@@ -746,7 +749,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         // Intentar detectar el ramo basado en los campos disponibles
         if (rowData.descripcion_del_vehiculo || rowData.modelo || rowData.placas) {
           ramo = 'autos';
-        } else if (rowData.contratante && rowData.numero_poliza) {
+        } else if (rowData.nombre_contratante && rowData.numero_poliza) {
           // Intentar detectar si es vida basado en el contexto
           if (rowData.aseguradora && rowData.aseguradora.toLowerCase().includes('vida')) {
             ramo = 'vida';
@@ -773,9 +776,9 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       } else if (emailType === 'renovacion_autos' || (ramo === 'autos' && tipo === 'renovacion')) {
         subject = `Renovación Seguro Auto - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_vida' || (ramo === 'vida' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Seguro Vida - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_vida' || (ramo === 'vida' && tipo === 'renovacion')) {
-        subject = `Renovación Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Seguro Vida - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_gmm' || (ramo === 'gmm' && tipo === 'nueva')) {
         subject = `Nueva Póliza GMM - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_gmm' || (ramo === 'gmm' && tipo === 'renovacion')) {
@@ -995,6 +998,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         formData.append('fromName', sender.name);
         formData.append('fromPass', sender.pass);
         formData.append('sendBccToSender', sendBccToSender.toString());
+        formData.append('autoBccToCasin', autoBccToCasin.toString());
         formData.append('cc', ccEmails);
         
         // Add drive links if any
@@ -1030,6 +1034,19 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
         
+        // Log email activity
+        await activityLogger.logEmailSent(
+          emailAddress,
+          emailContent.subject,
+          rowData.sourceTable || rowData.table || 'unknown',
+          {
+            hasAttachments: true,
+            attachmentCount: attachments.length,
+            hasDriveLinks: uploadedFiles.length > 0,
+            messageId: result.messageId
+          }
+        );
+        
         // Show BCC info if sent
         if (result.bccSent) {
           console.log('📧 Copia BCC enviada a:', result.bccSent);
@@ -1044,6 +1061,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           fromName: sender.name,
           fromPass: sender.pass,
           sendBccToSender: sendBccToSender,
+          autoBccToCasin: autoBccToCasin,
           cc: ccEmails,
           driveLinks: uploadedFiles.map(file => ({
             name: file.name,
@@ -1068,13 +1086,32 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         const result = await response.json();
         console.log('Email enviado exitosamente:', result);
         
+        // Log email activity
+        await activityLogger.logEmailSent(
+          emailAddress,
+          emailContent.subject,
+          rowData.sourceTable || rowData.table || 'unknown',
+          {
+            hasAttachments: false,
+            messageId: result.messageId
+          }
+        );
+        
         // Show BCC info if sent
         if (result.bccSent) {
           console.log('📧 Copia BCC enviada a:', result.bccSent);
         }
       }
 
-      setSuccess(sendBccToSender ? '✅ ¡Correo enviado exitosamente! 📧 Copia BCC enviada al remitente para su archivo personal' : '¡Correo enviado exitosamente!');
+      const bccInfo = [];
+      if (sendBccToSender) bccInfo.push('remitente');
+      if (autoBccToCasin) bccInfo.push('casinseguros@gmail.com');
+      
+      const bccMessage = bccInfo.length > 0 
+        ? ` 📧 Copias BCC enviadas a: ${bccInfo.join(' y ')}`
+        : '';
+      
+      setSuccess(`✅ ¡Correo enviado exitosamente!${bccMessage}`);
       setTimeout(() => {
         onClose();
       }, 2000);
@@ -1142,6 +1179,24 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
             </label>
             <small className="email-type-help" style={{ color: '#2e7d32', fontWeight: '500' }}>
               ✅ RECOMENDADO: El remitente recibirá una copia oculta del correo enviado para su archivo personal
+            </small>
+          </div>
+          
+          <div className="mail-field">
+            <label style={{ display: 'flex', alignItems: 'center', backgroundColor: '#e3f2fd', padding: '10px', borderRadius: '5px', border: '1px solid #2196f3' }}>
+              <input
+                type="checkbox"
+                checked={autoBccToCasin}
+                onChange={(e) => setAutoBccToCasin(e.target.checked)}
+                disabled={isGenerating}
+                style={{ marginRight: '8px', transform: 'scale(1.2)' }}
+              />
+              <span style={{ fontWeight: 'bold', color: '#1565c0' }}>
+                🏢 Enviar copia oculta (BCC) a casinseguros@gmail.com
+              </span>
+            </label>
+            <small className="email-type-help" style={{ color: '#1565c0', fontWeight: '500' }}>
+              ✅ OBLIGATORIO: Todos los correos se envían con copia oculta a la empresa para archivo
             </small>
           </div>
           <div className="mail-field">

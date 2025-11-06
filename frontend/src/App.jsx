@@ -37,6 +37,7 @@ import DirectorioSimple from './components/Directorio/DirectorioSimple'
 import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 import Cotiza from './components/Cotiza/Cotiza'
 import Clientes from './components/Clientes/Clientes'
+import Resumen from './components/Resumen/Resumen'
 
 // Componente protector de rutas con verificación de permisos
 const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
@@ -351,6 +352,12 @@ function AppRoutes() {
           <h1>🧪 Test Route Works!</h1>
           <p>Si ves esto, las rutas funcionan correctamente.</p>
         </div>
+      } />
+
+      <Route path="/resumen" element={
+        <ProtectedRoute requireAdminAccess>
+          <Resumen />
+        </ProtectedRoute>
       } />
       
       <Route path="*" element={<Navigate to="/" replace />} />

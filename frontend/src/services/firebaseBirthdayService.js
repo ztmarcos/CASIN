@@ -110,25 +110,31 @@ class FirebaseBirthdayService {
    * Get the appropriate name from a document based on collection type
    */
   getNameFromDocument(doc, collectionName) {
-    switch (collectionName) {
-      case 'directorio_contactos':
-        return doc.nombre_completo || doc.nombre || 'Sin nombre';
-      case 'autos':
-        return doc.nombre_contratante || 'Sin nombre';
-      case 'rc':
-        return doc.asegurado || 'Sin nombre';
-      case 'vida':
-        return doc.contratante || 'Sin nombre';
-      case 'gmm':
-      case 'transporte':
-      case 'mascotas':
-      case 'diversos':
-      case 'negocio':
-      case 'gruposgmm':
-        return doc.nombre_contratante || doc.contratante || doc.asegurado || 'Sin nombre';
-      default:
-        return doc.nombre_completo || doc.nombre_contratante || doc.contratante || doc.asegurado || 'Sin nombre';
+    // Lista de todos los posibles campos de nombre que pueden existir
+    const possibleNameFields = [
+      'nombre_completo',
+      'nombre_contratante', 
+      'contratante',
+      'asegurado',
+      'nombre',
+      'nombre_asegurado',
+      'cliente',
+      'nombre_cliente'
+    ];
+
+    // Buscar el primer campo de nombre que tenga valor
+    for (const field of possibleNameFields) {
+      if (doc[field] && doc[field].trim() !== '') {
+        return doc[field].trim();
+      }
     }
+
+    // Debug: Si no se encuentra ningún campo de nombre, loggear los campos disponibles
+    console.warn(`🔍 No se encontró campo de nombre en documento de ${collectionName}. Campos disponibles:`, Object.keys(doc));
+    console.warn(`🔍 Documento completo:`, doc);
+
+    // Si no se encuentra ningún campo de nombre, devolver 'Sin nombre'
+    return 'Sin nombre';
   }
 
   /**

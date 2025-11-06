@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTeam } from '../../context/TeamContext';
 import { NavLink } from 'react-router-dom';
 import NotionButton from '../Notion/NotionButton';
-import SupportChat from '../SupportChat/SupportChat';
+// import SupportChat from '../SupportChat/SupportChat';
 import { getCleanTeamName } from '../../utils/teamUtils';
 
 import { FEATURES } from '../../config/features';
@@ -40,7 +40,7 @@ const Layout = ({ children }) => {
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h5.25a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25h1.5a2.251 2.251 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V19.5a2.25 2.25 0 002.25 2.25h5.25a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08" />
               </svg>
-              <span>Tareas</span>
+              <span>Actividad</span>
             </NavLink>
             <NavLink to="/data">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
@@ -92,8 +92,8 @@ const Layout = ({ children }) => {
               </svg>
               <span>Directorio {!FEATURES.DIRECTORIO_ENABLED && '⚠️'}</span>
             </NavLink>
-            {/* Opciones disponibles solo para administradores */}
-            {canAccessTeamData && canAccessTeamData() ? (
+            {/* Opciones disponibles solo para administradores - completamente ocultas para otros usuarios */}
+            {canAccessTeamData && canAccessTeamData() && (
               <>
                 <NavLink to="/team-data">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
@@ -114,29 +114,6 @@ const Layout = ({ children }) => {
                   </svg>
                   <span>Dashboard Dev 🔧</span>
                 </NavLink>
-              </>
-            ) : (
-              <>
-                {/* Links deshabilitados para usuarios sin permisos de administrador */}
-                <span className="nav-disabled" title="Solo administradores pueden acceder">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                  </svg>
-                  <span>Datos Team 🔒</span>
-                </span>
-                <span className="nav-disabled" title="Solo administradores pueden acceder">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-                  </svg>
-                  <span>DB Viewer 🔒</span>
-                </span>
-                <span className="nav-disabled" title="Solo desarrolladores pueden acceder">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="nav-icon">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" />
-                  </svg>
-                  <span>Dashboard Dev 🔒</span>
-                </span>
               </>
             )}
           </nav>
@@ -169,8 +146,8 @@ const Layout = ({ children }) => {
         {children}
       </main>
       
-      {/* Support Chat Widget */}
-      <SupportChat />
+      {/* Support Chat Widget - Hidden */}
+      {/* <SupportChat /> */}
     </div>
   );
 };

@@ -9,9 +9,11 @@ const Birthdays = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [emailStatus, setEmailStatus] = useState(null);
+  const [autoEmailEnabled, setAutoEmailEnabled] = useState(true);
 
   useEffect(() => {
     loadBirthdays();
+    // Note: Automatic birthday emails are now triggered from Dashboard
   }, []);
 
   // Function to determine if an RFC belongs to a natural person (persona física)
@@ -31,6 +33,7 @@ const Birthdays = () => {
     
     return false;
   };
+
 
   const loadBirthdays = async () => {
     try {
@@ -54,17 +57,32 @@ const Birthdays = () => {
     }
   };
 
-  const handleSendEmails = async () => {
+  const handleAutoSendEmails = async () => {
     try {
       setEmailStatus({ loading: true });
       const result = await triggerBirthdayEmails();
       setEmailStatus({ 
         success: true, 
-        message: result.message || `Se encontraron ${result.emailsSent} cumpleaños para hoy.`
+        message: `✅ Mail automático de cumpleaños activado. ${result.message || `Se encontraron ${result.emailsSent} cumpleaños para hoy.`}`
       });
-      setTimeout(() => setEmailStatus(null), 5000); // Clear message after 5 seconds
+      setTimeout(() => setEmailStatus(null), 8000); // Clear message after 8 seconds
     } catch (err) {
-      setEmailStatus({ error: true, message: 'Error al enviar correos: ' + err.message });
+      setEmailStatus({ error: true, message: 'Error al activar envío automático: ' + err.message });
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    try {
+      setEmailStatus({ loading: true });
+      // Enviar test a ztmarcos@gmail.com con copia a casinseguros@gmail.com
+      const testResult = await triggerBirthdayEmails();
+      setEmailStatus({ 
+        success: true, 
+        message: `✅ Test enviado a ztmarcos@gmail.com con copia a casinseguros@gmail.com. ${testResult.message || 'Test completado.'}`
+      });
+      setTimeout(() => setEmailStatus(null), 8000);
+    } catch (err) {
+      setEmailStatus({ error: true, message: 'Error en test de correo: ' + err.message });
     }
   };
 
@@ -129,6 +147,13 @@ const Birthdays = () => {
     <div className="birthdays-container">
       <div className="birthdays-header">
         <h2>🎂 Cumpleaños - Personas Físicas</h2>
+        {autoEmailEnabled && (
+          <div className="auto-email-status">
+            <span className="auto-email-badge">
+              ✅ Mail automático de cumpleaños activado
+            </span>
+          </div>
+        )}
         <div className="header-actions">
           <div className="search-container">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="search-icon">
@@ -164,16 +189,6 @@ const Birthdays = () => {
             </button>
           </div>
           
-          <button 
-            className="btn-primary" 
-            onClick={handleSendEmails}
-            disabled={emailStatus?.loading}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
-            <span>{emailStatus?.loading ? 'Enviando...' : 'Enviar Correos'}</span>
-          </button>
         </div>
       </div>
 
