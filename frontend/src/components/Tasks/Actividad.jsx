@@ -479,76 +479,77 @@ const Actividad = () => {
           ) : (
             userActivities.map(task => (
               <div key={task.id} className={`activity-item status-${task.status || 'pending'}`}>
-                <div className="activity-header-section">
-                  <button 
-                    className={`status-badge status-${task.status || 'pending'}`}
-                    onClick={() => handleStatusCycle(task.id, task.status)}
-                    title="Clic para cambiar estado"
-                  >
-                    {getStatusText(task.status || 'pending')}
-                  </button>
-                  <div className="activity-dates">
-                    <div className="activity-date-badge created">
-                      <span className="date-label">Creada:</span>
-                      {(() => {
-                        if (!task.createdAt) return 'Hoy';
-                        
-                        try {
-                          const date = task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt);
-                          if (isNaN(date.getTime())) return 'Hoy';
-                          
-                          return date.toLocaleDateString('es-MX', {
-                            day: '2-digit',
-                            month: 'short'
-                          });
-                        } catch (error) {
-                          console.error('Error formatting date:', error, task.createdAt);
-                          return 'Hoy';
-                        }
-                      })()}
-                    </div>
-                    {task.updatedAt && task.updatedAt !== task.createdAt && (
-                      <div className="activity-date-badge updated">
-                        <span className="date-label">Actualizada:</span>
+                <div 
+                  className="activity-clickable-area"
+                  onClick={() => handleEditTask(task)}
+                >
+                  <div className="activity-header-section">
+                    <button 
+                      className={`status-badge status-${task.status || 'pending'}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStatusCycle(task.id, task.status);
+                      }}
+                      title="Clic para cambiar estado"
+                    >
+                      {getStatusText(task.status || 'pending')}
+                    </button>
+                    <div className="activity-dates">
+                      <div className="activity-date-badge created">
+                        <span className="date-label">Creada:</span>
                         {(() => {
+                          if (!task.createdAt) return 'Hoy';
+                          
                           try {
-                            const date = task.updatedAt instanceof Date ? task.updatedAt : new Date(task.updatedAt);
-                            if (isNaN(date.getTime())) return '';
+                            const date = task.createdAt instanceof Date ? task.createdAt : new Date(task.createdAt);
+                            if (isNaN(date.getTime())) return 'Hoy';
                             
                             return date.toLocaleDateString('es-MX', {
                               day: '2-digit',
                               month: 'short'
                             });
                           } catch (error) {
-                            return '';
+                            console.error('Error formatting date:', error, task.createdAt);
+                            return 'Hoy';
                           }
                         })()}
                       </div>
+                      {task.updatedAt && task.updatedAt !== task.createdAt && (
+                        <div className="activity-date-badge updated">
+                          <span className="date-label">Actualizada:</span>
+                          {(() => {
+                            try {
+                              const date = task.updatedAt instanceof Date ? task.updatedAt : new Date(task.updatedAt);
+                              if (isNaN(date.getTime())) return '';
+                              
+                              return date.toLocaleDateString('es-MX', {
+                                day: '2-digit',
+                                month: 'short'
+                              });
+                            } catch (error) {
+                              return '';
+                            }
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="activity-content">
+                    <h3>{task.title}</h3>
+                    {task.description && task.description !== task.title && (
+                      <p>{task.description.length > 150 ? task.description.substring(0, 150) + '...' : task.description}</p>
                     )}
                   </div>
                 </div>
                 
-                <div className="activity-content">
-                  <h3>{task.title}</h3>
-                  {task.description && task.description !== task.title && (
-                    <p>{task.description.length > 150 ? task.description.substring(0, 150) + '...' : task.description}</p>
-                  )}
-                </div>
-                
                 <div className="activity-actions">
                   <button 
-                    className="activity-edit-btn"
-                    onClick={() => handleEditTask(task)}
-                    title="Editar"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
-                    Editar
-                  </button>
-                  <button 
                     className="activity-delete-btn"
-                    onClick={() => handleDeleteTask(task.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTask(task.id);
+                    }}
                     title="Eliminar"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
