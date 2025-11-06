@@ -69,7 +69,7 @@ const EMAIL_TEMPLATES = {
   vida: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -85,7 +85,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
