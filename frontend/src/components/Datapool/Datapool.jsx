@@ -66,15 +66,15 @@ const Datapool = () => {
               // Debug log to see actual fields
               console.log('Available fields:', Object.keys(item));
 
-              // Find nombre_contratante field by looking for keywords
-              const nombreContratanteField = Object.keys(item).find(key => 
+              // Find contratante field by looking for keywords (prioritize contratante over nombre_contratante)
+              const contratanteField = Object.keys(item).find(key => 
+                key.toLowerCase() === 'contratante' ||
+                key.toLowerCase().includes('contratante')
+              ) || Object.keys(item).find(key => 
                 key.toLowerCase().includes('nombre_contratante') ||
-                key.toLowerCase().includes('contratante') || 
                 key.toLowerCase().includes('nombre del contratante') ||
                 key.toLowerCase().includes('nombre_del_contratante') ||
-                key.toLowerCase().includes('nombrecontratante') ||
-                key.toLowerCase().includes('nombre') ||
-                key.toLowerCase().includes('contrat')
+                key.toLowerCase().includes('nombrecontratante')
               );
 
               // Find poliza field by looking for keywords
@@ -89,13 +89,15 @@ const Datapool = () => {
               );
 
               console.log('Found fields:', {
-                nombre_contratante: nombreContratanteField,
+                contratante: contratanteField,
                 poliza: polizaField,
-                nombre_contratanteValue: item[nombreContratanteField],
+                contratanteValue: item[contratanteField],
                 polizaValue: item[polizaField]
               });
 
               const title = item[contratanteField] || 
+                          item['contratante'] || 
+                          item['nombre_contratante'] ||
                           item['nombre_del_contratante'] || 
                           item['NOMBRE_DEL_CONTRATANTE'] || 
                           item['nombreDelContratante'] || 

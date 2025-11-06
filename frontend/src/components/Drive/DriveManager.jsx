@@ -16,8 +16,8 @@ const DriveManager = ({ isOpen, onClose, clientData }) => {
     if (!clientData) return 'Cliente';
     
     return clientData.contratante || 
+           clientData.nombre_contratante ||
            clientData.nombre_del_asegurado ||
-           clientData.nombre_contratante || 
            clientData.nombre_asegurado || 
            clientData.asegurado || 
            clientData.nombre_completo ||

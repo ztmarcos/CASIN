@@ -4066,11 +4066,19 @@ NORMALIZACIÓN DE ASEGURADORAS:
    - "Qualitas SA de CV", "Qualitas S.A. de C.V.", "Qualitas Seguros", o cualquier variación → convertir a "Qualitas"
 
 REGLAS ESPECÍFICAS POR CAMPO:
-8. Para campos de email (e_mail, email): 
+8. Para campos de nombres (contratante, asegurado, nombre_cliente):
+   - CAPTURA "nombre de cliente", "nombre de contratante", "nombre de asegurado" cuando estén disponibles
+   - IMPORTANTE: El CONTRATANTE es quien contrata el seguro (quien firma el contrato)
+   - IMPORTANTE: El ASEGURADO es quien está asegurado (puede ser diferente del contratante)
+   - EXCEPTO cuando hay asegurado Y contratante: HAZ LA DISTINCIÓN CLARA entre ambos
+   - Si solo hay un nombre en el documento, puede ser contratante o asegurado según el contexto del documento
+   - Si el documento menciona "contratante" o "asegurado" explícitamente, usa esos términos
+   - Si no hay distinción clara, usa "contratante" como campo principal
+9. Para campos de email (e_mail, email): 
    - SOLO extrae emails del cliente/contratante
    - NO extraigas emails de compañías de seguros, agentes, o cualquier otra entidad
    - Si no hay email del cliente, devuelve null
-9. Para campos de primer pago/recibo (pago_parcial, primer_recibo, importe_primer_recibo, primer_pago):
+10. Para campos de primer pago/recibo (pago_parcial, primer_recibo, importe_primer_recibo, primer_pago):
    - Busca el TOTAL FINAL que el cliente debe pagar en el documento
    - Busca términos como: "Importe por Pagar", "Total a Pagar", "Importe Total", "Monto Total", "PRIMA TOTAL"
    - EXTRAE SOLO EL NÚMERO sin símbolos de moneda ($, comas, etc.)

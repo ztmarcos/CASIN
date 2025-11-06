@@ -12,7 +12,7 @@ const EMAIL_TEMPLATES = {
   autos: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -38,7 +38,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -104,7 +104,7 @@ const EMAIL_TEMPLATES = {
   gmm: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -120,7 +120,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -140,7 +140,7 @@ const EMAIL_TEMPLATES = {
   mascotas: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -156,7 +156,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -176,7 +176,7 @@ const EMAIL_TEMPLATES = {
   negocio: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -192,7 +192,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -212,7 +212,7 @@ const EMAIL_TEMPLATES = {
   rc: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -228,7 +228,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -248,7 +248,7 @@ const EMAIL_TEMPLATES = {
   transporte: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -264,7 +264,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -304,7 +304,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -324,7 +324,7 @@ const EMAIL_TEMPLATES = {
   default: {
     nueva: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || data.asegurado || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -340,7 +340,7 @@ const EMAIL_TEMPLATES = {
     `,
     renovacion: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Apreciable Asegurado ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong></p>
+        <p><strong>Apreciable Asegurado ${data.contratante || data.nombre_contratante || data.asegurado || 'Cliente'}</strong></p>
         
         <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
         
@@ -356,9 +356,9 @@ const EMAIL_TEMPLATES = {
     `,
     recibo: (data) => `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
-        <p><strong>Estimada ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'}</strong>, buen día</p>
+        <p><strong>Estimada ${data.contratante || data.nombre_contratante || data.asegurado || 'Cliente'}</strong>, buen día</p>
         
-        <p>Por este medio, deseo informar de la renovación del seguro de ${data.ramo || 'Vida'} del Sr. ${data.nombre_contratante || data.contratante || data.asegurado || 'Cliente'} de la vigencia ${data.vigencia_inicio || 'N/A'}-${data.vigencia_fin ? new Date(data.vigencia_fin).getFullYear() : 'N/A'}, asegurado en <strong>${data.aseguradora || 'AXA Seguros'}</strong>.</p>
+        <p>Por este medio, deseo informar de la renovación del seguro de ${data.ramo || 'Vida'} del Sr. ${data.contratante || data.nombre_contratante || data.asegurado || 'Cliente'} de la vigencia ${data.vigencia_inicio || 'N/A'}-${data.vigencia_fin ? new Date(data.vigencia_fin).getFullYear() : 'N/A'}, asegurado en <strong>${data.aseguradora || 'AXA Seguros'}</strong>.</p>
         
         <p>Adjunto el recibo de cobro por <strong>$${data.pago_total_o_prima_total || data.prima_neta || 'N/A'} ${data.moneda || 'dls'}</strong> de la póliza de ${data.ramo || 'vida'} no. <strong>${data.numero_poliza || 'N/A'}</strong> para su revisión y amable programación del pago con fecha límite ${data.vigencia_fin ? new Date(data.vigencia_fin).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}.</p>
         
@@ -769,49 +769,49 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       let subject = 'Póliza de Seguro - CASIN Seguros';
       
       if (emailType === 'nueva_autos' || (ramo === 'autos' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Seguro Auto - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Seguro Auto - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_autos' || (ramo === 'autos' && tipo === 'renovacion')) {
-        subject = `Renovación Seguro Auto - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Seguro Auto - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_vida' || (ramo === 'vida' && tipo === 'nueva')) {
         subject = `Nueva Póliza Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_vida' || (ramo === 'vida' && tipo === 'renovacion')) {
         subject = `Renovación Seguro Vida - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_gmm' || (ramo === 'gmm' && tipo === 'nueva')) {
-        subject = `Nueva Póliza GMM - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza GMM - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_gmm' || (ramo === 'gmm' && tipo === 'renovacion')) {
-        subject = `Renovación GMM - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación GMM - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_hogar' || (ramo === 'hogar' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Seguro Hogar - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Seguro Hogar - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_hogar' || (ramo === 'hogar' && tipo === 'renovacion')) {
-        subject = `Renovación Seguro Hogar - ${rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Seguro Hogar - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_mascotas' || (ramo === 'mascotas' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Mascotas - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Mascotas - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_mascotas' || (ramo === 'mascotas' && tipo === 'renovacion')) {
-        subject = `Renovación Mascotas - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Mascotas - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_negocio' || (ramo === 'negocio' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Negocio - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Negocio - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_negocio' || (ramo === 'negocio' && tipo === 'renovacion')) {
-        subject = `Renovación Negocio - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Negocio - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_rc' || (ramo === 'rc' && tipo === 'nueva')) {
-        subject = `Nueva Póliza RC - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza RC - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_rc' || (ramo === 'rc' && tipo === 'renovacion')) {
-        subject = `Renovación RC - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación RC - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_transporte' || (ramo === 'transporte' && tipo === 'nueva')) {
-        subject = `Nueva Póliza Transporte - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza Transporte - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_transporte' || (ramo === 'transporte' && tipo === 'renovacion')) {
-        subject = `Renovación Transporte - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación Transporte - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'nueva_general' || (ramo === 'default' && tipo === 'nueva')) {
-        subject = `Nueva Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Nueva Póliza - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'renovacion_general' || (ramo === 'default' && tipo === 'renovacion')) {
-        subject = `Renovación de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
+        subject = `Renovación de Póliza - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'} - Póliza ${rowData.numero_poliza || 'N/A'}`;
       } else if (emailType === 'bienvenida') {
-        subject = `Bienvenida - Confirmación de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+        subject = `Bienvenida - Confirmación de Póliza - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'}`;
       } else if (emailType === 'recordatorio') {
-        subject = `Recordatorio de Pago - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+        subject = `Recordatorio de Pago - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'}`;
       } else if (emailType === 'informacion') {
-        subject = `Información de Póliza - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+        subject = `Información de Póliza - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'}`;
       } else if (emailType === 'recibo') {
-        subject = `Recibo de Cobro - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.nombre_contratante || rowData.contratante || 'Cliente'}`;
+        subject = `Recibo de Cobro - Póliza ${rowData.numero_poliza || 'N/A'} - ${rowData.contratante || rowData.nombre_contratante || 'Cliente'}`;
       }
 
       const emailContent = {

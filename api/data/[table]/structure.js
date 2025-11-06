@@ -111,7 +111,7 @@ export default async function handler(req, res) {
       });
       
       // Sort columns to put common fields first
-      const commonFields = ['id', 'nombre_contratante', 'contratante', 'nombre_del_asegurado', 'numero_poliza', 'aseguradora', 'createdAt', 'updatedAt'];
+      const commonFields = ['id', 'contratante', 'nombre_del_asegurado', 'asegurado', 'numero_poliza', 'aseguradora', 'createdAt', 'updatedAt'];
       const sortedColumns = columns.sort((a, b) => {
         const aIndex = commonFields.indexOf(a.name);
         const bIndex = commonFields.indexOf(b.name);

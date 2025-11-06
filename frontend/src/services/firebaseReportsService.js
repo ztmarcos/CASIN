@@ -81,7 +81,8 @@ class FirebaseReportsService {
             // Create standardized policy object
             const policy = {
               id: doc.id,
-              nombre_contratante: name,
+              contratante: name,
+              nombre_contratante: name, // Keep for backward compatibility during migration
               numero_poliza: doc.numero_poliza || doc.poliza || 'Sin número',
               aseguradora: doc.aseguradora || 'Sin aseguradora',
               fecha_inicio: doc.fecha_inicio || doc.vigencia_inicio || doc.fecha_emision,
@@ -180,14 +181,14 @@ class FirebaseReportsService {
       
       const allPolicies = await this.getAllPolicies(forceRefresh);
       
-      const uniqueClients = [...new Set(allPolicies.map(p => p.nombre_contratante).filter(Boolean))];
+      const uniqueClients = [...new Set(allPolicies.map(p => p.contratante || p.nombre_contratante).filter(Boolean))];
       const uniqueCompanies = [...new Set(allPolicies.map(p => p.aseguradora).filter(Boolean))];
       const uniqueRamos = [...new Set(allPolicies.map(p => p.ramo || p.tipo_seguro).filter(Boolean))];
       
       // Build client matrix (clients and their policies by ramo)
       const clientMatrix = {};
       allPolicies.forEach(policy => {
-        const client = policy.nombre_contratante;
+        const client = policy.contratante || policy.nombre_contratante;
         const ramo = policy.ramo || policy.tipo_seguro;
         
         if (client && ramo) {
@@ -437,7 +438,8 @@ class FirebaseReportsService {
               
               const expirationEntry = {
                 id: doc.id,
-                nombre_contratante: name,
+                contratante: name,
+                nombre_contratante: name, // Keep for backward compatibility during migration
                 numero_poliza: doc.numero_poliza || doc.poliza || 'Sin número',
                 aseguradora: doc.aseguradora || 'Sin aseguradora',
                 fecha_fin: expirationDate.toISOString(),
@@ -453,7 +455,7 @@ class FirebaseReportsService {
               console.log('📅 Found expiration:', {
                 collection: collectionName,
                 policy: expirationEntry.numero_poliza,
-                name: expirationEntry.nombre_contratante,
+                name: expirationEntry.contratante || expirationEntry.nombre_contratante,
                 date: expirationEntry.fecha_fin,
                 type: expirationEntry.tipo_seguro
               });
@@ -493,9 +495,9 @@ class FirebaseReportsService {
   getNameFromDocument(doc, collectionName) {
     switch (collectionName) {
       case 'autos':
-        return doc.nombre_contratante || doc.contratante || 'Sin nombre';
+        return doc.contratante || doc.nombre_contratante || 'Sin nombre';
       case 'rc':
-        return doc.asegurado || doc.nombre_contratante || 'Sin nombre';
+        return doc.asegurado || doc.contratante || doc.nombre_contratante || 'Sin nombre';
       case 'vida':
         return doc.contratante || doc.nombre_contratante || 'Sin nombre';
       case 'hogar':
@@ -506,10 +508,10 @@ class FirebaseReportsService {
       case 'diversos':
       case 'negocio':
       case 'gruposgmm':
-        return doc.nombre_contratante || doc.contratante || doc.asegurado || 'Sin nombre';
+        return doc.contratante || doc.nombre_contratante || doc.asegurado || 'Sin nombre';
       default:
         // For dynamic collections, try common field patterns
-        return doc.nombre_contratante || doc.contratante || doc.asegurado || doc.nombre || 'Sin nombre';
+        return doc.contratante || doc.nombre_contratante || doc.asegurado || doc.nombre || 'Sin nombre';
     }
   }
 

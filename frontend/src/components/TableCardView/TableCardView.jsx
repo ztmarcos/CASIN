@@ -33,20 +33,20 @@ const TableCardView = ({ data, onCardClick, tableName, onRefresh }) => {
   };
 
   const getDisplayTitle = (item) => {
-    // For hogar table, prioritize 'contratante' field
-    if (tableName === 'hogar' && item.contratante) {
+    // For all tables, prioritize 'contratante' field (with fallback to nombre_contratante for compatibility)
+    if (item.contratante) {
       return item.contratante;
     }
     
-    // For other tables, prioritize 'nombre_contratante' first
+    // Fallback to nombre_contratante during migration
     if (item.nombre_contratante) {
       return item.nombre_contratante;
     }
     
     const titleFields = [
-      'contratante',
       'nombre',
-      'name'
+      'name',
+      'asegurado'
     ];
     
     for (const field of titleFields) {
@@ -270,6 +270,7 @@ const TableCardView = ({ data, onCardClick, tableName, onRefresh }) => {
     const excludeFields = [
       'id', 
       '_sourceTable', 
+      'contratante',
       'nombre_contratante', 
       'numero_de_poliza',
       'aa',
@@ -517,7 +518,7 @@ const TableCardView = ({ data, onCardClick, tableName, onRefresh }) => {
                 fontWeight: '600',
                 color: '#374151'
               }}>
-                Acciones para: {selectedRowForActions.nombre_contratante || 'Registro'}
+                Acciones para: {selectedRowForActions.contratante || selectedRowForActions.nombre_contratante || 'Registro'}
               </h3>
               <button
                 onClick={() => {

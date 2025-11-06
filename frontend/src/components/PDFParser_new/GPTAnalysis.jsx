@@ -475,10 +475,14 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                     console.log(`Value type:`, typeof value);
 
                     // Apply text normalization first (before type-specific processing)
+                    // IMPORTANT: contratante = quien contrata el seguro, asegurado = quien está asegurado (puede ser diferente)
                     if (typeof value === 'string' && !fieldTypes.numeric.includes(columnName) && !fieldTypes.date.includes(columnName)) {
                         if (columnName.toLowerCase().includes('rfc')) {
                             value = normalizeText(value, 'rfc');
-                        } else if (columnName.toLowerCase().includes('nombre') || columnName.toLowerCase().includes('contratante')) {
+                        } else if (columnName.toLowerCase().includes('nombre') || 
+                                   columnName.toLowerCase().includes('contratante') || 
+                                   columnName.toLowerCase().includes('asegurado')) {
+                            // Normalize names: contratante (who contracts), asegurado (who is insured), nombre_cliente (general client name)
                             value = normalizeText(value, 'name');
                         } else if (columnName.toLowerCase().includes('direccion') || columnName.toLowerCase().includes('address')) {
                             value = normalizeText(value, 'address');

@@ -85,7 +85,7 @@ class FirebaseDashboardService {
           console.log('✅ Valid expiration found (current month):', {
             policy: policy.numero_poliza,
             date: policy.fecha_fin,
-            name: policy.nombre_contratante,
+            name: policy.contratante || policy.nombre_contratante,
             expirationDate: expirationDate.toISOString(),
             today: today.toISOString(),
             endDate: endDate.toISOString()

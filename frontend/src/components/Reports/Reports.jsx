@@ -563,7 +563,7 @@ export default function Reports() {
 
   // Función para generar contenido de recordatorio
   const generateReminderContent = (policy, reminderType, daysUntilDue, selectedType) => {
-    const clientName = policy.nombre_contratante || policy.contratante || 'Cliente';
+    const clientName = policy.contratante || policy.nombre_contratante || 'Cliente';
     const policyNumber = policy.numero_poliza || 'N/A';
     const amount = getPolicyTotalAmount(policy);
     const dueDate = selectedType === 'Vencimientos' ? policy.fecha_fin : policy.fecha_proximo_pago;
@@ -732,7 +732,7 @@ export default function Reports() {
             totalRemindersSent++;
             sentReminders.push({
               policy: policy.numero_poliza,
-              client: policy.nombre_contratante || policy.contratante,
+              client: policy.contratante || policy.nombre_contratante,
               reminder: reminder.type,
               email: policy.email,
               messageId: result.messageId
@@ -934,7 +934,7 @@ export default function Reports() {
                 ) : (
                   (() => {
                     // Extraer datos únicos de las pólizas filtradas usando nombres normalizados
-                    const clients = [...new Set(filteredPolicies.map(p => p.nombre_contratante || p.contratante).filter(Boolean))].sort();
+                    const clients = [...new Set(filteredPolicies.map(p => p.contratante || p.nombre_contratante).filter(Boolean))].sort();
                     const ramos = [...new Set(filteredPolicies.map(p => normalizeRamo(p.sourceTable || p.table || p.ramo || '')).filter(Boolean))].sort();
                     const companies = [...new Set(filteredPolicies.map(p => normalizeCompany(p.aseguradora)).filter(Boolean))].sort();
                     
@@ -953,7 +953,7 @@ export default function Reports() {
                         </thead>
                         <tbody>
                           {clients.map(client => {
-                            const clientPolicies = filteredPolicies.filter(p => (p.nombre_contratante || p.contratante) === client);
+                            const clientPolicies = filteredPolicies.filter(p => (p.contratante || p.nombre_contratante) === client);
                             const clientRamos = [...new Set(clientPolicies.map(p => normalizeRamo(p.sourceTable || p.table || p.ramo || '')))];
                             const clientCompanies = [...new Set(clientPolicies.map(p => normalizeCompany(p.aseguradora)))];
                             
@@ -1035,7 +1035,7 @@ export default function Reports() {
                       >
                         <td>{policy.ramo}</td>
                         <td>{policy.numero_poliza}</td>
-                        <td>{policy.nombre_contratante || policy.contratante}</td>
+                        <td>{policy.contratante || policy.nombre_contratante}</td>
                         <td>{policy.email || 'No disponible'}</td>
                         <td>{policy.aseguradora}</td>
                         <td>{formatDate(policy.fecha_inicio, dateFormat)}</td>
@@ -1161,7 +1161,7 @@ export default function Reports() {
                   </div>
                   <div className="card-content">
                     <div className="card-info">
-                      <strong>Contratante: {policy.nombre_contratante || policy.contratante}</strong>
+                      <strong>Contratante: {policy.contratante || policy.nombre_contratante}</strong>
                     </div>
                     <div className="card-details">
                       {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
@@ -1309,7 +1309,7 @@ export default function Reports() {
                     // Priority order for important fields
                     const priority = [
                       'numero_poliza', 'ramo', 'aseguradora', 
-                      'nombre_contratante', 'contratante', 'asegurado',
+                      'contratante', 'nombre_contratante', 'asegurado',
                       'email', 'rfc', 'telefono',
                       'fecha_inicio', 'fecha_fin', 'fecha_expedicion',
                       'forma_pago', 'fecha_proximo_pago',
@@ -1377,8 +1377,8 @@ export default function Reports() {
                     };
 
                     const isImportantField = [
-                      'numero_poliza', 'ramo', 'aseguradora', 'nombre_contratante', 
-                      'contratante', 'email', 'pago_total_o_prima_total', 'status'
+                      'numero_poliza', 'ramo', 'aseguradora', 'contratante', 
+                      'email', 'pago_total_o_prima_total', 'status'
                     ].includes(key);
 
                     return (

@@ -172,6 +172,7 @@ const Firedrive = ({
     const clientName = (
       clientData.contratante || 
       clientData.nombre_del_asegurado ||
+      clientData.contratante ||
       clientData.nombre_contratante || 
       clientData.nombre_asegurado ||
       clientData.asegurado || 
@@ -210,6 +211,7 @@ const Firedrive = ({
     const clientName = (
       clientData.contratante || 
       clientData.nombre_del_asegurado ||
+      clientData.contratante ||
       clientData.nombre_contratante || 
       clientData.nombre_asegurado ||
       clientData.asegurado || 
@@ -242,7 +244,7 @@ const Firedrive = ({
       // Create the folder structure with a .keep file
       const keepContent = new Blob([
         `# Carpeta de Cliente\n\n` +
-        `Cliente: ${clientData?.contratante || clientData?.nombre_del_asegurado || clientData?.nombre_contratante || 'N/A'}\n` +
+        `Cliente: ${clientData?.contratante || clientData?.nombre_contratante || clientData?.nombre_del_asegurado || 'N/A'}\n` +
         `Póliza: ${clientData?.numero_poliza || 'N/A'}\n` +
         `Creada: ${new Date().toISOString()}\n` +
         `Team: ${userTeam?.name}\n` +
@@ -1080,7 +1082,7 @@ const Firedrive = ({
   // Handle client data and auto-search
   useEffect(() => {
     if (autoNavigateToClient && clientData && userTeam && connectionStatus === 'connected' && !hasNavigatedToClient) {
-      const clientName = clientData.contratante || clientData.nombre_del_asegurado || clientData.nombre_contratante || 'Cliente';
+      const clientName = clientData.contratante || clientData.nombre_contratante || clientData.nombre_del_asegurado || 'Cliente';
       addDebugInfo(`👤 Cliente detectado - iniciando búsqueda: ${clientName}`);
       
       // Add delay to ensure Firebase is ready
@@ -1291,7 +1293,7 @@ const Firedrive = ({
             fontWeight: '500',
             marginLeft: '10px'
           }}>
-            👤 {clientData.contratante || clientData.nombre_del_asegurado || clientData.nombre_contratante || 'Cliente'} 
+            👤 {clientData.contratante || clientData.nombre_contratante || clientData.nombre_del_asegurado || 'Cliente'} 
             {clientData.numero_poliza && ` - Póliza: ${clientData.numero_poliza}`}
           </div>
         )}
