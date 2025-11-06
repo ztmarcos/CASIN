@@ -17,11 +17,13 @@ const DataSection = () => {
   const [showAddEntryModal, setShowAddEntryModal] = useState(false);
   const [tables, setTables] = useState([]);
   const [error, setError] = useState(null);
+  const [isLoadingTables, setIsLoadingTables] = useState(true);
 
   // Load tables on mount - SIMPLE VERSION
   useEffect(() => {
     const loadTables = async () => {
       try {
+        setIsLoadingTables(true);
         console.log('🔥 Loading tables from Firebase...');
         const tablesData = await firebaseTableService.getTables();
         console.log('🔥 Received tables:', tablesData);
@@ -71,6 +73,8 @@ const DataSection = () => {
       } catch (error) {
         console.error('❌ Error loading tables:', error);
         setError('Error loading tables: ' + error.message);
+      } finally {
+        setIsLoadingTables(false);
       }
     };
     
@@ -267,6 +271,18 @@ const DataSection = () => {
               onRefresh={handleRefresh}
               isLoading={isLoading}
             />
+          </div>
+        ) : isLoadingTables ? (
+          <div className="table-selection-view">
+            <div className="selection-header">
+              <h2>Cargando Tablas</h2>
+              <p>Obteniendo las tablas disponibles...</p>
+            </div>
+            
+            <div className="tables-loading">
+              <div className="loading-spinner"></div>
+              <p className="loading-text">Cargando...</p>
+            </div>
           </div>
         ) : (
           <div className="table-selection-view">
