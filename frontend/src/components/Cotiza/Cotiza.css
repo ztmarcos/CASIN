@@ -27,6 +27,44 @@
   gap: 24px;
 }
 
+/* Policy Type Selector */
+.policy-type-selector {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #007bff;
+}
+
+.policy-type-selector label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2c3e50;
+  font-size: 1rem;
+}
+
+.policy-type-dropdown {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 2px solid #dee2e6;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.policy-type-dropdown:hover {
+  border-color: #007bff;
+}
+
+.policy-type-dropdown:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
 /* Upload Section */
 .upload-section {
   background: var(--card-background);

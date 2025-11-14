@@ -22,6 +22,7 @@ const Cotiza = () => {
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [detectedPolicyType, setDetectedPolicyType] = useState(null);
+  const [selectedPolicyType, setSelectedPolicyType] = useState('autos');
 
   const supportedTypes = {
     'application/pdf': 'PDF',
@@ -313,24 +314,40 @@ Nombres: ${fileNames}`;
     if (policyType === 'gmm') {
       return `${baseInstructions}
 
-TIPO DE PÓLIZA DETECTADO: GASTOS MÉDICOS MAYORES (GMM)
+TIPO DE PÓLIZA SELECCIONADO: GASTOS MÉDICOS MAYORES (GMM)
+
+🚨 IMPORTANTE: Este documento es ESPECÍFICAMENTE de Gastos Médicos Mayores. NO es de autos.
 
 ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN GMM:
-${fileNames.includes('Cotizacion_Tabla') || fileNames.includes('Comparativo') ? `
+${fileNames.includes('Cotizacion_Tabla') || fileNames.includes('Comparativo') || fileNames.includes('PROPUESTAS') || fileNames.includes('GNP') ? `
 🔍 DETECCIÓN ESPECIAL: Documento contiene tabla comparativa de GMM
 INSTRUCCIONES ESPECÍFICAS:
 - Busca patrones como "COBERTURAS", "Suma Asegurada", "Deducible", "Coaseguro"
-- Las aseguradoras suelen estar en columnas (GNP, BUPA, METLIFE, etc.)
+- Las aseguradoras suelen estar en columnas (GNP SEGUROS, BUPA NACIONAL, METLIFE, AXA, etc.)
 - Identifica filas de coberturas principales
+- Busca nombres completos de aseguradoras: "GNP SEGUROS", "BUPA NACIONAL", no solo "GNP" o "BUPA"
 ` : ''}
 
+IDENTIFICACIÓN DE ASEGURADORAS GMM:
+- Busca nombres COMPLETOS: "GNP SEGUROS", "BUPA NACIONAL", "METLIFE", "AXA SEGUROS", "SEGUROS MONTERREY"
+- NO confundas con aseguradoras de autos (ANA, HDI, QUALITAS son de autos, NO de GMM)
+- Las aseguradoras GMM típicas: GNP, BUPA, METLIFE, AXA, SEGUROS MONTERREY, MAPFRE TEPEYAC
+
 EXTRACCIÓN DE VALORES - CRÍTICO PARA GMM:
-- SUMA ASEGURADA: Busca valores como "$50,000,000", "SIN LIMITE", "ILIMITADA"
-- DEDUCIBLE: Busca valores como "$94,000 pesos", "$75,000", "$151,000 pesos"
-- COASEGURO: Busca porcentajes como "20%", "15%", "10%"
-- TABULADOR MÉDICO: Busca "Omnia", "Premier", "Estándar", "Red Hospitalaria"
-- ACCESO HOSPITALARIO: Busca "No Aplica", "Directo", "Con referencia"
-- COSTO ANUAL/TOTAL: Busca el precio total anual (ej: "$466,607.27", "$356,506.64")
+- SUMA ASEGURADA: Busca valores como "$50,000,000", "SIN LIMITE", "ILIMITADA", "$100,000,000"
+  * Puede aparecer como "SIN LIMITE" o valores numéricos grandes
+  * Formato común: "$50,000,000" o "SIN LIMITE"
+- DEDUCIBLE: Busca valores como "$94,000 pesos", "$75,000", "$151,000 pesos", "$94,000"
+  * Formato: "$94,000 pesos" o "$75,000" o "94,000"
+  * NO confundir con primas o costos anuales
+- COASEGURO: Busca porcentajes como "20%", "15%", "10%", "0%"
+  * Siempre en formato porcentaje
+- TABULADOR MÉDICO: Busca "Omnia", "Premier", "Estándar", "Red Hospitalaria", "Premier 100", "Premier 200"
+  * Puede incluir variaciones como "Premier 100", "Premier 200"
+- ACCESO HOSPITALARIO: Busca "No Aplica", "Directo", "Con referencia", "Directo sin referencia"
+- COSTO ANUAL/TOTAL: Busca el precio total anual (ej: "$466,607.27", "$356,506.64", "$306,126")
+  * Este es el valor MÁS GRANDE por aseguradora
+  * Formato: "$466,607.27" o "$306,126"
 
 INFORMACIÓN DEL TITULAR:
 - Nombre del titular
@@ -427,7 +444,12 @@ INSTRUCCIÓN FINAL CRÍTICA:
 2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
 3. Para GMM, presta especial atención a deducibles y coaseguros
 4. Si hay múltiples planes (Premier 100, Premier 200), identifícalos claramente
-5. El costo anual debe ser el valor total más grande por aseguradora`;
+5. El costo anual debe ser el valor total más grande por aseguradora
+6. 🚨 CRÍTICO: Identifica TODAS las aseguradoras presentes en el documento
+7. Usa nombres COMPLETOS de aseguradoras (ej: "GNP SEGUROS", "BUPA NACIONAL")
+8. NO mezcles aseguradoras de autos con GMM - este es un documento de GMM exclusivamente
+9. Extrae TODAS las coberturas presentes, no solo las del formato de ejemplo
+10. Si encuentras "SIN LIMITE" en suma asegurada, úsalo tal cual, no lo conviertas a número`;
 
     } else if (policyType === 'hogar') {
       return `${baseInstructions}
@@ -609,12 +631,12 @@ INSTRUCCIÓN FINAL CRÍTICA:
       const fileNames = extractedTexts.map(et => et.fileName).join(', ');
       const fileCount = extractedTexts.length;
 
-      // Detectar tipo de póliza automáticamente
-      const policyType = detectPolicyType(combinedText);
+      // Usar el tipo de póliza seleccionado por el usuario
+      const policyType = selectedPolicyType;
       setDetectedPolicyType(policyType);
       
-      console.log('📋 Tipo de póliza detectado:', policyType);
-      toast(`📋 Tipo detectado: ${policyType === 'gmm' ? 'Gastos Médicos Mayores' : policyType === 'hogar' ? 'Hogar' : 'Autos'}`, {
+      console.log('📋 Tipo de póliza seleccionado:', policyType);
+      toast(`📋 Cotizando: ${policyType === 'gmm' ? 'Gastos Médicos Mayores' : 'Autos'}`, {
         icon: '📋',
         duration: 3000
       });
@@ -1716,6 +1738,20 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
       </div>
 
       <div className="cotiza-content">
+        {/* Selector de tipo de póliza */}
+        <div className="policy-type-selector">
+          <label htmlFor="policy-type">Tipo de Cotización:</label>
+          <select 
+            id="policy-type"
+            value={selectedPolicyType}
+            onChange={(e) => setSelectedPolicyType(e.target.value)}
+            className="policy-type-dropdown"
+          >
+            <option value="autos">Seguros de Autos</option>
+            <option value="gmm">Gastos Médicos Mayores (GMM)</option>
+          </select>
+        </div>
+
         <div className="upload-section">
           <div className={`upload-area ${files.length >= 5 ? 'upload-disabled' : ''}`}>
             <input
@@ -1961,6 +1997,7 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
                           setGeneratedMail('');
                           setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
                           setSelectedSender('casin');
+                          setSelectedPolicyType('autos');
                           toast.info('🔄 Sistema reiniciado completamente');
                         }}
                       >
@@ -2008,6 +2045,7 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
                         setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
                         setSelectedSender('casin');
                         setSendBccToSender(true);
+                        setSelectedPolicyType('autos');
                         toast.info('🔄 Sistema reiniciado completamente');
                       }}
                       style={{
@@ -2176,6 +2214,7 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
                             setGeneratedMail('');
                             setClientData({ nombre: '', email: '', telefono: '', empresa: '' });
                             setSelectedSender('casin');
+                            setSelectedPolicyType('autos');
                             toast.info('🔄 Sistema reiniciado completamente');
                           }}
                         >
