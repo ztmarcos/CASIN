@@ -589,10 +589,13 @@ INSTRUCCIONES ESPECÍFICAS PARA PDFs TABULARES:
 - 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
 ` : ''}
 
-IDENTIFICACIÓN DE ASEGURADORAS AUTOS:
+IDENTIFICACIÓN DE ASEGURADORAS Y PLANES AUTOS:
 - 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
 - Busca nombres de aseguradoras en los encabezados de columna o secciones del documento
-- Si encuentras múltiples propuestas de la misma aseguradora, diferéncialas con PLAN 1, PLAN 2, etc.
+- 🚨 MUY IMPORTANTE: Si encuentras múltiples opciones/paquetes de la misma aseguradora (ej: "Amplia" y "Premium", "Básica" y "Plus"), crea columnas separadas
+- Para múltiples opciones, usa el formato: "[ASEGURADORA] [NOMBRE_OPCIÓN]" (ej: "GNP Amplia", "GNP Premium", "ANA Básica", "ANA Plus")
+- Si los nombres de opciones están explícitos en el documento (Amplia, Premium, Básica, Plus, etc.), úsalos tal cual
+- Si no hay nombres específicos pero hay múltiples propuestas numeradas, usa: "[ASEGURADORA] OPCIÓN 1", "[ASEGURADORA] OPCIÓN 2"
 - NO asumas que ciertas aseguradoras están presentes - extrae solo lo que ves
 
 EXTRACCIÓN DE VALORES - CRÍTICO PARA DEDUCIBLES:
@@ -672,17 +675,22 @@ FORMATO DE RESPUESTA EXACTO:
   ]
 }
 
-NOTA IMPORTANTE: Reemplaza [NOMBRE_ASEGURADORA_EXTRAÍDA_1], [NOMBRE_ASEGURADORA_EXTRAÍDA_2], etc. con los nombres REALES de las aseguradoras encontradas en el documento (ej: "GNP", "Qualitas", "Momento", etc.)
+NOTA IMPORTANTE: 
+- Reemplaza [NOMBRE_ASEGURADORA_EXTRAÍDA_1], [NOMBRE_ASEGURADORA_EXTRAÍDA_2], etc. con los nombres REALES de las aseguradoras/opciones encontradas
+- Si hay múltiples opciones de la misma aseguradora, usa: "GNP Amplia", "GNP Premium", "ANA Básica", "ANA Plus", etc.
+- Ejemplos reales: "GNP Amplia", "GNP Premium", "Qualitas", "Momento", "HDI Cobertura Amplia"
 
 INSTRUCCIÓN FINAL CRÍTICA: 
 1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
 2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
 3. 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
-4. El número de columnas debe coincidir exactamente con el número de aseguradoras encontradas en el documento
-5. Normaliza los nombres de aseguradoras según las reglas especificadas (ej: "Grupo Nacional Provincial" → "GNP")
-6. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
-7. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
-8. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
+4. 🚨 MUY IMPORTANTE: Si hay múltiples opciones/paquetes de la misma aseguradora (Amplia, Premium, Básica, Plus), crea una columna para CADA opción
+5. Para múltiples opciones, usa nombres descriptivos: "GNP Amplia", "GNP Premium" (NO "GNP PLAN 1", "GNP PLAN 2" si hay nombres reales)
+6. El número de columnas debe coincidir exactamente con el número de opciones/paquetes encontrados en el documento
+7. Normaliza los nombres de aseguradoras según las reglas especificadas (ej: "Grupo Nacional Provincial" → "GNP")
+8. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
+9. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
+10. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
     }
   };
 
