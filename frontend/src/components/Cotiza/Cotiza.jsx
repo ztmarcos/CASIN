@@ -301,9 +301,24 @@ Proporciona el texto extraído de manera estructurada, manteniendo la organizaci
   const getPolicyTypePrompt = (policyType, fileNames, fileCount, combinedText) => {
     const baseInstructions = `Eres un experto analista de seguros. Analiza los siguientes documentos de seguros y genera una tabla de cotización comparativa estilo matriz.
 
-IDENTIFICACIÓN DE ASEGURADORAS:
-- Busca nombres como: ANA, HDI, QUALITAS, GNP, ZURICH, MAPFRE, AXA, SEGUROS MONTERREY, BUPA, METLIFE, ALLIANZ
-- Si ves abreviaciones, usa el nombre completo de la aseguradora
+IDENTIFICACIÓN DINÁMICA DE ASEGURADORAS:
+- 🚨 CRÍTICO: Identifica TODAS las aseguradoras mencionadas en los documentos, sin asumir ninguna lista predefinida
+- Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+- Si encuentras múltiples propuestas de la misma aseguradora, enuméralas como: [ASEGURADORA] PLAN 1, [ASEGURADORA] PLAN 2, [ASEGURADORA] PLAN 3, etc.
+- El número de columnas debe coincidir exactamente con el número de aseguradoras/planes encontrados en el documento
+
+NORMALIZACIÓN DE NOMBRES DE ASEGURADORAS:
+- "Grupo Nacional Provincial", "GNP Seguros", "G.N.P.", "Grupo Nación Provincial" → normalizar a "GNP"
+- "Qualitas Compañía de Seguros", "Quálitas", "Qualitas SA de CV" → normalizar a "Qualitas"
+- "HDI Seguros", "H.D.I." → normalizar a "HDI"
+- "ANA Seguros", "A.N.A." → normalizar a "ANA"
+- "BUPA Nacional", "Bupa Seguros" → normalizar a "BUPA"
+- "Seguros Monterrey" → normalizar a "Monterrey"
+- "AXA Seguros" → normalizar a "AXA"
+- "Metlife Seguros" → normalizar a "Metlife"
+- "Zurich Seguros" → normalizar a "Zurich"
+- "Mapfre Seguros", "Mapfre Tepeyac" → normalizar a "Mapfre"
+- Mantén el nombre normalizado pero reconocible
 
 CRÍTICO: Responde SOLAMENTE con un objeto JSON válido y completo. No agregues texto antes o después del JSON. No uses markdown. Solo el JSON puro.
 
@@ -323,15 +338,17 @@ ${fileNames.includes('Cotizacion_Tabla') || fileNames.includes('Comparativo') ||
 🔍 DETECCIÓN ESPECIAL: Documento contiene tabla comparativa de GMM
 INSTRUCCIONES ESPECÍFICAS:
 - Busca patrones como "COBERTURAS", "Suma Asegurada", "Deducible", "Coaseguro"
-- Las aseguradoras suelen estar en columnas (GNP SEGUROS, BUPA NACIONAL, METLIFE, AXA, etc.)
+- Las aseguradoras suelen estar en columnas
 - Identifica filas de coberturas principales
-- Busca nombres completos de aseguradoras: "GNP SEGUROS", "BUPA NACIONAL", no solo "GNP" o "BUPA"
+- Busca nombres completos de aseguradoras en los encabezados de columna
+- Si hay múltiples propuestas de la misma compañía (ej: 3 propuestas GNP con diferentes planes), crea columnas separadas: GNP PLAN 1, GNP PLAN 2, GNP PLAN 3
 ` : ''}
 
 IDENTIFICACIÓN DE ASEGURADORAS GMM:
-- Busca nombres COMPLETOS: "GNP SEGUROS", "BUPA NACIONAL", "METLIFE", "AXA SEGUROS", "SEGUROS MONTERREY"
-- NO confundas con aseguradoras de autos (ANA, HDI, QUALITAS son de autos, NO de GMM)
-- Las aseguradoras GMM típicas: GNP, BUPA, METLIFE, AXA, SEGUROS MONTERREY, MAPFRE TEPEYAC
+- 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+- Busca nombres COMPLETOS en los encabezados de columna o secciones del documento
+- Si encuentras múltiples planes de la misma aseguradora, diferéncialos con PLAN 1, PLAN 2, PLAN 3, etc.
+- NO asumas que ciertas aseguradoras están presentes - extrae solo lo que ves
 
 EXTRACCIÓN DE VALORES - CRÍTICO PARA GMM:
 - SUMA ASEGURADA: Busca valores como "$50,000,000", "SIN LIMITE", "ILIMITADA", "$100,000,000"
@@ -376,57 +393,57 @@ FORMATO DE RESPUESTA EXACTO:
     "coberturas": [
       {
         "cobertura": "SUMA ASEGURADA",
-        "[ASEGURADORA_1]": "[VALOR - puede ser SIN LIMITE o valor numérico]",
-        "[ASEGURADORA_2]": "[VALOR]",
-        "[ASEGURADORA_3]": "[VALOR]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[VALOR - puede ser SIN LIMITE o valor numérico]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[VALOR]",
+        "... (una columna por cada aseguradora/plan encontrado en el documento)"
       },
       {
         "cobertura": "DEDUCIBLE",
-        "[ASEGURADORA_1]": "[VALOR en pesos]",
-        "[ASEGURADORA_2]": "[VALOR en pesos]",
-        "[ASEGURADORA_3]": "[VALOR en pesos]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[VALOR en pesos]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[VALOR en pesos]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "COASEGURO",
-        "[ASEGURADORA_1]": "[PORCENTAJE]",
-        "[ASEGURADORA_2]": "[PORCENTAJE]",
-        "[ASEGURADORA_3]": "[PORCENTAJE]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[PORCENTAJE]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[PORCENTAJE]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "NIVEL DE TABULADOR MÉDICO",
-        "[ASEGURADORA_1]": "[Omnia/Premier/Estándar]",
-        "[ASEGURADORA_2]": "[Omnia/Premier/Estándar]",
-        "[ASEGURADORA_3]": "[Omnia/Premier/Estándar]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[Omnia/Premier/Estándar]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[Omnia/Premier/Estándar]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "ACCESO HOSPITALARIO",
-        "[ASEGURADORA_1]": "[No Aplica/Directo/etc]",
-        "[ASEGURADORA_2]": "[No Aplica/Directo/etc]",
-        "[ASEGURADORA_3]": "[No Aplica/Directo/etc]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[No Aplica/Directo/etc]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[No Aplica/Directo/etc]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "EMERGENCIA MÉDICA EN EL EXTRANJERO",
-        "[ASEGURADORA_1]": "[Incluido/Amparado/No aplica]",
-        "[ASEGURADORA_2]": "[Incluido/Amparado/No aplica]",
-        "[ASEGURADORA_3]": "[Incluido/Amparado/No aplica]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[Incluido/Amparado/No aplica]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[Incluido/Amparado/No aplica]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "ASISTENCIA EN VIAJES",
-        "[ASEGURADORA_1]": "[Incluido/No aplica]",
-        "[ASEGURADORA_2]": "[Incluido/No aplica]",
-        "[ASEGURADORA_3]": "[Incluido/No aplica]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[Incluido/No aplica]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[Incluido/No aplica]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "MEMBRESÍA MÉDICA MÓVIL",
-        "[ASEGURADORA_1]": "[Incluido/No aplica]",
-        "[ASEGURADORA_2]": "[Incluido/No aplica]",
-        "[ASEGURADORA_3]": "[Incluido/No aplica]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[Incluido/No aplica]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[Incluido/No aplica]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       },
       {
         "cobertura": "COSTO ANUAL",
-        "[ASEGURADORA_1]": "[PRECIO_TOTAL]",
-        "[ASEGURADORA_2]": "[PRECIO_TOTAL]",
-        "[ASEGURADORA_3]": "[PRECIO_TOTAL]"
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1]": "[PRECIO_TOTAL]",
+        "[NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2]": "[PRECIO_TOTAL]",
+        "... (una columna por cada aseguradora/plan encontrado)"
       }
     ]
   },
@@ -439,17 +456,20 @@ FORMATO DE RESPUESTA EXACTO:
   ]
 }
 
+NOTA IMPORTANTE: Reemplaza [NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_1], [NOMBRE_ASEGURADORA_O_PLAN_EXTRAÍDO_2], etc. con los nombres REALES de las aseguradoras/planes encontrados en el documento (ej: "GNP PLAN 1", "GNP PLAN 2", "BUPA", "Metlife", etc.)
+
 INSTRUCCIÓN FINAL CRÍTICA: 
 1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
 2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
-3. Para GMM, presta especial atención a deducibles y coaseguros
-4. Si hay múltiples planes (Premier 100, Premier 200), identifícalos claramente
-5. El costo anual debe ser el valor total más grande por aseguradora
-6. 🚨 CRÍTICO: Identifica TODAS las aseguradoras presentes en el documento
-7. Usa nombres COMPLETOS de aseguradoras (ej: "GNP SEGUROS", "BUPA NACIONAL")
+3. 🚨 CRÍTICO: Extrae SOLO las aseguradoras/planes que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+4. Si hay múltiples propuestas de la misma aseguradora (ej: 3 propuestas GNP), créalas como: "GNP PLAN 1", "GNP PLAN 2", "GNP PLAN 3"
+5. Para GMM, presta especial atención a deducibles y coaseguros
+6. El costo anual debe ser el valor total más grande por aseguradora/plan
+7. Normaliza los nombres de aseguradoras según las reglas especificadas (ej: "Grupo Nacional Provincial" → "GNP")
 8. NO mezcles aseguradoras de autos con GMM - este es un documento de GMM exclusivamente
 9. Extrae TODAS las coberturas presentes, no solo las del formato de ejemplo
-10. Si encuentras "SIN LIMITE" en suma asegurada, úsalo tal cual, no lo conviertas a número`;
+10. Si encuentras "SIN LIMITE" en suma asegurada, úsalo tal cual, no lo conviertas a número
+11. El número de columnas en la tabla debe ser exactamente igual al número de aseguradoras/planes encontrados`;
 
     } else if (policyType === 'hogar') {
       return `${baseInstructions}
@@ -461,6 +481,7 @@ ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN HOGAR:
 - Identifica coberturas de edificio y contenido
 - Busca responsabilidad civil familiar
 - Identifica coberturas adicionales (robo, incendio, fenómenos naturales)
+- 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
 
 FORMATO DE RESPUESTA EXACTO:
 {
@@ -475,23 +496,27 @@ FORMATO DE RESPUESTA EXACTO:
     "coberturas": [
       {
         "cobertura": "EDIFICIO",
-        "[ASEGURADORA_1]": "[VALOR]",
-        "[ASEGURADORA_2]": "[VALOR]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR]",
+        "... (una columna por cada aseguradora encontrada)"
       },
       {
         "cobertura": "CONTENIDO",
-        "[ASEGURADORA_1]": "[VALOR]",
-        "[ASEGURADORA_2]": "[VALOR]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR]",
+        "... (una columna por cada aseguradora encontrada)"
       },
       {
         "cobertura": "RESPONSABILIDAD CIVIL FAMILIAR",
-        "[ASEGURADORA_1]": "[VALOR]",
-        "[ASEGURADORA_2]": "[VALOR]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR]",
+        "... (una columna por cada aseguradora encontrada)"
       },
       {
         "cobertura": "COSTO ANUAL",
-        "[ASEGURADORA_1]": "[PRECIO]",
-        "[ASEGURADORA_2]": "[PRECIO]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[PRECIO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[PRECIO]",
+        "... (una columna por cada aseguradora encontrada)"
       }
     ]
   },
@@ -504,7 +529,11 @@ FORMATO DE RESPUESTA EXACTO:
   ]
 }
 
-INSTRUCCIÓN FINAL: Extrae solo información real de los documentos.`;
+INSTRUCCIÓN FINAL: 
+1. Extrae solo información real de los documentos
+2. 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+3. Normaliza los nombres de aseguradoras según las reglas especificadas
+4. El número de columnas debe coincidir exactamente con el número de aseguradoras encontradas`;
 
     } else { // autos (default)
       return `${baseInstructions}
@@ -515,12 +544,20 @@ ANÁLISIS CRÍTICO - INSTRUCCIONES DE EXTRACCIÓN AUTOS:
 ${fileNames.includes('Cotizacion_Tabla') ? `
 🔍 DETECCIÓN ESPECIAL: Documento contiene "Cotizacion_Tabla" - Este es un PDF generado con estructura tabular.
 INSTRUCCIONES ESPECÍFICAS PARA PDFs TABULARES:
-- Busca patrones como "COBERTURAS", "ANA", "HDI", "QUALITAS", "GNP" en el texto
+- Busca patrones como "COBERTURAS" en el texto
+- Identifica los nombres de las aseguradoras en los encabezados de columna
 - Los valores monetarios pueden aparecer como números separados por espacios
 - Las aseguradoras suelen estar en columnas consecutivas
 - Identifica filas de "SUMA ASEGURADA", "DAÑOS MATERIALES", "ROBO TOTAL", "RESPONSABILIDAD CIVIL", "GASTOS MÉDICOS", "COSTO ANUAL"
 - Los valores pueden estar sin formato (ej: "446,400.00", "483,000.00", "503,000.00")
+- 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
 ` : ''}
+
+IDENTIFICACIÓN DE ASEGURADORAS AUTOS:
+- 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+- Busca nombres de aseguradoras en los encabezados de columna o secciones del documento
+- Si encuentras múltiples propuestas de la misma aseguradora, diferéncialas con PLAN 1, PLAN 2, etc.
+- NO asumas que ciertas aseguradoras están presentes - extrae solo lo que ves
 
 EXTRACCIÓN DE VALORES - CRÍTICO PARA DEDUCIBLES:
 - Para SUMA ASEGURADA: busca números grandes (400,000+)
@@ -554,63 +591,62 @@ FORMATO DE RESPUESTA EXACTO:
     "coberturas": [
       {
         "cobertura": "SUMA ASEGURADA",
-        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR_EXTRAÍDO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR_EXTRAÍDO]",
+        "... (una columna por cada aseguradora encontrada en el documento)"
       },
       {
         "cobertura": "DAÑOS MATERIALES", 
-        "[ASEGURADORA_1_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
-        "[ASEGURADORA_2_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
-        "[ASEGURADORA_3_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO - Para Qualitas buscar 5% S.A.]",
-        "[ASEGURADORA_4_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "... (una columna por cada aseguradora encontrada - Para Qualitas buscar 5% S.A.)"
       },
       {
         "cobertura": "ROBO TOTAL",
-        "[ASEGURADORA_1_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
-        "[ASEGURADORA_2_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
-        "[ASEGURADORA_3_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO - Para Qualitas buscar 5% S.A.]",
-        "[ASEGURADORA_4_REAL]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[DEDUCIBLE_O_VALOR_EXTRAÍDO]",
+        "... (una columna por cada aseguradora encontrada - Para Qualitas buscar 5% S.A.)"
       },
       {
         "cobertura": "RESPONSABILIDAD CIVIL",
-        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR_EXTRAÍDO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR_EXTRAÍDO]",
+        "... (una columna por cada aseguradora encontrada)"
       },
       {
         "cobertura": "GASTOS MÉDICOS OCUPANTES",
-        "[ASEGURADORA_1_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_2_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_3_REAL]": "[VALOR_EXTRAÍDO_REAL]",
-        "[ASEGURADORA_4_REAL]": "[VALOR_EXTRAÍDO_REAL]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[VALOR_EXTRAÍDO]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[VALOR_EXTRAÍDO]",
+        "... (una columna por cada aseguradora encontrada)"
       },
       {
         "cobertura": "COSTO ANUAL",
-        "[ASEGURADORA_1_REAL]": "[PRECIO_TOTAL_REAL]",
-        "[ASEGURADORA_2_REAL]": "[PRECIO_TOTAL_REAL]",
-        "[ASEGURADORA_3_REAL]": "[PRECIO_TOTAL_REAL]",
-        "[ASEGURADORA_4_REAL]": "[PRECIO_TOTAL_REAL]"
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_1]": "[PRECIO_TOTAL]",
+        "[NOMBRE_ASEGURADORA_EXTRAÍDA_2]": "[PRECIO_TOTAL]",
+        "... (una columna por cada aseguradora encontrada)"
       }
     ]
   },
   "recomendaciones": [
     {
-      "aseguradora": "[NOMBRE_ASEGURADORA_REAL_CON_MEJOR_PRECIO]",
+      "aseguradora": "[NOMBRE_ASEGURADORA_CON_MEJOR_PRECIO]",
       "razon": "[ANÁLISIS_DEL_POR_QUÉ_ES_LA_MEJOR_OPCIÓN]",
       "precio": "[PRECIO_MÁS_COMPETITIVO]"
     }
   ]
 }
 
+NOTA IMPORTANTE: Reemplaza [NOMBRE_ASEGURADORA_EXTRAÍDA_1], [NOMBRE_ASEGURADORA_EXTRAÍDA_2], etc. con los nombres REALES de las aseguradoras encontradas en el documento (ej: "GNP", "Qualitas", "Momento", etc.)
+
 INSTRUCCIÓN FINAL CRÍTICA: 
 1. Extrae ÚNICAMENTE información REAL encontrada en los documentos
 2. NO inventes datos. Si no encuentras un valor, usa "No disponible"
-3. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
-4. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
-5. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
+3. 🚨 CRÍTICO: Extrae SOLO las aseguradoras que aparecen en el documento. NO agregues aseguradoras que no estén presentes
+4. El número de columnas debe coincidir exactamente con el número de aseguradoras encontradas en el documento
+5. Normaliza los nombres de aseguradoras según las reglas especificadas (ej: "Grupo Nacional Provincial" → "GNP")
+6. 🚨 IMPORTANTE QUALITAS: Para DAÑOS MATERIALES y ROBO TOTAL busca el DEDUCIBLE (5% suma asegurada), NO el importe de prima
+7. Si Qualitas suma asegurada = $503,000 → deducible debería ser ~$25,150, NO $7,564
+8. Distingue claramente entre deducible (lo que paga el cliente) vs prima (costo del seguro)`;
     }
   };
 
