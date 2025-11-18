@@ -37,6 +37,8 @@ const Cotiza = () => {
   const handleFileUpload = async (event) => {
     const uploadedFiles = Array.from(event.target.files);
     
+    console.log('📤 Archivos seleccionados para subir:', uploadedFiles.map(f => f.name));
+    
     // Verificar límite de 5 archivos
     const currentFileCount = files.length;
     const totalFiles = currentFileCount + uploadedFiles.length;
@@ -48,21 +50,25 @@ const Cotiza = () => {
     
     const validFiles = uploadedFiles.filter(file => {
       if (supportedTypes[file.type]) {
+        console.log('✅ Archivo válido:', file.name, 'Tipo:', file.type);
         return true;
       }
+      console.log('❌ Archivo no soportado:', file.name, 'Tipo:', file.type);
       toast.error(`Tipo de archivo no soportado: ${file.name}`);
       return false;
     });
 
     if (validFiles.length > 0) {
-      const fileObjects = validFiles.map(file => ({
+      const fileObjects = validFiles.map((file, index) => ({
         file,
-        id: Date.now() + Math.random(),
+        id: Date.now() + Math.random() + index, // Ensure unique IDs even in batch
         name: file.name,
         type: supportedTypes[file.type],
         size: file.size,
         status: 'pending'
       }));
+      
+      console.log('📋 Objetos de archivo creados:', fileObjects.map(f => ({ name: f.name, id: f.id })));
       
       setFiles(prev => [...prev, ...fileObjects]);
       toast.success(`📁 ${validFiles.length} archivo(s) agregado(s) (${currentFileCount + validFiles.length}/5)`);
@@ -86,16 +92,26 @@ const Cotiza = () => {
       return;
     }
 
+    console.log('🚀 Iniciando extracción de texto para', filesToProcess.length, 'archivos');
+    console.log('📋 Archivos a procesar:', filesToProcess.map(f => ({ name: f.name, id: f.id, type: f.type })));
+    console.log('📚 Textos ya extraídos:', extractedTexts.map(et => ({ fileName: et.fileName, fileId: et.fileId })));
+
     setIsProcessing(true);
 
     try {
-      for (const fileData of filesToProcess) {
-        if (extractedTexts.some(et => et.fileId === fileData.id)) {
-          console.log('⏭️ Archivo ya procesado:', fileData.name);
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const fileData = filesToProcess[i];
+        
+        console.log(`\n📄 [${i + 1}/${filesToProcess.length}] Procesando: ${fileData.name} (ID: ${fileData.id})`);
+        
+        // Check if already processed
+        const alreadyProcessed = extractedTexts.some(et => et.fileId === fileData.id);
+        if (alreadyProcessed) {
+          console.log('⏭️ Archivo ya procesado, saltando:', fileData.name);
           continue;
         }
         
-        console.log('🔄 Procesando archivo:', fileData.name);
+        console.log('🔄 Iniciando extracción para:', fileData.name, 'Tipo:', fileData.type);
         
         setFiles(prev => prev.map(f => 
           f.id === fileData.id ? { ...f, status: 'processing' } : f
@@ -103,18 +119,32 @@ const Cotiza = () => {
 
         let extractedText = '';
 
-        if (fileData.type === 'PDF') {
-          extractedText = await extractTextFromPDF(fileData.file);
-        } else if (['PNG', 'JPEG', 'JPG'].includes(fileData.type)) {
-          extractedText = await extractTextFromImage(fileData.file);
-        } else if (['TXT', 'DOC', 'DOCX'].includes(fileData.type)) {
-          extractedText = await extractTextFromDocument(fileData.file);
+        try {
+          if (fileData.type === 'PDF') {
+            console.log('📄 Tipo PDF detectado, llamando extractTextFromPDF...');
+            extractedText = await extractTextFromPDF(fileData.file);
+            console.log('✅ Texto extraído del PDF:', fileData.name, '- Longitud:', extractedText.length);
+          } else if (['PNG', 'JPEG', 'JPG'].includes(fileData.type)) {
+            console.log('🖼️ Tipo imagen detectado, llamando extractTextFromImage...');
+            extractedText = await extractTextFromImage(fileData.file);
+            console.log('✅ Texto extraído de imagen:', fileData.name, '- Longitud:', extractedText.length);
+          } else if (['TXT', 'DOC', 'DOCX'].includes(fileData.type)) {
+            console.log('📝 Tipo documento detectado, llamando extractTextFromDocument...');
+            extractedText = await extractTextFromDocument(fileData.file);
+            console.log('✅ Texto extraído de documento:', fileData.name, '- Longitud:', extractedText.length);
+          } else {
+            console.warn('⚠️ Tipo de archivo no reconocido:', fileData.type);
+          }
+        } catch (extractError) {
+          console.error(`❌ Error extrayendo texto de ${fileData.name}:`, extractError);
+          extractedText = `Error al extraer texto: ${extractError.message}`;
         }
 
+        // Add to extractedTexts
         setExtractedTexts(prev => {
           const exists = prev.some(et => et.fileId === fileData.id);
           if (exists) {
-            console.log('⚠️ Evitando duplicado:', fileData.name);
+            console.log('⚠️ Evitando duplicado en setExtractedTexts:', fileData.name);
             return prev;
           }
           
@@ -124,22 +154,28 @@ const Cotiza = () => {
             text: extractedText
           };
           
-          console.log('✅ Agregando texto extraído:', fileData.name);
+          console.log('✅ Agregando texto extraído a estado:', fileData.name, 'FileID:', fileData.id);
+          console.log('📊 Total textos extraídos ahora:', prev.length + 1);
           return [...prev, newText];
         });
 
+        // Mark as completed
         setFiles(prev => prev.map(f => 
           f.id === fileData.id ? { ...f, status: 'completed' } : f
         ));
+        
+        console.log('✅ Archivo completado:', fileData.name);
       }
 
+      console.log('🎉 Extracción de texto completada para todos los archivos');
       toast.success('✅ Texto extraído exitosamente. Ahora puedes generar la tabla de cotización.');
       
     } catch (error) {
-      console.error('Error extracting text:', error);
+      console.error('❌ Error general en extractTextFromFiles:', error);
       toast.error('Error al extraer texto de los archivos');
     } finally {
       setIsProcessing(false);
+      console.log('🏁 Proceso de extracción finalizado');
     }
   };
 
