@@ -5173,25 +5173,19 @@ function extractHighlights(summaryData) {
     }
   }
   
-  // Most common action
-  const actions = Object.entries(summaryData.activities.byAction || {});
-  if (actions.length > 0) {
-    const mostCommon = actions.reduce((max, [action, count]) => 
-      count > (max.count || 0) ? { action, count } : max
-    , {});
-    if (mostCommon.action) {
-      highlights.push(`Actividad principal: ${mostCommon.action} (${mostCommon.count} veces)`);
-    }
-  }
-  
   // Urgent expirations
-  if (summaryData.summary.totalExpiring > 0) {
+  if (summaryData.summary && summaryData.summary.totalExpiring > 0) {
     highlights.push(`⚠️ ${summaryData.summary.totalExpiring} pólizas vencen en los próximos 7 días`);
   }
   
   // Pending payments
-  if (summaryData.summary.totalPartialPayments > 0) {
+  if (summaryData.summary && summaryData.summary.totalPartialPayments > 0) {
     highlights.push(`💰 ${summaryData.summary.totalPartialPayments} pagos parciales pendientes`);
+  }
+  
+  // Captured policies
+  if (summaryData.summary && summaryData.summary.policiesCaptured > 0) {
+    highlights.push(`📋 ${summaryData.summary.policiesCaptured} pólizas capturadas`);
   }
   
   return highlights;
