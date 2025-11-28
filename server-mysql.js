@@ -4,6 +4,7 @@ const cors = require('cors');
 const mysql = require('mysql2/promise');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
+const fetch = require('node-fetch');
 
 // Load environment variables from root .env file FIRST
 const dotenv = require('dotenv');
@@ -694,16 +695,23 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
       endDate: endDate.toISOString()
     });
     
-    // Generate summary data by calling the frontend's activity service logic
-    // We'll use the API endpoint that generates the summary data
-    const API_BASE = process.env.HEROKU_APP_URL || process.env.API_URL || 'http://localhost:3000';
+    // Get activity logs directly from Firebase
+    let query = db.collection('activity_logs')
+      .where('timestamp', '>=', startDate.toISOString())
+      .where('timestamp', '<=', endDate.toISOString())
+      .orderBy('timestamp', 'desc')
+      .limit(1000);
     
-    // First, get activity logs for the date range
-    const activityLogsResponse = await fetch(`${API_BASE}/api/activity-logs?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=1000`);
-    const activityLogsData = await activityLogsResponse.json();
-    const activities = activityLogsData.data || [];
+    const activityLogsSnapshot = await query.get();
+    const activities = [];
+    activityLogsSnapshot.forEach(doc => {
+      activities.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
     
-    console.log(`📊 Found ${activities.length} activities in date range`);
+    console.log(`📊 Found ${activities.length} activities in date range (direct from Firebase)`);
     
     // Get expiring policies (next 7 days)
     const expiringEndDate = new Date();
@@ -861,8 +869,8 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
       teamActivities: teamActivities.length
     });
     
-    // Call GPT analysis endpoint internally
-    const gptResponse = await fetch(`${API_BASE}/api/gpt/analyze-activity`, {
+    // Call GPT analysis endpoint internally using localhost
+    const gptResponse = await fetch(`http://localhost:${PORT}/api/gpt/analyze-activity`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -883,7 +891,7 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
     
     // Send email
     const recipients = ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com'];
-    const emailResponse = await fetch(`${API_BASE}/api/email/send-welcome`, {
+    const emailResponse = await fetch(`http://localhost:${PORT}/api/email/send-welcome`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
