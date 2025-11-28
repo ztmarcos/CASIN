@@ -591,17 +591,184 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
   try {
     console.log('🎂 Cron job: Triggering birthday emails...');
     
-    // Import the birthday service
-    const { triggerBirthdayEmails } = require('./services/firebaseBirthdayService');
+    if (!isFirebaseEnabled || !db) {
+      throw new Error('Firebase not initialized');
+    }
     
-    const result = await triggerBirthdayEmails();
+    // Get all collections that might contain RFC data
+    const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+    const birthdays = [];
     
-    console.log('✅ Cron job: Birthday emails triggered successfully', result);
+    for (const collectionName of collections) {
+      try {
+        const snapshot = await db.collection(collectionName).get();
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const rfc = data.rfc || data.RFC;
+          
+          if (rfc && typeof rfc === 'string') {
+            const cleanRFC = rfc.trim().toUpperCase();
+            
+            // Only process personal RFCs (13 characters)
+            if (cleanRFC.length === 13) {
+              const personalPattern = /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/;
+              if (personalPattern.test(cleanRFC)) {
+                // Extract birthday from RFC (YYMMDD format)
+                const yearDigits = cleanRFC.substring(4, 6);
+                const month = cleanRFC.substring(6, 8);
+                const day = cleanRFC.substring(8, 10);
+                
+                const currentYear = new Date().getFullYear();
+                const century = parseInt(yearDigits) <= 30 ? 2000 : 1900;
+                const year = century + parseInt(yearDigits);
+                
+                try {
+                  const birthdayDate = new Date(year, parseInt(month) - 1, parseInt(day));
+                  
+                  if (!isNaN(birthdayDate.getTime())) {
+                    const age = currentYear - year;
+                    
+                    birthdays.push({
+                      id: doc.id,
+                      name: data.nombre_contratante || data.contratante || data.nombre || 'Sin nombre',
+                      rfc: cleanRFC,
+                      email: data.email || data.correo || null,
+                      date: birthdayDate.toISOString(),
+                      age: age,
+                      source: collectionName,
+                      details: `${collectionName} - ${data.numero_poliza || 'Sin póliza'}`,
+                      birthdaySource: 'RFC'
+                    });
+                  }
+                } catch (err) {
+                  // Skip invalid dates
+                }
+              }
+            }
+          }
+        });
+      } catch (error) {
+        console.log(`⚠️  Error fetching ${collectionName}:`, error.message);
+      }
+    }
+    
+    // Filter for today's birthdays
+    const today = new Date();
+    const todaysBirthdays = birthdays.filter(birthday => {
+      const birthDate = new Date(birthday.date);
+      return birthDate.getMonth() === today.getMonth() && 
+             birthDate.getDate() === today.getDate();
+    });
+    
+    console.log(`📧 Found ${todaysBirthdays.length} birthdays for today`);
+    
+    // Send emails to today's birthdays
+    let emailsSent = 0;
+    const emailResults = [];
+    
+    for (const birthday of todaysBirthdays) {
+      if (birthday.email) {
+        try {
+          console.log(`📧 Sending birthday email to ${birthday.name} (${birthday.email})`);
+          
+          const emailHTML = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #e74c3c; text-align: center;">🎂 ¡Feliz Cumpleaños! 🎂</h2>
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; text-align: center;">
+                <h3 style="margin: 0; font-size: 24px;">${birthday.name}</h3>
+                <p style="font-size: 18px; margin: 20px 0;">¡Que tengas un día maravilloso lleno de alegría y éxito!</p>
+                <p style="font-size: 16px; margin: 20px 0;">¡Felicidades por tus ${birthday.age} años!</p>
+                <div style="margin: 30px 0;">
+                  <span style="font-size: 40px;">🎉 🎈 🎁</span>
+                </div>
+                <p style="font-size: 16px; margin: 0;">Con cariño,<br><strong>Equipo CASIN Seguros</strong></p>
+              </div>
+              <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+                <p>Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
+              </div>
+            </div>
+          `;
+          
+          const emailResponse = await fetch(`http://localhost:${PORT}/api/email/send-welcome`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              to: birthday.email,
+              subject: `¡Feliz Cumpleaños ${birthday.name}! 🎉`,
+              htmlContent: emailHTML,
+              from: 'casinseguros@gmail.com',
+              fromPass: process.env.GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+              fromName: 'CASIN Seguros - Felicitaciones'
+            })
+          });
+          
+          if (emailResponse.ok) {
+            emailsSent++;
+            emailResults.push({
+              name: birthday.name,
+              email: birthday.email,
+              status: 'sent'
+            });
+            console.log(`✅ Email sent to ${birthday.name}`);
+          } else {
+            emailResults.push({
+              name: birthday.name,
+              email: birthday.email,
+              status: 'failed',
+              error: `HTTP ${emailResponse.status}`
+            });
+            console.log(`❌ Failed to send email to ${birthday.name}`);
+          }
+        } catch (error) {
+          emailResults.push({
+            name: birthday.name,
+            email: birthday.email,
+            status: 'error',
+            error: error.message
+          });
+          console.error(`❌ Error sending email to ${birthday.name}:`, error.message);
+        }
+      }
+    }
+    
+    // Log the execution
+    await db.collection('activity_logs').add({
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userEmail: 'system',
+      userName: 'Automated System',
+      action: 'birthday_emails_sent',
+      tableName: null,
+      details: {
+        totalBirthdays: todaysBirthdays.length,
+        emailsSent: emailsSent,
+        automated: true,
+        results: emailResults
+      },
+      metadata: {
+        scheduledExecution: true,
+        executionTime: new Date().toISOString()
+      }
+    });
+    
+    console.log('✅ Cron job: Birthday emails triggered successfully');
     
     res.json({
       status: 'success',
       message: 'Birthday emails triggered successfully',
-      result: result,
+      result: {
+        totalBirthdays: todaysBirthdays.length,
+        emailsSent: emailsSent,
+        birthdays: todaysBirthdays.map(b => ({
+          name: b.name,
+          email: b.email || 'Sin email',
+          age: b.age
+        })),
+        emailResults: emailResults
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
