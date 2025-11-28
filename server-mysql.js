@@ -135,7 +135,7 @@ try {
   if (error.message.includes('private key') || error.message.includes('PEM')) {
     console.error('💡 SOLUTION: The FIREBASE_PRIVATE_KEY must be a complete PEM format key');
     console.error('💡 It should start with "-----BEGIN PRIVATE KEY-----" and end with "-----END PRIVATE KEY-----"');
-    console.error('💡 All newlines should be escaped as \\n when setting in Vercel environment variables');
+    console.error('💡 All newlines should be escaped as \\n when setting in Heroku environment variables');
   }
   
   isFirebaseEnabled = false;
@@ -551,7 +551,6 @@ app.get('/api/health', async (req, res) => {
         databaseType: databaseType,
         firebaseConfigured: hasFirebaseConfig,
         debug: {
-          isVercel: !!process.env.VERCEL,
           isFirebaseEnabled: isFirebaseEnabled,
           hasDb: !!db,
           hasAdmin: !!admin,
@@ -615,6 +614,533 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     });
   }
 });
+
+// Endpoint for cron job to trigger weekly resumen email (Fridays at 5pm CST)
+app.get('/api/cron/weekly-resumen', async (req, res) => {
+  try {
+    console.log('📊 Cron job: Triggering weekly resumen generation...');
+    
+    if (!isFirebaseEnabled || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    
+    // Check if auto-generate is enabled
+    const configSnapshot = await db.collection('app_config').doc('resumen-auto-generate').get();
+    const config = configSnapshot.exists ? configSnapshot.data() : {};
+    
+    console.log('⚙️  Auto-generate config:', config);
+    
+    if (!config.enabled) {
+      console.log('⏭️  Auto-generate disabled, skipping report');
+      return res.json({
+        status: 'skipped',
+        message: 'Auto-generate is disabled',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    // Calculate last 7 days date range
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+    
+    console.log('📊 Generating weekly report for date range:', {
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    });
+    
+    // Generate summary data by calling the frontend's activity service logic
+    // We'll use the API endpoint that generates the summary data
+    const API_BASE = process.env.HEROKU_APP_URL || process.env.API_URL || 'http://localhost:3000';
+    
+    // First, get activity logs for the date range
+    const activityLogsResponse = await fetch(`${API_BASE}/api/activity-logs?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}&limit=1000`);
+    const activityLogsData = await activityLogsResponse.json();
+    const activities = activityLogsData.data || [];
+    
+    console.log(`📊 Found ${activities.length} activities in date range`);
+    
+    // Get expiring policies (next 7 days)
+    const expiringEndDate = new Date();
+    expiringEndDate.setDate(expiringEndDate.getDate() + 7);
+    
+    // Get all insurance collections
+    const insuranceCollections = ['autos', 'hogar', 'vida', 'gmm', 'accidentes', 'responsabilidad_civil'];
+    const expiringPolicies = [];
+    const partialPayments = [];
+    const capturedPolicies = [];
+    const cancelledPolicies = [];
+    
+    for (const collectionName of insuranceCollections) {
+      try {
+        const collectionData = await db.collection(collectionName).get();
+        collectionData.forEach(doc => {
+          const policy = { id: doc.id, ...doc.data(), tabla: collectionName };
+          
+          // Check for expiring policies
+          if (policy.fecha_fin) {
+            const expirationDate = policy.fecha_fin.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
+            if (expirationDate >= new Date() && expirationDate <= expiringEndDate) {
+              expiringPolicies.push(policy);
+            }
+          }
+          
+          // Check for partial payments
+          if (policy.pago_parcial && policy.pago_parcial > 0) {
+            partialPayments.push(policy);
+          }
+          
+          // Check for captured policies (created in date range)
+          if (policy.createdAt) {
+            const createdDate = policy.createdAt.toDate ? policy.createdAt.toDate() : new Date(policy.createdAt);
+            if (createdDate >= startDate && createdDate <= endDate) {
+              capturedPolicies.push(policy);
+            }
+          }
+          
+          // Check for cancelled policies
+          if (policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo') {
+            cancelledPolicies.push(policy);
+          }
+        });
+      } catch (error) {
+        console.log(`⚠️  Error fetching ${collectionName}:`, error.message);
+      }
+    }
+    
+    // Get team activities (daily activities)
+    const teamActivitiesSnapshot = await db.collection('daily_activities')
+      .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(startDate))
+      .where('createdAt', '<=', admin.firestore.Timestamp.fromDate(endDate))
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    
+    const teamActivities = [];
+    teamActivitiesSnapshot.forEach(doc => {
+      const activity = { id: doc.id, ...doc.data() };
+      if (activity.createdAt && activity.createdAt.toDate) {
+        activity.createdAt = activity.createdAt.toDate().toISOString();
+      }
+      teamActivities.push(activity);
+    });
+    
+    // Calculate user activity stats
+    const userActivity = {};
+    activities.forEach(act => {
+      const userName = act.userName || 'Unknown';
+      if (!userActivity[userName]) {
+        userActivity[userName] = {
+          email_sent: 0,
+          data_captured: 0,
+          data_updated: 0,
+          daily_activity: 0,
+          total: 0
+        };
+      }
+      
+      if (act.action === 'email_sent') userActivity[userName].email_sent++;
+      if (act.action === 'data_captured') userActivity[userName].data_captured++;
+      if (act.action === 'data_updated') userActivity[userName].data_updated++;
+      if (act.action === 'daily_activity') userActivity[userName].daily_activity++;
+      userActivity[userName].total++;
+    });
+    
+    // Count metrics
+    const policiesCaptured = activities.filter(act => act.action === 'data_captured').length;
+    const policiesPaid = activities.filter(act => 
+      act.action === 'data_updated' && 
+      act.details && 
+      act.details.field === 'estado_pago' && 
+      act.details.newValue === 'Pagado'
+    ).length;
+    const emailsSent = activities.filter(act => act.action === 'email_sent').length;
+    const dataUpdates = activities.filter(act => act.action === 'data_updated').length;
+    
+    // Calculate partial payments total
+    const totalPartialAmount = partialPayments.reduce((sum, p) => sum + (parseFloat(p.pago_parcial) || 0), 0);
+    
+    // Build summary data object (matching frontend format)
+    const summaryData = {
+      dateRange: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString()
+      },
+      summary: {
+        policiesCaptured,
+        policiesPaid,
+        totalExpiring: expiringPolicies.length,
+        totalPartialPayments: partialPayments.length,
+        emailsSent,
+        dataUpdates,
+        activeUsers: Object.keys(userActivity).length
+      },
+      expiringPolicies: {
+        total: expiringPolicies.length,
+        policies: expiringPolicies.slice(0, 10)
+      },
+      partialPayments: {
+        total: partialPayments.length,
+        totalAmount: totalPartialAmount,
+        payments: partialPayments.slice(0, 10)
+      },
+      capturedPolicies: {
+        total: capturedPolicies.length,
+        policies: capturedPolicies.slice(0, 10).map(p => ({
+          numero_poliza: p.numero_poliza || '-',
+          contratante: p.contratante || p.nombre_contratante || '-',
+          ramo: p.tabla || '-',
+          fecha_inicio: p.fecha_inicio || 'N/A',
+          capturedBy: p.createdBy || '-'
+        }))
+      },
+      cancelledPolicies: {
+        total: cancelledPolicies.length,
+        policies: cancelledPolicies.slice(0, 10).map(p => ({
+          numero_poliza: p.numero_poliza || '-',
+          contratante: p.contratante || p.nombre_contratante || '-',
+          ramo: p.tabla || '-',
+          estado_cap: p.estado_cap || '-',
+          estado_cfp: p.estado_cfp || '-'
+        }))
+      },
+      teamActivities: teamActivities.slice(0, 20),
+      userActivity
+    };
+    
+    console.log('📊 Summary data generated:', {
+      activities: activities.length,
+      expiringPolicies: expiringPolicies.length,
+      partialPayments: partialPayments.length,
+      capturedPolicies: capturedPolicies.length,
+      teamActivities: teamActivities.length
+    });
+    
+    // Call GPT analysis endpoint internally
+    const gptResponse = await fetch(`${API_BASE}/api/gpt/analyze-activity`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(summaryData)
+    });
+    
+    if (!gptResponse.ok) {
+      throw new Error(`GPT analysis failed: ${gptResponse.status}`);
+    }
+    
+    const gptResult = await gptResponse.json();
+    console.log('✅ GPT analysis completed');
+    
+    // Generate email HTML (using same format as Resumen component)
+    const dateRangeText = `${startDate.toLocaleDateString('es-MX')} - ${endDate.toLocaleDateString('es-MX')}`;
+    const emailHTML = generateResumenEmailHTML(gptResult, summaryData, dateRangeText);
+    
+    // Send email
+    const recipients = ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com'];
+    const emailResponse = await fetch(`${API_BASE}/api/email/send-welcome`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: recipients.join(','),
+        subject: `Resumen Semanal de Actividad - ${dateRangeText}`,
+        htmlContent: emailHTML,
+        from: 'casinseguros@gmail.com',
+        fromPass: process.env.GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+        fromName: 'CASIN Seguros - Resumen Automático'
+      })
+    });
+    
+    if (!emailResponse.ok) {
+      throw new Error(`Email sending failed: ${emailResponse.status}`);
+    }
+    
+    const emailResult = await emailResponse.json();
+    console.log('✅ Email sent successfully');
+    
+    // Log successful execution
+    await db.collection('activity_logs').add({
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userEmail: 'system',
+      userName: 'Automated System',
+      action: 'report_generated',
+      tableName: null,
+      details: {
+        reportType: 'weekly_summary',
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        automated: true,
+        emailSent: true,
+        recipients: recipients
+      },
+      metadata: {
+        scheduledExecution: true,
+        executionTime: new Date().toISOString()
+      }
+    });
+    
+    res.json({
+      status: 'success',
+      message: 'Weekly resumen generated and sent successfully',
+      result: {
+        summaryData: {
+          activitiesCount: activities.length,
+          expiringPolicies: expiringPolicies.length,
+          partialPayments: partialPayments.length,
+          capturedPolicies: capturedPolicies.length
+        },
+        gptAnalysis: gptResult.summary,
+        emailSent: true,
+        recipients: recipients
+      },
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Cron job: Error generating weekly resumen:', error);
+    
+    res.status(500).json({
+      status: 'error',
+      message: 'Error generating weekly resumen',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Helper function to generate email HTML (matching Resumen component format)
+function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Resumen Semanal de Actividad</title>
+    </head>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; background-color: #f5f7fa; margin: 0; padding: 0;">
+      <div style="max-width: 800px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        
+        <!-- Header -->
+        <div style="background: #000000; padding: 40px 30px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 32px; font-weight: 700;">Resumen de Actividad</h1>
+          <p style="color: #cccccc; margin: 0; font-size: 18px;">${dateRangeText}</p>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div style="padding: 30px;">
+          
+          <!-- GPT Analysis -->
+          <div style="background-color: #ffffff; border-radius: 8px; padding: 25px; margin-bottom: 30px; border: 1px solid #e5e5e5;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Análisis</h2>
+            <div style="color: #333333; line-height: 1.8; font-size: 15px;">
+              ${gptSummary.summary ? gptSummary.summary.replace(/\n/g, '<br>') : 'No hay análisis disponible'}
+            </div>
+          </div>
+          
+          <!-- Expiring Policies -->
+          ${summaryData.expiringPolicies.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas por Vencer (Próximos 7 días)</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Aseguradora</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Vencimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.expiringPolicies.policies.slice(0, 5).map(policy => {
+                    const fechaFin = policy.fecha_fin?.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
+                    return `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.tabla || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${fechaFin.toLocaleDateString('es-MX')}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          ` : ''}
+          
+          <!-- Partial Payments -->
+          ${summaryData.partialPayments.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pagos Parciales Pendientes</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Próximo Pago</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.partialPayments.payments.slice(0, 5).map(policy => {
+                    const fechaProximoPago = policy.fecha_proximo_pago?.toDate ? policy.fecha_proximo_pago.toDate() : (policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago) : null);
+                    return `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.tabla || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">$${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                        <td style="padding: 10px; font-size: 13px;">${fechaProximoPago ? fechaProximoPago.toLocaleDateString('es-MX') : '-'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+              <p style="margin: 15px 0 0 0; color: #000000; font-weight: bold;">
+                Total estimado: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+              </p>
+            </div>
+          </div>
+          ` : ''}
+          
+          <!-- Team Activities -->
+          ${summaryData.teamActivities && summaryData.teamActivities.length > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Actividades Diarias del Equipo</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              ${summaryData.teamActivities.map(activity => {
+                const createdAt = activity.createdAt ? new Date(activity.createdAt) : new Date();
+                return `
+                  <div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 3px solid #000000; border-radius: 4px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                      <span style="font-weight: bold; color: #000000;">${activity.userName || 'Usuario'}</span>
+                      <span style="font-size: 12px; color: #666666;">${createdAt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: #333333; margin-bottom: 5px;">${activity.title || '-'}</div>
+                    ${activity.description && activity.description !== activity.title ? `
+                      <div style="font-size: 13px; color: #666666; line-height: 1.5;">
+                        ${activity.description.length > 200 ? activity.description.substring(0, 200) + '...' : activity.description}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+          ` : ''}
+          
+          <!-- Captured Policies -->
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas Capturadas (${summaryData.capturedPolicies?.total || 0})</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              ${summaryData.capturedPolicies?.policies && summaryData.capturedPolicies.policies.length > 0 ? `
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de Inicio</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Capturado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryData.capturedPolicies.policies.slice(0, 5).map(policy => `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.fecha_inicio && policy.fecha_inicio !== 'N/A' ? new Date(policy.fecha_inicio).toLocaleDateString('es-MX') : 'N/A'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.capturedBy || '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              ` : `
+                <p style="text-align: center; color: #666666; font-style: italic; margin: 20px 0;">No hay pólizas capturadas en este período</p>
+              `}
+            </div>
+          </div>
+          
+          <!-- Cancelled Policies -->
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas Canceladas (${summaryData.cancelledPolicies?.total || 0})</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              ${summaryData.cancelledPolicies?.policies && summaryData.cancelledPolicies.policies.length > 0 ? `
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Estado CAP</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Estado CFP</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryData.cancelledPolicies.policies.slice(0, 5).map(policy => `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">
+                          <span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; text-transform: uppercase; ${policy.estado_cap === 'Inactivo' ? 'background-color: #fee2e2; color: #dc2626;' : 'background-color: #dcfce7; color: #166534;'}">${policy.estado_cap || '-'}</span>
+                        </td>
+                        <td style="padding: 10px; font-size: 13px;">
+                          <span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; text-transform: uppercase; ${policy.estado_cfp === 'Inactivo' ? 'background-color: #fee2e2; color: #dc2626;' : 'background-color: #dcfce7; color: #166534;'}">${policy.estado_cfp || '-'}</span>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              ` : `
+                <p style="text-align: center; color: #666666; font-style: italic; margin: 20px 0;">No hay pólizas canceladas</p>
+              `}
+            </div>
+          </div>
+          
+          <!-- User Activity Stats -->
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Estadísticas por Usuario</h2>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              ${Object.entries(summaryData.userActivity).map(([user, stats]) => `
+                <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #e5e5e5;">
+                  <div style="font-weight: bold; color: #000000; margin-bottom: 8px;">${user}</div>
+                  <div style="font-size: 13px; color: #666666;">
+                    Emails: ${stats.email_sent || 0} | 
+                    Capturas: ${stats.data_captured || 0} | 
+                    Actualizaciones: ${stats.data_updated || 0} |
+                    Actividades Diarias: ${stats.daily_activity || 0}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+        </div>
+        
+        <!-- Footer -->
+        <div style="background-color: #f5f5f5; padding: 25px 30px; text-align: center; border-top: 1px solid #e5e5e5;">
+          <p style="color: #666666; margin: 0 0 10px 0; font-size: 14px;">Generado por CASIN Seguros CRM</p>
+          <p style="color: #999999; margin: 0; font-size: 12px;">${new Date().toLocaleString('es-MX')}</p>
+        </div>
+        
+      </div>
+    </body>
+    </html>
+  `;
+}
 
 app.get('/api/test', (req, res) => {
   res.json({
@@ -2254,7 +2780,6 @@ app.post('/api/birthday/check-and-send', async (req, res) => {
 app.get('/api/directorio', async (req, res) => {
   try {
     console.log('🔍 Directorio endpoint called');
-    console.log('- process.env.VERCEL:', !!process.env.VERCEL);
     console.log('- isFirebaseEnabled:', isFirebaseEnabled);
     console.log('- db available:', !!db);
     console.log('- admin available:', !!admin);
@@ -6045,7 +6570,6 @@ app.get('/api/data/crud_db', async (req, res) => {
 // Debug endpoint for Firebase status
 app.get('/api/debug/firebase', (req, res) => {
   res.json({
-    isVercel: !!process.env.VERCEL,
     isFirebaseEnabled: isFirebaseEnabled,
     hasDb: !!db,
     hasAdmin: !!admin,
@@ -6465,29 +6989,47 @@ app.get('*', (req, res) => {
 
 // Friday Weekly Report Scheduler
 // Runs every Friday at 5:00 PM CST (17:00)
+// NOTE: This scheduler is deprecated in favor of Heroku Scheduler + /api/cron/weekly-resumen endpoint
+// Keeping for backwards compatibility but Heroku Scheduler is recommended
 const scheduleFridayReport = () => {
   let lastExecutionDate = null; // Track last execution to avoid duplicates
   
   // Simple setInterval-based scheduler (for production, consider using node-cron)
   const checkAndRunReport = async () => {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
-    const hour = now.getHours();
-    const today = now.toDateString(); // YYYY-MM-DD format
+    
+    // Convert to CST (UTC-6) or CDT (UTC-5) depending on daylight saving
+    // CST is UTC-6, CDT is UTC-5
+    const cstOffset = -6 * 60; // CST offset in minutes
+    const cstTime = new Date(now.getTime() + (cstOffset * 60 * 1000));
+    
+    const dayOfWeek = cstTime.getDay(); // 0 = Sunday, 5 = Friday
+    const hour = cstTime.getHours();
+    const today = cstTime.toDateString();
+    
+    // Log hourly check
+    console.log(`⏰ Scheduler check (CST): ${cstTime.toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} - Day: ${dayOfWeek}, Hour: ${hour}`);
+    console.log(`⏰ UTC time: ${now.toISOString()}`);
     
     // Check if it's Friday at 5 PM CST (17:00) and we haven't run today
     if (dayOfWeek === 5 && hour === 17 && lastExecutionDate !== today) {
       try {
-        console.log('📊 Running scheduled Friday report...');
+        console.log('🎯 IT\'S FRIDAY AT 5 PM! Running scheduled Friday report...');
+        console.log('📅 Last execution date:', lastExecutionDate);
+        console.log('📅 Today:', today);
         
         // Check if auto-generate is enabled
         const configSnapshot = await db.collection('app_config').doc('resumen-auto-generate').get();
         const config = configSnapshot.exists ? configSnapshot.data() : {};
         
+        console.log('⚙️  Auto-generate config:', config);
+        
         if (!config.enabled) {
           console.log('⏭️  Auto-generate disabled, skipping report');
           return;
         }
+        
+        console.log('✅ Auto-generate is enabled, proceeding with report generation...');
         
         // Calculate last week's date range
         const endDate = new Date();
@@ -6498,83 +7040,30 @@ const scheduleFridayReport = () => {
         console.log('📊 Generating weekly report for date range:', startDate.toISOString(), 'to', endDate.toISOString());
         
         try {
-          // Call the GPT analysis endpoint to generate the report
-          const response = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/gpt/analyze-activity`, {
-            method: 'POST',
+          // Use Heroku URL or localhost for API calls
+          const API_BASE = process.env.HEROKU_APP_URL || process.env.API_URL || 'http://localhost:3000';
+          
+          // Call the weekly resumen cron endpoint instead of GPT directly
+          const response = await fetch(`${API_BASE}/api/cron/weekly-resumen`, {
+            method: 'GET',
             headers: {
               'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              startDate: startDate.toISOString(),
-              endDate: endDate.toISOString(),
-              automated: true
-            })
+            }
           });
           
           if (response.ok) {
             const result = await response.json();
-            console.log('✅ Weekly report generated successfully');
+            console.log('✅ Weekly report generated and sent successfully');
+            console.log('📊 Result:', result);
             
-            // Now send the email with the generated report
-            try {
-              const emailResponse = await fetch(`${process.env.VITE_API_URL || 'http://localhost:3000'}/api/email/send-welcome`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  to: 'ztmarcos@gmail.com,marcoszavala09@gmail.com',
-                  subject: `Resumen Semanal - ${new Date().toLocaleDateString('es-MX')}`,
-                  htmlContent: `
-                    <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px;">
-                      <h1 style="color: #000000; text-align: center; margin-bottom: 30px;">Resumen Semanal de Actividades</h1>
-                      <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h2 style="color: #000000; margin-top: 0;">Análisis Inteligente</h2>
-                        <div style="white-space: pre-line; line-height: 1.6;">${result.summary}</div>
-                      </div>
-                      <div style="text-align: center; margin-top: 30px; color: #666666; font-size: 12px;">
-                        Generado automáticamente el ${new Date().toLocaleDateString('es-MX')} a las ${new Date().toLocaleTimeString('es-MX')}
-                      </div>
-                    </div>
-                  `,
-                  from: 'casinseguros@gmail.com',
-                  fromPass: 'espajcgariyhsboq',
-                  fromName: 'CASIN Seguros - Resumen Automático'
-                })
-              });
-              
-              if (emailResponse.ok) {
-                console.log('✅ Weekly report email sent successfully');
-              } else {
-                console.error('❌ Failed to send weekly report email:', emailResponse.status);
-              }
-            } catch (emailError) {
-              console.error('❌ Error sending weekly report email:', emailError);
-            }
+            // Mark execution as complete
+            lastExecutionDate = today;
+            console.log('✅ Friday report completed successfully and logged');
             
-            // Log successful execution
-            await db.collection('activity_logs').add({
-              timestamp: new Date().toISOString(),
-              userId: 'system',
-              userEmail: 'system',
-              userName: 'Automated System',
-              action: 'report_generated',
-              tableName: null,
-              details: {
-                reportType: 'weekly_summary',
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
-                automated: true,
-                emailSent: true,
-                recipients: ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com']
-              },
-              metadata: {
-                scheduledExecution: true,
-                executionTime: new Date().toISOString()
-              }
-            });
           } else {
+            const errorText = await response.text();
             console.error('❌ Failed to generate weekly report:', response.status, response.statusText);
+            console.error('❌ Error details:', errorText);
           }
         } catch (error) {
           console.error('❌ Error generating weekly report:', error);
@@ -6588,22 +7077,23 @@ const scheduleFridayReport = () => {
   
   // Check every hour
   setInterval(checkAndRunReport, 60 * 60 * 1000);
-  console.log('📅 Friday report scheduler initialized');
+  console.log('📅 Friday report scheduler initialized - checking every hour');
+  console.log('⏰ Next check will be at the top of the next hour');
+  
+  // Run initial check immediately
+  checkAndRunReport();
 };
 
-// Start server for Heroku (only if not in Vercel environment)
-if (!process.env.VERCEL) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);
-    console.log(`📧 Notion enabled: ${isNotionEnabled}`);
-    
-    // Initialize Friday report scheduler
-    scheduleFridayReport();
-  });
-}
+// Start server for Heroku
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔥 Firebase enabled: ${isFirebaseEnabled}`);
+  console.log(`📧 Notion enabled: ${isNotionEnabled}`);
+  
+  // Initialize Friday report scheduler
+  scheduleFridayReport();
+});
 
-  // Export for Vercel serverless deployment
-  module.exports = app;
+module.exports = app;
