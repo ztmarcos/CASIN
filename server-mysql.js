@@ -615,6 +615,49 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
   }
 });
 
+// App config endpoints for resumen auto-generate
+app.get('/api/app-config/resumen-auto-generate', async (req, res) => {
+  try {
+    if (!isFirebaseEnabled || !db) {
+      return res.status(500).json({ error: 'Firebase not initialized' });
+    }
+    
+    const configSnapshot = await db.collection('app_config').doc('resumen-auto-generate').get();
+    const config = configSnapshot.exists ? configSnapshot.data() : { enabled: false };
+    
+    res.json(config);
+  } catch (error) {
+    console.error('❌ Error getting resumen auto-generate config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/app-config/resumen-auto-generate', async (req, res) => {
+  try {
+    if (!isFirebaseEnabled || !db) {
+      return res.status(500).json({ error: 'Firebase not initialized' });
+    }
+    
+    const { enabled } = req.body;
+    
+    await db.collection('app_config').doc('resumen-auto-generate').set({
+      enabled: enabled === true,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    
+    console.log(`⚙️  Resumen auto-generate ${enabled ? 'enabled' : 'disabled'}`);
+    
+    res.json({
+      success: true,
+      enabled: enabled === true,
+      message: `Auto-generate ${enabled ? 'enabled' : 'disabled'} successfully`
+    });
+  } catch (error) {
+    console.error('❌ Error updating resumen auto-generate config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint for cron job to trigger weekly resumen email (Fridays at 5pm CST)
 app.get('/api/cron/weekly-resumen', async (req, res) => {
   try {
