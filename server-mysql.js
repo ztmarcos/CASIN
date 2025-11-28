@@ -697,7 +697,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             },
             body: JSON.stringify({
               to: birthday.email,
-              cc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
+              bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
               subject: `¡Feliz Cumpleaños ${birthday.name}! 🎉`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
@@ -5748,7 +5748,7 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     console.log('📧 Has files:', !!req.files);
     
     // Handle both FormData and JSON requests
-    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc;
+    let to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc, bcc;
     
     if (req.get('Content-Type')?.includes('multipart/form-data')) {
       // FormData request (with potential file attachments)
@@ -5762,19 +5762,20 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
       sendBccToSender = req.body.sendBccToSender === 'true'; // Convert string to boolean
       autoBccToCasin = req.body.autoBccToCasin === 'true'; // Convert string to boolean
       cc = req.body.cc || '';
+      bcc = req.body.bcc || '';
       driveLinks = req.body.driveLinks ? JSON.parse(req.body.driveLinks) : [];
       
       // Extract other fields from FormData
       clientData = {};
       Object.keys(req.body).forEach(key => {
-        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'autoBccToCasin', 'cc'].includes(key)) {
+        if (!['to', 'subject', 'htmlContent', 'driveLinks', 'from', 'fromName', 'fromPass', 'sendBccToSender', 'autoBccToCasin', 'cc', 'bcc'].includes(key)) {
           clientData[key] = req.body[key];
         }
       });
     } else {
       // JSON request (no file attachments)
       console.log('📄 Processing JSON request');
-      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc } = req.body);
+      ({ to, subject, htmlContent, clientData, cotizaciones, driveLinks, from, fromName, fromPass, sendBccToSender, autoBccToCasin, cc, bcc } = req.body);
     }
     
     if (!to || !subject || !htmlContent) {
@@ -5843,6 +5844,13 @@ app.post('/api/email/send-welcome', upload.any(), async (req, res) => {
     
     // Add BCC recipients
     const bccRecipients = [];
+    
+    // Add custom BCC recipients if provided
+    if (bcc) {
+      const bccList = bcc.split(',').map(email => email.trim()).filter(email => email);
+      bccRecipients.push(...bccList);
+      console.log('📧 Adding custom BCC recipients:', bccList);
+    }
     
     // Add BCC to sender if requested
     if (sendBccToSender && smtpUser) {
