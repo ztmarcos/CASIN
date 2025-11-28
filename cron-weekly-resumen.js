@@ -50,6 +50,21 @@ function makeRequest(url) {
 // Main function
 async function runWeeklyResumenCron() {
   try {
+    // Check if today is Friday (day 5)
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday
+    
+    console.log('📅 Current day:', dayOfWeek, '(0=Sunday, 5=Friday)');
+    
+    if (dayOfWeek !== 5) {
+      console.log('⏭️  Not Friday, skipping weekly resumen');
+      console.log('✅ Cron job completed (skipped - not Friday)');
+      process.exit(0);
+      return;
+    }
+    
+    console.log('🎯 It\'s Friday! Running weekly resumen...');
+    
     const endpoint = `${APP_URL}/api/cron/weekly-resumen`;
     console.log('🚀 Calling endpoint:', endpoint);
     
