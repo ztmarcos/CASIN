@@ -36,6 +36,7 @@ El sistema de cumpleaños automático está completamente implementado y funcion
    - Diseño profesional con gradiente morado
    - Incluye nombre, edad y mensaje personalizado
    - Firmado por "Equipo CASIN Seguros"
+   - **BCC (copia oculta)** a: ztmarcos@gmail.com y casinseguros@gmail.com
 
 ## 📧 Contenido del Email
 
