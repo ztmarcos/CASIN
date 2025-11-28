@@ -697,6 +697,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             },
             body: JSON.stringify({
               to: birthday.email,
+              cc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
               subject: `¡Feliz Cumpleaños ${birthday.name}! 🎉`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
