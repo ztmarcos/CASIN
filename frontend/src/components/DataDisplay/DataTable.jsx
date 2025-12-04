@@ -1249,6 +1249,56 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   };
 
+  // Función para convertir timestamps de Google Sheets/Excel a fecha legible
+  const convertGoogleSheetsTimestamp = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    
+    // Si es un número que podría ser timestamp de Google Sheets/Excel
+    if (typeof value === 'number') {
+      // Timestamps de Excel/Google Sheets (1-100000 = días desde 1900-01-01)
+      if (value >= 1 && value <= 100000) {
+        const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
+        const millisecondsPerDay = 24 * 60 * 60 * 1000;
+        const date = new Date(excelEpoch.getTime() + (value * millisecondsPerDay));
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      }
+      
+      // Timestamps Unix en segundos (10 dígitos)
+      if (value >= 1000000000 && value <= 9999999999) {
+        const date = new Date(value * 1000);
+        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      }
+      
+      // Timestamps Unix en milisegundos (13 dígitos)
+      if (value >= 1000000000000 && value <= 9999999999999) {
+        const date = new Date(value);
+        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      }
+      
+      // Números grandes que podrían ser timestamps (como 458924375)
+      if (value > 100000) {
+        // Intentar como timestamp Unix en segundos
+        let date = new Date(value * 1000);
+        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+        // Intentar como timestamp Unix en milisegundos
+        date = new Date(value);
+        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+      }
+    }
+    
+    return null;
+  };
+
   const renderCell = (row, rowIndex, column) => {
     // Debug logging for hogar table
     if (tableName === 'hogar' && column === 'contratante') {
@@ -1299,7 +1349,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       );
     }
     
-    const cellValue = row[column] !== null ? String(row[column]) : '-';
+    // Detectar si es una columna de fecha y convertir timestamps de Google Sheets
+    const isDateColumn = column.toLowerCase().includes('fecha') || 
+                         column.toLowerCase().includes('vigencia') ||
+                         column.toLowerCase().includes('inicio') ||
+                         column.toLowerCase().includes('fin');
+    
+    if (isDateColumn && typeof row[column] === 'number') {
+      const convertedDate = convertGoogleSheetsTimestamp(row[column]);
+      if (convertedDate) {
+        return <span>{convertedDate}</span>;
+      }
+    }
+    
+    const cellValue = row[column] !== null && row[column] !== undefined ? String(row[column]) : '-';
     return <span>{cellValue}</span>;
   };
 
