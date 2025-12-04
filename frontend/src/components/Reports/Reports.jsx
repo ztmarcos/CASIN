@@ -37,31 +37,76 @@ const isPolicyExpired = (policy) => {
 // Utility function to get the total amount from a policy, handling multiple field variations
 const getPolicyTotalAmount = (policy) => {
   // Try different field variations for total amount (prioritized order)
+  // Only use fields that represent the TOTAL amount, NOT prima_neta (which is net, not total)
   const totalFields = [
     'pago_total_o_prima_total', // Most common field in Firebase data
     'pago_total',
-    'prima_total', 
-    'prima_neta', // Add prima_neta as it's the same value as prima_total in vida table
-    'prima_neta_mxn', // Add prima_neta_mxn for VIDA table specifically (correct field name)
-    'importe_total',
-    'importe_total_a_pagar',
+    'prima_total',
+    'importe_total', // Total amount to pay
+    'importe_total_a_pagar', // Total amount to pay
     'prima',
     'total',
     'monto_total'
+    // NOTE: prima_neta and prima_neta_mxn are NOT included as they represent net amounts, not totals
   ];
 
-  // Debug: Log available payment fields for VIDA policies or first policy
-  if ((!getPolicyTotalAmount.debugLogged && policy.numero_poliza) || 
-      (policy.ramo === 'VIDA' || policy.sourceTable === 'vida')) {
+  // Debug: Log available payment fields for VIDA policies, GMM policies, or first policy
+  const isGMM = policy.ramo === 'GMM' || policy.sourceTable === 'gmm' || 
+                (policy.contratante && policy.contratante.toLowerCase().includes('game time'));
+  const isVIDA = policy.ramo === 'VIDA' || policy.sourceTable === 'vida';
+  
+  if (isGMM) {
+    // For GMM, show ALL fields that might contain amounts - use console.log with JSON.stringify for better visibility
+    const allAmountFields = ['importe_total', 'prima_neta', 'prima_total', 'pago_total', 
+                             'pago_total_o_prima_total', 'importe_total_a_pagar', 'prima', 
+                             'total', 'monto_total', 'derecho_poliza', 'iva_16', 'recargo_pago_fraccionado'];
+    
+    const availableTotalFields = totalFields.filter(field => policy[field] !== undefined && policy[field] !== null && policy[field] !== '');
+    const totalFieldValues = totalFields.reduce((acc, field) => {
+      if (policy[field] !== undefined && policy[field] !== null && policy[field] !== '') {
+        acc[field] = policy[field];
+      }
+      return acc;
+    }, {});
+    
+    const allAmountFieldValues = allAmountFields.reduce((acc, field) => {
+      if (policy[field] !== undefined && policy[field] !== null && policy[field] !== '') {
+        acc[field] = policy[field];
+      }
+      return acc;
+    }, {});
+    
+    console.log('🔍 GMM Policy payment fields - FULL DETAILS:', {
+      numero_poliza: policy.numero_poliza,
+      contratante: policy.contratante,
+      ramo: policy.ramo || policy.sourceTable,
+      availableTotalFields: availableTotalFields,
+      totalFieldValues: totalFieldValues,
+      allAmountFieldValues: allAmountFieldValues
+    });
+    
+    // Also log as JSON string for easier reading
+    console.log('📋 GMM Policy ALL fields (JSON):', JSON.stringify({
+      numero_poliza: policy.numero_poliza,
+      contratante: policy.contratante,
+      importe_total: policy.importe_total,
+      prima_neta: policy.prima_neta,
+      prima_total: policy.prima_total,
+      pago_total: policy.pago_total,
+      pago_total_o_prima_total: policy.pago_total_o_prima_total
+    }, null, 2));
+  } else if ((!getPolicyTotalAmount.debugLogged && policy.numero_poliza) || isVIDA) {
     console.log('🔍 Policy payment fields available:', {
       numero_poliza: policy.numero_poliza,
+      contratante: policy.contratante,
       ramo: policy.ramo || policy.sourceTable,
-      availableFields: totalFields.filter(field => policy[field] !== undefined),
+      availableFields: totalFields.filter(field => policy[field] !== undefined && policy[field] !== null && policy[field] !== ''),
       fieldValues: totalFields.reduce((acc, field) => {
-        if (policy[field] !== undefined) {
+        if (policy[field] !== undefined && policy[field] !== null && policy[field] !== '') {
           acc[field] = {
             value: policy[field],
-            type: typeof policy[field]
+            type: typeof policy[field],
+            raw: policy[field]
           };
         }
         return acc;
@@ -76,76 +121,130 @@ const getPolicyTotalAmount = (policy) => {
   for (const field of totalFields) {
     if (policy[field] !== undefined && policy[field] !== null && policy[field] !== '') {
       const value = policy[field];
+      
+      // Debug for GMM policies
+      if (isGMM && field === 'importe_total') {
+        console.log(`🔍 GMM Policy checking field ${field}:`, {
+          numero_poliza: policy.numero_poliza,
+          contratante: policy.contratante,
+          field: field,
+          rawValue: value,
+          type: typeof value
+        });
+      }
+      
       // Handle string values that might contain commas, dollar signs, etc.
       if (typeof value === 'string') {
         const cleanedValue = value.replace(/[\s,$"]/g, ''); // Remove spaces, commas, dollar signs, and quotes
         const numericValue = parseFloat(cleanedValue);
         if (!isNaN(numericValue)) {
-          // For prima_total and pago_total_o_prima_total, only return if > 0
-          // For prima_neta, prima_neta_mxn and other fields, return even if 0 (as fallback)
-          if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
+          // For main total fields (prima_total, pago_total_o_prima_total, importe_total), only return if > 0
+          // For prima_neta, prima_neta_mxn and other fallback fields, return even if 0 (as fallback)
+          if (field === 'prima_total' || field === 'pago_total_o_prima_total' || 
+              field === 'importe_total' || field === 'importe_total_a_pagar') {
             if (numericValue > 0) {
               // Debug: Log successful amount found
-              if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
-                console.log('🔍 VIDA Policy amount found:', {
+              if (isVIDA || isGMM) {
+                console.log(`✅ ${isGMM ? 'GMM' : 'VIDA'} Policy amount found:`, {
                   numero_poliza: policy.numero_poliza,
+                  contratante: policy.contratante,
                   field: field,
-                  value: numericValue
+                  rawValue: value,
+                  cleanedValue: cleanedValue,
+                  numericValue: numericValue
+                });
+              }
+              return numericValue;
+            } else if (isGMM) {
+              console.log(`⚠️ GMM Policy ${field} is 0 or negative:`, {
+                numero_poliza: policy.numero_poliza,
+                contratante: policy.contratante,
+                field: field,
+                rawValue: value,
+                numericValue: numericValue
+              });
+            }
+          } else {
+            // For other fallback fields (prima, total, monto_total), return if > 0
+            if (numericValue > 0) {
+              // Debug: Log fallback field usage
+              if (isVIDA || isGMM) {
+                console.log(`⚠️ ${isGMM ? 'GMM' : 'VIDA'} Policy using fallback field:`, {
+                  numero_poliza: policy.numero_poliza,
+                  contratante: policy.contratante,
+                  field: field,
+                  value: numericValue,
+                  originalValue: value,
+                  type: typeof value
                 });
               }
               return numericValue;
             }
-          } else {
-            // Debug: Log prima_neta/prima_neta_mxn fallback
-            if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
-              console.log('🔍 VIDA Policy using fallback field:', {
-                numero_poliza: policy.numero_poliza,
-                field: field,
-                value: numericValue,
-                originalValue: value,
-                type: typeof value
-              });
-            }
-            return numericValue; // Return prima_neta/prima_neta_mxn even if 0, as it's a valid fallback
           }
+        } else if (isGMM && field === 'importe_total') {
+          console.log(`❌ GMM Policy ${field} failed to parse:`, {
+            numero_poliza: policy.numero_poliza,
+            contratante: policy.contratante,
+            field: field,
+            rawValue: value,
+            cleanedValue: cleanedValue
+          });
         }
       } else if (typeof value === 'number') {
-        // For prima_total and pago_total_o_prima_total, only return if > 0
-        // For prima_neta, prima_neta_mxn and other fields, return even if 0 (as fallback)
-        if (field === 'prima_total' || field === 'pago_total_o_prima_total') {
+        // For main total fields (prima_total, pago_total_o_prima_total, importe_total), only return if > 0
+        // For prima_neta, prima_neta_mxn and other fallback fields, return even if 0 (as fallback)
+        if (field === 'prima_total' || field === 'pago_total_o_prima_total' || 
+            field === 'importe_total' || field === 'importe_total_a_pagar') {
           if (value > 0) {
             // Debug: Log successful amount found
-            if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
-              console.log('🔍 VIDA Policy amount found:', {
+            if (isVIDA || isGMM) {
+              console.log(`✅ ${isGMM ? 'GMM' : 'VIDA'} Policy amount found:`, {
                 numero_poliza: policy.numero_poliza,
+                contratante: policy.contratante,
                 field: field,
                 value: value
               });
             }
             return value;
-          }
-        } else {
-          // Debug: Log prima_neta/prima_neta_mxn fallback
-          if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
-            console.log('🔍 VIDA Policy using fallback field:', {
+          } else if (isGMM) {
+            console.log(`⚠️ GMM Policy ${field} is 0 or negative:`, {
               numero_poliza: policy.numero_poliza,
+              contratante: policy.contratante,
               field: field,
-              value: value,
-              type: typeof value
+              value: value
             });
           }
-          return value; // Return prima_neta/prima_neta_mxn even if 0, as it's a valid fallback
+        } else {
+          // For other fallback fields (prima, total, monto_total), return if > 0
+          if (value > 0) {
+            // Debug: Log fallback field usage
+            if (isVIDA || isGMM) {
+              console.log(`⚠️ ${isGMM ? 'GMM' : 'VIDA'} Policy using fallback field:`, {
+                numero_poliza: policy.numero_poliza,
+                contratante: policy.contratante,
+                field: field,
+                value: value,
+                type: typeof value
+              });
+            }
+            return value;
+          }
         }
       }
     }
   }
   
-  // Debug: Log final result for VIDA policies
-  if (policy.ramo === 'VIDA' || policy.sourceTable === 'vida') {
-    console.log('🔍 VIDA Policy final amount result:', {
+  // Debug: Log final result for VIDA or GMM policies
+  if (isVIDA || isGMM) {
+    console.log(`❌ ${isGMM ? 'GMM' : 'VIDA'} Policy final amount result:`, {
       numero_poliza: policy.numero_poliza,
+      contratante: policy.contratante,
       finalAmount: 0,
-      reason: 'No valid amount found in any field'
+      reason: 'No valid amount found in any field',
+      availableFields: totalFields.filter(field => {
+        const val = policy[field];
+        return val !== undefined && val !== null && val !== '';
+      })
     });
   }
   
