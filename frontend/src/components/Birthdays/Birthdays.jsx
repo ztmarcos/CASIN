@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchBirthdays, triggerBirthdayEmails } from '../../services/firebaseBirthdayService';
+import { fetchBirthdays, triggerBirthdayEmails, checkTodaysEmailStatus } from '../../services/firebaseBirthdayService';
 import './Birthdays.css';
 
 const Birthdays = () => {
@@ -10,6 +10,7 @@ const Birthdays = () => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
   const [emailStatus, setEmailStatus] = useState(null);
   const [autoEmailEnabled, setAutoEmailEnabled] = useState(true);
+  const [emailCheckStatus, setEmailCheckStatus] = useState(null);
 
   useEffect(() => {
     loadBirthdays();
@@ -83,6 +84,21 @@ const Birthdays = () => {
       setTimeout(() => setEmailStatus(null), 8000);
     } catch (err) {
       setEmailStatus({ error: true, message: 'Error en test de correo: ' + err.message });
+    }
+  };
+
+  const handleCheckTodaysEmails = async () => {
+    try {
+      setEmailCheckStatus({ loading: true });
+      const status = await checkTodaysEmailStatus();
+      setEmailCheckStatus(status);
+      setTimeout(() => setEmailCheckStatus(null), 10000); // Clear after 10 seconds
+    } catch (err) {
+      setEmailCheckStatus({ 
+        sent: false, 
+        error: true, 
+        message: 'Error al verificar: ' + err.message 
+      });
     }
   };
 
@@ -168,6 +184,24 @@ const Birthdays = () => {
             />
           </div>
           
+          <button 
+            className="btn-check-emails"
+            onClick={handleCheckTodaysEmails}
+            title="Verificar si se enviaron correos hoy"
+            style={{ 
+              padding: '8px 16px', 
+              backgroundColor: '#3498db', 
+              color: 'white', 
+              border: 'none', 
+              borderRadius: '4px', 
+              cursor: 'pointer',
+              fontSize: '14px',
+              marginLeft: '10px'
+            }}
+          >
+            📧 Verificar Envío de Hoy
+          </button>
+          
           <div className="view-actions">
             <button 
               className={`view-toggle ${viewMode === 'grid' ? 'active' : ''}`}
@@ -195,6 +229,26 @@ const Birthdays = () => {
       {emailStatus && (
         <div className={`email-status ${emailStatus.success ? 'success' : emailStatus.error ? 'error' : ''}`}>
           {emailStatus.message}
+        </div>
+      )}
+
+      {emailCheckStatus && (
+        <div className={`email-status ${emailCheckStatus.sent ? 'success' : emailCheckStatus.error ? 'error' : 'warning'}`}>
+          {emailCheckStatus.loading ? '⏳ Verificando...' : emailCheckStatus.message}
+          {emailCheckStatus.details && emailCheckStatus.details.emailsSent > 0 && (
+            <div style={{ marginTop: '8px', fontSize: '12px', opacity: 0.9 }}>
+              📋 Detalles: {emailCheckStatus.details.totalBirthdays} cumpleaños encontrados, {emailCheckStatus.details.emailsSent} correos enviados
+              {emailCheckStatus.details.results && emailCheckStatus.details.results.length > 0 && (
+                <div style={{ marginTop: '4px' }}>
+                  {emailCheckStatus.details.results.map((r, i) => (
+                    <div key={i} style={{ fontSize: '11px' }}>
+                      {r.status === 'sent' ? '✅' : '❌'} {r.name} ({r.email})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

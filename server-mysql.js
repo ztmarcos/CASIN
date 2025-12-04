@@ -605,47 +605,84 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
         
         snapshot.forEach(doc => {
           const data = doc.data();
-          const rfc = data.rfc || data.RFC;
+          let birthdayDate = null;
+          let birthdaySource = 'unknown';
           
-          if (rfc && typeof rfc === 'string') {
-            const cleanRFC = rfc.trim().toUpperCase();
+          // First, try to get birthday from explicit fecha_nacimiento field
+          if (data.fecha_nacimiento) {
+            try {
+              birthdayDate = new Date(data.fecha_nacimiento);
+              if (!isNaN(birthdayDate.getTime())) {
+                birthdaySource = 'fecha_nacimiento';
+              } else {
+                birthdayDate = null;
+              }
+            } catch (err) {
+              // Skip invalid dates
+            }
+          }
+          
+          // If no fecha_nacimiento, try to extract from RFC
+          if (!birthdayDate) {
+            const rfc = data.rfc || data.RFC;
             
-            // Only process personal RFCs (13 characters)
-            if (cleanRFC.length === 13) {
-              const personalPattern = /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/;
-              if (personalPattern.test(cleanRFC)) {
-                // Extract birthday from RFC (YYMMDD format)
-                const yearDigits = cleanRFC.substring(4, 6);
-                const month = cleanRFC.substring(6, 8);
-                const day = cleanRFC.substring(8, 10);
-                
-                const currentYear = new Date().getFullYear();
-                const century = parseInt(yearDigits) <= 30 ? 2000 : 1900;
-                const year = century + parseInt(yearDigits);
-                
-                try {
-                  const birthdayDate = new Date(year, parseInt(month) - 1, parseInt(day));
+            if (rfc && typeof rfc === 'string') {
+              const cleanRFC = rfc.trim().toUpperCase();
+              
+              // Only process personal RFCs (13 characters)
+              if (cleanRFC.length === 13) {
+                const personalPattern = /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/;
+                if (personalPattern.test(cleanRFC)) {
+                  // Extract birthday from RFC (YYMMDD format)
+                  const yearDigits = cleanRFC.substring(4, 6);
+                  const month = cleanRFC.substring(6, 8);
+                  const day = cleanRFC.substring(8, 10);
                   
-                  if (!isNaN(birthdayDate.getTime())) {
-                    const age = currentYear - year;
+                  const currentYear = new Date().getFullYear();
+                  const century = parseInt(yearDigits) <= 30 ? 2000 : 1900;
+                  const year = century + parseInt(yearDigits);
+                  
+                  try {
+                    birthdayDate = new Date(year, parseInt(month) - 1, parseInt(day));
                     
-                    birthdays.push({
-                      id: doc.id,
-                      name: data.nombre_contratante || data.contratante || data.nombre || 'Sin nombre',
-                      rfc: cleanRFC,
-                      email: data.email || data.correo || null,
-                      date: birthdayDate.toISOString(),
-                      age: age,
-                      source: collectionName,
-                      details: `${collectionName} - ${data.numero_poliza || 'Sin póliza'}`,
-                      birthdaySource: 'RFC'
-                    });
+                    if (!isNaN(birthdayDate.getTime())) {
+                      birthdaySource = 'RFC';
+                    } else {
+                      birthdayDate = null;
+                    }
+                  } catch (err) {
+                    // Skip invalid dates
                   }
-                } catch (err) {
-                  // Skip invalid dates
                 }
               }
             }
+          }
+          
+          // If we have a valid birthday, add it to the list
+          if (birthdayDate && !isNaN(birthdayDate.getTime())) {
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - birthdayDate.getFullYear();
+            
+            // Get email from multiple possible fields (check all variations)
+            const email = data.email || data.correo || data.e_mail || data.E_mail || data['E-mail'] || 
+                         data.email_contratante || data.email_asegurado || data.correo_electronico || null;
+            
+            // Debug: Log if we found a birthday but no email
+            if (!email && birthdayDate) {
+              console.log(`⚠️  Birthday found for ${data.nombre_contratante || data.contratante || 'Unknown'} but no email field found. Available fields:`, Object.keys(data).filter(k => k.toLowerCase().includes('mail') || k.toLowerCase().includes('correo')));
+            }
+            
+            birthdays.push({
+              id: doc.id,
+              name: data.nombre_contratante || data.contratante || data.nombre || data.nombre_completo || data.nombre_asegurado || 'Sin nombre',
+              rfc: data.rfc || data.RFC || '',
+              email: email,
+              date: birthdayDate.toISOString(),
+              age: age,
+              source: collectionName,
+              details: `${collectionName} - ${data.numero_poliza || 'Sin póliza'}`,
+              birthdaySource: birthdaySource
+            });
           }
         });
       } catch (error) {
@@ -690,7 +727,12 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             </div>
           `;
           
-          const emailResponse = await fetch(`http://localhost:${PORT}/api/email/send-welcome`, {
+          // Use relative URL for internal API calls (works in both local and Heroku)
+          const emailApiUrl = process.env.HEROKU_APP_URL 
+            ? `${process.env.HEROKU_APP_URL}/api/email/send-welcome`
+            : `http://localhost:${PORT}/api/email/send-welcome`;
+          
+          const emailResponse = await fetch(emailApiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -701,7 +743,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
               subject: `¡Feliz Cumpleaños ${birthday.name}! 🎉`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
-              fromPass: process.env.GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+              fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
               fromName: 'CASIN Seguros - Felicitaciones'
             })
           });

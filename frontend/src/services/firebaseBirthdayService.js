@@ -287,25 +287,37 @@ class FirebaseBirthdayService {
 
   /**
    * Triggers the birthday email check and send process
+   * Actually sends emails via backend endpoint with BCC to ztmarcos@gmail.com and casinseguros@gmail.com
    */
   async triggerBirthdayEmails() {
     try {
       console.log('🎂 Triggering birthday emails check (Firebase mode)...');
       
-      // Get today's birthdays
-      const todaysBirthdays = await this.getTodaysBirthdays();
+      // Call the backend endpoint that actually sends the emails
+      const response = await fetch(`${API_URL}/cron/birthday-emails`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
       
-      console.log(`📧 Would send emails to ${todaysBirthdays.length} birthday contacts`);
+      console.log('✅ Birthday emails triggered:', result);
       
-      // Simulate success response
       return {
         success: true,
-        emailsSent: todaysBirthdays.length,
-        message: `Se encontraron ${todaysBirthdays.length} cumpleaños para hoy`,
-        birthdays: todaysBirthdays.map(b => ({
-          name: b.name,
-          email: b.email || 'Sin email'
-        }))
+        emailsSent: result.result?.emailsSent || 0,
+        message: result.result?.emailsSent > 0 
+          ? `✅ Se enviaron ${result.result.emailsSent} correo(s) de cumpleaños con copia a ztmarcos@gmail.com y casinseguros@gmail.com`
+          : `Se encontraron ${result.result?.totalBirthdays || 0} cumpleaños para hoy, pero no todos tienen email registrado`,
+        birthdays: result.result?.birthdays || [],
+        emailResults: result.result?.emailResults || []
       };
       
     } catch (error) {
@@ -316,16 +328,18 @@ class FirebaseBirthdayService {
 
   /**
    * Send birthday email using Gmail credentials
+   * Includes BCC to ztmarcos@gmail.com and casinseguros@gmail.com
    */
   async sendBirthdayEmailWithGmail(birthdayPerson, message = '') {
     try {
-      const response = await fetch(`${API_URL}/email/send`, {
+      const response = await fetch(`${API_URL}/email/send-welcome`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           to: birthdayPerson.email,
+          bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
           subject: `¡Feliz Cumpleaños ${birthdayPerson.name}! 🎉`,
           htmlContent: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -357,7 +371,7 @@ class FirebaseBirthdayService {
       }
 
       const result = await response.json();
-      console.log('Birthday email sent successfully with Gmail:', result);
+      console.log('Birthday email sent successfully with Gmail (BCC included):', result);
       return result;
     } catch (error) {
       console.error('Error sending birthday email with Gmail:', error);
@@ -409,6 +423,60 @@ class FirebaseBirthdayService {
       throw error;
     }
   }
+
+  /**
+   * Check if birthday emails were sent today by querying activity logs
+   */
+  async checkTodaysEmailStatus() {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
+      
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const todayEnd = tomorrow.toISOString();
+      
+      const response = await fetch(
+        `${API_URL}/activity-logs?startDate=${encodeURIComponent(todayStart)}&endDate=${encodeURIComponent(todayEnd)}&action=birthday_emails_sent&limit=10`
+      );
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch activity logs: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      const logs = result.data || [];
+      
+      // Find the most recent birthday email log for today
+      const todayLog = logs.find(log => {
+        const logDate = new Date(log.timestamp);
+        return logDate.toDateString() === today.toDateString();
+      });
+      
+      if (todayLog) {
+        return {
+          sent: true,
+          timestamp: todayLog.timestamp,
+          details: todayLog.details || {},
+          message: `✅ Se enviaron ${todayLog.details?.emailsSent || 0} correo(s) de cumpleaños hoy a las ${new Date(todayLog.timestamp).toLocaleTimeString('es-MX')}`
+        };
+      }
+      
+      return {
+        sent: false,
+        message: '⚠️ No se encontraron registros de envío de correos de cumpleaños hoy'
+      };
+      
+    } catch (error) {
+      console.error('❌ Error checking today\'s email status:', error);
+      return {
+        sent: false,
+        error: error.message,
+        message: '❌ Error al verificar el estado de los correos de hoy'
+      };
+    }
+  }
 }
 
 // Create and export singleton instance
@@ -419,4 +487,5 @@ export default firebaseBirthdayService;
 export const fetchBirthdays = () => firebaseBirthdayService.fetchBirthdays();
 export const triggerBirthdayEmails = () => firebaseBirthdayService.triggerBirthdayEmails();
 export const sendBirthdayEmailWithGmail = (birthdayPerson, message) => firebaseBirthdayService.sendBirthdayEmailWithGmail(birthdayPerson, message);
-export const sendTodaysBirthdayEmailsWithGmail = (message) => firebaseBirthdayService.sendTodaysBirthdayEmailsWithGmail(message); 
+export const sendTodaysBirthdayEmailsWithGmail = (message) => firebaseBirthdayService.sendTodaysBirthdayEmailsWithGmail(message);
+export const checkTodaysEmailStatus = () => firebaseBirthdayService.checkTodaysEmailStatus(); 
