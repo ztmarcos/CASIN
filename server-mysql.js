@@ -797,29 +797,29 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             emailsSent++;
             emailResults.push({
               name: birthday.name,
-              email: birthday.email,
+              email: birthday.email || 'N/A',
+              notificationSentTo: 'ztmarcos@gmail.com',
               status: 'sent'
             });
-            console.log(`✅ Email sent to ${birthday.name}`);
+            console.log(`✅ Birthday notification sent for ${birthday.name} to ztmarcos@gmail.com`);
           } else {
             emailResults.push({
               name: birthday.name,
-              email: birthday.email,
+              email: birthday.email || 'N/A',
               status: 'failed',
               error: `HTTP ${emailResponse.status}`
             });
-            console.log(`❌ Failed to send email to ${birthday.name}`);
+            console.log(`❌ Failed to send birthday notification for ${birthday.name}`);
           }
         } catch (error) {
           emailResults.push({
             name: birthday.name,
-            email: birthday.email,
+            email: birthday.email || 'N/A',
             status: 'error',
             error: error.message
           });
-          console.error(`❌ Error sending email to ${birthday.name}:`, error.message);
+          console.error(`❌ Error sending birthday notification for ${birthday.name}:`, error.message);
         }
-      }
     }
     
     // Log the execution
