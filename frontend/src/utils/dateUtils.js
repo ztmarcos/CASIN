@@ -17,11 +17,23 @@ const SHORT_MONTHS = [
 export const parseDate = (dateStr) => {
   if (!dateStr) return null;
   
-  // Try dd/mm/yyyy format first (prioritize European format)
-  if (typeof dateStr === 'string') {
+  // Try DD/MMM/YYYY format with Spanish month abbreviations first
+  if (typeof dateStr === 'string' && dateStr.includes('/')) {
     const parts = dateStr.split('/').map(part => part.trim());
     if (parts.length === 3) {
-      const [day, month, year] = parts.map(num => parseInt(num, 10));
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1].toLowerCase();
+      const year = parseInt(parts[2], 10);
+      
+      // Check if middle part is a month abbreviation (Spanish)
+      const monthIndex = SHORT_MONTHS.findIndex(month => month === monthStr);
+      if (monthIndex !== -1 && !isNaN(day) && !isNaN(year)) {
+        const date = new Date(year, monthIndex, day);
+        if (!isNaN(date.getTime())) return date;
+      }
+      
+      // If not a month abbreviation, try numeric format DD/MM/YYYY
+      const month = parseInt(parts[1], 10);
       if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
         // Check if this looks like DD/MM/YYYY (day > 12 or month > 12)
         if (day > 12 || month > 12) {
