@@ -85,12 +85,14 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, resto, id
+    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio, fecha_fin, resto, id
     const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
+    const hasFechaInicio = filteredColumns.includes('fecha_inicio');
+    const hasFechaFin = filteredColumns.includes('fecha_fin');
     const hasId = filteredColumns.includes('id');
 
     // Quitar los que vamos a reordenar
@@ -101,16 +103,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'pago_total_o_prima_total' &&
       col !== 'primer_pago' && 
       col !== 'pago_parcial' &&
+      col !== 'fecha_inicio' &&
+      col !== 'fecha_fin' &&
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio, fecha_fin, ...resto..., id
     const finalOrder = [
       ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
+      ...(hasFechaInicio ? ['fecha_inicio'] : []),
+      ...(hasFechaFin ? ['fecha_fin'] : []),
       ...filteredColumns,
       ...(hasId ? ['id'] : [])
     ];
