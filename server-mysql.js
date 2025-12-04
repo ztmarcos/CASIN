@@ -595,6 +595,36 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
       throw new Error('Firebase not initialized');
     }
     
+    // Check if emails were already sent today to avoid duplicates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.toISOString();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const todayEnd = tomorrow.toISOString();
+    
+    const existingLogs = await db.collection('activity_logs')
+      .where('action', '==', 'birthday_emails_sent')
+      .where('timestamp', '>=', todayStart)
+      .where('timestamp', '<', todayEnd)
+      .get();
+    
+    if (!existingLogs.empty) {
+      console.log('⚠️  Birthday emails already sent today. Skipping to avoid duplicates.');
+      const lastLog = existingLogs.docs[0].data();
+      return res.json({
+        status: 'success',
+        message: 'Birthday emails already sent today',
+        result: {
+          totalBirthdays: lastLog.details?.totalBirthdays || 0,
+          emailsSent: lastLog.details?.emailsSent || 0,
+          alreadySent: true,
+          lastSent: lastLog.timestamp
+        },
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Get all collections that might contain RFC data
     const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
     const birthdays = [];
