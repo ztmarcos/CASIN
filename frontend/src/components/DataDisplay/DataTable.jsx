@@ -93,12 +93,16 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
     
-    // Buscar columnas de fecha con variantes (fecha_inicio, vigencia_inicio, etc.)
+    // Buscar columnas de fecha con variantes - PRIORIZAR vigencia_inicio/vigencia_fin sobre fecha_inicio/fecha_fin
     const fechaInicioCol = filteredColumns.find(col => 
-      col === 'fecha_inicio' || col === 'vigencia_inicio' || col === 'desde_vigencia'
+      col === 'vigencia_inicio' || col === 'desde_vigencia'
+    ) || filteredColumns.find(col => 
+      col === 'fecha_inicio'
     );
     const fechaFinCol = filteredColumns.find(col => 
-      col === 'fecha_fin' || col === 'vigencia_fin' || col === 'hasta_vigencia'
+      col === 'vigencia_fin' || col === 'hasta_vigencia'
+    ) || filteredColumns.find(col => 
+      col === 'fecha_fin'
     );
     
     const hasId = filteredColumns.includes('id');
@@ -1651,37 +1655,49 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           </thead>
           <tbody>
             {(() => {
-              // SORT DATA HERE - NEWEST FIRST ALWAYS
+              // SORT DATA HERE - NEWEST FIRST ALWAYS (por createdAt)
               const dataToSort = [...filteredData];
               const sortedForRender = dataToSort.sort((a, b) => {
                 const getTimestamp = (record) => {
+                  // Priorizar createdAt para ordenar por más reciente
                   const createdAt = record.createdAt;
-                  if (!createdAt) return 0;
+                  if (createdAt) {
+                    // Handle Firebase Timestamp with underscore (NEW FORMAT)
+                    if (createdAt._seconds) {
+                      return createdAt._seconds * 1000;
+                    }
+                    // Handle Firebase Timestamp without underscore (OLD FORMAT)  
+                    else if (createdAt.seconds) {
+                      return createdAt.seconds * 1000;
+                    } 
+                    // Handle Firestore Timestamp object
+                    else if (createdAt.toDate) {
+                      return createdAt.toDate().getTime();
+                    } 
+                    // Handle string dates
+                    else if (typeof createdAt === 'string') {
+                      return new Date(createdAt).getTime();
+                    } 
+                    // Handle Date objects
+                    else if (createdAt instanceof Date) {
+                      return createdAt.getTime();
+                    }
+                  }
                   
-                  // Handle Firebase Timestamp with underscore (NEW FORMAT)
-                  if (createdAt._seconds) {
-                    return createdAt._seconds * 1000;
+                  // Fallback: usar updatedAt si createdAt no está disponible
+                  const updatedAt = record.updatedAt;
+                  if (updatedAt) {
+                    if (updatedAt._seconds) return updatedAt._seconds * 1000;
+                    if (updatedAt.seconds) return updatedAt.seconds * 1000;
+                    if (updatedAt.toDate) return updatedAt.toDate().getTime();
+                    if (typeof updatedAt === 'string') return new Date(updatedAt).getTime();
+                    if (updatedAt instanceof Date) return updatedAt.getTime();
                   }
-                  // Handle Firebase Timestamp without underscore (OLD FORMAT)  
-                  else if (createdAt.seconds) {
-                    return createdAt.seconds * 1000;
-                  } 
-                  // Handle Firestore Timestamp object
-                  else if (createdAt.toDate) {
-                    return createdAt.toDate().getTime();
-                  } 
-                  // Handle string dates
-                  else if (typeof createdAt === 'string') {
-                    return new Date(createdAt).getTime();
-                  } 
-                  // Handle Date objects
-                  else if (createdAt instanceof Date) {
-                    return createdAt.getTime();
-                  }
+                  
                   return 0;
                 };
                 
-                return getTimestamp(b) - getTimestamp(a); // Newest first
+                return getTimestamp(b) - getTimestamp(a); // Newest first (más reciente primero)
               });
               
               // Debug: basic record count

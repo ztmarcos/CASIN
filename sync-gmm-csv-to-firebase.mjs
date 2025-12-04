@@ -25,8 +25,8 @@ const columnMapping = {
   'Contratante': 'contratante',
   'Número De Póliza': 'numero_poliza',
   'Aseguradora': 'aseguradora',
-  'Vigencia (Inicio)': 'vigencia_inicio',
-  'Vigencia (Fin)': 'vigencia_fin',
+  'Vigencia (Inicio)': 'vigencia_inicio',  // Usar vigencia_inicio, no fecha_inicio
+  'Vigencia (Fin)': 'vigencia_fin',  // Usar vigencia_fin, no fecha_fin
   'Forma De Pago': 'forma_pago',
   'Importe Total A Pagar': 'importe_total',
   'Prima Neta': 'prima_neta',
