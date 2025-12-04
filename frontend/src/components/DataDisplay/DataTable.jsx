@@ -10,6 +10,7 @@ import './DataTable.css';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
 import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
+import { toDDMMMYYYY } from '../../utils/dateUtils';
 // import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, columnOrder }) => {
@@ -1249,9 +1250,11 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     }
   };
 
-  // Función para convertir timestamps de Google Sheets/Excel a fecha legible
+  // Función para convertir timestamps de Google Sheets/Excel a fecha legible en formato dd/mmm/aaaa
   const convertGoogleSheetsTimestamp = (value) => {
     if (value === null || value === undefined || value === '') return null;
+    
+    let date = null;
     
     // Si es un número que podría ser timestamp de Google Sheets/Excel
     if (typeof value === 'number') {
@@ -1259,40 +1262,37 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       if (value >= 1 && value <= 100000) {
         const excelEpoch = new Date(1899, 11, 30); // 1899-12-30
         const millisecondsPerDay = 24 * 60 * 60 * 1000;
-        const date = new Date(excelEpoch.getTime() + (value * millisecondsPerDay));
-        if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
+        date = new Date(excelEpoch.getTime() + (value * millisecondsPerDay));
       }
-      
       // Timestamps Unix en segundos (10 dígitos)
-      if (value >= 1000000000 && value <= 9999999999) {
-        const date = new Date(value * 1000);
-        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
-          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
+      else if (value >= 1000000000 && value <= 9999999999) {
+        date = new Date(value * 1000);
       }
-      
       // Timestamps Unix en milisegundos (13 dígitos)
-      if (value >= 1000000000000 && value <= 9999999999999) {
-        const date = new Date(value);
-        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
-          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      else if (value >= 1000000000000 && value <= 9999999999999) {
+        date = new Date(value);
+      }
+      // Números grandes que podrían ser timestamps (como 458924375)
+      else if (value > 100000) {
+        // Intentar como timestamp Unix en segundos
+        date = new Date(value * 1000);
+        if (isNaN(date.getTime()) || date.getFullYear() < 1970 || date.getFullYear() > 2030) {
+          // Intentar como timestamp Unix en milisegundos
+          date = new Date(value);
         }
       }
       
-      // Números grandes que podrían ser timestamps (como 458924375)
-      if (value > 100000) {
-        // Intentar como timestamp Unix en segundos
-        let date = new Date(value * 1000);
-        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
-          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
-        // Intentar como timestamp Unix en milisegundos
-        date = new Date(value);
-        if (!isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
-          return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        }
+      // Si tenemos una fecha válida, convertirla a dd/mmm/aaaa
+      if (date && !isNaN(date.getTime()) && date.getFullYear() >= 1970 && date.getFullYear() <= 2030) {
+        return toDDMMMYYYY(date);
+      }
+    }
+    
+    // Si es un string que parece fecha, intentar convertirla
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsedDate = new Date(value);
+      if (!isNaN(parsedDate.getTime())) {
+        return toDDMMMYYYY(parsedDate);
       }
     }
     
@@ -1355,10 +1355,20 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
                          column.toLowerCase().includes('inicio') ||
                          column.toLowerCase().includes('fin');
     
-    if (isDateColumn && typeof row[column] === 'number') {
-      const convertedDate = convertGoogleSheetsTimestamp(row[column]);
-      if (convertedDate) {
-        return <span>{convertedDate}</span>;
+    if (isDateColumn) {
+      // Si es un número, intentar convertir timestamp
+      if (typeof row[column] === 'number') {
+        const convertedDate = convertGoogleSheetsTimestamp(row[column]);
+        if (convertedDate) {
+          return <span>{convertedDate}</span>;
+        }
+      }
+      // Si es un string o ya es una fecha, convertir a formato dd/mmm/aaaa
+      else if (row[column] !== null && row[column] !== undefined && row[column] !== '') {
+        const formattedDate = toDDMMMYYYY(row[column]);
+        if (formattedDate) {
+          return <span>{formattedDate}</span>;
+        }
       }
     }
     
