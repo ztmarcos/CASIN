@@ -85,14 +85,21 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio, fecha_fin, resto, id
+    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio/vigencia_inicio, fecha_fin/vigencia_fin, resto, id
     const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
     const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
     const hasPrimerPago = filteredColumns.includes('primer_pago');
     const hasPagoParcial = filteredColumns.includes('pago_parcial');
-    const hasFechaInicio = filteredColumns.includes('fecha_inicio');
-    const hasFechaFin = filteredColumns.includes('fecha_fin');
+    
+    // Buscar columnas de fecha con variantes (fecha_inicio, vigencia_inicio, etc.)
+    const fechaInicioCol = filteredColumns.find(col => 
+      col === 'fecha_inicio' || col === 'vigencia_inicio' || col === 'desde_vigencia'
+    );
+    const fechaFinCol = filteredColumns.find(col => 
+      col === 'fecha_fin' || col === 'vigencia_fin' || col === 'hasta_vigencia'
+    );
+    
     const hasId = filteredColumns.includes('id');
 
     // Quitar los que vamos a reordenar
@@ -105,18 +112,22 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'pago_parcial' &&
       col !== 'fecha_inicio' &&
       col !== 'fecha_fin' &&
+      col !== 'vigencia_inicio' &&
+      col !== 'vigencia_fin' &&
+      col !== 'desde_vigencia' &&
+      col !== 'hasta_vigencia' &&
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio, fecha_fin, ...resto..., id
+    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio/vigencia_inicio, fecha_fin/vigencia_fin, ...resto..., id
     const finalOrder = [
       ...(hasContratante ? ['contratante'] : []),
       ...(hasNumeroPoliza ? ['numero_poliza'] : []),
       ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
       ...(hasPrimerPago ? ['primer_pago'] : []),
       ...(hasPagoParcial ? ['pago_parcial'] : []),
-      ...(hasFechaInicio ? ['fecha_inicio'] : []),
-      ...(hasFechaFin ? ['fecha_fin'] : []),
+      ...(fechaInicioCol ? [fechaInicioCol] : []),
+      ...(fechaFinCol ? [fechaFinCol] : []),
       ...filteredColumns,
       ...(hasId ? ['id'] : [])
     ];
