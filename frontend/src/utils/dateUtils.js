@@ -59,7 +59,17 @@ export const parseDate = (dateStr) => {
 export const formatDate = (date, format = 'long-es') => {
   if (!date) return 'Sin fecha';
   
-  const parsedDate = typeof date === 'string' ? parseDate(date) : new Date(date);
+  // Handle different input types
+  let parsedDate = null;
+  if (typeof date === 'string') {
+    parsedDate = parseDate(date);
+  } else if (date instanceof Date) {
+    parsedDate = date;
+  } else {
+    // Try to parse as Date object
+    parsedDate = new Date(date);
+  }
+  
   if (!parsedDate || isNaN(parsedDate.getTime())) return 'Fecha inválida';
 
   const day = parsedDate.getDate();
