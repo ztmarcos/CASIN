@@ -735,34 +735,34 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     const emailResults = [];
     
     for (const birthday of todaysBirthdays) {
-      if (birthday.email) {
-        try {
-          console.log(`📧 Sending birthday email to ${birthday.name} (${birthday.email})`);
+      // Send notification to ztmarcos@gmail.com about the birthday (not to the birthday person)
+      try {
+        console.log(`📧 Sending birthday notification for ${birthday.name} to ztmarcos@gmail.com`);
           
           const emailHTML = `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8f9fa;">
-              <div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <div style="text-align: center; margin-bottom: 30px;">
-                  <h1 style="color: #2c3e50; font-size: 28px; font-weight: 600; margin: 0 0 10px 0;">Feliz Cumpleaños</h1>
-                  <div style="width: 60px; height: 3px; background-color: #3498db; margin: 0 auto;"></div>
+                  <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">🎂 ¡Feliz Cumpleaños! 🎂</h1>
+                </div>
+                
+                <div style="text-align: center; margin-bottom: 30px; background-color: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
+                  <h2 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">${birthday.name}</h2>
                 </div>
                 
                 <div style="text-align: center; margin-bottom: 30px;">
-                  <h2 style="color: #34495e; font-size: 22px; font-weight: 500; margin: 0;">${birthday.name}</h2>
-                </div>
-                
-                <div style="text-align: center; margin-bottom: 30px; padding: 20px 0;">
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
-                    En este día tan especial, queremos desearte que tengas un día maravilloso lleno de alegría y éxito.
-                  </p>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 15px 0 0 0;">
-                    Esperamos que este nuevo año de vida esté lleno de momentos gratificantes y logros importantes.
+                  <p style="color: #ffffff; font-size: 18px; line-height: 1.6; margin: 0;">
+                    ¡Que tengas un día maravilloso lleno de alegría y éxito!
                   </p>
                 </div>
                 
-                <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
-                  <p style="color: #7f8c8d; font-size: 14px; margin: 0 0 10px 0;">Atentamente,</p>
-                  <p style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0;">Equipo CASIN Seguros</p>
+                <div style="text-align: center; margin: 30px 0;">
+                  <span style="font-size: 48px;">🎉 🎈 🎁</span>
+                </div>
+                
+                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.3);">
+                  <p style="color: #ffffff; font-size: 16px; margin: 0;">Con cariño,</p>
+                  <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin: 10px 0 0 0;">Equipo CASIN Seguros</p>
                 </div>
               </div>
               
@@ -783,13 +783,13 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              to: birthday.email,
-              bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
-              subject: `Feliz Cumpleaños ${birthday.name}`,
+              to: 'ztmarcos@gmail.com',
+              bcc: 'casinseguros@gmail.com',
+              subject: `🎂 Cumpleaños de hoy: ${birthday.name}`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
               fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
-              fromName: 'CASIN Seguros - Felicitaciones'
+              fromName: 'CASIN Seguros - Notificación de Cumpleaños'
             })
           });
           
