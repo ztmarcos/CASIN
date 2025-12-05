@@ -720,8 +720,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
       }
     }
     
-    // Filter for today's birthdays
-    const today = new Date();
+    // Filter for today's birthdays (reuse the today variable from above)
     const todaysBirthdays = birthdays.filter(birthday => {
       const birthDate = new Date(birthday.date);
       return birthDate.getMonth() === today.getMonth() && 
