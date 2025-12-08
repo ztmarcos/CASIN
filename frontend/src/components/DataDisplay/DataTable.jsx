@@ -10,7 +10,7 @@ import './DataTable.css';
 import { toast } from 'react-hot-toast';
 import { API_URL } from '../../config/api.js';
 import { notifyDataUpdate, notifyDataInsert, notifyDataEdit, notifyDataDelete } from '../../utils/dataUpdateNotifier';
-import { toDDMMMYYYY } from '../../utils/dateUtils';
+import { toDDMMMYYYY, parseDDMMMYYYY, parseDate } from '../../utils/dateUtils';
 // import TestInsert from '../TestInsert/TestInsert'; // Temporarily disabled
 
 const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, columnOrder }) => {
@@ -1461,9 +1461,26 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       if (value instanceof Date) {
         return value.getTime();
       }
-      // String dates
+      // String dates - prioritize DD/MMM/YYYY format (dd/mmm/aaaa)
       if (typeof value === 'string') {
-        const date = new Date(value);
+        const strValue = value.trim();
+        
+        // First try DD/MMM/YYYY format (e.g., "15/ene/2024", "31/dic/2023")
+        if (strValue.includes('/') && strValue.match(/^\d{1,2}\/[a-z]{3}\/\d{4}$/i)) {
+          const parsed = parseDDMMMYYYY(strValue);
+          if (parsed && !isNaN(parsed.getTime())) {
+            return parsed.getTime();
+          }
+        }
+        
+        // Try general date parsing (handles DD/MMM/YYYY and other formats)
+        const parsed = parseDate(strValue);
+        if (parsed && !isNaN(parsed.getTime())) {
+          return parsed.getTime();
+        }
+        
+        // Fallback to standard Date parsing
+        const date = new Date(strValue);
         if (!isNaN(date.getTime())) {
           return date.getTime();
         }
