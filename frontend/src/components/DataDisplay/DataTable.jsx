@@ -86,12 +86,33 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       return !excludeColumns.includes(columnName);
     });
 
-    // Ordenamiento personalizado: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio/vigencia_inicio, fecha_fin/vigencia_fin, resto, id
+    // Ordenamiento personalizado: contratante, numero_poliza, TODOS LOS PAGOS/PRIMAS JUNTOS, fechas, resto, id
     const hasContratante = filteredColumns.includes('contratante');
     const hasNumeroPoliza = filteredColumns.includes('numero_poliza');
-    const hasPagoTotal = filteredColumns.includes('pago_total_o_prima_total');
-    const hasPrimerPago = filteredColumns.includes('primer_pago');
-    const hasPagoParcial = filteredColumns.includes('pago_parcial');
+    
+    // Definir todos los campos relacionados con pagos y primas (en orden de prioridad)
+    const paymentAndPremiumFields = [
+      'pago_total_o_prima_total',
+      'importe_total',
+      'importe_total_a_pagar',
+      'prima_total',
+      'pago_total',
+      'prima_neta',
+      'primer_pago',
+      'pago_parcial',
+      'derecho_poliza',
+      'recargo_pago_fraccionado',
+      'iva_16',
+      'iva',
+      'prima',
+      'total',
+      'monto_total'
+    ];
+    
+    // Buscar todas las columnas de pagos/primas que existen en la tabla
+    const availablePaymentFields = paymentAndPremiumFields.filter(field => 
+      filteredColumns.includes(field)
+    );
     
     // Buscar columnas de fecha con variantes - PRIORIZAR vigencia_inicio/vigencia_fin sobre fecha_inicio/fecha_fin
     const fechaInicioCol = filteredColumns.find(col => 
@@ -112,9 +133,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'nombre_contratante' && 
       col !== 'contratante' && 
       col !== 'numero_poliza' && 
-      col !== 'pago_total_o_prima_total' &&
-      col !== 'primer_pago' && 
-      col !== 'pago_parcial' &&
+      !paymentAndPremiumFields.includes(col) &&
       col !== 'fecha_inicio' &&
       col !== 'fecha_fin' &&
       col !== 'vigencia_inicio' &&
@@ -124,18 +143,30 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
       col !== 'id'
     );
 
-    // Orden final: contratante, numero_poliza, pago_total_o_prima_total, primer_pago, pago_parcial, fecha_inicio/vigencia_inicio, fecha_fin/vigencia_fin, ...resto..., id
-    const finalOrder = [
-      ...(hasContratante ? ['contratante'] : []),
-      ...(hasNumeroPoliza ? ['numero_poliza'] : []),
-      ...(hasPagoTotal ? ['pago_total_o_prima_total'] : []),
-      ...(hasPrimerPago ? ['primer_pago'] : []),
-      ...(hasPagoParcial ? ['pago_parcial'] : []),
-      ...(fechaInicioCol ? [fechaInicioCol] : []),
-      ...(fechaFinCol ? [fechaFinCol] : []),
-      ...filteredColumns,
-      ...(hasId ? ['id'] : [])
-    ];
+    // Construir orden final: contratante, numero_poliza, TODOS LOS PAGOS/PRIMAS, fechas, resto, id
+    const finalOrder = [];
+    
+    // Posición 1: contratante
+    if (hasContratante) finalOrder.push('contratante');
+    
+    // Posición 2: numero_poliza
+    if (hasNumeroPoliza) finalOrder.push('numero_poliza');
+    
+    // Posiciones 3+: TODOS los campos de pagos/primas juntos (en orden de prioridad)
+    finalOrder.push(...availablePaymentFields);
+    
+    // Después de pagos/primas: fecha_inicio/vigencia_inicio
+    if (fechaInicioCol) finalOrder.push(fechaInicioCol);
+    
+    // Después de fecha inicio: fecha_fin/vigencia_fin
+    if (fechaFinCol) finalOrder.push(fechaFinCol);
+    
+    // Resto de columnas
+    finalOrder.push(...filteredColumns);
+    
+    // Última posición: id
+    if (hasId) finalOrder.push('id');
+    
     return finalOrder;
   }, [tableColumns, columnOrder, tableName, forceRender]);
 
@@ -1399,6 +1430,61 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     );
   };
 
+  // Helper function to compare values with proper type handling
+  const compareValues = (a, b) => {
+    // Handle null/undefined values
+    if (a === null || a === undefined) return 1;
+    if (b === null || b === undefined) return -1;
+    if (a === null && b === null) return 0;
+    if (a === undefined && b === undefined) return 0;
+
+    // Handle numbers
+    if (typeof a === 'number' && typeof b === 'number') {
+      if (isNaN(a)) return 1;
+      if (isNaN(b)) return -1;
+      return a - b;
+    }
+
+    // Handle dates (Firebase Timestamps, Date objects, or date strings)
+    const getDateValue = (value) => {
+      if (!value) return null;
+      
+      // Firebase Timestamp with underscore (NEW FORMAT)
+      if (value._seconds) return value._seconds * 1000;
+      // Firebase Timestamp without underscore (OLD FORMAT)
+      if (value.seconds) return value.seconds * 1000;
+      // Firestore Timestamp object
+      if (value.toDate && typeof value.toDate === 'function') {
+        return value.toDate().getTime();
+      }
+      // Date objects
+      if (value instanceof Date) {
+        return value.getTime();
+      }
+      // String dates
+      if (typeof value === 'string') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+          return date.getTime();
+        }
+      }
+      return null;
+    };
+
+    const dateA = getDateValue(a);
+    const dateB = getDateValue(b);
+    if (dateA !== null && dateB !== null) {
+      return dateA - dateB;
+    }
+
+    // Handle strings (case-insensitive comparison)
+    const strA = String(a).toLowerCase().trim();
+    const strB = String(b).toLowerCase().trim();
+    if (strA < strB) return -1;
+    if (strA > strB) return 1;
+    return 0;
+  };
+
   // Add handleSort function
   const handleSort = (column) => {
     let direction = 'ascending';
@@ -1410,11 +1496,7 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
 
     // Sort the base sortedData, not filteredData
     const sorted = [...sortedData].sort((a, b) => {
-      if (a[column] === null) return 1;
-      if (b[column] === null) return -1;
-      if (a[column] === b[column]) return 0;
-
-      const compareResult = a[column] < b[column] ? -1 : 1;
+      const compareResult = compareValues(a[column], b[column]);
       return direction === 'ascending' ? compareResult : -compareResult;
     });
 
@@ -1655,53 +1737,64 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
           </thead>
           <tbody>
             {(() => {
-              // SORT DATA HERE - NEWEST FIRST ALWAYS (por createdAt)
+              // SORT DATA HERE - Respect sortConfig if set, otherwise default to createdAt (newest first)
               const dataToSort = [...filteredData];
-              const sortedForRender = dataToSort.sort((a, b) => {
-                const getTimestamp = (record) => {
-                  // Priorizar createdAt para ordenar por más reciente
-                  const createdAt = record.createdAt;
-                  if (createdAt) {
-                    // Handle Firebase Timestamp with underscore (NEW FORMAT)
-                    if (createdAt._seconds) {
-                      return createdAt._seconds * 1000;
+              let sortedForRender;
+              
+              // If user has selected a column to sort by, use that
+              if (sortConfig.key) {
+                sortedForRender = dataToSort.sort((a, b) => {
+                  const compareResult = compareValues(a[sortConfig.key], b[sortConfig.key]);
+                  return sortConfig.direction === 'ascending' ? compareResult : -compareResult;
+                });
+              } else {
+                // Default: sort by createdAt (newest first)
+                sortedForRender = dataToSort.sort((a, b) => {
+                  const getTimestamp = (record) => {
+                    // Priorizar createdAt para ordenar por más reciente
+                    const createdAt = record.createdAt;
+                    if (createdAt) {
+                      // Handle Firebase Timestamp with underscore (NEW FORMAT)
+                      if (createdAt._seconds) {
+                        return createdAt._seconds * 1000;
+                      }
+                      // Handle Firebase Timestamp without underscore (OLD FORMAT)  
+                      else if (createdAt.seconds) {
+                        return createdAt.seconds * 1000;
+                      } 
+                      // Handle Firestore Timestamp object
+                      else if (createdAt.toDate) {
+                        return createdAt.toDate().getTime();
+                      } 
+                      // Handle string dates
+                      else if (typeof createdAt === 'string') {
+                        return new Date(createdAt).getTime();
+                      } 
+                      // Handle Date objects
+                      else if (createdAt instanceof Date) {
+                        return createdAt.getTime();
+                      }
                     }
-                    // Handle Firebase Timestamp without underscore (OLD FORMAT)  
-                    else if (createdAt.seconds) {
-                      return createdAt.seconds * 1000;
-                    } 
-                    // Handle Firestore Timestamp object
-                    else if (createdAt.toDate) {
-                      return createdAt.toDate().getTime();
-                    } 
-                    // Handle string dates
-                    else if (typeof createdAt === 'string') {
-                      return new Date(createdAt).getTime();
-                    } 
-                    // Handle Date objects
-                    else if (createdAt instanceof Date) {
-                      return createdAt.getTime();
+                    
+                    // Fallback: usar updatedAt si createdAt no está disponible
+                    const updatedAt = record.updatedAt;
+                    if (updatedAt) {
+                      if (updatedAt._seconds) return updatedAt._seconds * 1000;
+                      if (updatedAt.seconds) return updatedAt.seconds * 1000;
+                      if (updatedAt.toDate) return updatedAt.toDate().getTime();
+                      if (typeof updatedAt === 'string') return new Date(updatedAt).getTime();
+                      if (updatedAt instanceof Date) return updatedAt.getTime();
                     }
-                  }
+                    
+                    return 0;
+                  };
                   
-                  // Fallback: usar updatedAt si createdAt no está disponible
-                  const updatedAt = record.updatedAt;
-                  if (updatedAt) {
-                    if (updatedAt._seconds) return updatedAt._seconds * 1000;
-                    if (updatedAt.seconds) return updatedAt.seconds * 1000;
-                    if (updatedAt.toDate) return updatedAt.toDate().getTime();
-                    if (typeof updatedAt === 'string') return new Date(updatedAt).getTime();
-                    if (updatedAt instanceof Date) return updatedAt.getTime();
-                  }
-                  
-                  return 0;
-                };
-                
-                return getTimestamp(b) - getTimestamp(a); // Newest first (más reciente primero)
-              });
+                  return getTimestamp(b) - getTimestamp(a); // Newest first (más reciente primero)
+                });
+              }
               
               // Debug: basic record count
-              console.log('📊 Rendering', sortedForRender.length, 'records');
+              console.log('📊 Rendering', sortedForRender.length, 'records', sortConfig.key ? `sorted by ${sortConfig.key} (${sortConfig.direction})` : 'sorted by createdAt (default)');
               
               return sortedForRender;
             })().map((row, rowIndex) => {
