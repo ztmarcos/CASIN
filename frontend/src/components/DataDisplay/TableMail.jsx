@@ -398,6 +398,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [selectedFooter, setSelectedFooter] = useState('navidad'); // Footer seleccionado (default: navidad)
   const [customFooters, setCustomFooters] = useState([]); // Footers personalizados subidos
   const footerInputRef = useRef(null); // Ref para input de footer
+  const [isSending, setIsSending] = useState(false); // Estado para animación de "Enviando..."
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false); // Estado para animación de "Mail enviado!"
 
   // Función para convertir HTML a texto plano
   const htmlToPlainText = (html) => {
@@ -672,6 +674,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setIsMinimized(false); // Reset minimized state
       setSelectedFooter('navidad'); // Reset footer to default
       setCustomFooters([]); // Reset custom footers
+      setIsSending(false); // Reset sending animation
+      setShowSuccessAnimation(false); // Reset success animation
     }
   }, [isOpen]);
 
@@ -1091,6 +1095,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
 
     setError(null);
     setSuccess(null);
+    setIsSending(true); // Activar animación de "Enviando..."
+    setShowSuccessAnimation(false); // Asegurar que la animación de éxito esté oculta
 
     try {
       let uploadedFiles = [];
@@ -1100,12 +1106,9 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         console.log('📤 Starting Drive upload process...');
         console.log('📂 Selected folder:', selectedFolder);
         console.log('📎 Attachments count:', attachments.length);
-        setSuccess('Subiendo archivos a Drive...');
         uploadedFiles = await uploadAttachmentsToDrive();
         console.log('📤 Drive upload completed. Files:', uploadedFiles);
       }
-
-      setSuccess('Enviando correo...');
 
       // If we have attachments, use FormData approach
       if (attachments.length > 0) {
@@ -1232,12 +1235,20 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
         ? ` 📧 Copias BCC enviadas a: ${bccInfo.join(' y ')}`
         : '';
       
+      // Desactivar animación de "Enviando..." y activar animación de éxito
+      setIsSending(false);
+      setShowSuccessAnimation(true);
       setSuccess(`✅ ¡Correo enviado exitosamente!${bccMessage}`);
+      
+      // Cerrar modal después de mostrar la animación de éxito
       setTimeout(() => {
+        setShowSuccessAnimation(false);
         onClose();
-      }, 2000);
+      }, 2500);
     } catch (error) {
       console.error('Error al enviar el correo:', error);
+      setIsSending(false); // Desactivar animación de "Enviando..." en caso de error
+      setShowSuccessAnimation(false); // Asegurar que la animación de éxito esté oculta
       setError(error.message || 'Error al enviar el correo. Por favor, intenta de nuevo.');
     }
   };
@@ -1280,12 +1291,42 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           </div>
         </div>
         <div className="mail-modal-body">
+          {/* Animación de "Enviando..." */}
+          {isSending && (
+            <div className="sending-animation-overlay">
+              <div className="sending-animation">
+                <div className="sending-spinner"></div>
+                <div className="sending-text">Enviando correo...</div>
+                <div className="sending-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Animación de "Mail enviado!" */}
+          {showSuccessAnimation && (
+            <div className="success-animation-overlay">
+              <div className="success-animation">
+                <div className="success-checkmark">
+                  <div className="checkmark-circle"></div>
+                  <div className="checkmark-stem"></div>
+                  <div className="checkmark-kick"></div>
+                </div>
+                <div className="success-text">¡Correo enviado exitosamente!</div>
+                <div className="success-icon">✉️</div>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="mail-error">
               {error}
             </div>
           )}
-          {success && (
+          {success && !isSending && !showSuccessAnimation && (
             <div className="mail-success">
               {success}
             </div>
@@ -1609,12 +1650,21 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          setCustomFooters(prev => prev.filter(f => f.id !== footer.id));
-                          if (selectedFooter === footer.id) {
-                            setSelectedFooter('navidad');
+                          // Confirmar antes de eliminar
+                          const confirmDelete = window.confirm(
+                            `¿Estás seguro de que deseas eliminar el pie de página "${footer.name}"?`
+                          );
+                          if (confirmDelete) {
+                            setCustomFooters(prev => prev.filter(f => f.id !== footer.id));
+                            if (selectedFooter === footer.id) {
+                              setSelectedFooter('navidad');
+                            }
+                            setSuccess('Pie de página eliminado correctamente');
+                            setTimeout(() => setSuccess(null), 2000);
                           }
                         }}
                         disabled={isGenerating}
+                        title="Eliminar pie de página personalizado"
                       >
                         ✕
                       </button>
@@ -1652,9 +1702,9 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
           <button 
             className="send-btn"
             onClick={handleSendEmail}
-            disabled={isGenerating || isUploading || !emailContent.subject || !emailContent.message || !extractEmail(rowData)}
+            disabled={isGenerating || isUploading || isSending || !emailContent.subject || !emailContent.message || !extractEmail(rowData)}
           >
-            {isUploading ? 'Subiendo archivos...' : 'Enviar Correo'}
+            {isUploading ? 'Subiendo archivos...' : isSending ? 'Enviando...' : 'Enviar Correo'}
           </button>
         </div>
 
