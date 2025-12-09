@@ -17,7 +17,7 @@
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   width: 90%;
-  max-width: 700px;
+  max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -57,6 +57,26 @@
 
 .mail-modal-body {
   padding: 24px;
+}
+
+/* Section grouping for better organization */
+.mail-field-group {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.mail-field-group-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .mail-field {
@@ -560,4 +580,207 @@
 [data-theme='dark'] .minimize-modal-btn:hover {
   background: #334155;
   color: #f1f5f9;
+}
+
+/* Footer Section Styles */
+.footer-section {
+  border-top: 2px solid #e5e7eb;
+  padding-top: 20px;
+  margin-top: 24px;
+}
+
+.footer-selector {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.footer-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.footer-option {
+  position: relative;
+  cursor: pointer;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: white;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.footer-option:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.footer-option.selected {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.footer-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.footer-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  position: relative;
+}
+
+.footer-preview-image {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+}
+
+.footer-preview-placeholder {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  border-radius: 4px;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.footer-name {
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 500;
+  text-align: center;
+}
+
+.footer-option.selected .footer-name {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+.remove-footer-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  border: none;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.remove-footer-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.upload-footer-btn {
+  width: 100%;
+  padding: 10px 16px;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.upload-footer-btn:hover:not(:disabled) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.upload-footer-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Dark mode for footer */
+[data-theme='dark'] .footer-section {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .footer-selector {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .footer-option {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .footer-option:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .footer-option.selected {
+  background: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+[data-theme='dark'] .footer-preview-image {
+  border-color: #334155;
+}
+
+[data-theme='dark'] .footer-preview-placeholder {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .footer-name {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .footer-option.selected .footer-name {
+  color: #93c5fd;
+}
+
+[data-theme='dark'] .upload-footer-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .upload-footer-btn:hover:not(:disabled) {
+  background: #334155;
+  border-color: #3b82f6;
+  color: #93c5fd;
 } 

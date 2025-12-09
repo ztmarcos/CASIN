@@ -7,6 +7,13 @@ import activityLogger from '../../utils/activityLogger';
 
 const SENDER_OPTIONS = getSenderOptions();
 
+// Default footer options
+const DEFAULT_FOOTERS = [
+  { id: 'navidad', name: 'Felices Fiestas', path: '/footers/casinnavidad.jpeg' },
+  { id: 'logo', name: 'Logo CASIN', path: '/footers/casin-logo.png' },
+  { id: 'none', name: 'Sin pie de página', path: null }
+];
+
 // Templates de email por ramo y tipo (nueva póliza o renovación)
 const EMAIL_TEMPLATES = {
   // ===== AUTOS =====
@@ -388,6 +395,9 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   const [autoBccToCasin, setAutoBccToCasin] = useState(true); // BCC automático a casinseguros@gmail.com
   const [plainTextMessage, setPlainTextMessage] = useState(''); // Mensaje en texto plano para edición
   const [isMinimized, setIsMinimized] = useState(false); // Estado de minimización
+  const [selectedFooter, setSelectedFooter] = useState('navidad'); // Footer seleccionado (default: navidad)
+  const [customFooters, setCustomFooters] = useState([]); // Footers personalizados subidos
+  const footerInputRef = useRef(null); // Ref para input de footer
 
   // Función para convertir HTML a texto plano
   const htmlToPlainText = (html) => {
@@ -660,6 +670,8 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       setCcEmails(''); // Reset CC field
       setPlainTextMessage(''); // Reset plain text message
       setIsMinimized(false); // Reset minimized state
+      setSelectedFooter('navidad'); // Reset footer to default
+      setCustomFooters([]); // Reset custom footers
     }
   }, [isOpen]);
 
@@ -768,7 +780,20 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
       // Usar el template específico del ramo y tipo
       const ramoTemplates = EMAIL_TEMPLATES[ramo] || EMAIL_TEMPLATES.default;
       const template = ramoTemplates[tipo] || ramoTemplates.renovacion;
-      const htmlContent = template(rowData);
+      let htmlContent = template(rowData);
+      
+      // Add footer to HTML content
+      const footerHTML = getFooterHTML();
+      if (footerHTML) {
+        // Insert footer before the last closing div tag (main container)
+        const lastDivIndex = htmlContent.lastIndexOf('</div>');
+        if (lastDivIndex !== -1) {
+          htmlContent = htmlContent.slice(0, lastDivIndex) + footerHTML + htmlContent.slice(lastDivIndex);
+        } else {
+          // If no closing div found, append at the end
+          htmlContent = htmlContent + footerHTML;
+        }
+      }
       
       // Generar asunto basado en el tipo de email, ramo y tipo de póliza
       let subject = 'Póliza de Seguro - CASIN Seguros';
@@ -879,6 +904,90 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  // Convert image file to base64 for email embedding
+  const imageToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle footer image upload
+  const handleFooterUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate it's an image
+    if (!file.type.startsWith('image/')) {
+      setError('Por favor, selecciona un archivo de imagen válido');
+      return;
+    }
+
+    // Validate file size (5MB limit for footers)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      setError('La imagen del pie de página no debe exceder 5MB');
+      return;
+    }
+
+    try {
+      const base64 = await imageToBase64(file);
+      const customFooter = {
+        id: `custom_${Date.now()}`,
+        name: file.name,
+        base64: base64,
+        type: file.type
+      };
+      setCustomFooters(prev => [...prev, customFooter]);
+      setSelectedFooter(customFooter.id);
+      setError(null);
+    } catch (error) {
+      console.error('Error converting footer image:', error);
+      setError('Error al procesar la imagen del pie de página');
+    }
+
+    // Clear the input
+    if (footerInputRef.current) {
+      footerInputRef.current.value = '';
+    }
+  };
+
+  // Get footer HTML based on selection
+  const getFooterHTML = () => {
+    if (selectedFooter === 'none') return '';
+
+    // Find selected footer
+    let footer = DEFAULT_FOOTERS.find(f => f.id === selectedFooter);
+    if (!footer) {
+      footer = customFooters.find(f => f.id === selectedFooter);
+    }
+
+    if (!footer || (!footer.path && !footer.base64)) return '';
+
+    // Build image source
+    let imageSrc = '';
+    if (footer.base64) {
+      // Custom uploaded footer (base64)
+      imageSrc = footer.base64;
+    } else if (footer.path) {
+      // Default footer (public path) - use full URL for email clients
+      // In production, this should be the full domain URL
+      const baseUrl = window.location.origin;
+      imageSrc = `${baseUrl}${footer.path}`;
+    }
+
+    if (!imageSrc) return '';
+
+    // Return footer HTML with proper styling for email
+    return `
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+        <img src="${imageSrc}" alt="CASIN Seguros" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+      </div>
+    `;
   };
 
   const uploadAttachmentsToDrive = async () => {
@@ -1434,6 +1543,98 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Footer Section */}
+          <div className="mail-field footer-section">
+            <label>Pie de Página del Email:</label>
+            <div className="footer-selector">
+              <input
+                type="file"
+                ref={footerInputRef}
+                onChange={handleFooterUpload}
+                style={{ display: 'none' }}
+                accept="image/*"
+              />
+              
+              <div className="footer-options">
+                {DEFAULT_FOOTERS.map(footer => (
+                  <label key={footer.id} className={`footer-option ${selectedFooter === footer.id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="footer"
+                      value={footer.id}
+                      checked={selectedFooter === footer.id}
+                      onChange={(e) => setSelectedFooter(e.target.value)}
+                      disabled={isGenerating}
+                    />
+                    <div className="footer-preview">
+                      {footer.path ? (
+                        <img 
+                          src={footer.path} 
+                          alt={footer.name}
+                          className="footer-preview-image"
+                        />
+                      ) : (
+                        <div className="footer-preview-placeholder">
+                          <span>Sin imagen</span>
+                        </div>
+                      )}
+                      <span className="footer-name">{footer.name}</span>
+                    </div>
+                  </label>
+                ))}
+                
+                {customFooters.map(footer => (
+                  <label key={footer.id} className={`footer-option ${selectedFooter === footer.id ? 'selected' : ''}`}>
+                    <input
+                      type="radio"
+                      name="footer"
+                      value={footer.id}
+                      checked={selectedFooter === footer.id}
+                      onChange={(e) => setSelectedFooter(e.target.value)}
+                      disabled={isGenerating}
+                    />
+                    <div className="footer-preview">
+                      <img 
+                        src={footer.base64} 
+                        alt={footer.name}
+                        className="footer-preview-image"
+                      />
+                      <span className="footer-name">{footer.name}</span>
+                      <button
+                        type="button"
+                        className="remove-footer-btn"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setCustomFooters(prev => prev.filter(f => f.id !== footer.id));
+                          if (selectedFooter === footer.id) {
+                            setSelectedFooter('navidad');
+                          }
+                        }}
+                        disabled={isGenerating}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </label>
+                ))}
+              </div>
+              
+              <button 
+                type="button"
+                className="upload-footer-btn"
+                onClick={() => footerInputRef.current?.click()}
+                disabled={isGenerating}
+              >
+                📤 Subir Pie de Página Personalizado
+              </button>
+              
+              <small className="email-type-help">
+                El pie de página aparecerá al final del email. La imagen de Navidad está seleccionada por defecto.
+              </small>
             </div>
           </div>
 
