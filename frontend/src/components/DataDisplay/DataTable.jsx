@@ -1064,13 +1064,34 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
     return () => document.removeEventListener('copy', handleCopy);
   }, [selectedCells, data, tableColumns]);
 
+  // Listen for custom event to open TableMail modal (fallback for GPTAnalysis)
+  useEffect(() => {
+    const handleOpenTableMail = (event) => {
+      const { rowData, tableName: eventTableName } = event.detail;
+      console.log('📧 DataTable: Received openTableMail event:', { rowData, eventTableName, currentTableName: tableName });
+      
+      // Only open if the table name matches or if no table name is specified
+      if (!eventTableName || eventTableName === tableName) {
+        console.log('📧 DataTable: Opening TableMail modal from custom event');
+        handleOpenEmailModal(rowData);
+      }
+    };
+
+    window.addEventListener('openTableMail', handleOpenTableMail);
+    return () => window.removeEventListener('openTableMail', handleOpenTableMail);
+  }, [tableName]);
+
   const handleEmailClick = (rowData) => {
+    console.log('📧 handleEmailClick called with:', { rowData, tableName });
     setMailModal({ isOpen: true, rowData });
+    console.log('📧 Mail modal state updated:', { isOpen: true, rowData });
   };
 
   const handleOpenEmailModal = (rowData) => {
     console.log('📧 DataTable: Opening email modal via callback with row data:', rowData);
+    console.log('📧 DataTable: Table name:', tableName);
     setMailModal({ isOpen: true, rowData });
+    console.log('📧 DataTable: Mail modal state updated:', { isOpen: true, rowData, tableName });
   };
 
   const handleCloseMailModal = () => {
@@ -2238,9 +2259,15 @@ const DataTable = ({ data, onRowClick, onCellUpdate, onRefresh, tableName, colum
               {/* Botón Email */}
               <button
                 onClick={() => {
-                  handleEmailClick(selectedRowForActions);
+                  console.log('📧 Email button clicked in actions modal for row:', selectedRowForActions);
+                  console.log('📧 Table name:', tableName);
+                  // Close actions modal first
                   setShowActionsModal(false);
                   setSelectedRowForActions(null);
+                  // Then open email modal with a small delay to ensure state updates
+                  setTimeout(() => {
+                    handleEmailClick(selectedRowForActions);
+                  }, 100);
                 }}
                 style={{
                   padding: '12px 16px',

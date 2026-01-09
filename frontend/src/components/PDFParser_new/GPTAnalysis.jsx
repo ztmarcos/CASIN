@@ -638,15 +638,23 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                 setTimeout(() => {
                     console.log('🚀 Opening TableMail modal automatically');
                     console.log('📧 Data to pass to TableMail:', cleanData);
+                    console.log('📧 Table name:', tableName);
                     console.log('📧 ¡ABRIENDO MODAL DE EMAIL AUTOMÁTICAMENTE - ESTILO DATATABLE!');
                     
                     // Use callback to trigger TableMail modal in DataTable
                     if (onOpenEmailModal) {
+                        console.log('✅ onOpenEmailModal callback available, calling it...');
                         onOpenEmailModal(cleanData);
                     } else {
                         console.warn('⚠️ onOpenEmailModal callback not available');
+                        console.warn('⚠️ Attempting to open modal via custom event as fallback');
+                        // Fallback: try to open via custom event
+                        const event = new CustomEvent('openTableMail', {
+                            detail: { rowData: cleanData, tableName: tableName }
+                        });
+                        window.dispatchEvent(event);
                     }
-                }, 1200); // Give time to see success message
+                }, 800); // Reduced delay for faster modal opening
                 
                 // Close GPTAnalysis modal after dispatching the email event
                 if (onClose) {
