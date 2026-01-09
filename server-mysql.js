@@ -895,7 +895,12 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             </div>
           `;
           
-          const notificationResponse = await fetch(emailApiUrl, {
+          // Use relative URL for internal API calls (works in both local and Heroku)
+          const notificationApiUrl = process.env.HEROKU_APP_URL 
+            ? `${process.env.HEROKU_APP_URL}/api/email/send-welcome`
+            : `http://localhost:${PORT}/api/email/send-welcome`;
+          
+          const notificationResponse = await fetch(notificationApiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
