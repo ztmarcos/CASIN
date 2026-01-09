@@ -137,8 +137,8 @@ const Resumen = () => {
           to: recipients.join(','), // Multiple recipients separated by comma
           subject: `Resumen Semanal de Actividad - ${dateRangeText}`,
           htmlContent: emailHTML,
-          from: 'casinseguros@gmail.com',
-          fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+          from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
+          fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
           fromName: 'CASIN Seguros - Resumen Automático'
         })
       });

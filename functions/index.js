@@ -6,14 +6,14 @@ const nodemailer = require('nodemailer');
 // Initialize Firebase Admin
 admin.initializeApp();
 
-// SMTP Configuration
+// SMTP Configuration - Uses environment variables
 const SMTP_CONFIG = {
-  host: 'smtp.gmail.com',
-  port: 587,
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587'),
   secure: false,
   auth: {
-    user: 'casinseguros@gmail.com',
-    pass: 'espajcgariyhsboq' // App password
+    user: process.env.SMTP_USER_CASIN || process.env.GMAIL_USERNAME || 'casinseguros@gmail.com',
+    pass: process.env.SMTP_PASS_CASIN || process.env.GMAIL_APP_PASSWORD // App password from env
   }
 };
 

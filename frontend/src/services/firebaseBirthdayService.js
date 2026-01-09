@@ -376,7 +376,7 @@ class FirebaseBirthdayService {
             </div>
           `,
           from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
-          fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+          fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
           fromName: 'CASIN Seguros - Felicitaciones'
         }),
       });

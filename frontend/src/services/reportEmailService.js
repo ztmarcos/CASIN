@@ -38,7 +38,7 @@ const sendReportEmailWithGmail = async (policies, reportType, to, subject, htmlC
                 subject,
                 htmlContent,
                 from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
-                fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+                fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
                 fromName: 'CASIN Seguros - Reportes',
                 driveLinks: policies.map(policy => ({
                     name: `Poliza_${policy.id || policy.numero}`,

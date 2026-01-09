@@ -1079,8 +1079,8 @@ export default function Reports() {
                 to: policy.email,
                 subject: subject,
                 htmlContent: htmlContent,
-                from: 'casinseguros@gmail.com',
-                fromPass: 'espajcgariyhsboq',
+                from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
+                fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
                 fromName: `CASIN Seguros - ${reminder.type}`
               }),
             });

@@ -3,7 +3,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'CASIN Seguros (casinseguros@gmail.com)',
     value: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
-    pass: import.meta.env.VITE_GMAIL_APP_PASSWORD || 'espajcgariyhsboq',
+    pass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
     name: 'CASIN Seguros',
     email: 'casinseguros@gmail.com',
     role: 'admin',
@@ -12,7 +12,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Lorena Acosta - CASIN Seguros (lorenacasin5@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_LORE || 'lorenacasin5@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_LORE || 'fvjnqfyouyzglzkk',
+    pass: import.meta.env.VITE_SMTP_PASS_LORE,
     name: 'Lorena Acosta - CASIN Seguros',
     email: 'lorenacasin5@gmail.com',
     role: 'user',
@@ -21,7 +21,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Michell Diaz - CASIN Seguros (michelldiaz.casinseguros@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_MICH || 'michelldiaz.casinseguros@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_MICH || 'yxeyswjxsicwgoow',
+    pass: import.meta.env.VITE_SMTP_PASS_MICH,
     name: 'Michell Diaz - CASIN Seguros',
     email: 'michelldiaz.casinseguros@gmail.com',
     role: 'user',
@@ -30,7 +30,7 @@ export const SENDER_OPTIONS = [
   {
     label: 'Marquitos (z.t.marcos@gmail.com)',
     value: import.meta.env.VITE_SMTP_USER_MARCOS || 'z.t.marcos@gmail.com',
-    pass: import.meta.env.VITE_SMTP_PASS_MARCOS || 'cpwv xoym wjrf uvpy',
+    pass: import.meta.env.VITE_SMTP_PASS_MARCOS,
     name: 'Marquitos',
     email: 'z.t.marcos@gmail.com',
     role: 'admin',
