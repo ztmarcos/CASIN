@@ -750,10 +750,50 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     let emailsSent = 0;
     const emailResults = [];
     
+    // Check which birthdays already received emails today
+    const sentTodayMap = new Map();
+    try {
+      const sentLogsSnapshot = await db.collection('activity_logs')
+        .where('action', '==', 'birthday_emails_sent')
+        .orderBy('timestamp', 'desc')
+        .limit(50)
+        .get();
+      
+      sentLogsSnapshot.forEach(doc => {
+        const logData = doc.data();
+        const logTimestamp = logData.timestamp;
+        if (logTimestamp >= todayStart && logTimestamp < todayEnd) {
+          // Check if this person was already sent an email
+          if (logData.details?.emailResults) {
+            logData.details.emailResults.forEach(result => {
+              if (result.status === 'sent' && result.email && result.email !== 'N/A') {
+                sentTodayMap.set(result.email.toLowerCase(), true);
+              }
+            });
+          }
+        }
+      });
+    } catch (error) {
+      console.log('⚠️  Could not check sent emails history:', error.message);
+    }
+    
     for (const birthday of todaysBirthdays) {
-      // Send notification to ztmarcos@gmail.com about the birthday (not to the birthday person)
-      try {
-        console.log(`📧 Sending birthday notification for ${birthday.name} to ztmarcos@gmail.com`);
+      // Skip if already sent to this person today
+      if (birthday.email && sentTodayMap.has(birthday.email.toLowerCase())) {
+        console.log(`⏭️  Skipping ${birthday.name} - already sent email today`);
+        emailResults.push({
+          name: birthday.name,
+          email: birthday.email,
+          status: 'skipped',
+          reason: 'already_sent_today'
+        });
+        continue;
+      }
+      
+      // Send email to the birthday person (if they have email), with BCC to ztmarcos and casinseguros
+      if (birthday.email) {
+        try {
+          console.log(`📧 Sending birthday email to ${birthday.name} (${birthday.email})`);
           
           const emailHTML = `
             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
@@ -799,13 +839,13 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              to: 'ztmarcos@gmail.com',
-              bcc: 'casinseguros@gmail.com',
-              subject: `🎂 Cumpleaños de hoy: ${birthday.name}`,
+              to: birthday.email,
+              bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
+              subject: `🎂 ¡Feliz Cumpleaños ${birthday.name}!`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
               fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
-              fromName: 'CASIN Seguros - Notificación de Cumpleaños'
+              fromName: 'CASIN Seguros - Felicitaciones'
             })
           });
           
@@ -813,29 +853,74 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             emailsSent++;
             emailResults.push({
               name: birthday.name,
-              email: birthday.email || 'N/A',
-              notificationSentTo: 'ztmarcos@gmail.com',
-              status: 'sent'
+              email: birthday.email,
+              status: 'sent',
+              sentTo: birthday.email,
+              bccTo: 'ztmarcos@gmail.com, casinseguros@gmail.com'
             });
-            console.log(`✅ Birthday notification sent for ${birthday.name} to ztmarcos@gmail.com`);
+            console.log(`✅ Birthday email sent to ${birthday.name} (${birthday.email}) with BCC to ztmarcos@gmail.com and casinseguros@gmail.com`);
           } else {
             emailResults.push({
               name: birthday.name,
-              email: birthday.email || 'N/A',
+              email: birthday.email,
               status: 'failed',
               error: `HTTP ${emailResponse.status}`
             });
-            console.log(`❌ Failed to send birthday notification for ${birthday.name}`);
+            console.log(`❌ Failed to send birthday email to ${birthday.name}`);
           }
         } catch (error) {
           emailResults.push({
             name: birthday.name,
-            email: birthday.email || 'N/A',
+            email: birthday.email,
             status: 'error',
             error: error.message
           });
-          console.error(`❌ Error sending birthday notification for ${birthday.name}:`, error.message);
+          console.error(`❌ Error sending birthday email to ${birthday.name}:`, error.message);
         }
+      } else {
+        // No email for this birthday person, send notification to ztmarcos only
+        console.log(`⚠️  ${birthday.name} has no email. Sending notification to ztmarcos@gmail.com`);
+        try {
+          const notificationHTML = `
+            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
+              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 30px;">
+                  <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">🎂 Cumpleaños de Hoy</h1>
+                </div>
+                <div style="text-align: center; margin-bottom: 30px; background-color: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
+                  <h2 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">${birthday.name}</h2>
+                  <p style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0;">No tiene email registrado</p>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          const notificationResponse = await fetch(emailApiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: 'ztmarcos@gmail.com',
+              bcc: 'casinseguros@gmail.com',
+              subject: `🎂 Cumpleaños de hoy: ${birthday.name} (sin email)`,
+              htmlContent: notificationHTML,
+              from: 'casinseguros@gmail.com',
+              fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
+              fromName: 'CASIN Seguros - Notificación'
+            })
+          });
+          
+          if (notificationResponse.ok) {
+            emailResults.push({
+              name: birthday.name,
+              email: null,
+              status: 'notification_sent',
+              notificationTo: 'ztmarcos@gmail.com'
+            });
+          }
+        } catch (err) {
+          console.error(`Error sending notification for ${birthday.name}:`, err.message);
+        }
+      }
     }
     
     // Log the execution
