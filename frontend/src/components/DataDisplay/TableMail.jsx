@@ -1253,7 +1253,19 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
     }
   };
 
-  if (!isOpen) return null;
+  console.log('🎨 TableMail render check:', { isOpen, hasRowData: !!rowData, isMinimized, tableType });
+  
+  if (!isOpen) {
+    console.log('❌ TableMail not rendering: isOpen is false');
+    return null;
+  }
+
+  const emailAddress = extractEmail(rowData);
+  console.log('📧 Email address extracted:', emailAddress);
+  
+  if (!emailAddress) {
+    console.warn('⚠️ No email address found in rowData:', rowData);
+  }
 
   // Si está minimizado, mostrar solo el indicador flotante
   if (isMinimized) {
