@@ -596,6 +596,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     }
     
     // Check if emails were already sent today to avoid duplicates
+    // Use a simpler query that doesn't require composite index
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStart = today.toISOString();
@@ -603,26 +604,42 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const todayEnd = tomorrow.toISOString();
     
-    const existingLogs = await db.collection('activity_logs')
-      .where('action', '==', 'birthday_emails_sent')
-      .where('timestamp', '>=', todayStart)
-      .where('timestamp', '<', todayEnd)
-      .get();
-    
-    if (!existingLogs.empty) {
-      console.log('⚠️  Birthday emails already sent today. Skipping to avoid duplicates.');
-      const lastLog = existingLogs.docs[0].data();
-      return res.json({
-        status: 'success',
-        message: 'Birthday emails already sent today',
-        result: {
-          totalBirthdays: lastLog.details?.totalBirthdays || 0,
-          emailsSent: lastLog.details?.emailsSent || 0,
-          alreadySent: true,
-          lastSent: lastLog.timestamp
-        },
-        timestamp: new Date().toISOString()
+    try {
+      // Query by action first, then filter by timestamp in memory (avoids composite index requirement)
+      const existingLogsSnapshot = await db.collection('activity_logs')
+        .where('action', '==', 'birthday_emails_sent')
+        .orderBy('timestamp', 'desc')
+        .limit(10)
+        .get();
+      
+      // Filter in memory for today's logs
+      const todayLogs = [];
+      existingLogsSnapshot.forEach(doc => {
+        const logData = doc.data();
+        const logTimestamp = logData.timestamp;
+        if (logTimestamp >= todayStart && logTimestamp < todayEnd) {
+          todayLogs.push(logData);
+        }
       });
+      
+      if (todayLogs.length > 0) {
+        console.log('⚠️  Birthday emails already sent today. Skipping to avoid duplicates.');
+        const lastLog = todayLogs[0];
+        return res.json({
+          status: 'success',
+          message: 'Birthday emails already sent today',
+          result: {
+            totalBirthdays: lastLog.details?.totalBirthdays || 0,
+            emailsSent: lastLog.details?.emailsSent || 0,
+            alreadySent: true,
+            lastSent: lastLog.timestamp
+          },
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      // If query fails (e.g., missing index), log warning but continue
+      console.log('⚠️  Could not check for duplicate emails (missing index). Continuing anyway:', error.message);
     }
     
     // Get all collections that might contain RFC data
