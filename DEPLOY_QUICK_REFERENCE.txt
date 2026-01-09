@@ -1,0 +1,136 @@
+═══════════════════════════════════════════════════════════════════════════
+  CASIN CRM - Firebase Hosting Deploy - Referencia Rápida
+═══════════════════════════════════════════════════════════════════════════
+
+📦 PROYECTO
+───────────────────────────────────────────────────────────────────────────
+Project ID:     casinbbdd
+URL Principal:  https://casin.web.app
+URL Alternativa: https://casinbbdd.web.app
+Console:        https://console.firebase.google.com/project/casinbbdd
+
+🚀 DEPLOY RÁPIDO (3 COMANDOS)
+───────────────────────────────────────────────────────────────────────────
+1. firebase login
+2. ./pre-deploy-check.sh
+3. ./deploy-firebase.sh
+
+O con npm:
+npm run deploy:firebase
+
+📝 SCRIPTS NPM
+───────────────────────────────────────────────────────────────────────────
+npm run deploy:firebase      # Deploy solo hosting
+npm run deploy:firebase:all  # Deploy hosting + reglas
+npm run deploy:rules         # Deploy solo reglas
+npm run build                # Build del frontend
+npm run dev:frontend         # Dev local frontend
+npm run dev:backend          # Dev local backend
+
+🔧 FIREBASE CLI COMMANDS
+───────────────────────────────────────────────────────────────────────────
+firebase login                          # Login
+firebase use casinbbdd                  # Seleccionar proyecto
+firebase projects:list                  # Listar proyectos
+firebase deploy --only hosting          # Deploy solo hosting
+firebase deploy                         # Deploy todo
+firebase hosting:releases:list          # Ver releases
+firebase serve --only hosting           # Preview local
+
+📁 ARCHIVOS IMPORTANTES
+───────────────────────────────────────────────────────────────────────────
+firebase.json                           # Config principal
+.firebaserc                             # Proyecto
+firestore.rules                         # Reglas Firestore
+storage.rules                           # Reglas Storage
+frontend/dist/                          # Build output
+deploy-firebase.sh                      # Script deploy
+pre-deploy-check.sh                     # Script verificación
+
+📚 DOCUMENTACIÓN
+───────────────────────────────────────────────────────────────────────────
+FIREBASE_HOSTING_DEPLOY.md             # Guía completa
+QUICK_START_FIREBASE.md                # Quick start
+DEPLOY_SUMMARY.md                      # Resumen
+DEPLOY_CHECKLIST.md                    # Checklist
+firebase-deploy-commands.txt           # Comandos
+
+🔐 GITHUB ACTIONS
+───────────────────────────────────────────────────────────────────────────
+Secret Name: FIREBASE_SERVICE_ACCOUNT_CASINBBDD
+Secret Value: Contenido de casinbbdd-firebase-adminsdk-hnwk0-d3e04afbfd.json
+Location: GitHub → Settings → Secrets → Actions
+
+Workflows:
+- .github/workflows/firebase-hosting-merge.yml (producción)
+- .github/workflows/firebase-hosting-pull-request.yml (preview)
+
+🐛 TROUBLESHOOTING
+───────────────────────────────────────────────────────────────────────────
+Error: Firebase CLI not found
+→ npm install -g firebase-tools
+
+Error: Not authenticated
+→ firebase login --reauth
+
+Error: Build failed
+→ cd frontend && rm -rf node_modules && npm install && npm run build
+
+Error: Wrong project
+→ firebase use casinbbdd
+
+Ver logs:
+→ firebase deploy --only hosting --debug
+
+💡 TIPS
+───────────────────────────────────────────────────────────────────────────
+• Build tarda ~30-60 segundos
+• Deploy tarda ~1-2 minutos
+• Cambios son instantáneos (CDN)
+• Rollback desde Firebase Console
+• Backend sigue en Heroku
+
+✅ CHECKLIST PRE-DEPLOY
+───────────────────────────────────────────────────────────────────────────
+[ ] Firebase CLI instalado
+[ ] Autenticado (firebase login)
+[ ] Proyecto correcto (firebase use casinbbdd)
+[ ] Build exitoso (npm run build)
+[ ] Variables de entorno configuradas
+[ ] Backend funcionando
+
+🎯 FLUJO DE TRABAJO
+───────────────────────────────────────────────────────────────────────────
+1. Desarrollo local:
+   npm run dev:frontend (Terminal 1)
+   npm run dev:backend (Terminal 2)
+
+2. Verificar:
+   ./pre-deploy-check.sh
+
+3. Deploy:
+   ./deploy-firebase.sh
+
+4. Verificar en producción:
+   https://casin.web.app
+
+🌐 ARQUITECTURA
+───────────────────────────────────────────────────────────────────────────
+Frontend (React + Vite)
+    ↓
+Firebase Hosting (casin.web.app)
+    ↓
+    ├─→ Firebase Firestore (Database)
+    ├─→ Firebase Storage (Files)
+    └─→ Heroku Backend (APIs)
+
+📞 SOPORTE
+───────────────────────────────────────────────────────────────────────────
+Firebase Docs:   https://firebase.google.com/docs/hosting
+Firebase CLI:    https://firebase.google.com/docs/cli
+Firebase Status: https://status.firebase.google.com/
+
+═══════════════════════════════════════════════════════════════════════════
+Última actualización: Enero 2025 | Versión: 1.0.0
+═══════════════════════════════════════════════════════════════════════════
+

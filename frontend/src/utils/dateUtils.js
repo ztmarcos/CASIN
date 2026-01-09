@@ -17,6 +17,38 @@ const SHORT_MONTHS = [
 export const parseDate = (dateStr) => {
   if (!dateStr) return null;
   
+  // Try DD-MMM-YYYY format (like "18-Dic-2024")
+  if (typeof dateStr === 'string' && dateStr.includes('-') && !dateStr.match(/^\d+$/)) {
+    const parts = dateStr.split('-').map(part => part.trim());
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1].toLowerCase();
+      const year = parseInt(parts[2], 10);
+      
+      // Map Spanish month names to indices
+      const monthMap = {
+        'ene': 0, 'jan': 0,
+        'feb': 1, 'feb': 1,
+        'mar': 2, 'mar': 2,
+        'abr': 3, 'apr': 3,
+        'may': 4, 'may': 4,
+        'jun': 5, 'jun': 5,
+        'jul': 6, 'jul': 6,
+        'ago': 7, 'aug': 7,
+        'sep': 8, 'sep': 8,
+        'oct': 9, 'oct': 9,
+        'nov': 10, 'nov': 10,
+        'dic': 11, 'dec': 11
+      };
+      
+      const monthIndex = monthMap[monthStr.substring(0, 3).toLowerCase()];
+      if (monthIndex !== undefined && !isNaN(day) && !isNaN(year)) {
+        const date = new Date(year, monthIndex, day);
+        if (!isNaN(date.getTime())) return date;
+      }
+    }
+  }
+  
   // Try DD/MMM/YYYY format with Spanish month abbreviations first
   if (typeof dateStr === 'string' && dateStr.includes('/')) {
     const parts = dateStr.split('/').map(part => part.trim());
@@ -47,6 +79,12 @@ export const parseDate = (dateStr) => {
         }
       }
     }
+  }
+  
+  // Try YYYY-MM-DD format (ISO)
+  if (typeof dateStr === 'string' && dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) return date;
   }
   
   // Try standard date parsing as fallback

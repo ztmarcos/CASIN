@@ -1,0 +1,80 @@
+
+📁 ESTRUCTURA DE ARCHIVOS - Firebase Hosting Deploy
+═══════════════════════════════════════════════════════════════════════════
+
+X4/
+│
+├── 🔧 Configuración de Firebase
+│   ├── firebase.json                    ✅ Config principal de Firebase
+│   ├── .firebaserc                      ✅ Proyecto por defecto
+│   ├── .firebaseignore                  ✅ Archivos a ignorar
+│   ├── firestore.rules                  ✅ Reglas de Firestore
+│   ├── firestore.indexes.json           ✅ Índices de Firestore
+│   └── storage.rules                    ✅ Reglas de Storage
+│
+├── 🚀 Scripts de Deploy
+│   ├── deploy-firebase.sh               ✅ Script automatizado de deploy
+│   ├── pre-deploy-check.sh              ✅ Verificación pre-deploy
+│   └── package.json                     ✅ Scripts npm (actualizado)
+│
+├── 🤖 GitHub Actions
+│   └── .github/
+│       ├── workflows/
+│       │   ├── firebase-hosting-merge.yml       ✅ Deploy producción
+│       │   └── firebase-hosting-pull-request.yml ✅ Deploy preview
+│       ├── FIREBASE_DEPLOY_SETUP.md     ✅ Setup de secrets
+│       └── README.md                    ✅ Info de workflows
+│
+├── 📚 Documentación
+│   ├── FIREBASE_HOSTING_DEPLOY.md       ✅ Guía completa
+│   ├── QUICK_START_FIREBASE.md          ✅ Quick start
+│   ├── DEPLOY_SUMMARY.md                ✅ Resumen general
+│   ├── DEPLOY_CHECKLIST.md              ✅ Checklist interactivo
+│   ├── DEPLOY_QUICK_REFERENCE.txt       ✅ Referencia rápida
+│   ├── firebase-deploy-commands.txt     ✅ Comandos útiles
+│   └── FIREBASE_DEPLOY_FILES.txt        ✅ Este archivo
+│
+├── 🎨 Frontend
+│   └── frontend/
+│       ├── .env                         ✅ Variables de entorno
+│       ├── .env.example                 ✅ Plantilla de .env
+│       ├── package.json                 ✅ Dependencias
+│       ├── vite.config.js               ✅ Config de Vite
+│       ├── dist/                        📦 Build output (generado)
+│       │   ├── index.html
+│       │   └── assets/
+│       └── src/
+│           └── config/
+│               └── firebase.js          ✅ Config de Firebase
+│
+└── 🔐 Credenciales (NO subir a Git)
+    └── casinbbdd-firebase-adminsdk-*.json  🔒 Service Account
+
+═══════════════════════════════════════════════════════════════════════════
+
+📊 RESUMEN DE ARCHIVOS
+───────────────────────────────────────────────────────────────────────────
+
+Archivos de Configuración:     6 archivos
+Scripts de Deploy:              3 archivos
+GitHub Actions:                 3 archivos
+Documentación:                  7 archivos
+Frontend Config:                4 archivos
+───────────────────────────────────────────────────────────────────────────
+TOTAL:                         23 archivos
+
+═══════════════════════════════════════════════════════════════════════════
+
+🎯 ARCHIVOS MÁS IMPORTANTES
+───────────────────────────────────────────────────────────────────────────
+
+1. firebase.json                 → Configuración principal
+2. deploy-firebase.sh            → Script de deploy
+3. QUICK_START_FIREBASE.md       → Guía rápida
+4. frontend/.env                 → Variables de entorno
+5. .github/workflows/*.yml       → Deploy automático
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ ARCHIVOS VERIFICADOS Y LISTOS PARA USAR
+

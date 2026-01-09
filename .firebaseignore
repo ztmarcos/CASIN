@@ -1,0 +1,85 @@
+# Firebase ignore file
+# Archivos y directorios que no deben subirse a Firebase Hosting
+
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build artifacts (excepto frontend/dist que es lo que se despliega)
+*.log
+*.logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# Firebase credentials
+*firebase-adminsdk*.json
+pdfcasin-*.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Backend files (no necesarios en hosting)
+server-mysql.js
+server-mysql.js.backup
+api/
+database/
+scripts/
+sql/
+uploads/
+
+# Test files
+test-*.js
+*.test.js
+*.spec.js
+filestests/
+
+# Documentation and configs (excepto los necesarios)
+*.md
+!README.md
+*.sh
+Procfile
+.firebaserc
+
+# CSV and data files
+*.csv
+*.sql
+*.json.backup
+
+# Images not in frontend
+*.png
+*.jpg
+*.jpeg
+!frontend/public/**/*.png
+!frontend/public/**/*.jpg
+!frontend/public/**/*.jpeg
+
+# Migration scripts
+migrate-*.mjs
+check-*.mjs
+*.mjs
+
+# Cleanup
+cleanup-*/
+backup/
+
+# Terminals
+terminals/
+

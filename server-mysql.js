@@ -984,17 +984,25 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
         collectionData.forEach(doc => {
           const policy = { id: doc.id, ...doc.data(), tabla: collectionName };
           
-          // Check for expiring policies
+          // Check for expiring policies (exclude CAP/CFP inactive)
           if (policy.fecha_fin) {
-            const expirationDate = policy.fecha_fin.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
-            if (expirationDate >= new Date() && expirationDate <= expiringEndDate) {
-              expiringPolicies.push(policy);
+            // Exclude policies with CAP or CFP inactive (cancelled)
+            const isCancelled = policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo';
+            if (!isCancelled) {
+              const expirationDate = policy.fecha_fin.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
+              if (expirationDate >= new Date() && expirationDate <= expiringEndDate) {
+                expiringPolicies.push(policy);
+              }
             }
           }
           
-          // Check for partial payments
+          // Check for partial payments (exclude CAP/CFP inactive)
           if (policy.pago_parcial && policy.pago_parcial > 0) {
-            partialPayments.push(policy);
+            // Exclude policies with CAP or CFP inactive (cancelled)
+            const isCancelled = policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo';
+            if (!isCancelled) {
+              partialPayments.push(policy);
+            }
           }
           
           // Check for captured policies (created in date range)

@@ -1271,6 +1271,13 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   return (
     <div className="mail-modal-overlay">
       <div className="mail-modal-content" onClick={e => e.stopPropagation()}>
+        <button 
+          className="close-modal-btn"
+          onClick={onClose}
+          title="Cerrar"
+        >
+          ×
+        </button>
         <div className="mail-modal-header">
           <h3>📧 Enviar Correo Electrónico</h3>
           <div className="mail-modal-header-actions">
@@ -1280,13 +1287,6 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
               title="Minimizar"
             >
               −
-            </button>
-            <button 
-              className="close-modal-btn"
-              onClick={onClose}
-              title="Cerrar"
-            >
-              ×
             </button>
           </div>
         </div>

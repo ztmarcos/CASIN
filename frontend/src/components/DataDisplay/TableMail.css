@@ -10,6 +10,7 @@
   justify-content: center;
   align-items: center;
   z-index: 1003;
+  position: relative; /* Para que el botón de cerrar se posicione relativo al overlay */
 }
 
 .mail-modal-content {
@@ -21,6 +22,7 @@
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
+  margin-top: 0; /* Asegurar que el botón flotante no se corte */
 }
 
 .mail-modal-header {
@@ -31,6 +33,9 @@
   align-items: center;
   background: #f8fafc;
   border-radius: 12px 12px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .mail-modal-header h3 {
@@ -40,19 +45,37 @@
 }
 
 .close-modal-btn {
-  background: none;
-  border: none;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid #e5e7eb;
   font-size: 1.5rem;
   cursor: pointer;
   color: #64748b;
-  padding: 5px 10px;
-  border-radius: 6px;
+  padding: 8px 12px;
+  border-radius: 50%;
   transition: all 0.2s;
+  z-index: 1001;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  line-height: 1;
 }
 
 .close-modal-btn:hover {
-  background: #f1f5f9;
-  color: #475569;
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fecaca;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.close-modal-btn:active {
+  transform: scale(0.95);
 }
 
 .mail-modal-body {

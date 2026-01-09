@@ -13,6 +13,9 @@
     "dev:backend": "node server-mysql.js",
     "install:all": "npm install && cd frontend && npm install",
     "cron:birthdays": "node cron.js",
+    "deploy:firebase": "npm run build && firebase deploy --only hosting",
+    "deploy:firebase:all": "npm run build && firebase deploy",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
