@@ -1264,7 +1264,7 @@ const TableMail = ({ isOpen, onClose, rowData, tableType }) => {
   console.log('📧 Email address extracted:', emailAddress);
   
   if (!emailAddress) {
-    console.warn('⚠️ No email address found in rowData:', rowData);
+    console.warn('⚠️ No email address found in rowData - modal will show but user needs to enter email manually');
   }
 
   // Si está minimizado, mostrar solo el indicador flotante

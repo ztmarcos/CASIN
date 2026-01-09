@@ -10,7 +10,6 @@
   justify-content: center;
   align-items: center;
   z-index: 10000; /* Higher z-index to ensure it appears above actions modal (z-index: 1000) */
-  position: relative; /* Para que el botón de cerrar se posicione relativo al overlay */
 }
 
 .mail-modal-content {
