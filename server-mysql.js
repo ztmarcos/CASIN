@@ -625,6 +625,11 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
       if (todayLogs.length > 0) {
         console.log('⚠️  Birthday emails already sent today. Skipping to avoid duplicates.');
         const lastLog = todayLogs[0];
+        // Check if the last execution was successful (not just a skip)
+        const hasSuccessfulSends = lastLog.details?.emailResults?.some(r => 
+          r.status === 'sent' || r.status === 'notification_sent'
+        );
+        
         return res.json({
           status: 'success',
           message: 'Birthday emails already sent today',
@@ -632,7 +637,8 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             totalBirthdays: lastLog.details?.totalBirthdays || 0,
             emailsSent: lastLog.details?.emailsSent || 0,
             alreadySent: true,
-            lastSent: lastLog.timestamp
+            lastSent: lastLog.timestamp,
+            hasSuccessfulSends: hasSuccessfulSends
           },
           timestamp: new Date().toISOString()
         });
@@ -750,8 +756,10 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     let emailsSent = 0;
     const emailResults = [];
     
-    // Check which birthdays already received emails today
-    const sentTodayMap = new Map();
+    // Check which birthdays already received emails or notifications today
+    // Track by both email (if exists) and name to prevent duplicates
+    const sentTodayByEmail = new Map();
+    const sentTodayByName = new Map();
     try {
       const sentLogsSnapshot = await db.collection('activity_logs')
         .where('action', '==', 'birthday_emails_sent')
@@ -763,11 +771,16 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
         const logData = doc.data();
         const logTimestamp = logData.timestamp;
         if (logTimestamp >= todayStart && logTimestamp < todayEnd) {
-          // Check if this person was already sent an email
+          // Check if this person was already sent an email or notification
           if (logData.details?.emailResults) {
             logData.details.emailResults.forEach(result => {
-              if (result.status === 'sent' && result.email && result.email !== 'N/A') {
-                sentTodayMap.set(result.email.toLowerCase(), true);
+              // Track by email if exists
+              if (result.email && result.email !== 'N/A') {
+                sentTodayByEmail.set(result.email.toLowerCase(), true);
+              }
+              // Track by name for notifications (when no email)
+              if (result.name) {
+                sentTodayByName.set(result.name.toLowerCase(), true);
               }
             });
           }
@@ -778,12 +791,26 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     }
     
     for (const birthday of todaysBirthdays) {
-      // Skip if already sent to this person today
-      if (birthday.email && sentTodayMap.has(birthday.email.toLowerCase())) {
-        console.log(`⏭️  Skipping ${birthday.name} - already sent email today`);
+      // Skip if already sent to this person today (by email or by name)
+      const nameKey = birthday.name.toLowerCase();
+      const emailKey = birthday.email ? birthday.email.toLowerCase() : null;
+      
+      if (emailKey && sentTodayByEmail.has(emailKey)) {
+        console.log(`⏭️  Skipping ${birthday.name} - already sent email today (by email)`);
         emailResults.push({
           name: birthday.name,
           email: birthday.email,
+          status: 'skipped',
+          reason: 'already_sent_today'
+        });
+        continue;
+      }
+      
+      if (sentTodayByName.has(nameKey)) {
+        console.log(`⏭️  Skipping ${birthday.name} - already sent notification today (by name)`);
+        emailResults.push({
+          name: birthday.name,
+          email: birthday.email || null,
           status: 'skipped',
           reason: 'already_sent_today'
         });
@@ -858,6 +885,9 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
               sentTo: birthday.email,
               bccTo: 'ztmarcos@gmail.com, casinseguros@gmail.com'
             });
+            // Mark as processed to prevent duplicates
+            sentTodayByEmail.set(emailKey, true);
+            sentTodayByName.set(nameKey, true);
             console.log(`✅ Birthday email sent to ${birthday.name} (${birthday.email}) with BCC to ztmarcos@gmail.com and casinseguros@gmail.com`);
           } else {
             emailResults.push({
@@ -878,8 +908,9 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
           console.error(`❌ Error sending birthday email to ${birthday.name}:`, error.message);
         }
       } else {
-        // No email for this birthday person, send notification to ztmarcos only
-        console.log(`⚠️  ${birthday.name} has no email. Sending notification to ztmarcos@gmail.com`);
+        // No email for this birthday person, send notification to ztmarcos with BCC to casinseguros
+        // Only send once per person per day
+        console.log(`⚠️  ${birthday.name} has no email. Sending notification to ztmarcos@gmail.com with BCC to casinseguros@gmail.com`);
         try {
           const notificationHTML = `
             <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
@@ -915,15 +946,34 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
           });
           
           if (notificationResponse.ok) {
+            emailsSent++; // Count notification as sent
             emailResults.push({
               name: birthday.name,
               email: null,
               status: 'notification_sent',
-              notificationTo: 'ztmarcos@gmail.com'
+              notificationTo: 'ztmarcos@gmail.com',
+              bccTo: 'casinseguros@gmail.com'
             });
+            // Mark this name as processed to prevent duplicates
+            sentTodayByName.set(nameKey, true);
+            console.log(`✅ Notification sent for ${birthday.name} (no email) to ztmarcos@gmail.com with BCC to casinseguros@gmail.com`);
+          } else {
+            emailResults.push({
+              name: birthday.name,
+              email: null,
+              status: 'failed',
+              error: `HTTP ${notificationResponse.status}`
+            });
+            console.log(`❌ Failed to send notification for ${birthday.name}`);
           }
         } catch (err) {
-          console.error(`Error sending notification for ${birthday.name}:`, err.message);
+          emailResults.push({
+            name: birthday.name,
+            email: null,
+            status: 'error',
+            error: err.message
+          });
+          console.error(`❌ Error sending notification for ${birthday.name}:`, err.message);
         }
       }
     }
