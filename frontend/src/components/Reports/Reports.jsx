@@ -5,6 +5,7 @@ import policyStatusService from '../../services/policyStatusService';
 import { sendReportEmail } from '../../services/reportEmailService';
 import { formatDate, parseDate, getDateFormatOptions, toDDMMMYYYY } from '../../utils/dateUtils';
 import { toast } from 'react-hot-toast';
+import { useTeam } from '../../context/TeamContext';
 import VencimientosGraphics from './VencimientosGraphics';
 import MatrixGraphics from './MatrixGraphics';
 import airplaneTableService from '../../services/airplaneTableService';
@@ -14,7 +15,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const REPORT_TYPES = ['Vencimientos', 'Pagos Parciales', 'Matriz de Productos'];
+const REPORT_TYPES = ['Vencimientos', 'Activas', 'Pagos Parciales', 'Matriz de Productos'];
 
 // Utility function to check if a policy is expired
 const isPolicyExpired = (policy) => {
@@ -40,6 +41,8 @@ const getPolicyTotalAmount = (policy) => {
   // Only use fields that represent the TOTAL amount, NOT prima_neta (which is net, not total)
   const totalFields = [
     'pago_total_o_prima_total', // Most common field in Firebase data
+    'importe_a_pagar_mxn', // VIDA policies use this (priority!)
+    'importe_a_pagar', // Alternative for import to pay
     'pago_total',
     'prima_total',
     'importe_total', // Total amount to pay
@@ -133,15 +136,16 @@ const getPolicyTotalAmount = (policy) => {
         });
       }
       
-      // Handle string values that might contain commas, dollar signs, etc.
+      // Handle string values that might contain commas, dollar signs, "DLS", etc.
       if (typeof value === 'string') {
-        const cleanedValue = value.replace(/[\s,$"]/g, ''); // Remove spaces, commas, dollar signs, and quotes
+        // Remove "DLS", "USD", "MXN" and other currency indicators, along with spaces, commas, dollar signs, and quotes
+        const cleanedValue = value.replace(/[\s,$"]/g, '').replace(/DLS|USD|MXN|dls|usd|mxn/gi, '').trim();
         const numericValue = parseFloat(cleanedValue);
         if (!isNaN(numericValue)) {
-          // For main total fields (prima_total, pago_total_o_prima_total, importe_total), only return if > 0
-          // For prima_neta, prima_neta_mxn and other fallback fields, return even if 0 (as fallback)
+          // For main total fields, only return if > 0
           if (field === 'prima_total' || field === 'pago_total_o_prima_total' || 
-              field === 'importe_total' || field === 'importe_total_a_pagar') {
+              field === 'importe_total' || field === 'importe_total_a_pagar' ||
+              field === 'importe_a_pagar_mxn' || field === 'importe_a_pagar' || field === 'pago_total') {
             if (numericValue > 0) {
               // Debug: Log successful amount found
               if (isVIDA || isGMM) {
@@ -191,10 +195,10 @@ const getPolicyTotalAmount = (policy) => {
           });
         }
       } else if (typeof value === 'number') {
-        // For main total fields (prima_total, pago_total_o_prima_total, importe_total), only return if > 0
-        // For prima_neta, prima_neta_mxn and other fallback fields, return even if 0 (as fallback)
+        // For main total fields, only return if > 0
         if (field === 'prima_total' || field === 'pago_total_o_prima_total' || 
-            field === 'importe_total' || field === 'importe_total_a_pagar') {
+            field === 'importe_total' || field === 'importe_total_a_pagar' ||
+            field === 'importe_a_pagar_mxn' || field === 'importe_a_pagar' || field === 'pago_total') {
           if (value > 0) {
             // Debug: Log successful amount found
             if (isVIDA || isGMM) {
@@ -252,6 +256,7 @@ const getPolicyTotalAmount = (policy) => {
 };
 
 export default function Reports() {
+  const { userTeam, currentTeam } = useTeam();
   const [viewMode, setViewMode] = useState('table');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedType, setSelectedType] = useState('Vencimientos');
@@ -807,6 +812,14 @@ export default function Reports() {
     loadPolicies();
   }, []);
 
+  // Reload policies when team changes (so Michelle/CASIN gets CASIN data, not cached other team)
+  const teamId = currentTeam?.id ?? userTeam?.id;
+  useEffect(() => {
+    if (!teamId) return;
+    console.log('📊 Reports: team changed, reloading policies for team:', teamId);
+    loadPolicies(true);
+  }, [teamId]);
+
   // Add the policy update listener
   useEffect(() => {
     const handlePolicyUpdate = () => {
@@ -859,14 +872,47 @@ export default function Reports() {
       if (selectedType === 'Vencimientos') {
         filtered = filtered.filter(policy => {
           const endDate = parseDate(policy.fecha_fin);
-          if (!endDate) return false;
+          if (!endDate) {
+            console.warn('⚠️ Vencimientos: Skipping policy with invalid fecha_fin:', policy.numero_poliza, policy.fecha_fin);
+            return false;
+          }
           return endDate.getMonth() === selectedMonth;
         });
       } else if (selectedType === 'Pagos Parciales') {
         filtered = filtered.filter(policy => {
           const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
-          if (!nextPaymentDate) return false;
+          if (!nextPaymentDate) {
+            // For annual policies, use fecha_fin instead of fecha_proximo_pago
+            if (policy.forma_pago?.toUpperCase() === 'ANUAL' && policy.fecha_fin) {
+              const endDate = parseDate(policy.fecha_fin);
+              if (endDate) {
+                console.log('ℹ️ Using fecha_fin for annual policy:', policy.numero_poliza);
+                return endDate.getMonth() === selectedMonth;
+              }
+            }
+            console.warn('⚠️ Pagos Parciales: Skipping policy with invalid fecha_proximo_pago:', policy.numero_poliza, policy.fecha_proximo_pago);
+            return false;
+          }
           return nextPaymentDate.getMonth() === selectedMonth;
+        });
+      } else if (selectedType === 'Activas') {
+        const beforeActivas = filtered.length;
+        const activePolicies = filtered.filter(policy => !isPolicyExpired(policy));
+        const expiredCount = beforeActivas - activePolicies.length;
+        console.log(`📋 Activas filter: total policies=${beforeActivas}, activas=${activePolicies.length}, vencidas=${expiredCount}`);
+        if (beforeActivas > 0 && activePolicies.length === 0) {
+          const sample = filtered.slice(0, 3).map(p => ({
+            numero_poliza: p.numero_poliza,
+            fecha_fin: p.fecha_fin,
+            expiration_override: p.expiration_override,
+            isExpired: isPolicyExpired(p)
+          }));
+          console.warn('⚠️ Activas: no hay pólizas activas. Muestra de pólizas (¿todas vencidas?):', sample);
+        }
+        filtered = [...activePolicies].sort((a, b) => {
+          const dateA = parseDate(a.fecha_fin) || parseDate(a.fecha_inicio) || new Date(0);
+          const dateB = parseDate(b.fecha_fin) || parseDate(b.fecha_inicio) || new Date(0);
+          return dateB - dateA; // más reciente primero
         });
       }
     }
@@ -1070,7 +1116,7 @@ export default function Reports() {
           try {
             console.log(`📧 Enviando ${reminder.type} para póliza ${policy.numero_poliza}...`);
             
-            const response = await fetch('/api/email/send-welcome', {
+            const response = await fetch(FIREBASE_API.sendEmail, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -1383,9 +1429,33 @@ export default function Reports() {
 
   // Validate and clean policy data - simplified for matrix
   const validatePolicy = (policy) => {
-    return policy && 
-           (policy.id || policy.firebase_doc_id || policy.docId) && 
-           (policy.numero_poliza || policy.policy_number);
+    if (!policy) {
+      console.warn('⚠️ Null/undefined policy found');
+      return false;
+    }
+    
+    if (!(policy.id || policy.firebase_doc_id || policy.docId)) {
+      console.warn('⚠️ Policy without valid ID:', policy.numero_poliza || 'Unknown');
+      return false;
+    }
+    
+    if (!(policy.numero_poliza || policy.policy_number)) {
+      console.warn('⚠️ Policy without policy number:', policy.id || policy.firebase_doc_id);
+      return false;
+    }
+    
+    // Additional validation for dates
+    if (policy.fecha_fin && !parseDate(policy.fecha_fin)) {
+      console.warn('⚠️ Policy with invalid fecha_fin:', policy.numero_poliza, policy.fecha_fin);
+      // Don't reject the policy, just warn
+    }
+    
+    if (policy.fecha_proximo_pago && !parseDate(policy.fecha_proximo_pago)) {
+      console.warn('⚠️ Policy with invalid fecha_proximo_pago:', policy.numero_poliza, policy.fecha_proximo_pago);
+      // Don't reject the policy, just warn
+    }
+    
+    return true;
   };
 
   // Normaliza nombres de aseguradoras
@@ -1454,7 +1524,7 @@ export default function Reports() {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
-              {selectedType !== 'Matriz de Productos' && (
+              {(selectedType !== 'Matriz de Productos' && selectedType !== 'Activas') && (
                 <select
                   className="filter-select"
                   value={selectedMonth}
@@ -1467,7 +1537,7 @@ export default function Reports() {
               )}
             </div>
           )}
-          {selectedType !== 'Matriz de Productos' && (
+          {(selectedType !== 'Matriz de Productos' && selectedType !== 'Activas') && (
             <button
               className="send-email-btn"
               onClick={handleSendEmail}
