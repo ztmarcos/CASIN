@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Cron job script for Heroku Scheduler
- * This script will be executed every Friday at 5:00 PM CST to trigger weekly resumen emails
+ * DEPRECATED: Use Firebase scheduledWeeklyResumen instead.
+ * Cron job script for Heroku Scheduler (legacy).
+ * Weekly resumen is now sent by Firebase Cloud Function scheduledWeeklyResumen (Fridays 5:00 PM CST).
+ * See HEROKU_SCHEDULER_DISABLE.md to remove this job from Heroku and avoid duplicate sends.
  */
 
 const https = require('https');

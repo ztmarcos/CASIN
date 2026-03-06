@@ -1,8 +1,8 @@
-import { API_URL } from '../config/api.js';
+import { FIREBASE_API } from '../config/api.js';
 
 const sendWelcomeEmail = async (gptResponse, data) => {
   try {
-    const response = await fetch(`${API_URL}/email/send-welcome`, {
+    const response = await fetch(FIREBASE_API.sendEmail, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -30,7 +30,7 @@ const sendWelcomeEmail = async (gptResponse, data) => {
 
 const sendEmailWithGmail = async (to, subject, htmlContent, fromName = 'CASIN Seguros') => {
   try {
-    const response = await fetch(`${API_URL}/email/send`, {
+    const response = await fetch(FIREBASE_API.sendEmail, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

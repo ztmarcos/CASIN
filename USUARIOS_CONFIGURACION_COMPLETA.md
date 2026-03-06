@@ -25,10 +25,10 @@
 - **Backend**: ✅ Configurado
 - **Variables Frontend**:
   - `VITE_SMTP_USER_LORE`: lorenacasin5@gmail.com
-  - `VITE_SMTP_PASS_LORE`: yxeyswjxsicwgoow
+  - `VITE_SMTP_PASS_LORE`: qblamddapeoyqwvw
 - **Variables Backend**:
   - `SMTP_USER_LORE`: lorenacasin5@gmail.com
-  - `SMTP_PASS_LORE`: yxeyswjxsicwgoow
+  - `SMTP_PASS_LORE`: qblamddapeoyqwvw
 
 #### 3. **Mich** (User)
 - **Email**: `michelldiaz.casinseguros@gmail.com`

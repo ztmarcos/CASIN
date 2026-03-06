@@ -9,7 +9,7 @@ Este directorio contiene los workflows de GitHub Actions para el deploy automát
 1. **`firebase-hosting-merge.yml`**
    - Deploy automático a producción
    - Trigger: Push a `main` o `master`
-   - Destino: https://casin.web.app
+   - Destino: https://casin-crm.web.app
 
 2. **`firebase-hosting-pull-request.yml`**
    - Deploy de preview para Pull Requests
@@ -44,7 +44,7 @@ Una vez configurado:
 1. Haz un commit y push a `main`
 2. Ve a la pestaña **Actions** en GitHub
 3. Verifica que el workflow se ejecute correctamente
-4. La app estará disponible en: https://casin.web.app
+4. La app estará disponible en: https://casin-crm.web.app
 
 ## 🔄 Flujo de Trabajo
 
@@ -59,7 +59,7 @@ Build Frontend
     ↓
 Deploy to Firebase Hosting
     ↓
-✅ Live at casin.web.app
+✅ Live at casin-crm.web.app
 ```
 
 ## 📚 Más Información

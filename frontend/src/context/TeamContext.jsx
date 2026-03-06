@@ -12,18 +12,18 @@ import {
   deleteDoc,
   serverTimestamp 
 } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { db, auth } from '../firebase/config';
+import { CASIN_TEAM_ID, resolveToCanonicalCasin } from '../config/teams';
+import { API_URL } from '../config/api';
 import firebaseTeamService from '../services/firebaseTeamService';
 import firebaseTeamStorageService from '../services/firebaseTeamStorageService';
+import firebaseTableService from '../services/firebaseTableService';
 import { setCurrentTeam } from '../services/firebaseService';
 
 const TeamContext = createContext();
 
 export const TeamProvider = ({ children }) => {
-  console.log('🏢 TeamProvider: Component initializing...');
-  
   const { user } = useAuth();
-  console.log('🏢 TeamProvider: Got user from AuthContext:', user);
   
   const [userTeam, setUserTeam] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
@@ -35,15 +35,9 @@ export const TeamProvider = ({ children }) => {
 
   // Cargar equipo del usuario cuando se autentica
   useEffect(() => {
-    console.log('🔄 TeamContext: useEffect triggered, user:', user);
-    
     if (user?.email) {
-      console.log('🔍 User authenticated, loading team data for:', user.email);
-      console.log('👤 User details:', { email: user.email, uid: user.uid, name: user.name });
       loadUserTeam();
     } else {
-      console.log('👤 User not authenticated, resetting team state');
-      console.log('👤 User value:', user);
       resetTeamState();
     }
   }, [user]);
@@ -58,6 +52,7 @@ export const TeamProvider = ({ children }) => {
     
     // 🚫 DESACTIVAR SISTEMA DE EQUIPOS EN FIREBASE SERVICE
     setCurrentTeam(null);
+    firebaseTableService.setTeam(null);
     console.log('🏢 Team system DEACTIVATED in FirebaseService');
   };
 
@@ -77,6 +72,10 @@ export const TeamProvider = ({ children }) => {
       firebaseTeamStorageService.setCurrentTeam(teamId);
       console.log('🗂️ Team storage service configured for team:', teamId);
       
+      // Configurar el servicio de tablas para este equipo
+      firebaseTableService.setTeam(teamId);
+      console.log('📊 Team table service configured for team:', teamId);
+      
       console.log('✅ Team Firebase configuration ready');
       
       return firebaseConfig;
@@ -90,13 +89,59 @@ export const TeamProvider = ({ children }) => {
     setIsLoadingTeam(true);
     
     try {
-      console.log('🔍 Loading team for user:', user.email);
+      if (import.meta.env.DEV) console.log('🔍 Loading team for user:', user.email);
       
-      // Para usuarios específicos, FORZAR el uso del equipo CASIN específico
-      if (user.email === 'z.t.marcos@gmail.com' || user.email === '2012solitario@gmail.com' || user.email === 'lorenacasin5@gmail.com' || user.email === 'michelldiaz.casinseguros@gmail.com' || user.email === 'marcoszavala09@gmail.com') {
-        console.log('🎯 Special user detected, forcing CASIN team 4JlUqhAvfJMlCDhQ4vgH');
+      // Solo estos usuarios pueden tener equipo distinto a CASIN (mismo criterio que el selector en top bar)
+      const CAN_SWITCH_TEAM_EMAILS = ['z.t.marcos@gmail.com', 'ztmarcos@gmail.com', 'marcos@casin.com', '2012solitario@gmail.com', 'marcoszavala09@gmail.com', 'casinseguros@gmail.com'];
+      const canSwitchTeam = CAN_SWITCH_TEAM_EMAILS.includes(user.email);
+      let selectedTeamId = canSwitchTeam ? localStorage.getItem('selectedTeamId') : null;
+      // Si tenía guardado un CASIN duplicado, usar siempre el canónico y actualizar localStorage
+      if (selectedTeamId && resolveToCanonicalCasin(selectedTeamId) !== selectedTeamId) {
+        console.log('🔄 Equipo guardado era CASIN duplicado, usando canónico:', CASIN_TEAM_ID);
+        selectedTeamId = CASIN_TEAM_ID;
+        localStorage.setItem('selectedTeamId', CASIN_TEAM_ID);
+        localStorage.setItem('selectedTeamName', 'CASIN');
+      }
+      
+      // Si puede cambiar equipo y tiene uno seleccionado distinto a CASIN, usar ese
+      if (canSwitchTeam && selectedTeamId && selectedTeamId !== CASIN_TEAM_ID) {
+        console.log('🔄 Admin CASIN con equipo seleccionado:', selectedTeamId);
+        try {
+          const teamDoc = await getDoc(doc(db, 'teams', selectedTeamId));
+          console.log('📄 Team document exists?', teamDoc.exists());
+          if (teamDoc.exists()) {
+            const teamData = {
+              id: selectedTeamId,
+              ...teamDoc.data()
+            };
+            console.log('📋 Team data loaded:', teamData);
+            setUserTeam(teamData);
+            setUserRole('admin');
+            await setupTeamFirebase(selectedTeamId, teamData);
+            await loadTeamMembers(selectedTeamId);
+            setNeedsTeamSetup(false);
+            setIsLoadingTeam(false);
+            console.log('✅ Cargado equipo seleccionado:', teamData.name);
+            return;
+          } else {
+            console.warn('⚠️ Team document not found:', selectedTeamId);
+            console.log('🗑️ Clearing invalid selectedTeamId from localStorage');
+            localStorage.removeItem('selectedTeamId');
+            localStorage.removeItem('selectedTeamName');
+          }
+        } catch (error) {
+          console.error('❌ Error cargando equipo seleccionado:', error);
+          console.log('🗑️ Clearing selectedTeamId from localStorage due to error');
+          localStorage.removeItem('selectedTeamId');
+          localStorage.removeItem('selectedTeamName');
+          // Si falla, continuar con CASIN por defecto
+        }
+      }
+      
+      // Resto de usuarios: entrar siempre a CASIN (equipo principal)
+      {
         
-        const forcedTeamId = '4JlUqhAvfJMlCDhQ4vgH';
+        const forcedTeamId = CASIN_TEAM_ID;
         
         try {
           // Verificar si el equipo existe en Firebase
@@ -154,20 +199,33 @@ export const TeamProvider = ({ children }) => {
           const memberSnapshot = await getDocs(memberQuery);
           
           if (memberSnapshot.empty) {
-            console.log('👤 Creating team member record for admin user');
-            // Crear el registro del miembro del equipo
-            await addDoc(collection(db, 'team_members'), {
-              userId: user.uid || user.email.replace(/[@.]/g, '_'),
-              email: user.email,
-              name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marquitos' : user.email === 'lorenacasin5@gmail.com' ? 'Lorena CASIN' : user.email === 'michelldiaz.casinseguros@gmail.com' ? 'Michelle Díaz' : user.email === 'marcoszavala09@gmail.com' ? 'Marcos Zavala' : '2012 Solitario'),
-              teamId: forcedTeamId,
-              role: 'admin',
-              invitedBy: user.email,
-              joinedAt: new Date(),
-              status: 'active',
-              isOwner: true
-            });
-            console.log('✅ Team member record created');
+            console.log('👤 Creating team member record for admin user (via API)');
+            const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+            if (idToken) {
+              const res = await fetch(`${API_URL}/team/ensure-casin-admin-member`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify({ teamId: forcedTeamId })
+              });
+              if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || res.statusText);
+              }
+              console.log('✅ Team member record created');
+            } else {
+              await addDoc(collection(db, 'team_members'), {
+                userId: user.uid || user.email.replace(/[@.]/g, '_'),
+                email: user.email,
+                name: user.name || user.displayName || (user.email === 'z.t.marcos@gmail.com' ? 'Marquitos' : user.email === 'lorenacasin5@gmail.com' ? 'Lorena CASIN' : user.email === 'michelldiaz.casinseguros@gmail.com' ? 'Michelle Díaz' : user.email === 'marcoszavala09@gmail.com' ? 'Marcos Zavala' : user.email === 'casinseguros@gmail.com' ? 'CASIN Seguros' : '2012 Solitario'),
+                teamId: forcedTeamId,
+                role: 'admin',
+                invitedBy: user.email,
+                joinedAt: serverTimestamp(),
+                status: 'active',
+                isOwner: true
+              });
+              console.log('✅ Team member record created');
+            }
           } else {
             console.log('✅ Team member record already exists');
           }
@@ -176,9 +234,7 @@ export const TeamProvider = ({ children }) => {
           await loadTeamMembers(forcedTeamId);
           
           setNeedsTeamSetup(false);
-          console.log('🎉 Admin user setup complete for CASIN team:', forcedTeamId);
-          console.log('📊 Team data:', teamData);
-          console.log('🗂️ Firebase Storage:', 'gs://casinbbdd.firebasestorage.app');
+          if (import.meta.env.DEV) console.log('🎉 Admin user setup complete for CASIN team:', forcedTeamId);
           return;
           
         } catch (teamError) {
@@ -190,7 +246,6 @@ export const TeamProvider = ({ children }) => {
       }
       
       // Código existente para otros usuarios...
-      console.log('👤 Regular user, checking team membership');
       
       // Buscar en team_members
       const memberQuery = query(
@@ -549,17 +604,27 @@ export const TeamProvider = ({ children }) => {
         throw new Error('User is already a member of this team');
       }
 
-      // Por ahora, agregar directamente (en producción sería un sistema de invitaciones)
-      await addDoc(collection(db, 'team_members'), {
-        userId: null, // Se llenará cuando el usuario haga login
-        email: emailToInvite,
-        name: emailToInvite,
-        teamId: userTeam.id,
-        role: 'member',
-        invitedBy: user.email,
-        joinedAt: serverTimestamp(),
-        status: 'invited' // pending invitation
-      });
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      if (idToken) {
+        const res = await fetch(`${API_URL}/team/grant-access`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ email: emailToInvite, teamId: userTeam.id, role: 'member', name: emailToInvite })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || res.statusText);
+      } else {
+        await addDoc(collection(db, 'team_members'), {
+          userId: null,
+          email: emailToInvite,
+          name: emailToInvite,
+          teamId: userTeam.id,
+          role: 'member',
+          invitedBy: user.email,
+          joinedAt: serverTimestamp(),
+          status: 'invited'
+        });
+      }
 
       console.log('✅ User invited successfully');
       
@@ -715,6 +780,43 @@ export const TeamProvider = ({ children }) => {
     return userRole === 'admin' || userRole === 'member';
   };
 
+  // Función para cambiar de equipo (solo para admins CASIN)
+  const switchTeam = async (teamId, teamData) => {
+    try {
+      console.log(`🔄 Switching to team: ${teamId}`, teamData);
+      
+      // Actualizar estado del equipo
+      setUserTeam({
+        id: teamId,
+        ...teamData
+      });
+      
+      // Configurar Firebase para el nuevo equipo
+      await setupTeamFirebase(teamId, teamData);
+      
+      // Cargar miembros del nuevo equipo
+      const membersSnapshot = await getDocs(
+        query(collection(db, 'team_members'), where('teamId', '==', teamId))
+      );
+      
+      const members = [];
+      membersSnapshot.forEach((doc) => {
+        members.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+      
+      setTeamMembers(members);
+      
+      console.log(`✅ Successfully switched to team: ${teamData.name}`);
+      return true;
+    } catch (error) {
+      console.error('Error switching team:', error);
+      throw error;
+    }
+  };
+
   const value = {
     userTeam,
     teamMembers,
@@ -734,6 +836,7 @@ export const TeamProvider = ({ children }) => {
     removeUserFromTeam,
     loadUserTeam,
     setupTeamFirebase,
+    switchTeam,
     // Funciones para acceder a la configuración del equipo
     getTeamDb: () => firebaseTeamService.getCurrentDb(),
     getTeamAuth: () => firebaseTeamService.getCurrentAuth(),

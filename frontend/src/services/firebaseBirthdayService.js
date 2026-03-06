@@ -1,6 +1,23 @@
 import firebaseService from './firebaseService';
+import firebaseClientesService from './firebaseClientesService';
 import { API_URL } from '../config/api.js';
 import { extractBirthdayFromRFC, formatBirthday, calculateAge } from '../utils/rfcUtils';
+
+/** Returns true if email is corporate (GNP, Qualitas) and should be avoided for birthday emails */
+function isCorporateEmail(email) {
+  if (!email || typeof email !== 'string') return true;
+  const e = email.toLowerCase().trim();
+  return e.includes('@gnp') || e.includes('@qualitas');
+}
+
+/** Prefer personal email, then other; never use @gnp / @qualitas */
+function pickBestEmail(personal, other) {
+  const p = (personal && String(personal).trim()) || '';
+  const o = (other && String(other).trim()) || '';
+  if (p && !isCorporateEmail(p)) return p;
+  if (o && !isCorporateEmail(o)) return o;
+  return '';
+}
 
 class FirebaseBirthdayService {
   constructor() {
@@ -8,24 +25,25 @@ class FirebaseBirthdayService {
   }
 
   /**
-   * Fetches birthday data from all Firebase collections with RFC
+   * Fetches birthday data from Firebase collections with RFC (for a specific team)
+   * Uses email personal from directorio de clientes (clientes_metadata), fallback to doc email; excludes @gnp / @qualitas.
+   * @param {string} [teamId] - Team document ID. If omitted, uses default/CASIN collections.
    * @returns {Promise<Array>} Array of birthday objects
    */
-  async fetchBirthdays() {
+  async fetchBirthdays(teamId) {
     try {
-      console.log('🎂 Fetching birthdays from Firebase...');
+      console.log('🎂 Fetching birthdays from Firebase...', teamId ? `team: ${teamId}` : 'default/CASIN');
       
-      // All collections that might contain RFC data
+      const metadataMap = await firebaseClientesService.getClientesMetadataMap();
       const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
-      
+      const teamParam = teamId ? `&team=${encodeURIComponent(teamId)}` : '';
       const birthdays = [];
       
       for (const collectionName of collections) {
         try {
           console.log(`🔍 Checking collection: ${collectionName}`);
           
-          // Get all documents from this collection via backend API
-          const response = await fetch(`${API_URL}/data/${collectionName}`);
+          const response = await fetch(`${API_URL}/data/${collectionName}?nocache=${Date.now()}${teamParam}`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -60,12 +78,16 @@ class FirebaseBirthdayService {
               
               // Get the name based on collection type
               const name = this.getNameFromDocument(doc, collectionName);
+              const normalizedName = firebaseClientesService.normalizeClientName(name);
+              const emailPersonal = (metadataMap.get(normalizedName)?.emailPersonal || '').trim();
+              const otherEmail = (doc.email || doc.e_mail || '').trim();
+              const email = pickBestEmail(emailPersonal, otherEmail);
               
               const birthdayEntry = {
                 id: doc.id,
                 name: name,
                 rfc: doc.rfc || '',
-                email: doc.email || doc.e_mail || '',
+                email: email,
                 date: birthdayData.toISOString(),
                 age: age,
                 details: this.getBirthdayDetails(doc, collectionName),
@@ -500,7 +522,7 @@ const firebaseBirthdayService = new FirebaseBirthdayService();
 export default firebaseBirthdayService;
 
 // Export individual functions for compatibility
-export const fetchBirthdays = () => firebaseBirthdayService.fetchBirthdays();
+export const fetchBirthdays = (teamId) => firebaseBirthdayService.fetchBirthdays(teamId);
 export const triggerBirthdayEmails = () => firebaseBirthdayService.triggerBirthdayEmails();
 export const sendBirthdayEmailWithGmail = (birthdayPerson, message) => firebaseBirthdayService.sendBirthdayEmailWithGmail(birthdayPerson, message);
 export const sendTodaysBirthdayEmailsWithGmail = (message) => firebaseBirthdayService.sendTodaysBirthdayEmailsWithGmail(message);

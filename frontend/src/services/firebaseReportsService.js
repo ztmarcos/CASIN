@@ -2,6 +2,7 @@ import firebaseService from './firebaseService';
 import firebaseTableService from './firebaseTableService.js';
 import { API_URL } from '../config/api.js';
 import localCacheService from './localCacheService.js';
+import { parseDate, toDDMMMYYYY } from '../utils/dateUtils.js';
 
 class FirebaseReportsService {
   constructor() {
@@ -43,32 +44,35 @@ class FirebaseReportsService {
    * @returns {Promise<Array>} Array of all policies
    */
   async getAllPolicies(forceRefresh = false) {
-    const cacheKey = 'reports_all_policies';
-    
-    // Check cache first
+    const teamId = this.firebaseTableService.currentTeamId || 'default';
+    const cacheKey = `reports_all_policies_${teamId}`;
+
+    // Check cache first (per-team so Michelle/CASIN doesn't get another team's cache)
     if (!forceRefresh) {
       const cachedPolicies = localCacheService.get(cacheKey);
       if (cachedPolicies) {
-        console.log('💾 Using cached policies data');
+        console.log(`💾 Using cached policies data for team: ${teamId} (${cachedPolicies.length} policies)`);
         return cachedPolicies;
       }
     }
 
     try {
-      console.log('📊 Getting all policies from Firebase...');
-      
+      console.log(`📊 Getting all policies from Firebase for team: ${teamId}...`);
+
       // Get available insurance collections dynamically
       const insuranceCollections = await this.getAvailableInsuranceCollections();
       console.log('📋 Using collections for policies:', insuranceCollections);
-      
+
       const allPolicies = [];
+
+      const teamParam = this.firebaseTableService.getTeamParam();
+      const teamSeparator = teamParam ? '?' : '';
       
       for (const collectionName of insuranceCollections) {
         try {
           console.log(`🔍 Getting policies from collection: ${collectionName}`);
           
-          // Get all documents from this collection via backend API
-          const response = await fetch(`${API_URL}/data/${collectionName}`);
+          const response = await fetch(`${API_URL}/data/${collectionName}${teamSeparator}${teamParam}`);
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
           }
@@ -78,6 +82,17 @@ class FirebaseReportsService {
           for (const doc of documents) {
             const name = this.getNameFromDocument(doc, collectionName);
             
+            // Helper function to find best date value from multiple possible fields
+            const findBestDate = (possibleFields) => {
+              for (const field of possibleFields) {
+                const value = doc[field];
+                if (value && value !== null && value !== undefined && value !== '') {
+                  return value;
+                }
+              }
+              return null; // Explicitly return null instead of undefined
+            };
+
             // Create standardized policy object
             const policy = {
               id: doc.id,
@@ -85,8 +100,8 @@ class FirebaseReportsService {
               nombre_contratante: name, // Keep for backward compatibility during migration
               numero_poliza: doc.numero_poliza || doc.poliza || 'Sin número',
               aseguradora: doc.aseguradora || 'Sin aseguradora',
-              fecha_inicio: doc.fecha_inicio || doc.vigencia_inicio || doc.fecha_emision,
-              fecha_fin: doc.fecha_fin || doc.vigencia_fin || doc.fecha_vencimiento,
+              fecha_inicio: findBestDate(['fecha_inicio', 'vigencia_inicio', 'fecha_emision', 'vigencia_de', 'fecha_expedicion']),
+              fecha_fin: findBestDate(['fecha_fin', 'vigencia_fin', 'fecha_vencimiento', 'vigencia_hasta', 'vencimiento']),
               tipo_seguro: this.getInsuranceType(collectionName),
               ramo: this.getInsuranceType(collectionName),
               source: collectionName,
@@ -115,9 +130,9 @@ class FirebaseReportsService {
         }
       }
       
-      console.log(`✅ Found ${allPolicies.length} total policies from Firebase`);
-      
-      // Cache the result for 3 minutes
+      console.log(`✅ Found ${allPolicies.length} total policies from Firebase (team: ${teamId})`);
+
+      // Cache the result for 3 minutes (per-team)
       localCacheService.set(cacheKey, allPolicies, {}, 3 * 60 * 1000);
       
       return allPolicies;
@@ -132,30 +147,56 @@ class FirebaseReportsService {
    * Calculate next payment date based on start date and payment frequency
    */
   calculateNextPaymentDate(startDate, paymentForm) {
-    if (!startDate || !paymentForm) return null;
+    if (!startDate || !paymentForm) {
+      console.log('ℹ️ calculateNextPaymentDate: Missing startDate or paymentForm');
+      return null;
+    }
     
     try {
-      const start = new Date(startDate);
+      // Use parseDate to handle various date formats
+      const start = parseDate(startDate);
+      if (!start || isNaN(start.getTime())) {
+        console.warn(`⚠️ calculateNextPaymentDate: Could not parse startDate: "${startDate}"`);
+        return null;
+      }
+
       const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
+      
       const paymentIntervals = {
         'MENSUAL': 1,
         'BIMESTRAL': 2,
         'TRIMESTRAL': 3,
         'CUATRIMESTRAL': 4,
         'SEMESTRAL': 6,
-        'ANUAL': 12
+        'ANUAL': 12,
+        'CONTADO': 12 // Treat CONTADO as annual
       };
 
-      const interval = paymentIntervals[paymentForm.toUpperCase()] || 12;
+      const upperPaymentForm = paymentForm.toUpperCase().trim();
+      const interval = paymentIntervals[upperPaymentForm];
+      
+      if (!interval) {
+        console.warn(`⚠️ Unknown payment form: "${paymentForm}", defaulting to annual`);
+      }
+      
+      const monthsInterval = interval || 12;
       let nextPayment = new Date(start);
+      nextPayment.setHours(0, 0, 0, 0);
 
+      // Calculate next payment date
       while (nextPayment <= today) {
-        nextPayment.setMonth(nextPayment.getMonth() + interval);
+        nextPayment.setMonth(nextPayment.getMonth() + monthsInterval);
       }
 
-      return nextPayment;
+      // Convert to DD/MMM/YYYY format for consistency
+      const formattedDate = toDDMMMYYYY(nextPayment);
+      console.log(`✅ Next payment calculated for ${paymentForm}: ${formattedDate}`);
+      
+      return formattedDate;
     } catch (error) {
-      console.warn('Error calculating next payment date:', error);
+      console.error('❌ Error calculating next payment date:', error);
+      console.error('   startDate:', startDate, 'paymentForm:', paymentForm);
       return null;
     }
   }
@@ -397,36 +438,14 @@ class FirebaseReportsService {
             for (const field of expirationFields) {
               if (doc[field]) {
                 console.log(`📅 Found date field '${field}':`, doc[field], 'in document:', doc.id);
-                
-                // Try to parse different date formats
-                let dateValue = doc[field];
-                
-                // Handle DD-MMM-YYYY format (like "19-Apr-2025")
-                if (typeof dateValue === 'string' && dateValue.includes('-')) {
-                  const dateParts = dateValue.split('-');
-                  if (dateParts.length === 3) {
-                    const monthMap = {
-                      'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
-                      'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
-                      'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
-                    };
-                    
-                    if (monthMap[dateParts[1]]) {
-                      // Convert to ISO format: YYYY-MM-DD
-                      dateValue = `${dateParts[2]}-${monthMap[dateParts[1]]}-${dateParts[0].padStart(2, '0')}`;
-                      console.log(`📅 Converted date format:`, doc[field], '→', dateValue);
-                    }
-                  }
-                }
-                
-                expirationDate = new Date(dateValue);
-                
-                // Verify the date is valid
-                if (!isNaN(expirationDate.getTime())) {
+                const rawValue = doc[field];
+                // Use shared parseDate so all formats work: Hasta las 12 hrs del 09/Ene/2027, 22/Dic/2026, 09/ENE/2027, 25-Ene-2026, 15/11/2026, etc.
+                expirationDate = parseDate(rawValue);
+                if (expirationDate && !isNaN(expirationDate.getTime())) {
                   console.log(`✅ Valid date parsed:`, expirationDate.toISOString());
                   break;
                 } else {
-                  console.log(`❌ Invalid date:`, dateValue);
+                  console.log(`❌ Invalid date:`, rawValue);
                   expirationDate = null;
                 }
               }
@@ -641,13 +660,12 @@ class FirebaseReportsService {
     try {
       console.log(`🔄 Updating policy ${policyId} field ${fieldName} to: ${fieldValue} in collection: ${tableName}`);
       
-      // Ensure tableName is properly encoded for URL
       const encodedTableName = encodeURIComponent(tableName);
-      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}`;
+      const teamParam = this.firebaseTableService.getTeamParam();
+      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}${teamParam ? '?' + teamParam : ''}`;
       
       console.log(`🌐 Making request to: ${apiUrl}`);
       
-      // Update the document in Firebase through backend API
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
@@ -705,13 +723,12 @@ class FirebaseReportsService {
     try {
       console.log(`🔄 Updating policy ${policyId} field ${fieldName} to:`, fieldValue, 'in collection:', tableName);
       
-      // Ensure tableName is properly encoded for URL
       const encodedTableName = encodeURIComponent(tableName);
-      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}`;
+      const teamParam = this.firebaseTableService.getTeamParam();
+      const apiUrl = `${API_URL}/data/${encodedTableName}/${policyId}${teamParam ? '?' + teamParam : ''}`;
       
       console.log(`🌐 Making request to: ${apiUrl}`);
       
-      // Update the document in Firebase through backend API
       const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {

@@ -17,7 +17,8 @@ service firebase.storage {
                '2012solitario@gmail.com',
                'marcoszavala09@gmail.com',
                'michelldiaz.casinseguros@gmail.com',
-               'lorenacasin5@gmail.com'
+               'lorenacasin5@gmail.com',
+               'casinseguros@gmail.com'
              ];
     }
     

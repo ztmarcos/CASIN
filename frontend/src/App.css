@@ -4,11 +4,27 @@
   box-sizing: border-box;
 }
 
+/* Evitar pantalla blanca en móvil: root y body ocupan toda la vista */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height, mejor en móvil */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+html {
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font-family-sans);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   width: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
 }
 
 .section-container {

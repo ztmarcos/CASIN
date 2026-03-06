@@ -2,8 +2,8 @@
 export const SENDER_OPTIONS = [
   {
     label: 'CASIN Seguros (casinseguros@gmail.com)',
-    value: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
-    pass: import.meta.env.VITE_GMAIL_APP_PASSWORD,
+    value: import.meta.env.VITE_SMTP_USER_CASIN || 'casinseguros@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_CASIN,
     name: 'CASIN Seguros',
     email: 'casinseguros@gmail.com',
     role: 'admin',
@@ -35,6 +35,15 @@ export const SENDER_OPTIONS = [
     email: 'z.t.marcos@gmail.com',
     role: 'admin',
     avatar: '👨‍💻'
+  },
+  {
+    label: 'Test Team - Marcos (z.t.marcos@gmail.com)',
+    value: import.meta.env.VITE_SMTP_USER_MARCOS || 'z.t.marcos@gmail.com',
+    pass: import.meta.env.VITE_SMTP_PASS_MARCOS,
+    name: 'Test Team - Marcos',
+    email: 'z.t.marcos@gmail.com',
+    role: 'admin',
+    avatar: '🧪'
   }
 ];
 
@@ -56,6 +65,7 @@ export const getSenderOptions = () => {
     label: `${user.name} (${user.email})`,
     value: user.value,
     pass: user.pass,
-    name: user.name
+    name: user.name,
+    email: user.email // Agregar email para poder buscar por email
   }));
 };

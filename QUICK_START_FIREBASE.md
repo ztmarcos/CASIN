@@ -27,7 +27,7 @@ O usando npm:
 npm run deploy:firebase
 ```
 
-**¡Listo!** Tu app estará en: **https://casin.web.app** 🎉
+**¡Listo!** Tu app estará en: **https://casin-crm.web.app** 🎉
 
 ---
 
@@ -106,7 +106,7 @@ firebase hosting:releases:list
 
 ## 🌐 URLs de la Aplicación
 
-- **Producción**: https://casin.web.app
+- **Producción**: https://casin-crm.web.app
 - **Alternativa**: https://casinbbdd.web.app
 - **Firebase Console**: https://console.firebase.google.com/project/casinbbdd
 
@@ -147,7 +147,7 @@ Para más detalles, consulta: **[FIREBASE_HOSTING_DEPLOY.md](./FIREBASE_HOSTING_
    ```
 
 4. **Verificar en Producción**
-   - Abrir https://casin.web.app
+   - Abrir https://casin-crm.web.app
    - Probar funcionalidades principales
    - Verificar consola del navegador
 

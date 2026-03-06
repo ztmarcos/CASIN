@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './Cotiza.css';
+import { API_URL, FIREBASE_API } from '../../config/api';
 import { toast } from 'react-hot-toast';
 
 const Cotiza = () => {
@@ -201,7 +202,7 @@ const Cotiza = () => {
     const base64 = await fileToBase64(file);
     
     try {
-      const response = await fetch('/api/analyze-image', {
+      const response = await fetch(`${API_URL}/analyze-image`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -729,7 +730,7 @@ INSTRUCCIÓN FINAL CRÍTICA:
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
 
-      const response = await fetch('/api/generate-quote', {
+      const response = await fetch(`${API_URL}/generate-quote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1001,7 +1002,7 @@ INSTRUCCIÓN FINAL CRÍTICA:
           : '- Información del vehículo disponible en la cotización';
       }
 
-      const response = await fetch('/api/generate-quote', {
+      const response = await fetch(`${API_URL}/generate-quote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -1132,7 +1133,7 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
       const senderConfig = getSenderConfig(selectedSender);
       const subject = `Propuesta de Seguros - ${clientData.nombre}`;
       
-      const response = await fetch('/api/email/send-welcome', {
+      const response = await fetch(FIREBASE_API.sendEmail, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1200,7 +1201,7 @@ Genera un correo completo y profesional listo para enviar, adaptado específicam
         recomendaciones: cotizaciones.recomendaciones
       };
 
-      const response = await fetch('/api/generate-pdf', {
+      const response = await fetch(`${API_URL}/generate-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

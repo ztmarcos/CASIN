@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * Cron job script for Heroku Scheduler
- * This script will be executed daily to trigger birthday emails
+ * DEPRECATED: Use Firebase scheduledBirthdayEmails instead.
+ * Cron job script for Heroku Scheduler (legacy).
+ * Birthday emails are now sent by Firebase Cloud Function scheduledBirthdayEmails (9:00 AM CST).
+ * See HEROKU_SCHEDULER_DISABLE.md to remove this job from Heroku and avoid duplicate sends.
  */
 
 const https = require('https');

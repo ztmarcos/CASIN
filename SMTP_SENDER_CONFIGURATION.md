@@ -29,7 +29,7 @@ Se ha implementado la funcionalidad para **elegir entre 3 remitentes diferentes*
 **Frontend (.env):**
 ```env
 VITE_SMTP_PASS_CASIN=qlqvjpccsgfihszj
-VITE_SMTP_PASS_LORE=yxeyswjxsicwgoow
+VITE_SMTP_PASS_LORE=qblamddapeoyqwvw
 VITE_SMTP_PASS_MICH=klejsbcgpjmwoogg
 ```
 
@@ -38,7 +38,7 @@ VITE_SMTP_PASS_MICH=klejsbcgpjmwoogg
 SMTP_USER_CASIN=casindb46@gmail.com
 SMTP_PASS_CASIN=qlqvjpccsgfihszj
 SMTP_USER_LORE=casindb46@gmail.com
-SMTP_PASS_LORE=yxeyswjxsicwgoow
+SMTP_PASS_LORE=qblamddapeoyqwvw
 SMTP_USER_MICH=casindb46@gmail.com
 SMTP_PASS_MICH=klejsbcgpjmwoogg
 ```
@@ -49,13 +49,13 @@ SMTP_PASS_MICH=klejsbcgpjmwoogg
 SMTP_USER_CASIN=casindb46@gmail.com
 SMTP_PASS_CASIN=qlqvjpccsgfihszj
 SMTP_USER_LORE=casindb46@gmail.com
-SMTP_PASS_LORE=yxeyswjxsicwgoow
+SMTP_PASS_LORE=qblamddapeoyqwvw
 SMTP_USER_MICH=casindb46@gmail.com
 SMTP_PASS_MICH=klejsbcgpjmwoogg
 
 # Frontend variables  
 VITE_SMTP_PASS_CASIN=qlqvjpccsgfihszj
-VITE_SMTP_PASS_LORE=yxeyswjxsicwgoow
+VITE_SMTP_PASS_LORE=qblamddapeoyqwvw
 VITE_SMTP_PASS_MICH=klejsbcgpjmwoogg
 ```
 

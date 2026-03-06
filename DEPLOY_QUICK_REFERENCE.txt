@@ -5,8 +5,8 @@
 📦 PROYECTO
 ───────────────────────────────────────────────────────────────────────────
 Project ID:     casinbbdd
-URL Principal:  https://casin.web.app
-URL Alternativa: https://casinbbdd.web.app
+URL Principal:  https://casin-crm.web.app
+URL Alternativa: https://casinbbdd.web.app (otros proyectos)
 Console:        https://console.firebase.google.com/project/casinbbdd
 
 🚀 DEPLOY RÁPIDO (3 COMANDOS)
@@ -112,13 +112,13 @@ Ver logs:
    ./deploy-firebase.sh
 
 4. Verificar en producción:
-   https://casin.web.app
+   https://casin-crm.web.app
 
 🌐 ARQUITECTURA
 ───────────────────────────────────────────────────────────────────────────
 Frontend (React + Vite)
     ↓
-Firebase Hosting (casin.web.app)
+Firebase Hosting (casin-crm.web.app)
     ↓
     ├─→ Firebase Firestore (Database)
     ├─→ Firebase Storage (Files)

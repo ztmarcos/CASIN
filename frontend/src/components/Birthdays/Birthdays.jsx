@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useTeam } from '../../context/TeamContext';
 import { fetchBirthdays, triggerBirthdayEmails, checkTodaysEmailStatus } from '../../services/firebaseBirthdayService';
 import './Birthdays.css';
 
 const Birthdays = () => {
+  const { userTeam } = useTeam();
   const [birthdays, setBirthdays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +17,7 @@ const Birthdays = () => {
   useEffect(() => {
     loadBirthdays();
     // Note: Automatic birthday emails are now triggered from Dashboard
-  }, []);
+  }, [userTeam?.id]);
 
   // Function to determine if an RFC belongs to a natural person (persona física)
   const isPersonalRFC = (rfc) => {
@@ -39,8 +41,9 @@ const Birthdays = () => {
   const loadBirthdays = async () => {
     try {
       setLoading(true);
-      console.log('🎂 Loading birthdays from Firebase...');
-      const data = await fetchBirthdays();
+      const teamId = userTeam?.id;
+      console.log('🎂 Loading birthdays from Firebase...', teamId ? `team: ${teamId}` : 'default');
+      const data = await fetchBirthdays(teamId);
       
       // Convert date strings to Date objects
       const processedData = data.map(birthday => ({

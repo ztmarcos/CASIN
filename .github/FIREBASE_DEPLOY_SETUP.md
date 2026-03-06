@@ -110,7 +110,7 @@ Una vez configurado correctamente:
    - ✅ Workflow se ejecuta automáticamente
    - ✅ Build del frontend
    - ✅ Deploy a Firebase Hosting
-   - ✅ App disponible en https://casin.web.app
+   - ✅ App disponible en https://casin-crm.web.app
 
 2. **Pull Request**
    - ✅ Workflow se ejecuta automáticamente

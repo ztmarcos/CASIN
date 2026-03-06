@@ -255,6 +255,8 @@
   background: #10b981;
   color: white;
   border-color: #10b981;
+  width: 160px;
+  min-width: 160px;
 }
 
 .toolbar-btn.add-btn:hover:not(:disabled) {
@@ -660,6 +662,11 @@
     min-width: 40px;
     width: 40px;
     height: 40px;
+  }
+  
+  .toolbar-btn.add-btn {
+    width: 160px;
+    min-width: 160px;
   }
   
   .dropdown-container {

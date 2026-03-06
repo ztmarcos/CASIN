@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import firebaseTableService from '../../services/firebaseTableService';
+import { useTeam } from '../../context/TeamContext';
 import { API_URL } from '../../config/api.js';
 import './GPTAnalysis.css';
 import { notifyDataInsert } from '../../utils/dataUpdateNotifier';
-import { toDDMMMYYYY, parseDDMMMYYYY } from '../../utils/dateUtils';
+import { toDDMMMYYYY, parseDDMMMYYYY, parseDate } from '../../utils/dateUtils';
 import activityLogger from '../../utils/activityLogger';
 
 
 const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false, onClose, onOpenEmailModal }) => {
+    const { userTeam } = useTeam();
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -30,9 +32,70 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
 
     // Define field types at component level
     const fieldTypes = {
-        numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo'],
-        date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago'],
-        status: ['status']
+        numeric: ['prima', 'suma_asegurada', 'prima_neta', 'derecho_de_poliza', 'i_v_a', 'recargo_por_pago_fraccionado', 'pago_total_o_prima_total', 'modelo', 'importe_total', 'pago_total', 'prima_total'],
+        date: ['fecha_inicio', 'fecha_fin', 'desde_vigencia', 'hasta_vigencia', 'fecha_expedicion', 'fecha_pago', 'vigencia_de', 'vigencia_hasta', 'fecha_emision', 'fecha_vencimiento', 'fecha_proximo_pago'],
+        status: ['status', 'estado_pago']
+    };
+
+    // Comprehensive date normalization function
+    const normalizeDateValue = (dateValue, fieldName = '') => {
+        if (!dateValue || dateValue === null || dateValue === undefined) {
+            console.log(`ℹ️ Date field ${fieldName} is null/undefined`);
+            return null;
+        }
+
+        try {
+            // If it's already a Date object
+            if (dateValue instanceof Date) {
+                if (isNaN(dateValue.getTime())) {
+                    console.warn(`⚠️ Invalid Date object for ${fieldName}`);
+                    return null;
+                }
+                const normalized = toDDMMMYYYY(dateValue);
+                console.log(`✅ Date ${fieldName}: Date object → ${normalized}`);
+                return normalized;
+            }
+
+            // If it's a string
+            if (typeof dateValue === 'string') {
+                const trimmed = dateValue.trim();
+                if (trimmed === '') {
+                    console.log(`ℹ️ Date field ${fieldName} is empty string`);
+                    return null;
+                }
+
+                // Use our robust parseDate function
+                const parsedDate = parseDate(trimmed);
+                if (parsedDate && !isNaN(parsedDate.getTime())) {
+                    const normalized = toDDMMMYYYY(parsedDate);
+                    console.log(`✅ Date ${fieldName}: "${trimmed}" → ${normalized}`);
+                    return normalized;
+                } else {
+                    console.warn(`⚠️ Could not parse date for ${fieldName}: "${trimmed}"`);
+                    return null;
+                }
+            }
+
+            // If it's a number (Excel serial date)
+            if (typeof dateValue === 'number') {
+                const parsedDate = parseDate(dateValue.toString());
+                if (parsedDate && !isNaN(parsedDate.getTime())) {
+                    const normalized = toDDMMMYYYY(parsedDate);
+                    console.log(`✅ Date ${fieldName}: ${dateValue} (Excel) → ${normalized}`);
+                    return normalized;
+                } else {
+                    console.warn(`⚠️ Could not parse numeric date for ${fieldName}: ${dateValue}`);
+                    return null;
+                }
+            }
+
+            console.warn(`⚠️ Unknown date type for ${fieldName}:`, typeof dateValue);
+            return null;
+        } catch (error) {
+            console.error(`❌ Error normalizing date for ${fieldName}:`, error);
+            console.error(`   Original value:`, dateValue);
+            return null;
+        }
     };
 
     // Insurance company name normalization function
@@ -575,20 +638,8 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
                         value = parseFloat(numStr) || null;
                         console.log(`Numeric field ${columnName} processed:`, value);
                     } else if (fieldTypes.date.includes(columnName)) {
-                        try {
-                            if (typeof value === 'string') {
-                                // Convert any date format to DD/MMM/YYYY
-                                const formattedDate = toDDMMMYYYY(value);
-                                value = formattedDate || value; // Keep original if conversion fails
-                            } else if (value instanceof Date) {
-                                // Convert Date object to DD/MMM/YYYY format
-                                value = toDDMMMYYYY(value);
-                            }
-                            console.log(`Date field ${columnName} processed:`, value);
-                        } catch (e) {
-                            console.warn(`Failed to parse date: ${value}`, e);
-                            value = null;
-                        }
+                        // Use the comprehensive date normalization function
+                        value = normalizeDateValue(value, columnName);
                     } else if (fieldTypes.status.includes(columnName)) {
                         const status = value?.toString().toLowerCase();
                         value = status === 'pagado' || status === 'paid' ? 'Pagado' : 'No Pagado';
@@ -699,8 +750,14 @@ const GPTAnalysis = ({ parsedData, selectedTable, tableInfo, autoAnalyze = false
             }
         }
         
+        // Check if this is a date field
+        if (fieldTypes.date.includes(column)) {
+            // Normalize date value
+            processedValue = normalizeDateValue(processedValue, column);
+            console.log(`📝 User edited date field ${column}:`, processedValue);
+        }
         // Apply text normalization for string values
-        if (typeof processedValue === 'string') {
+        else if (typeof processedValue === 'string') {
             if (column.toLowerCase().includes('rfc')) {
                 processedValue = normalizeText(processedValue, 'rfc');
             } else if (column.toLowerCase().includes('nombre') || column.toLowerCase().includes('contratante')) {

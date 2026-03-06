@@ -38,7 +38,8 @@ service cloud.firestore {
                '2012solitario@gmail.com',
                'marcoszavala09@gmail.com',
                'lorenacasin5@gmail.com',
-               'michelldiaz.casinseguros@gmail.com'
+               'michelldiaz.casinseguros@gmail.com',
+               'casinseguros@gmail.com'
              ];
     }
     
@@ -47,6 +48,13 @@ service cloud.firestore {
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/team_members/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/team_members/$(request.auth.uid)).data.teamId == teamId;
+    }
+    
+    // Función helper para extraer teamId de path con prefijo team_
+    function extractTeamIdFromPath(path) {
+      // Extrae teamId de "team_TEAMID_collection"
+      // Ejemplo: "team_test_team_001_autos" -> "test_team_001"
+      return path.split('_')[1];
     }
     
     // Colecciones globales - Solo administradores CASIN
@@ -83,9 +91,20 @@ service cloud.firestore {
       allow read: if isAuthenticated() && request.auth.uid == memberId;
     }
     
-    // Datos de equipos con prefijo team_
-    match /team_{teamId}_{collection}/{document} {
-      allow read, write: if isCASINAdmin() || isTeamMember(teamId);
+    // Datos de equipos con prefijo team_ - Permite acceso a miembros del equipo
+    // IMPORTANTE: Esta regla NO afecta colecciones sin prefijo (autos, vida, gmm, etc.)
+    // Solo aplica a colecciones que empiezan con "team_"
+    // Nota: Usamos regex para capturar colecciones con patrón team_*
+    match /{teamCollection}/{document} {
+      allow read, write: if teamCollection.matches('team_.*') && 
+                           (isCASINAdmin() || 
+                            isTeamMember(teamCollection.split('_')[1]));
+    }
+    
+    // Email footers - Usuarios autenticados pueden leer, solo admins pueden escribir
+    match /email_footers/{document} {
+      allow read: if isAuthenticated();
+      allow write: if isCASINAdmin();
     }
     
     // Configuraciones específicas por equipo

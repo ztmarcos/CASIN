@@ -3,10 +3,10 @@
 ## ⚠️ Error Actual
 
 ```
-Firebase: Error (auth/requests-from-referer-https://casin.web.app-are-blocked.)
+Firebase: Error (auth/requests-from-referer-https://casin-crm.web.app-are-blocked.)
 ```
 
-**Causa**: El dominio `casin.web.app` no está autorizado en Firebase Authentication.
+**Causa**: El dominio `casin-crm.web.app` no está autorizado en Firebase Authentication.
 
 ---
 
@@ -41,7 +41,7 @@ Deberías ver una lista con dominios como:
 ### 3️⃣ Agrega el nuevo dominio
 
 1. Click en el botón **"Add domain"**
-2. En el campo de texto, escribe: `casin.web.app`
+2. En el campo de texto, escribe: `casin-crm.web.app`
 3. Click en **"Add"** o presiona Enter
 
 ---
@@ -52,13 +52,13 @@ La lista de dominios autorizados ahora debe incluir:
 - ✅ `localhost`
 - ✅ `casinbbdd.web.app`
 - ✅ `casinbbdd.firebaseapp.com`
-- ✅ `casin.web.app` ← **NUEVO**
+- ✅ `casin-crm.web.app` ← **NUEVO**
 
 ---
 
 ### 5️⃣ Recarga la aplicación
 
-1. Ve a: https://casin.web.app
+1. Ve a: https://casin-crm.web.app
 2. Recarga la página (Cmd+R o F5)
 3. Intenta hacer login de nuevo
 4. ✅ Debería funcionar correctamente
@@ -70,9 +70,9 @@ La lista de dominios autorizados ahora debe incluir:
 - [ ] Abrí Firebase Console
 - [ ] Fui a Authentication → Settings
 - [ ] Encontré "Authorized domains"
-- [ ] Agregué `casin.web.app`
+- [ ] Agregué `casin-crm.web.app`
 - [ ] Verifiqué que aparece en la lista
-- [ ] Recargué https://casin.web.app
+- [ ] Recargué https://casin-crm.web.app
 - [ ] Login funciona ✅
 
 ---
@@ -81,7 +81,7 @@ La lista de dominios autorizados ahora debe incluir:
 
 - **Firebase Console**: https://console.firebase.google.com/project/casinbbdd
 - **Authentication Settings**: https://console.firebase.google.com/project/casinbbdd/authentication/settings
-- **Tu aplicación**: https://casin.web.app
+- **Tu aplicación**: https://casin-crm.web.app
 
 ---
 

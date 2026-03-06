@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import { useAuth } from '../../context/AuthContext';
 import './Login.css';
@@ -8,6 +8,28 @@ const GoogleLogin = () => {
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Verificar si hay un resultado de redirección al cargar el componente
+  React.useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const userData = {
+            uid: result.user.uid,
+            email: result.user.email,
+            name: result.user.displayName,
+            photoURL: result.user.photoURL
+          };
+          console.log('🔐 User signed in via redirect:', userData.email);
+          await login(userData);
+        }
+      } catch (error) {
+        console.error('❌ Redirect result error:', error);
+      }
+    };
+    checkRedirectResult();
+  }, [login]);
   
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -21,7 +43,19 @@ const GoogleLogin = () => {
         prompt: 'select_account'
       });
       
-      const result = await signInWithPopup(auth, provider);
+      // Intentar primero con popup
+      let result;
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (popupError) {
+        // Si el popup está bloqueado, usar redirect como fallback
+        if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
+          console.log('⚠️ Popup bloqueado, usando redirect...');
+          await signInWithRedirect(auth, provider);
+          return; // La redirección manejará el resto
+        }
+        throw popupError; // Re-lanzar si es otro error
+      }
       
       const userData = {
         uid: result.user.uid,
@@ -58,6 +92,10 @@ const GoogleLogin = () => {
           `Error de configuración de Firebase: El dominio ${currentDomain} no está permitido en las restricciones del API key. ` +
           `Por favor, agrega este dominio en la consola de Firebase (Credentials → API Key → HTTP referrers). ` +
           `Consulta la documentación FIREBASE_API_KEY_SETUP.md para más detalles.`
+        );
+      } else if (error.code === 'auth/popup-blocked') {
+        setError(
+          '⚠️ El navegador bloqueó la ventana emergente. Por favor, permite popups para este sitio y vuelve a intentar, o el sistema usará redirección automáticamente.'
         );
       } else {
         setError('Error al iniciar sesión: ' + error.message);

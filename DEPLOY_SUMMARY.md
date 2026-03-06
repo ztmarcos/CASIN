@@ -70,7 +70,7 @@ firebase deploy --only hosting
 
 | Entorno | URL | Descripción |
 |---------|-----|-------------|
-| **Producción** | https://casin.web.app | URL principal |
+| **Producción** | https://casin-crm.web.app | URL principal CRM |
 | **Alternativa** | https://casinbbdd.web.app | URL alternativa |
 | **Firebase Console** | https://console.firebase.google.com/project/casinbbdd | Panel de control |
 
@@ -86,7 +86,7 @@ firebase deploy --only hosting
 Frontend (React + Vite)
     ↓
 Firebase Hosting
-    ↓ (casin.web.app)
+    ↓ (casin-crm.web.app)
     │
     ├─→ Firebase Firestore (Database)
     ├─→ Firebase Storage (Files)
@@ -97,7 +97,7 @@ Firebase Hosting
 
 1. **Frontend**: React + Vite
    - Desplegado en: Firebase Hosting
-   - URL: https://casin.web.app
+   - URL: https://casin-crm.web.app
    - Build: `frontend/dist/`
 
 2. **Backend**: Node.js + Express
@@ -185,7 +185,7 @@ npm run dev:backend
 ./deploy-firebase.sh
 
 # 3. Verificar en producción
-# Abrir: https://casin.web.app
+# Abrir: https://casin-crm.web.app
 ```
 
 ### Deploy Automático (GitHub Actions)
@@ -381,7 +381,7 @@ Para soporte o preguntas sobre el deploy, consulta la documentación o revisa lo
 ### ¿Qué sigue?
 
 1. Hacer el primer deploy: `./deploy-firebase.sh`
-2. Verificar en: https://casin.web.app
+2. Verificar en: https://casin-crm.web.app
 3. Configurar GitHub Actions (agregar secret)
 4. ¡Disfrutar del deploy automático! 🎉
 

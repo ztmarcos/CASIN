@@ -1,4 +1,4 @@
-import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import firebaseTeamService from './firebaseTeamService';
 
@@ -229,18 +229,22 @@ class FirebaseClientesService {
   }
 
   /**
-   * Normaliza el nombre del cliente para mejor comparación
+   * Normaliza el nombre del cliente para mejor comparación y unificación de duplicados.
+   * Quita sufijos como S.A. de C.V. para que variantes del mismo cliente se consoliden.
    */
   normalizeClientName(name) {
     if (!name) return '';
-    
-    return name
-      .toLowerCase()
+    let s = String(name)
       .trim()
-      .replace(/\s+/g, ' ') // Reemplaza múltiples espacios con uno solo
-      .replace(/[.,]/g, '') // Remueve puntos y comas
-      .normalize('NFD') // Normaliza caracteres acentuados
-      .replace(/[\u0300-\u036f]/g, ''); // Remueve diacríticos
+      .replace(/\s+/g, ' ')
+      .toLowerCase()
+      .replace(/[.,]/g, '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    // Quitar sufijos de razón social para unificar duplicados (ej. "sa de cv", "s a de c v")
+    s = s.replace(/\s+sa\s+de\s+cv\s*$/i, '').trim();
+    s = s.replace(/\s+s\s+a\s+de\s+c\s+v\s*$/i, '').trim();
+    return s;
   }
 
   /**
@@ -280,7 +284,7 @@ class FirebaseClientesService {
               rfc: data.rfc || 'N/A',
               direccion: data.domicilio_o_direccion || data.direccion || 'N/A',
               telefono: data.telefono || 'N/A',
-              ramo: data.ramo || this.getRamoFromTable(collectionName),
+              ramo: this.getRamoFromTable(collectionName),
               pdf: data.pdf || 'N/A',
               responsable: data.responsable || 'N/A'
             };
@@ -367,6 +371,91 @@ class FirebaseClientesService {
   }
 
   /**
+   * Campos de metadatos de cliente (datos personales editables + nombre para override/crear)
+   */
+  getMetadataFields() {
+    return ['clientName', 'emailPersonal', 'telefonoCasa', 'telefonoTrabajo', 'telefonoCelular', 'ocupacion', 'notas'];
+  }
+
+  /**
+   * Lee todos los documentos de clientes_metadata y devuelve un Map clientId -> datos personales
+   */
+  async getClientesMetadataMap() {
+    if (!FIREBASE_ENABLED) return new Map();
+    try {
+      const collName = this.getCollectionName('clientes_metadata');
+      const snapshot = await getDocs(collection(this.db, collName));
+      const map = new Map();
+      const fields = this.getMetadataFields();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const meta = { updatedAt: data.updatedAt || null };
+        fields.forEach(f => {
+          meta[f] = data[f] != null ? String(data[f]).trim() : '';
+        });
+        map.set(docSnap.id, meta);
+      });
+      return map;
+    } catch (error) {
+      console.warn('⚠️ Error leyendo clientes_metadata:', error);
+      return new Map();
+    }
+  }
+
+  /**
+   * Actualiza metadatos de un cliente (datos personales). Crea el documento si no existe.
+   */
+  async updateClientMetadata(clientId, metadata) {
+    if (!FIREBASE_ENABLED) {
+      throw new Error('Firebase no está habilitado');
+    }
+    const collName = this.getCollectionName('clientes_metadata');
+    const docRef = doc(this.db, collName, clientId);
+    const payload = { updatedAt: serverTimestamp() };
+    const fields = this.getMetadataFields();
+    fields.forEach(f => {
+      payload[f] = metadata[f] != null ? String(metadata[f]).trim() : '';
+    });
+    await setDoc(docRef, payload, { merge: true });
+    this.invalidateCache();
+  }
+
+  /**
+   * Crea un cliente nuevo (solo en directorio, sin pólizas). El id será el nombre normalizado.
+   * metadata: { clientName, emailPersonal?, telefonoCasa?, ... } (clientName obligatorio)
+   */
+  async createClient(metadata) {
+    if (!FIREBASE_ENABLED) throw new Error('Firebase no está habilitado');
+    const raw = typeof metadata === 'string' ? { clientName: metadata } : metadata || {};
+    const name = String(raw.clientName ?? '').trim();
+    if (!name) throw new Error('Nombre requerido');
+    const normalizedName = this.normalizeClientName(name);
+    const collName = this.getCollectionName('clientes_metadata');
+    const docRef = doc(this.db, collName, normalizedName);
+    const fields = this.getMetadataFields();
+    const payload = { clientName: name, updatedAt: serverTimestamp() };
+    fields.forEach(f => {
+      if (f === 'clientName') return;
+      payload[f] = raw[f] != null ? String(raw[f]).trim() : '';
+    });
+    await setDoc(docRef, payload, { merge: true });
+    this.invalidateCache();
+    return normalizedName;
+  }
+
+  /**
+   * Borra un cliente del directorio. Solo debe usarse para clientes sin pólizas (totalPolicies === 0).
+   * Elimina el documento de clientes_metadata.
+   */
+  async deleteClient(clientId) {
+    if (!FIREBASE_ENABLED) throw new Error('Firebase no está habilitado');
+    const collName = this.getCollectionName('clientes_metadata');
+    const docRef = doc(this.db, collName, clientId);
+    await deleteDoc(docRef);
+    this.invalidateCache();
+  }
+
+  /**
    * Obtiene todas las colecciones de seguros disponibles
    */
   getInsuranceCollections() {
@@ -413,24 +502,28 @@ class FirebaseClientesService {
       }
     }
     
-    // Consolidar clientes duplicados
+    // Consolidar clientes duplicados (mismo normalizedName = un solo cliente)
     allClients.forEach(client => {
       const normalizedName = client.normalizedName;
-      
-              if (!consolidatedClients.has(normalizedName)) {
-          consolidatedClients.set(normalizedName, {
-            id: normalizedName, // Usar nombre normalizado como ID
-            clientName: client.clientName,
-            normalizedName: normalizedName,
-            totalPolicies: 0,
-            policies: [],
-            collections: new Set(),
-            activePolicies: 0,
-            expiredPolicies: 0
-          });
-        }
-      
+
+      if (!consolidatedClients.has(normalizedName)) {
+        consolidatedClients.set(normalizedName, {
+          id: normalizedName,
+          clientName: client.clientName,
+          normalizedName: normalizedName,
+          totalPolicies: 0,
+          policies: [],
+          collections: new Set(),
+          activePolicies: 0,
+          expiredPolicies: 0
+        });
+      }
+
       const consolidatedClient = consolidatedClients.get(normalizedName);
+      // Usar el nombre más completo como display (ej. "Razón Social S.a. de C.v." sobre "Razón Social")
+      if (String(client.clientName || '').length > String(consolidatedClient.clientName || '').length) {
+        consolidatedClient.clientName = client.clientName;
+      }
       consolidatedClient.policies.push(...client.policies);
       consolidatedClient.totalPolicies += client.policies.length;
       client.policies.forEach(policy => {
@@ -481,17 +574,69 @@ class FirebaseClientesService {
     
     // Convertir a array y ordenar por nombre
     const result = Array.from(consolidatedClients.values())
-      .sort((a, b) => a.clientName.localeCompare(b.clientName));
-    
+      .sort((a, b) => String(a.clientName || '').localeCompare(String(b.clientName || '')));
+
+    // Fusionar metadatos (datos personales) desde clientes_metadata
+    // Agrupar por id normalizado para unificar duplicados (ej. mismo cliente con/sin "S.a. de C.v.")
+    const metadataMap = await this.getClientesMetadataMap();
+    const metaFields = this.getMetadataFields();
+    const metadataByCanonical = new Map();
+    for (const [metaId, meta] of metadataMap) {
+      const canonicalId = this.normalizeClientName(metaId);
+      if (!metadataByCanonical.has(canonicalId)) {
+        metadataByCanonical.set(canonicalId, { ...meta });
+      } else {
+        const merged = metadataByCanonical.get(canonicalId);
+        metaFields.forEach(f => {
+          const v = meta[f];
+          if (f === 'clientName') {
+            if (v && String(v).length > String(merged.clientName || '').length) merged.clientName = v;
+          } else if (v) merged[f] = v;
+        });
+      }
+    }
+    result.forEach(client => {
+      const meta = metadataByCanonical.get(client.id) || metadataMap.get(client.id);
+      metaFields.forEach(f => {
+        if (f === 'clientName') {
+          if (meta && meta.clientName) client.clientName = meta.clientName;
+        } else {
+          client[f] = meta ? meta[f] : '';
+        }
+      });
+    });
+
+    // Incluir clientes solo en metadata (creados a mano, sin pólizas); id canonical para no duplicar
+    const existingIds = new Set(result.map(c => c.id));
+    const addedCanonical = new Set();
+    for (const [metaId, meta] of metadataMap) {
+      const canonicalId = this.normalizeClientName(metaId);
+      if (existingIds.has(canonicalId) || addedCanonical.has(canonicalId)) continue;
+      addedCanonical.add(canonicalId);
+      const mergedMeta = metadataByCanonical.get(canonicalId) || meta;
+      result.push({
+        id: canonicalId,
+        clientName: mergedMeta.clientName || metaId,
+        normalizedName: canonicalId,
+        totalPolicies: 0,
+        policies: [],
+        collections: [],
+        activePolicies: 0,
+        expiredPolicies: 0,
+        ...mergedMeta
+      });
+    }
+    result.sort((a, b) => String(a.clientName || '').localeCompare(String(b.clientName || '')));
+
     // Actualizar cache
     this.clientCache.clear();
     result.forEach(client => {
       this.clientCache.set(client.id, client);
     });
     this.lastCacheUpdate = Date.now();
-    
+
     console.log(`✅ Consolidados ${result.length} clientes únicos con ${result.reduce((total, c) => total + c.totalPolicies, 0)} pólizas totales`);
-    
+
     return result;
   }
 
@@ -508,9 +653,9 @@ class FirebaseClientesService {
     const normalizedSearch = this.normalizeClientName(searchTerm);
     
     return allClients
-      .filter(client => 
-        client.normalizedName.includes(normalizedSearch) ||
-        client.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+      .filter(client =>
+        (client.normalizedName && client.normalizedName.includes(normalizedSearch)) ||
+        (client.clientName && String(client.clientName).toLowerCase().includes(searchTerm.toLowerCase()))
       )
       .slice(0, limit);
   }
@@ -553,6 +698,14 @@ class FirebaseClientesService {
    */
   async refreshCache() {
     return await this.getAllClients(true);
+  }
+
+  /**
+   * Invalida el cache para forzar una recarga en el siguiente getAllClients()
+   */
+  invalidateCache() {
+    this.clientCache.clear();
+    this.lastCacheUpdate = null;
   }
 }
 

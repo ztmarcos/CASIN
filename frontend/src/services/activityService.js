@@ -224,6 +224,12 @@ class ActivityService {
       // Contar actualizaciones de datos
       const dataUpdates = activities.filter(act => act.action === 'data_updated').length;
       
+      // Contar deployments/actualizaciones del sistema
+      const systemUpdates = activities.filter(act => 
+        act.action === 'system_deployment' || 
+        (act.action === 'system_update' && act.details?.type === 'firebase_deploy')
+      ).length;
+      
       // Obtener pólizas capturadas (con detalles)
       const capturedPolicies = await this.getCapturedPolicies(startDate, endDate);
       
@@ -233,10 +239,15 @@ class ActivityService {
       // Obtener pagos realizados
       const paymentsMade = await this.getPaymentsMade(startDate, endDate);
       
+      // Obtener pagos pendientes (de policies con forma_pago parcial y primer_pago_realizado = false)
+      const paymentsPending = await this.getPaymentsPending();
+      
       const summaryData = {
         dateRange: {
           start: typeof startDate === 'string' ? startDate : startDate.toISOString(),
-          end: typeof endDate === 'string' ? endDate : endDate.toISOString()
+          end: typeof endDate === 'string' ? endDate : endDate.toISOString(),
+          startDate: typeof startDate === 'string' ? startDate : startDate.toISOString(),
+          endDate: typeof endDate === 'string' ? endDate : endDate.toISOString()
         },
         activities: {
           total: activities.length,
@@ -257,7 +268,7 @@ class ActivityService {
         teamActivities: teamActivities, // Actividades de la sección Actividad
         capturedPolicies: {
           total: capturedPolicies.length,
-          policies: capturedPolicies.slice(0, 10) // Top 10 most recent
+          policies: capturedPolicies // Top 10 most recent with full details
         },
         cancelledPolicies: {
           total: cancelledPolicies.length,
@@ -268,6 +279,14 @@ class ActivityService {
           payments: paymentsMade.slice(0, 10), // Top 10 most recent
           totalAmount: this.calculateTotalAmount(paymentsMade)
         },
+        paymentsPending: {
+          total: paymentsPending.length,
+          payments: paymentsPending.slice(0, 10) // Top 10 most urgent
+        },
+        systemUpdates: {
+          total: systemUpdates,
+          description: systemUpdates > 0 ? `${systemUpdates} actualizaciones del sistema (deployments a Firebase)` : 'Sin actualizaciones registradas'
+        },
         summary: {
           totalActivities: activities.length,
           totalExpiring: expiringPolicies.length,
@@ -276,8 +295,10 @@ class ActivityService {
           totalDailyActivities: teamActivities.length,
           policiesCaptured: policiesCaptured,
           policiesPaid: policiesPaid,
+          policiesPending: paymentsPending.length,
           emailsSent: emailsSent,
-          dataUpdates: dataUpdates
+          dataUpdates: dataUpdates,
+          systemUpdates: systemUpdates
         }
       };
       
@@ -299,8 +320,10 @@ class ActivityService {
           activeUsers: 0,
           policiesCaptured: 0,
           policiesPaid: 0,
+          policiesPending: 0,
           emailsSent: 0,
-          dataUpdates: 0
+          dataUpdates: 0,
+          systemUpdates: 0
         }
       };
     }
@@ -634,6 +657,63 @@ class ActivityService {
       return paymentsMade;
     } catch (error) {
       console.error('❌ Error fetching payments made:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get pending payments (policies with partial payments not yet paid)
+   * @returns {Promise<Array>} Array of pending payments
+   */
+  async getPaymentsPending() {
+    try {
+      console.log('📋 Fetching pending payments...');
+      
+      // Get all policies from Firebase
+      const allPolicies = await this.reportsService.getAllPolicies();
+      
+      // Filter policies with pending first payment or partial payments
+      const pendingPayments = allPolicies.filter(policy => {
+        // Check if first payment is pending
+        if (policy.primer_pago_realizado === false || !policy.primer_pago_realizado) {
+          return true;
+        }
+        
+        // Check for partial payments (non-annual) that are not fully paid
+        const hasPartialPayments = policy.forma_pago && [
+          'MENSUAL', 'BIMESTRAL', 'TRIMESTRAL', 'CUATRIMESTRAL', 'SEMESTRAL'
+        ].some(form => policy.forma_pago.toUpperCase().includes(form));
+        
+        if (hasPartialPayments && policy.pago_parcial && policy.pago_parcial > 0) {
+          // Check if current payment is pending
+          const pagosRealizados = policy.pagos_realizados || [];
+          const currentPayment = policy.pago_actual || 1;
+          const currentPaymentData = pagosRealizados.find(p => p.numero === currentPayment);
+          
+          // If current payment is not marked as paid, it's pending
+          if (!currentPaymentData || !currentPaymentData.pagado) {
+            return true;
+          }
+        }
+        
+        return false;
+      }).map(policy => ({
+        id: policy.id || policy.firebase_doc_id,
+        numero_poliza: policy.numero_poliza,
+        contratante: policy.nombre_contratante || policy.contratante,
+        aseguradora: policy.aseguradora,
+        ramo: policy.ramo || policy.sourceTable,
+        forma_pago: policy.forma_pago,
+        pago_parcial: policy.pago_parcial,
+        fecha_proximo_pago: policy.fecha_proximo_pago,
+        primer_pago_realizado: policy.primer_pago_realizado,
+        pago_actual: policy.pago_actual || 1
+      }));
+      
+      console.log(`✅ Found ${pendingPayments.length} pending payments`);
+      return pendingPayments;
+    } catch (error) {
+      console.error('❌ Error fetching pending payments:', error);
       return [];
     }
   }

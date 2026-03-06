@@ -87,7 +87,7 @@
 - [ ] **Deploy completado sin errores** ✅
 
 - [ ] **Anotar la URL del deploy**
-  - URL: https://casin.web.app
+  - URL: https://casin-crm.web.app
 
 ---
 
@@ -96,7 +96,7 @@
 ### Verificación Básica
 
 - [ ] **Abrir la aplicación en el navegador**
-  - URL: https://casin.web.app
+  - URL: https://casin-crm.web.app
 
 - [ ] **La página carga correctamente**
 
@@ -169,7 +169,7 @@
 
 - [ ] **Workflow completa exitosamente** ✅
 
-- [ ] **Verificar deploy en https://casin.web.app**
+- [ ] **Verificar deploy en https://casin-crm.web.app**
 
 ---
 
@@ -243,7 +243,7 @@
 
 - **Fecha del deploy**: _______________
 - **Versión**: _______________
-- **URL de producción**: https://casin.web.app
+- **URL de producción**: https://casin-crm.web.app
 - **URL alternativa**: https://casinbbdd.web.app
 - **Tiempo de build**: _______________
 - **Tiempo de deploy**: _______________
@@ -268,7 +268,7 @@
 Si todos los checks están marcados, ¡felicidades! 🎉
 
 Tu aplicación está desplegada en:
-- **https://casin.web.app**
+- **https://casin-crm.web.app**
 - **https://casinbbdd.web.app**
 
 ---

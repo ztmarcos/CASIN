@@ -2,11 +2,11 @@
 
 ## 📋 Descripción
 
-Este documento describe cómo hacer deploy de la aplicación CASIN CRM en Firebase Hosting usando el dominio `casin.web.app`.
+Este documento describe cómo hacer deploy de la aplicación CASIN CRM en Firebase Hosting usando el dominio `casin-crm.web.app`.
 
 ## 🏗️ Arquitectura
 
-- **Frontend**: React + Vite → Firebase Hosting (`casin.web.app`)
+- **Frontend**: React + Vite → Firebase Hosting (`casin-crm.web.app`)
 - **Backend**: Node.js + Express → Heroku (APIs)
 - **Base de datos**: Firestore (Firebase)
 - **Storage**: Firebase Storage
@@ -15,7 +15,7 @@ Este documento describe cómo hacer deploy de la aplicación CASIN CRM en Fireba
 
 ### Firebase Project
 - **Project ID**: `casinbbdd`
-- **Hosting URL**: `https://casin.web.app` y `https://casinbbdd.web.app`
+- **Hosting URL**: `https://casin-crm.web.app` y `https://casinbbdd.web.app`
 - **Firestore Database**: `(default)` en región `nam5`
 
 ### Archivos de Configuración
@@ -119,7 +119,7 @@ npm run deploy:all
 
 ## 🌐 URLs de la Aplicación
 
-- **Producción**: https://casin.web.app
+- **Producción**: https://casin-crm.web.app
 - **Alternativa**: https://casinbbdd.web.app
 - **Backend API**: Tu URL de Heroku (mantener actual)
 
@@ -207,7 +207,7 @@ firebase deploy --only firestore:rules --debug
 - [ ] Login en Firebase CLI (`firebase login`)
 - [ ] Proyecto correcto seleccionado (`firebase use casinbbdd`)
 - [ ] Deploy (`firebase deploy --only hosting`)
-- [ ] Verificar en https://casin.web.app
+- [ ] Verificar en https://casin-crm.web.app
 - [ ] Probar funcionalidades principales
 - [ ] Verificar conexión con backend de Heroku
 - [ ] Verificar acceso a Firestore y Storage

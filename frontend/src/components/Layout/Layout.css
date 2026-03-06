@@ -3,7 +3,9 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
+  overflow-x: hidden;
 }
 
 .top-bar {
@@ -15,6 +17,7 @@
   border-bottom: 1px solid var(--border-color);
   height: 45px;
   width: 100%;
+  min-width: 0; /* permite que flex hijos se encojan en móvil */
   position: fixed;
   top: 0;
   left: 0;
@@ -93,6 +96,7 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  flex-shrink: 0; /* nav no se comprime, hace scroll si hace falta */
 }
 
 .top-nav a {
@@ -121,6 +125,10 @@
 .nav-icon {
   width: 0.9rem;
   height: 0.9rem;
+}
+
+.top-bar-hidden {
+  display: none !important;
 }
 
 .top-nav a.nav-disabled,
@@ -207,6 +215,10 @@
   padding: 0;
   flex: 1;
   width: 100%;
+  min-height: calc(100vh - 45px);
+  min-height: calc(100dvh - 45px);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .desktop-only {
@@ -223,6 +235,8 @@
   
   .main-content {
     margin-top: 38px;
+    min-height: calc(100vh - 38px);
+    min-height: calc(100dvh - 38px);
   }
   
   .logo-text {
@@ -274,6 +288,8 @@
   
   .main-content {
     margin-top: 35px;
+    min-height: calc(100vh - 35px);
+    min-height: calc(100dvh - 35px);
   }
   
   .left-section {

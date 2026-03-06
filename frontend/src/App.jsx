@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, Component } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Dashboard from './components/Dashboard/Dashboard'
@@ -39,23 +39,89 @@ import Cotiza from './components/Cotiza/Cotiza'
 import Clientes from './components/Clientes/Clientes'
 import Resumen from './components/Resumen/Resumen'
 
+// Error Boundary: evita pantalla blanca si algo falla (p. ej. en móvil)
+class AppErrorBoundary extends Component {
+  state = { hasError: false, error: null }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('AppErrorBoundary:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '2rem',
+          background: 'var(--bg-secondary, #f8f9fa)',
+          color: 'var(--text-primary, #212529)',
+          textAlign: 'center',
+          fontFamily: 'system-ui, sans-serif'
+        }}>
+          <h1 style={{ marginBottom: '1rem', fontSize: '1.5rem' }}>Algo salió mal</h1>
+          <p style={{ marginBottom: '1.5rem', color: 'var(--text-secondary, #495057)' }}>
+            Si ves esto en móvil, recarga la página o prueba desde escritorio.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.75rem 1.5rem',
+              fontSize: '1rem',
+              background: 'var(--accent-color, #2563eb)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer'
+            }}
+          >
+            Recargar
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 // Componente protector de rutas con verificación de permisos
 const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
   const { user, loading } = useAuth();
   const { needsTeamSetup, isLoadingTeam, userTeam, canAccessTeamData, isActiveMember } = useTeam();
   
-  console.log('🛡️ ProtectedRoute: State check', {
-    user: !!user,
-    userEmail: user?.email,
-    loading,
-    isLoadingTeam,
-    needsTeamSetup,
-    userTeam: !!userTeam,
-    teamName: userTeam?.name,
-    requireAdminAccess,
-    canAccessTeamData: canAccessTeamData ? canAccessTeamData() : false,
-    isActiveMember: isActiveMember ? isActiveMember() : false
-  });
+  // 🛠️ BYPASS DE DESARROLLO: Permitir acceso sin auth en localhost
+  const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const DEV_BYPASS = isDevelopment && localStorage.getItem('dev_bypass_auth') === 'true';
+  
+  if (import.meta.env.DEV && typeof window !== 'undefined' && window.__LOG_PROTECTED_ROUTE__) {
+    console.log('🛡️ ProtectedRoute: State check', {
+      user: !!user,
+      userEmail: user?.email,
+      loading,
+      isLoadingTeam,
+      needsTeamSetup,
+      userTeam: !!userTeam,
+      teamName: userTeam?.name,
+      requireAdminAccess,
+      canAccessTeamData: canAccessTeamData ? canAccessTeamData() : false,
+      isActiveMember: isActiveMember ? isActiveMember() : false,
+      isDevelopment,
+      DEV_BYPASS
+    });
+  }
+  
+  // 🛠️ BYPASS: Si está en desarrollo y el bypass está activado, permitir acceso directo
+  if (DEV_BYPASS) {
+    console.log('🛠️ DEV MODE: Bypassing authentication');
+    return children;
+  }
   
   // 1. Primero verificar si está cargando la autenticación
   if (loading) {
@@ -73,8 +139,53 @@ const ProtectedRoute = ({ children, requireAdminAccess = false }) => {
     );
   }
   
-  // 2. Si no está autenticado, mostrar Google Login
+  // 2. Si no está autenticado, mostrar Google Login (con opción de bypass en desarrollo)
   if (!user) {
+    // En desarrollo, mostrar opción de bypass
+    if (isDevelopment) {
+      return (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '100vh',
+          padding: '2rem'
+        }}>
+          <GoogleLogin />
+          <div style={{ 
+            marginTop: '2rem', 
+            padding: '1rem', 
+            background: '#f8f9fa', 
+            borderRadius: '8px',
+            maxWidth: '400px',
+            textAlign: 'center'
+          }}>
+            <p style={{ marginBottom: '1rem', color: '#666' }}>
+              🛠️ Modo Desarrollo: Puedes activar el bypass de autenticación
+            </p>
+            <button
+              onClick={() => {
+                localStorage.setItem('dev_bypass_auth', 'true');
+                window.location.reload();
+              }}
+              style={{
+                background: '#28a745',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '6px',
+                fontSize: '1rem',
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              ✅ Activar Bypass de Auth (Solo Desarrollo)
+            </button>
+          </div>
+        </div>
+      );
+    }
     return <GoogleLogin />;
   }
   
@@ -393,14 +504,16 @@ function App() {
       <AuthProvider>
         <TeamProvider>
           <ThemeProvider>
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true
-              }}
-            >
-              <AppRoutes />
-            </BrowserRouter>
+            <AppErrorBoundary>
+              <BrowserRouter
+                future={{
+                  v7_startTransition: true,
+                  v7_relativeSplatPath: true
+                }}
+              >
+                <AppRoutes />
+              </BrowserRouter>
+            </AppErrorBoundary>
           </ThemeProvider>
         </TeamProvider>
       </AuthProvider>

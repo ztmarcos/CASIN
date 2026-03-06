@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import activityService from '../../services/activityService';
-import { API_URL } from '../../config/api.js';
+import { API_URL, FIREBASE_API } from '../../config/api.js';
 import './Resumen.css';
 import { toast } from 'react-hot-toast';
 
@@ -21,7 +21,7 @@ const Resumen = () => {
 
   const loadAutoGenerateSetting = async () => {
     try {
-      const response = await fetch(`${API_URL}/app-config/resumen-auto-generate`);
+      const response = await fetch(FIREBASE_API.getResumenConfig);
       if (response.ok) {
         const result = await response.json();
         setAutoGenerate(result.enabled || false);
@@ -33,8 +33,8 @@ const Resumen = () => {
 
   const saveAutoGenerateSetting = async (enabled) => {
     try {
-      await fetch(`${API_URL}/app-config/resumen-auto-generate`, {
-        method: 'PUT',
+      await fetch(FIREBASE_API.updateResumenConfig, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled })
       });
@@ -88,7 +88,7 @@ const Resumen = () => {
       // Step 2: Send to GPT for analysis
       console.log('🤖 Sending to GPT for analysis...');
       
-      const response = await fetch(`${API_URL}/gpt/analyze-activity`, {
+      const response = await fetch(FIREBASE_API.gptAnalyzeActivity, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data)
@@ -130,7 +130,7 @@ const Resumen = () => {
       // Send email to both recipients
       const recipients = ['ztmarcos@gmail.com', 'marcoszavala09@gmail.com'];
       
-      const response = await fetch(`${API_URL}/email/send-welcome`, {
+      const response = await fetch(FIREBASE_API.sendEmail, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -288,7 +288,7 @@ const Resumen = () => {
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
-                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de Inicio</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Aseguradora</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Capturado por</th>
                       </tr>
                     </thead>
@@ -297,8 +297,8 @@ const Resumen = () => {
                         <tr style="border-bottom: 1px solid #e5e5e5;">
                           <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
                           <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
-                          <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
-                          <td style="padding: 10px; font-size: 13px;">${policy.fecha_inicio && policy.fecha_inicio !== 'N/A' ? new Date(policy.fecha_inicio).toLocaleDateString('es-MX') : 'N/A'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.ramo || policy.tableName || '-'}</td>
+                          <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || '-'}</td>
                           <td style="padding: 10px; font-size: 13px;">${policy.capturedBy || '-'}</td>
                         </tr>
                       `).join('')}
@@ -309,6 +309,76 @@ const Resumen = () => {
                 `}
               </div>
             </div>
+            
+            <!-- Payments Made -->
+            ${summaryData.paymentsMade && summaryData.paymentsMade.total > 0 ? `
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">✅ Pagos Realizados (${summaryData.paymentsMade?.total || 0})</h2>
+              <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; border: 1px solid #86efac;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #dcfce7; border-bottom: 2px solid #22c55e;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Tipo de Pago</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Pagado por</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryData.paymentsMade.payments.slice(0, 5).map(payment => `
+                      <tr style="border-bottom: 1px solid #d1fae5;">
+                        <td style="padding: 10px; font-size: 13px;">${payment.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${payment.tableName || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${payment.paymentType || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${payment.paidBy || '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            ` : ''}
+            
+            <!-- Payments Pending -->
+            ${summaryData.paymentsPending && summaryData.paymentsPending.total > 0 ? `
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pagos Pendientes (${summaryData.paymentsPending?.total || 0})</h2>
+              <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; border: 1px solid #fbbf24;">
+                <table style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr style="background-color: #fde68a; border-bottom: 2px solid #f59e0b;">
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                      <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma de Pago</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${summaryData.paymentsPending.payments.slice(0, 5).map(policy => `
+                      <tr style="border-bottom: 1px solid #fed7aa;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.forma_pago || '-'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            ` : ''}
+            
+            <!-- System Updates -->
+            ${summaryData.systemUpdates && summaryData.systemUpdates.total > 0 ? `
+            <div style="margin-bottom: 30px;">
+              <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">🔄 Actualizaciones del Sistema (${summaryData.systemUpdates?.total || 0})</h2>
+              <div style="background-color: #dbeafe; border-radius: 8px; padding: 20px; border: 1px solid #60a5fa;">
+                <p style="margin: 0; font-size: 15px; color: #1e40af;">
+                  ${summaryData.systemUpdates.description || `Se realizaron ${summaryData.systemUpdates.total} deployment${summaryData.systemUpdates.total > 1 ? 's' : ''} a Firebase durante este período.`}
+                </p>
+              </div>
+            </div>
+            ` : ''}
             
             <!-- Cancelled Policies -->
             <div style="margin-bottom: 30px;">
@@ -591,6 +661,7 @@ const Resumen = () => {
                       <th>Póliza</th>
                       <th>Contratante</th>
                       <th>Ramo</th>
+                      <th>Aseguradora</th>
                       <th>Fecha de Inicio</th>
                       <th>Capturado por</th>
                     </tr>
@@ -600,7 +671,8 @@ const Resumen = () => {
                       <tr key={idx}>
                         <td>{policy.numero_poliza}</td>
                         <td>{policy.contratante}</td>
-                        <td>{policy.ramo}</td>
+                        <td>{policy.ramo || policy.tableName}</td>
+                        <td>{policy.aseguradora || '-'}</td>
                         <td>
                           {policy.fecha_inicio && policy.fecha_inicio !== 'N/A' 
                             ? new Date(policy.fecha_inicio).toLocaleDateString('es-MX')
@@ -618,6 +690,81 @@ const Resumen = () => {
               </div>
             )}
           </div>
+
+          {/* Payments Made */}
+          {summaryData.paymentsMade && summaryData.paymentsMade.total > 0 && (
+            <div className="section-card success">
+              <h2>Pagos Realizados ({summaryData.paymentsMade?.total || 0})</h2>
+              <div className="policies-table-container">
+                <table className="policies-table">
+                  <thead>
+                    <tr>
+                      <th>Póliza</th>
+                      <th>Ramo</th>
+                      <th>Tipo de Pago</th>
+                      <th>Pagado por</th>
+                      <th>Fecha</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryData.paymentsMade.payments.map((payment, idx) => (
+                      <tr key={idx}>
+                        <td>{payment.numero_poliza}</td>
+                        <td>{payment.tableName || '-'}</td>
+                        <td>{payment.paymentType}</td>
+                        <td>{payment.paidBy}</td>
+                        <td>{payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('es-MX') : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Payments Pending */}
+          {summaryData.paymentsPending && summaryData.paymentsPending.total > 0 && (
+            <div className="section-card warning">
+              <h2>Pagos Pendientes ({summaryData.paymentsPending?.total || 0})</h2>
+              <div className="policies-table-container">
+                <table className="policies-table">
+                  <thead>
+                    <tr>
+                      <th>Póliza</th>
+                      <th>Contratante</th>
+                      <th>Ramo</th>
+                      <th>Forma de Pago</th>
+                      <th>Monto Parcial</th>
+                      <th>Próximo Pago</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryData.paymentsPending.payments.map((policy, idx) => (
+                      <tr key={idx}>
+                        <td>{policy.numero_poliza}</td>
+                        <td>{policy.contratante}</td>
+                        <td>{policy.ramo}</td>
+                        <td>{policy.forma_pago}</td>
+                        <td>${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                        <td>{policy.fecha_proximo_pago ? new Date(policy.fecha_proximo_pago).toLocaleDateString('es-MX') : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* System Updates */}
+          {summaryData.systemUpdates && summaryData.systemUpdates.total > 0 && (
+            <div className="section-card info">
+              <h2>Actualizaciones del Sistema ({summaryData.systemUpdates?.total || 0})</h2>
+              <p className="system-updates-description">
+                {summaryData.systemUpdates.description || 
+                 `Se realizaron ${summaryData.systemUpdates.total} deployment${summaryData.systemUpdates.total > 1 ? 's' : ''} a Firebase durante este período.`}
+              </p>
+            </div>
+          )}
 
           {/* Cancelled Policies */}
           <div className="section-card">

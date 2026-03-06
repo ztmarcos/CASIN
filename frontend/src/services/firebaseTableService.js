@@ -6,6 +6,7 @@ class FirebaseTableService {
     this.firebaseService = firebaseService;
     this.currentTableName = null;
     this.currentTableTitle = null;
+    this.currentTeamId = null;
     
     // Available Firebase collections (equivalent to MySQL tables)
     this.availableCollections = [
@@ -252,6 +253,21 @@ class FirebaseTableService {
   }
 
   /**
+   * Set the current team ID for API calls
+   */
+  setTeam(teamId) {
+    this.currentTeamId = teamId;
+    console.log(`🏢 FirebaseTableService: Team set to ${teamId}`);
+  }
+
+  /**
+   * Get the team query parameter for API calls
+   */
+  getTeamParam() {
+    return this.currentTeamId ? `team=${this.currentTeamId}` : '';
+  }
+
+  /**
    * Discover collections by testing API endpoints
    */
   async discoverCollections() {
@@ -266,9 +282,13 @@ class FirebaseTableService {
     
     console.log('🔍 Discovering collections by testing API endpoints...');
     
+    const teamParam = this.getTeamParam();
+    const separator = teamParam ? '?' : '';
+    
     for (const name of possibleNames) {
               try {
-          const response = await fetch(`${API_URL}/data/${name}`);
+          const url = `${API_URL}/data/${name}${separator}${teamParam}`;
+          const response = await fetch(url);
           if (response.ok) {
             const result = await response.json();
             const count = result.total || 0;
@@ -334,7 +354,10 @@ class FirebaseTableService {
             try {
               // Add random timestamp to avoid browser caching
               const timestamp = Date.now();
-              const response = await fetch(`${API_URL}/data/${collection.name}?nocache=${timestamp}&_t=${Math.random()}`);
+              const teamParam = this.getTeamParam();
+              const separator = teamParam ? '&' : '?';
+              const url = `${API_URL}/data/${collection.name}?nocache=${timestamp}&_t=${Math.random()}${separator}${teamParam}`;
+              const response = await fetch(url);
               if (response.ok) {
                 const result = await response.json();
                 count = result.total || (result.data ? result.data.length : 0);
@@ -376,14 +399,23 @@ class FirebaseTableService {
       // Set current table when getting data
       this.setCurrentTable(tableName);
       
+      // Build URL with team parameter
+      const teamParam = this.getTeamParam();
+      const separator = teamParam ? '&' : '';
+      const url = `${API_URL}/data/${tableName}?nocache=true${separator}${teamParam}`;
+      
+      console.log(`🌐 Fetching from: ${url}`);
+      
       // Use backend API instead of direct Firebase calls
-      const response = await fetch(`${API_URL}/data/${tableName}?nocache=true`);
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const result = await response.json();
       const documents = result.data || [];
+      
+      console.log(`✅ Received ${documents.length} documents for ${tableName}`);
       
       return {
         data: documents,
@@ -407,14 +439,17 @@ class FirebaseTableService {
       // Use provided documents or fetch from API
       let sampleDocs = documents;
              if (!sampleDocs || sampleDocs.length === 0) {
-         const response = await fetch(`${API_URL}/data/${tableName}?nocache=true`);
+         const teamParam = this.getTeamParam();
+         const separator = teamParam ? '&' : '';
+         const url = `${API_URL}/data/${tableName}?nocache=true${separator}${teamParam}`;
+         const response = await fetch(url);
          if (response.ok) {
            const result = await response.json();
            sampleDocs = (result.data || []).slice(0, 5); // Take first 5 for sampling
          } else {
            return [];
          }
-       }
+      }
       
       if (sampleDocs.length === 0) {
         return [];
@@ -575,8 +610,11 @@ class FirebaseTableService {
     try {
       console.log(`➕ Inserting new document into ${tableName} via backend API`);
       
-      // Use backend API instead of direct Firebase call to ensure cache invalidation
-      const response = await fetch(`${API_URL}/data/${tableName}`, {
+      const teamParam = this.getTeamParam();
+      const separator = teamParam ? '?' : '';
+      const url = `${API_URL}/data/${tableName}${separator}${teamParam}`;
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

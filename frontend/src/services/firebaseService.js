@@ -794,44 +794,11 @@ class FirebaseService {
     }
   }
 
-  // Get all records from a table
-  async getAll(tableName, limitCount = 50) {
-    if (!FIREBASE_ENABLED) {
-      console.log(`🔥 Firebase disabled - returning empty data for ${tableName}`);
-      return { success: true, data: [], count: 0, source: 'Backend' };
-    }
-    
-    if (!this.isConnected) {
-      throw new Error('Firebase not connected');
-    }
-    
-    try {
-      const q = query(
-        collection(this.db, tableName),
-        orderBy('id'),
-        limit(limitCount)
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const records = [];
-      
-      querySnapshot.forEach((doc) => {
-        records.push({
-          firebaseId: doc.id,
-          ...doc.data()
-        });
-      });
-      
-      return {
-        success: true,
-        data: records,
-        count: records.length,
-        source: 'Firebase'
-      };
-    } catch (error) {
-      console.error(`Error getting ${tableName}:`, error);
-      throw error;
-    }
+  // Get all records from a table (legacy method - redirects to main getAll)
+  // This method is kept for backwards compatibility but now uses the main getAll method
+  async getAllLegacy(tableName, limitCount = 50) {
+    console.log(`⚠️ Using legacy getAllLegacy method, redirecting to main getAll for ${tableName}`);
+    return this.getAll(tableName, limitCount, false, true);
   }
 
   // Search records by text

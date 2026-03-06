@@ -15,31 +15,81 @@ const Clientes = () => {
   const [sortOrder, setSortOrder] = useState('asc');
   const [filterByStatus, setFilterByStatus] = useState('all');
   const [filterByRamo, setFilterByRamo] = useState('all');
+  const [editingMetadata, setEditingMetadata] = useState({
+    clientName: '',
+    emailPersonal: '',
+    telefonoCasa: '',
+    telefonoTrabajo: '',
+    telefonoCelular: '',
+    ocupacion: '',
+    notas: ''
+  });
+  const [showCreateClient, setShowCreateClient] = useState(false);
+  const [newClientMetadata, setNewClientMetadata] = useState({
+    clientName: '',
+    emailPersonal: '',
+    telefonoCasa: '',
+    telefonoTrabajo: '',
+    telefonoCelular: '',
+    ocupacion: '',
+    notas: ''
+  });
+  const [creatingClient, setCreatingClient] = useState(false);
+  const [deletingClientId, setDeletingClientId] = useState(null);
+  const [savingMetadata, setSavingMetadata] = useState(false);
+  const [policiesExpanded, setPoliciesExpanded] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+
+  // Primer valor no vacío de las pólizas (para mostrar en directorio, solo lectura)
+  const getFirstFromPolicies = (policies, field) => {
+    if (!policies?.length) return '';
+    const key = field === 'telefono' ? 'telefono' : field;
+    const found = policies.find(p => p[key] && p[key] !== 'N/A');
+    return found ? String(found[key]).trim() : '';
+  };
 
   useEffect(() => {
     loadClients();
   }, []);
 
   useEffect(() => {
+    if (!selectedClient) return;
+    setEditingMetadata({
+      clientName: selectedClient.clientName ?? '',
+      emailPersonal: selectedClient.emailPersonal ?? '',
+      telefonoCasa: selectedClient.telefonoCasa ?? '',
+      telefonoTrabajo: selectedClient.telefonoTrabajo ?? '',
+      telefonoCelular: selectedClient.telefonoCelular ?? '',
+      ocupacion: selectedClient.ocupacion ?? '',
+      notas: selectedClient.notas ?? ''
+    });
+    setPoliciesExpanded(false);
+    setEditingField(null);
+  }, [selectedClient?.id]);
+
+  useEffect(() => {
     filterAndSortClients();
   }, [clients, searchTerm, sortBy, sortOrder, filterByStatus, filterByRamo]);
 
-  const loadClients = async () => {
+  const loadClients = async (silent = false, keepSelectedId = null, forceRefresh = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const [clientsData, statsData] = await Promise.all([
-        firebaseClientesService.getAllClients(),
+        firebaseClientesService.getAllClients(forceRefresh),
         firebaseClientesService.getClientStats()
       ]);
-      
       setClients(clientsData);
       setStats(statsData);
-      toast.success(`Cargados ${clientsData.length} clientes`);
+      if (keepSelectedId) {
+        const next = clientsData.find(c => c.id === keepSelectedId);
+        if (next) setSelectedClient(next);
+      }
+      if (!silent) toast.success(`Cargados ${clientsData.length} clientes`);
     } catch (error) {
       console.error('Error loading clients:', error);
       toast.error('Error al cargar los clientes');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -50,10 +100,10 @@ const Clientes = () => {
     if (searchTerm) {
       const normalizedSearch = searchTerm.toLowerCase();
       filtered = filtered.filter(client =>
-        client.clientName.toLowerCase().includes(normalizedSearch) ||
-        client.policies.some(policy => 
-          policy.numero_poliza.toLowerCase().includes(normalizedSearch) ||
-          policy.aseguradora.toLowerCase().includes(normalizedSearch)
+        (client.clientName && String(client.clientName).toLowerCase().includes(normalizedSearch)) ||
+        client.policies.some(policy =>
+          (policy.numero_poliza != null && String(policy.numero_poliza).toLowerCase().includes(normalizedSearch)) ||
+          (policy.aseguradora != null && String(policy.aseguradora).toLowerCase().includes(normalizedSearch))
         )
       );
     }
@@ -78,24 +128,23 @@ const Clientes = () => {
     // Ordenar
     filtered.sort((a, b) => {
       let aValue, bValue;
-      
+
       switch (sortBy) {
         case 'name':
-          aValue = a.clientName.toLowerCase();
-          bValue = b.clientName.toLowerCase();
+          aValue = String(a.clientName ?? '').toLowerCase();
+          bValue = String(b.clientName ?? '').toLowerCase();
           break;
         case 'policies':
           aValue = a.totalPolicies;
           bValue = b.totalPolicies;
           break;
-
         case 'active':
           aValue = a.activePolicies;
           bValue = b.activePolicies;
           break;
         default:
-          aValue = a.clientName.toLowerCase();
-          bValue = b.clientName.toLowerCase();
+          aValue = String(a.clientName ?? '').toLowerCase();
+          bValue = String(b.clientName ?? '').toLowerCase();
       }
 
       if (sortOrder === 'asc') {
@@ -108,39 +157,103 @@ const Clientes = () => {
     setFilteredClients(filtered);
   };
 
-  const handleRefresh = async () => {
-    await loadClients();
-  };
-
   const handleClientClick = (client) => {
     setSelectedClient(selectedClient?.id === client.id ? null : client);
+  };
+
+  const handleSaveMetadata = async (e) => {
+    e?.stopPropagation();
+    if (!selectedClient) return;
+    const name = String(editingMetadata.clientName ?? '').trim();
+    const meta = {
+      clientName: name || selectedClient.clientName || selectedClient.id,
+      emailPersonal: editingMetadata.emailPersonal ?? '',
+      telefonoCasa: editingMetadata.telefonoCasa ?? '',
+      telefonoTrabajo: editingMetadata.telefonoTrabajo ?? '',
+      telefonoCelular: editingMetadata.telefonoCelular ?? '',
+      ocupacion: editingMetadata.ocupacion ?? '',
+      notas: editingMetadata.notas ?? ''
+    };
+    try {
+      setSavingMetadata(true);
+      await firebaseClientesService.updateClientMetadata(selectedClient.id, meta);
+      await loadClients(true, selectedClient?.id);
+      toast.success('Datos guardados');
+    } catch (err) {
+      console.error('Error saving client metadata:', err);
+      toast.error('Error al guardar');
+    } finally {
+      setSavingMetadata(false);
+    }
+  };
+
+  const handleCreateClient = async (e) => {
+    e?.preventDefault();
+    const name = String(newClientMetadata.clientName ?? '').trim();
+    if (!name) {
+      toast.error('Escribe el nombre del cliente');
+      return;
+    }
+    try {
+      setCreatingClient(true);
+      await firebaseClientesService.createClient(newClientMetadata);
+      setNewClientMetadata({
+        clientName: '',
+        emailPersonal: '',
+        telefonoCasa: '',
+        telefonoTrabajo: '',
+        telefonoCelular: '',
+        ocupacion: '',
+        notas: ''
+      });
+      setShowCreateClient(false);
+      await loadClients(true);
+      toast.success('Cliente creado');
+    } catch (err) {
+      console.error('Error creating client:', err);
+      toast.error(err.message || 'Error al crear cliente');
+    } finally {
+      setCreatingClient(false);
+    }
+  };
+
+  const togglePolicies = (e) => {
+    e.stopPropagation();
+    setPoliciesExpanded(prev => !prev);
+  };
+
+  const handleDeleteClient = async (e) => {
+    e?.stopPropagation();
+    if (!selectedClient) return;
+    if (selectedClient.totalPolicies > 0) {
+      toast.error('No se puede borrar: el cliente tiene pólizas asociadas.');
+      return;
+    }
+    if (!window.confirm(`¿Borrar al cliente "${selectedClient.clientName}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      setDeletingClientId(selectedClient.id);
+      await firebaseClientesService.deleteClient(selectedClient.id);
+      setSelectedClient(null);
+      await loadClients(true);
+      toast.success('Cliente eliminado');
+    } catch (err) {
+      console.error('Error deleting client:', err);
+      toast.error(err.message || 'Error al eliminar');
+    } finally {
+      setDeletingClientId(null);
+    }
   };
 
 
 
   const formatDate = (dateString) => {
-    if (!dateString || dateString === 'N/A') return 'N/A';
-    
+    if (dateString == null || dateString === '' || String(dateString).trim() === '' || String(dateString) === 'N/A') return '—';
     try {
-      // Convert to DD/MMM/YYYY format
-      const formattedDate = toDDMMMYYYY(dateString);
-      return formattedDate || dateString;
-      
+      const formatted = toDDMMMYYYY(dateString);
+      return formatted || '—';
     } catch (error) {
-      console.error(`❌ Error formateando fecha ${dateString}:`, error);
-      return dateString;
+      return '—';
     }
-  };
-
-  const getStatusBadge = (client) => {
-    if (client.activePolicies > 0 && client.expiredPolicies === 0) {
-      return <span className="status-badge active">Activas</span>;
-    } else if (client.activePolicies === 0 && client.expiredPolicies > 0) {
-      return <span className="status-badge expired">Expiradas</span>;
-    } else if (client.activePolicies > 0 && client.expiredPolicies > 0) {
-      return <span className="status-badge mixed">Mixtas</span>;
-    }
-    return <span className="status-badge unknown">Desconocido</span>;
   };
 
   const getRamoOptions = () => {
@@ -174,16 +287,94 @@ const Clientes = () => {
           <h1>📋 Directorio de Clientes</h1>
           <p>Directorio unificado de todos los clientes y sus pólizas</p>
         </div>
-        <div className="header-right">
-          <button 
-            className="refresh-btn"
-            onClick={handleRefresh}
-            title="Actualizar datos"
-          >
-            🔄 Actualizar
-          </button>
-        </div>
       </div>
+
+      {showCreateClient && (
+        <div className="create-client-overlay" onClick={() => setShowCreateClient(false)}>
+          <div className="create-client-modal create-client-modal-full" onClick={(e) => e.stopPropagation()}>
+            <h3>Crear cliente</h3>
+            <form onSubmit={handleCreateClient} className="create-client-form">
+              <div className="create-client-field">
+                <label>Nombre</label>
+                <input
+                  type="text"
+                  placeholder="Nombre completo del cliente"
+                  value={newClientMetadata.clientName}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, clientName: e.target.value }))}
+                  className="create-client-input"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="create-client-field">
+                <label>E-mail personal</label>
+                <input
+                  type="email"
+                  placeholder="correo@ejemplo.com"
+                  value={newClientMetadata.emailPersonal}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, emailPersonal: e.target.value }))}
+                  className="create-client-input"
+                />
+              </div>
+              <div className="create-client-field">
+                <label>Tel. casa</label>
+                <input
+                  type="tel"
+                  value={newClientMetadata.telefonoCasa}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, telefonoCasa: e.target.value }))}
+                  className="create-client-input"
+                />
+              </div>
+              <div className="create-client-field">
+                <label>Tel. trabajo</label>
+                <input
+                  type="tel"
+                  value={newClientMetadata.telefonoTrabajo}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, telefonoTrabajo: e.target.value }))}
+                  className="create-client-input"
+                />
+              </div>
+              <div className="create-client-field">
+                <label>Tel. celular</label>
+                <input
+                  type="tel"
+                  value={newClientMetadata.telefonoCelular}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, telefonoCelular: e.target.value }))}
+                  className="create-client-input"
+                />
+              </div>
+              <div className="create-client-field">
+                <label>Ocupación</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Empresario, Contador..."
+                  value={newClientMetadata.ocupacion}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, ocupacion: e.target.value }))}
+                  className="create-client-input"
+                />
+              </div>
+              <div className="create-client-field">
+                <label>Notas</label>
+                <textarea
+                  placeholder="Notas sobre el cliente..."
+                  value={newClientMetadata.notas}
+                  onChange={(e) => setNewClientMetadata(prev => ({ ...prev, notas: e.target.value }))}
+                  className="create-client-textarea"
+                  rows={3}
+                />
+              </div>
+              <div className="create-client-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowCreateClient(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="metadata-save-btn" disabled={creatingClient}>
+                  {creatingClient ? 'Creando…' : 'Crear'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       {stats && (
@@ -250,18 +441,41 @@ const Clientes = () => {
             <option value="active">Ordenar por activas</option>
           </select>
 
-          <button 
+          <button
+            type="button"
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
             className="sort-btn"
+            title={sortOrder === 'asc' ? 'Orden A-Z (clic para Z-A)' : 'Orden Z-A (clic para A-Z)'}
           >
-            {sortOrder === 'asc' ? '↑' : '↓'}
+            <span className="sort-btn-label">{sortOrder === 'asc' ? 'A-Z' : 'Z-A'}</span>
+            <span className="sort-btn-arrow">{sortOrder === 'asc' ? '↑' : '↓'}</span>
           </button>
         </div>
       </div>
 
-      {/* Results count */}
-      <div className="results-info">
-        Mostrando {filteredClients.length} de {clients.length} clientes
+      {/* Results count + Nuevo cliente abajo */}
+      <div className="results-row">
+        <span className="results-info">
+          Mostrando {filteredClients.length} de {clients.length} clientes
+        </span>
+        <button
+          type="button"
+          className="btn-create-client"
+          onClick={() => {
+            setShowCreateClient(true);
+            setNewClientMetadata({
+              clientName: '',
+              emailPersonal: '',
+              telefonoCasa: '',
+              telefonoTrabajo: '',
+              telefonoCelular: '',
+              ocupacion: '',
+              notas: ''
+            });
+          }}
+        >
+          + Nuevo cliente
+        </button>
       </div>
 
       {/* Clients List */}
@@ -279,8 +493,15 @@ const Clientes = () => {
                   <span className="policy-count">
                     📄 {client.totalPolicies} póliza{client.totalPolicies !== 1 ? 's' : ''}
                   </span>
-
-                  {getStatusBadge(client)}
+                  {(client.emailPersonal || client.telefonoCelular || client.telefonoCasa) && (
+                    <span className="client-contact-preview">
+                      {client.emailPersonal && <>✉ {client.emailPersonal}</>}
+                      {(client.emailPersonal && (client.telefonoCelular || client.telefonoCasa)) && ' · '}
+                      {client.telefonoCelular && <>📱 {client.telefonoCelular}</>}
+                      {client.telefonoCelular && client.telefonoCasa && ' · '}
+                      {client.telefonoCasa && <>🏠 {client.telefonoCasa}</>}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="client-actions">
@@ -292,59 +513,253 @@ const Clientes = () => {
 
             {/* Expanded Details */}
             {selectedClient?.id === client.id && (
-              <div className="client-details">
+              <div className="client-details" onClick={(e) => e.stopPropagation()}>
+                {/* Directorio: datos de póliza (solo lectura) + datos editables, misma presentación */}
+                <div className="client-directorio">
+                  <h4>Datos del cliente</h4>
+                  <div className="directorio-list">
+                    <div className="directorio-row">
+                      <span className="directorio-label">Nombre</span>
+                      {editingField === 'clientName' ? (
+                        <input
+                          type="text"
+                          placeholder="Nombre del cliente"
+                          value={editingMetadata.clientName}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, clientName: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('clientName')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.clientName || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Email (póliza)</span>
+                      <span className="directorio-value directorio-value-readonly">
+                        {getFirstFromPolicies(client.policies, 'email') || '—'}
+                      </span>
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Email personal</span>
+                      {editingField === 'emailPersonal' ? (
+                        <input
+                          type="email"
+                          placeholder="correo@ejemplo.com"
+                          value={editingMetadata.emailPersonal}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, emailPersonal: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('emailPersonal')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.emailPersonal || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Teléfono (póliza)</span>
+                      <span className="directorio-value directorio-value-readonly">
+                        {getFirstFromPolicies(client.policies, 'telefono') || '—'}
+                      </span>
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Tel. casa</span>
+                      {editingField === 'telefonoCasa' ? (
+                        <input
+                          type="tel"
+                          value={editingMetadata.telefonoCasa}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, telefonoCasa: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('telefonoCasa')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.telefonoCasa || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Tel. trabajo</span>
+                      {editingField === 'telefonoTrabajo' ? (
+                        <input
+                          type="tel"
+                          value={editingMetadata.telefonoTrabajo}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, telefonoTrabajo: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('telefonoTrabajo')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.telefonoTrabajo || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Tel. celular</span>
+                      {editingField === 'telefonoCelular' ? (
+                        <input
+                          type="tel"
+                          value={editingMetadata.telefonoCelular}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, telefonoCelular: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('telefonoCelular')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.telefonoCelular || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Dirección (póliza)</span>
+                      <span className="directorio-value directorio-value-readonly">
+                        {getFirstFromPolicies(client.policies, 'direccion') || '—'}
+                      </span>
+                    </div>
+                    <div className="directorio-row">
+                      <span className="directorio-label">Ocupación</span>
+                      {editingField === 'ocupacion' ? (
+                        <input
+                          type="text"
+                          placeholder="Ej. Empresario, Contador..."
+                          value={editingMetadata.ocupacion}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, ocupacion: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-input"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('ocupacion')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.ocupacion || '—'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="directorio-row directorio-row-full">
+                      <span className="directorio-label">Notas</span>
+                      {editingField === 'notas' ? (
+                        <textarea
+                          placeholder="Notas sobre el cliente..."
+                          value={editingMetadata.notas}
+                          onChange={(e) => setEditingMetadata(prev => ({ ...prev, notas: e.target.value }))}
+                          onBlur={() => setEditingField(null)}
+                          className="directorio-textarea"
+                          rows={3}
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="directorio-value directorio-value-editable"
+                          onClick={() => setEditingField('notas')}
+                          title="Clic para editar"
+                        >
+                          {editingMetadata.notas || '—'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="directorio-actions">
+                    <button
+                      type="button"
+                      className="metadata-save-btn"
+                      onClick={(e) => { handleSaveMetadata(e); setEditingField(null); }}
+                      disabled={savingMetadata}
+                    >
+                      {savingMetadata ? 'Guardando…' : 'Guardar datos'}
+                    </button>
+                    {client.totalPolicies === 0 && (
+                      <button
+                        type="button"
+                        className="btn-delete-client"
+                        onClick={handleDeleteClient}
+                        disabled={deletingClientId === client.id}
+                        title="Borrar cliente (solo si no tiene pólizas)"
+                      >
+                        {deletingClientId === client.id ? 'Borrando…' : 'Borrar cliente'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pólizas (colapsable) */}
                 <div className="policies-section">
-                  <h4>📋 Pólizas ({client.policies.length})</h4>
-                  <div className="policies-grid">
-                    {client.policies.map((policy, index) => (
-                      <div key={`${policy.id}-${index}`} className="policy-card">
-                        <div className="policy-header">
-                          <span className="policy-number">#{policy.numero_poliza}</span>
-                          <span className="policy-ramo">{policy.ramo}</span>
+                  <button
+                    type="button"
+                    className="policies-section-header"
+                    onClick={togglePolicies}
+                    aria-expanded={policiesExpanded}
+                  >
+                    <span className="policies-section-arrow">{policiesExpanded ? '▼' : '▶'}</span>
+                    <span>Pólizas ({client.policies.length})</span>
+                  </button>
+                  <div className={`policies-section-content ${policiesExpanded ? 'is-expanded' : ''}`}>
+                    <div className="policies-grid">
+                      {client.policies.map((policy, index) => (
+                        <div key={`${policy.id}-${index}`} className="policy-card">
+                          <div className="policy-header">
+                            <span className="policy-number">#{policy.numero_poliza}</span>
+                            <span className="policy-ramo">{policy.ramo}</span>
+                          </div>
+                          <div className="policy-details">
+                            <p><strong>Vigencia:</strong> {formatDate(policy.vigencia_inicio)} – {formatDate(policy.vigencia_fin)}</p>
+                            {(policy.email && policy.email !== 'N/A') && (
+                              <p><strong>Email:</strong> {policy.email}</p>
+                            )}
+                            {(policy.direccion && policy.direccion !== 'N/A') && (
+                              <p><strong>Dirección:</strong> {policy.direccion}</p>
+                            )}
+                          </div>
+                          <div className="policy-footer">
+                            <span className="policy-table">Tabla: {policy.tableName}</span>
+                            {policy.pdf && policy.pdf !== 'N/A' && (
+                              <a
+                                href={policy.pdf}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="pdf-link"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                📄 Ver PDF
+                              </a>
+                            )}
+                          </div>
                         </div>
-                        <div className="policy-details">
-                          <p><strong>Aseguradora:</strong> {policy.aseguradora}</p>
-                          <p><strong>Vigencia:</strong> {formatDate(policy.vigencia_inicio)} - {formatDate(policy.vigencia_fin)}</p>
-                          <p><strong>Prima:</strong> {policy.prima_total}</p>
-                          <p><strong>Forma de Pago:</strong> {policy.forma_pago}</p>
-                          {policy.email !== 'N/A' && (
-                            <p><strong>Email:</strong> {policy.email}</p>
-                          )}
-                          {policy.telefono !== 'N/A' && (
-                            <p><strong>Teléfono:</strong> {policy.telefono}</p>
-                          )}
-                          {policy.direccion !== 'N/A' && (
-                            <p><strong>Dirección:</strong> {policy.direccion}</p>
-                          )}
-                        </div>
-                        <div className="policy-footer">
-                          <span className="policy-table">Tabla: {policy.tableName}</span>
-                          {policy.pdf !== 'N/A' && (
-                            <a 
-                              href={policy.pdf} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="pdf-link"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              📄 Ver PDF
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
 
                 <div className="client-summary">
-                  <div className="summary-item">
-                    <span className="summary-label">Pólizas Activas:</span>
-                    <span className="summary-value active">{client.activePolicies}</span>
-                  </div>
-                  <div className="summary-item">
-                    <span className="summary-label">Pólizas Expiradas:</span>
-                    <span className="summary-value expired">{client.expiredPolicies}</span>
-                  </div>
                   <div className="summary-item">
                     <span className="summary-label">Ramos:</span>
                     <span className="summary-value">{client.collections.join(', ')}</span>
