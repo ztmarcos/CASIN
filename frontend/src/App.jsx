@@ -38,6 +38,7 @@ import FirebaseTest from './components/FirebaseTest/FirebaseTest'
 import Cotiza from './components/Cotiza/Cotiza'
 import Clientes from './components/Clientes/Clientes'
 import Resumen from './components/Resumen/Resumen'
+import ChatGPT from './components/ChatGPT/ChatGPT'
 
 // Error Boundary: evita pantalla blanca si algo falla (p. ej. en móvil)
 class AppErrorBoundary extends Component {
@@ -410,6 +411,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <Clientes />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/chat-gpt" element={
+        <ProtectedRoute>
+          <Layout>
+            <ChatGPT />
           </Layout>
         </ProtectedRoute>
       } />

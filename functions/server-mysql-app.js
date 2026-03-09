@@ -2286,91 +2286,77 @@ app.get('/api/data/:tableName', validateTeamAccess, async (req, res) => {
   }
 });
 
-// Add dedicated count endpoint
+// Policy table names (no directorio_contactos) – used for consolidated count
+const POLICY_TABLE_NAMES = [
+  'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm', 'hogar'
+];
+
+// Helper: get document count for a collection (uses count aggregation when available)
+async function getCollectionCount(collectionName) {
+  if (!admin.firestore || !db) return 0;
+  try {
+    const colRef = db.collection(collectionName);
+    if (typeof colRef.count === 'function') {
+      const agg = colRef.count();
+      const snapshot = await agg.get();
+      return snapshot.data().count ?? 0;
+    }
+    const snapshot = await colRef.limit(5000).get();
+    return snapshot.size;
+  } catch (err) {
+    console.warn(`⚠️ Count failed for ${collectionName}:`, err.message);
+    return 0;
+  }
+}
+
+// Add dedicated count endpoint (real count for all teams, including CASIN)
 app.get('/api/count/:tableName', validateTeamAccess, async (req, res) => {
   try {
     const { tableName } = req.params;
     const { team } = req.query;
-    
+
     const actualCollectionName = getCollectionName(tableName, team);
-    
+
     console.log(`🔢 Getting count for ${actualCollectionName} (team: ${team || 'CASIN'})`);
-    
-    // Use estimated counts to avoid Firebase quota usage for CASIN
-    const estimatedTotals = {
-      'autos': 33,
-      'vida': 2, 
-      'gmm': 53,
-      'hogar': 51,  // Agregar conteo correcto para hogar
-      'rc': 1,
-      'transporte': 0,
-      'mascotas': 1,
-      'diversos': 1,
-      'negocio': 4,
-      'gruposgmm': 0,
-      'directorio_contactos': 2700
-    };
-    
-    let count = 0;
-    
-    // Para equipos con prefijo team_, obtener conteo real de Firebase
-    if (actualCollectionName !== tableName) {
-      try {
-        const snapshot = await admin.firestore().collection(actualCollectionName).limit(1).get();
-        if (!snapshot.empty) {
-          // Si tiene datos, hacer una consulta más completa para obtener el conteo
-          const fullSnapshot = await admin.firestore().collection(actualCollectionName).get();
-          count = fullSnapshot.size;
-        }
-        console.log(`📊 Real count for team ${team}: ${count}`);
-      } catch (error) {
-        console.warn(`⚠️ Could not get real count for ${actualCollectionName}:`, error.message);
-        count = 0;
-      }
-    } else {
-      // Para CASIN, usar conteos estimados
-      count = estimatedTotals[tableName] || 0;
-    }
-    
+
+    const count = await getCollectionCount(actualCollectionName);
+
+    console.log(`📊 Count for ${actualCollectionName}: ${count}`);
+
     res.json({
       table: tableName,
       actualCollection: actualCollectionName,
-      count: count,
+      count,
       team: team || 'CASIN'
     });
-    
   } catch (error) {
     console.error(`Error getting count for ${tableName}:`, error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Add consolidated policies count endpoint (after the existing count endpoint)
+// Add consolidated policies count endpoint (real counts, respects team)
 app.get('/api/policies/count', async (req, res) => {
   try {
-    console.log('📊 Getting consolidated policies count');
-    
-    // Use estimated counts to avoid Firebase quota usage
-    const policyTotals = {
-      'autos': 33,
-      'vida': 2,
-      'gmm': 53,
-      'rc': 1,
-      'transporte': 0,
-      'mascotas': 1,
-      'diversos': 1,
-      'negocio': 4,
-      'gruposgmm': 0
-    };
-    
-    const total = Object.values(policyTotals).reduce((sum, count) => sum + count, 0);
-    
+    const { team } = req.query;
+    console.log('📊 Getting consolidated policies count (team:', team || 'CASIN', ')');
+
+    const policyTotals = {};
+    let total = 0;
+
+    for (const tableName of POLICY_TABLE_NAMES) {
+      const actualCollectionName = getCollectionName(tableName, team);
+      const count = await getCollectionCount(actualCollectionName);
+      policyTotals[tableName] = count;
+      total += count;
+    }
+
     res.json({
-      total: total,
+      total,
       breakdown: policyTotals,
+      team: team || 'CASIN',
       excluding: 'directorio_contactos'
     });
-    
   } catch (error) {
     console.error('Error getting policies count:', error);
     res.status(500).json({ error: error.message });
@@ -5925,6 +5911,22 @@ function generateDataRecommendations(columnAnalysis, tableName) {
   return recommendations;
 }
 
+function buildPolicyEmailFallback(data, ramo, tipo) {
+  const name = data.destinatarioDisplay || data.destinatario || 'Cliente';
+  const poliza = data.numeroPoliza || 'N/A';
+  const aseguradora = data.aseguradora || 'N/A';
+  const monto = data.montoFormateado || 'N/A';
+  const vigenciaFin = data.vigenciaFinLong || data.vigenciaFin || 'N/A';
+  const vigenciaInicio = data.vigenciaInicio || 'N/A';
+  const tipoLabel = tipo === 'nueva' ? 'nueva póliza' : tipo === 'recibo' ? 'recibo de cobro' : 'renovación';
+  const vehiculo = data.vehiculoLinea || '';
+  const body = ramo === 'autos'
+    ? `<p><strong>Apreciable Asegurado ${name}</strong></p><p>Tengo el gusto de saludarle.</p><p>Me permito enviar su ${tipoLabel} del seguro del auto ${vehiculo ? `<strong>${vehiculo}</strong>` : ''} de la vigencia ${vigenciaInicio} al ${vigenciaFin} con no. de póliza <strong>${poliza}</strong>, asegurada en <strong>${aseguradora}</strong>.</p><p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${monto} pesos</strong>.</p><p>Cordialmente,<br><strong>CASIN Seguros</strong></p>`
+    : `<p><strong>Apreciable Asegurado ${name}</strong></p><p>Tengo el gusto de saludarle.</p><p>Me permito enviar su ${tipoLabel} con no. de póliza <strong>${poliza}</strong>, asegurada en <strong>${aseguradora}</strong>.</p><p>Anexo carátula y recibo por la cantidad de <strong>$${monto} pesos</strong>.</p><p>Cordialmente,<br><strong>CASIN Seguros</strong></p>`;
+  const subject = data.subjectOverride || `Póliza - ${name} - ${poliza}`;
+  return { subject, message: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">${body}</div>` };
+}
+
 // Additional GPT endpoints
 app.post('/api/gpt/analyze-list', async (req, res) => {
   try {
@@ -5957,7 +5959,60 @@ app.post('/api/gpt/generate', async (req, res) => {
     // Generate email content based on type
     let emailContent = {};
     
-    if (type === 'welcome_email') {
+    if (type === 'policy_email') {
+      // GPT-generated policy email using validated data (destinatarioDisplay, montoFormateado, etc.)
+      const ramo = data.ramo || 'default';
+      const tipo = data.tipo || 'renovacion';
+      const ramoLabels = {
+        autos: 'seguro de auto',
+        vida: 'seguro de vida',
+        gmm: 'Gastos Médicos Mayores',
+        hogar: 'seguro de hogar',
+        mascotas: 'seguro de mascotas',
+        negocio: 'seguro de negocio',
+        rc: 'Responsabilidad Civil',
+        transporte: 'seguro de transporte',
+        default: 'póliza'
+      };
+      const tipoLabel = tipo === 'nueva' ? 'nueva póliza' : tipo === 'recibo' ? 'recibo de cobro' : 'renovación';
+      const ramoLabel = ramoLabels[ramo] || ramoLabels.default;
+      const systemPrompt = `Eres un asistente que redacta correos profesionales para una agencia de seguros (CASIN Seguros). 
+Genera ÚNICAMENTE el cuerpo del correo en HTML válido, sin head ni body. Usa solo estas etiquetas: div, p, strong, br, a, hr, span.
+Incluye estilos inline en el primer div: font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;
+El tono debe ser formal y cordial en español (México). No inventes datos: usa solo los que se te pasan.`;
+      const userPrompt = `Redacta un correo para el asegurado con los siguientes datos (usa exactamente estos valores):
+- Nombre del asegurado: ${data.destinatarioDisplay || 'Cliente'}
+- Tipo: ${tipoLabel} de ${ramoLabel}
+- Número de póliza: ${data.numeroPoliza || 'N/A'}
+- Aseguradora: ${data.aseguradora || 'N/A'}
+- Monto a pagar (pesos): $${data.montoFormateado || 'N/A'}
+- Vigencia: ${data.vigenciaInicio || 'N/A'} al ${data.vigenciaFin || 'N/A'}
+${data.vehiculoLinea ? `- Vehículo: ${data.vehiculoLinea}` : ''}
+${data.direccion ? `- Domicilio: ${data.direccion}` : ''}
+Cierra con "Cordialmente, CASIN Seguros". No repitas el mismo dato dos veces.`;
+      if (openai && isOpenAIEnabled) {
+        try {
+          const completion = await openai.chat.completions.create({
+            model: 'gpt-4o-mini',
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.4,
+            max_tokens: 1200
+          });
+          const htmlBody = completion.choices[0]?.message?.content?.trim() || '';
+          const subject = data.subjectOverride || `Póliza ${ramoLabel} - ${data.destinatarioDisplay || 'Cliente'} - Póliza ${data.numeroPoliza || 'N/A'}`;
+          emailContent = { subject, message: htmlBody ? `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">${htmlBody}</div>` : '' };
+        } catch (gptErr) {
+          console.warn('⚠️ GPT policy email failed, using fallback:', gptErr.message);
+          const fallback = buildPolicyEmailFallback(data, ramo, tipo);
+          emailContent = fallback;
+        }
+      } else {
+        emailContent = buildPolicyEmailFallback(data, ramo, tipo);
+      }
+    } else if (type === 'welcome_email') {
       // Email de bienvenida con información completa
       const name = data.nombre_contratante || data.name || 'Cliente';
       const policyNumber = data.numero_poliza || data.policy_number || 'Sin especificar';
@@ -6174,6 +6229,373 @@ app.post('/api/support-chat', async (req, res) => {
     res.status(500).json({ error: 'Support chat error', details: error.message });
   }
 });
+
+// ========================================
+// ChatGPT Endpoints - Full Database Access
+// ========================================
+
+// ChatGPT Message endpoint - Main chat interface
+app.post('/api/chat-gpt/message', async (req, res) => {
+  try {
+    console.log('🤖 ChatGPT message request');
+    const { message, context } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ 
+        error: 'Message is required' 
+      });
+    }
+
+    // Check user permissions
+    const userEmail = context?.userEmail;
+    const allowedUsers = ['marcoszavala09@gmail.com', 'z.t.marcos@gmail.com'];
+    
+    if (!allowedUsers.includes(userEmail)) {
+      return res.status(403).json({ 
+        error: 'Access denied. This feature is restricted to authorized users only.' 
+      });
+    }
+
+    console.log('✅ User authorized:', userEmail);
+    console.log('📝 Processing message:', message.substring(0, 100) + '...');
+
+    // Initialize OpenAI
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+
+    if (!openai.apiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Get database context
+    const databaseContext = await getChatGPTDatabaseContext(context?.teamId);
+    
+    // Build system prompt with full database access
+    const systemPrompt = `Eres un asistente inteligente especializado en el CRM de seguros CASIN con acceso COMPLETO a toda la base de datos de Firebase.
+
+CONTEXTO DE LA BASE DE DATOS:
+${databaseContext}
+
+CAPACIDADES:
+- Acceso completo a Firebase: clientes, pólizas, cumpleaños, directorio
+- Análisis de datos y estadísticas
+- Cálculos complejos y reportes
+- Búsquedas avanzadas en todas las colecciones
+- Información de seguros: autos, vida, GMM, hogar, negocio, etc.
+
+INSTRUCCIONES:
+1. Responde en español de manera profesional y clara
+2. Usa los datos reales de Firebase para responder
+3. Proporciona información específica y detallada
+4. Si necesitas hacer cálculos, hazlos paso a paso
+5. Cita fuentes de datos cuando sea relevante
+6. Si no tienes información suficiente, indícalo claramente
+
+DATOS DISPONIBLES:
+- Clientes y sus pólizas activas/expiradas
+- Cumpleaños extraídos de RFC y fechas explícitas
+- Directorio de contactos completo
+- Estadísticas de seguros por ramo
+- Información de aseguradoras y responsables
+- Fechas de vigencia y montos de pólizas
+
+Usuario actual: ${userEmail}
+Equipo: ${context?.teamId || 'CASIN'}
+
+Responde de manera útil y precisa basándote en los datos reales disponibles.`;
+
+    // Send request to OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    
+    if (!response) {
+      throw new Error('No response from OpenAI');
+    }
+
+    console.log('✅ ChatGPT response generated successfully');
+    
+    // Log the interaction for analytics
+    if (isFirebaseEnabled) {
+      try {
+        await db.collection('chat_gpt_logs').add({
+          userEmail,
+          teamId: context?.teamId || 'CASIN',
+          message: message.substring(0, 500), // Truncate for storage
+          response: response.substring(0, 1000), // Truncate for storage
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          tokensUsed: completion.usage?.total_tokens || 0
+        });
+      } catch (logError) {
+        console.warn('⚠️ Failed to log ChatGPT interaction:', logError);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: response,
+      metadata: {
+        model: 'gpt-4o-mini',
+        tokensUsed: completion.usage?.total_tokens || 0,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ ChatGPT message error:', error);
+    res.status(500).json({ 
+      error: 'Failed to process message', 
+      details: error.message 
+    });
+  }
+});
+
+// Get database schema and available collections
+app.get('/api/chat-gpt/schema', async (req, res) => {
+  try {
+    console.log('🗄️ ChatGPT schema request');
+    const teamId = req.query.team;
+    
+    const schema = await getChatGPTDatabaseSchema(teamId);
+    
+    res.json({
+      success: true,
+      schema,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ ChatGPT schema error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get database schema', 
+      details: error.message 
+    });
+  }
+});
+
+// Query specific data from Firebase
+app.post('/api/chat-gpt/query', async (req, res) => {
+  try {
+    console.log('🔍 ChatGPT query request');
+    const { collection, filters, teamId } = req.body;
+    
+    if (!collection) {
+      return res.status(400).json({ 
+        error: 'Collection name is required' 
+      });
+    }
+
+    const data = await queryChatGPTData(collection, filters, teamId);
+    
+    res.json({
+      success: true,
+      data,
+      collection,
+      count: data.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ ChatGPT query error:', error);
+    res.status(500).json({ 
+      error: 'Failed to query data', 
+      details: error.message 
+    });
+  }
+});
+
+// Get system information and capabilities
+app.get('/api/chat-gpt/info', async (req, res) => {
+  try {
+    console.log('ℹ️ ChatGPT info request');
+    
+    res.json({
+      success: true,
+      info: {
+        model: 'gpt-4o-mini',
+        capabilities: [
+          'Full Firebase database access',
+          'Client and policy analysis',
+          'Birthday and contact management',
+          'Insurance calculations',
+          'Advanced data queries',
+          'Statistical analysis'
+        ],
+        availableCollections: [
+          'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
+          'mascotas', 'transporte', 'rc', 'emant_caratula',
+          'gruposvida', 'gruposautos', 'directorio_contactos',
+          'clientes_metadata'
+        ],
+        restrictedTo: ['marcoszavala09@gmail.com', 'z.t.marcos@gmail.com'],
+        firebaseEnabled: isFirebaseEnabled,
+        openaiEnabled: !!process.env.OPENAI_API_KEY
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ ChatGPT info error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get system info', 
+      details: error.message 
+    });
+  }
+});
+
+// Helper function to get database context for ChatGPT
+async function getChatGPTDatabaseContext(teamId) {
+  if (!isFirebaseEnabled) {
+    return 'Firebase no está disponible en este momento.';
+  }
+
+  try {
+    const collections = [
+      'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
+      'mascotas', 'transporte', 'rc', 'directorio_contactos'
+    ];
+    
+    let context = 'RESUMEN DE BASE DE DATOS:\n\n';
+    let totalRecords = 0;
+    
+    for (const collectionName of collections) {
+      try {
+        const collectionRef = teamId && teamId !== 'CASIN' 
+          ? db.collection(`team_${teamId}_${collectionName}`)
+          : db.collection(collectionName);
+        
+        const snapshot = await collectionRef.limit(1).get();
+        const count = snapshot.size;
+        totalRecords += count;
+        
+        if (count > 0) {
+          const sampleDoc = snapshot.docs[0].data();
+          const fields = Object.keys(sampleDoc).slice(0, 10).join(', ');
+          context += `- ${collectionName}: ~${count}+ registros (campos: ${fields})\n`;
+        }
+      } catch (error) {
+        context += `- ${collectionName}: Error accediendo (${error.message})\n`;
+      }
+    }
+    
+    // Add clients metadata info
+    try {
+      const metadataRef = teamId && teamId !== 'CASIN' 
+        ? db.collection(`team_${teamId}_clientes_metadata`)
+        : db.collection('clientes_metadata');
+      
+      const metadataSnapshot = await metadataRef.limit(1).get();
+      if (metadataSnapshot.size > 0) {
+        context += `- clientes_metadata: Datos personales adicionales de clientes\n`;
+      }
+    } catch (error) {
+      // Ignore metadata errors
+    }
+    
+    context += `\nTOTAL ESTIMADO: ${totalRecords}+ registros en Firebase\n`;
+    context += `EQUIPO: ${teamId || 'CASIN'}\n`;
+    context += `FECHA: ${new Date().toLocaleDateString('es-MX')}\n`;
+    
+    return context;
+    
+  } catch (error) {
+    console.error('Error getting database context:', error);
+    return `Error accediendo a la base de datos: ${error.message}`;
+  }
+}
+
+// Helper function to get database schema
+async function getChatGPTDatabaseSchema(teamId) {
+  if (!isFirebaseEnabled) {
+    return { error: 'Firebase not available' };
+  }
+
+  const collections = [
+    'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
+    'mascotas', 'transporte', 'rc', 'directorio_contactos', 'clientes_metadata'
+  ];
+  
+  const schema = {};
+  
+  for (const collectionName of collections) {
+    try {
+      const collectionRef = teamId && teamId !== 'CASIN' 
+        ? db.collection(`team_${teamId}_${collectionName}`)
+        : db.collection(collectionName);
+      
+      const snapshot = await collectionRef.limit(3).get();
+      
+      if (snapshot.size > 0) {
+        const fields = new Set();
+        snapshot.docs.forEach(doc => {
+          Object.keys(doc.data()).forEach(field => fields.add(field));
+        });
+        
+        schema[collectionName] = {
+          count: snapshot.size,
+          fields: Array.from(fields),
+          available: true
+        };
+      } else {
+        schema[collectionName] = {
+          count: 0,
+          fields: [],
+          available: false
+        };
+      }
+    } catch (error) {
+      schema[collectionName] = {
+        error: error.message,
+        available: false
+      };
+    }
+  }
+  
+  return schema;
+}
+
+// Helper function to query data for ChatGPT
+async function queryChatGPTData(collection, filters = {}, teamId) {
+  if (!isFirebaseEnabled) {
+    throw new Error('Firebase not available');
+  }
+
+  const collectionRef = teamId && teamId !== 'CASIN' 
+    ? db.collection(`team_${teamId}_${collection}`)
+    : db.collection(collection);
+  
+  let query = collectionRef;
+  
+  // Apply filters if provided
+  if (filters.limit) {
+    query = query.limit(parseInt(filters.limit));
+  }
+  
+  if (filters.orderBy) {
+    query = query.orderBy(filters.orderBy, filters.orderDirection || 'asc');
+  }
+  
+  const snapshot = await query.get();
+  const data = [];
+  
+  snapshot.forEach(doc => {
+    data.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return data;
+}
 
 // Notion Debug endpoint
 app.get('/api/notion/debug', async (req, res) => {
