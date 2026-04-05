@@ -80,10 +80,24 @@ function getSMTPConfig() {
 /**
  * Test Function - Send test email
  * HTTP Trigger: https://us-central1-casinbbdd.cloudfunctions.net/testEmail
+ * Secured: requires header X-Test-Email-Secret to match TEST_EMAIL_SECRET (or query ?secret=).
+ * If TEST_EMAIL_SECRET is not set in env, endpoint returns 403 (no emails sent).
  */
 exports.testEmail = onRequest({cors: true}, async (req, res) => {
   try {
-    console.log('📧 Test Email Function triggered');
+    const secret = process.env.TEST_EMAIL_SECRET;
+    const provided = (req.headers['x-test-email-secret'] || req.query?.secret || '').trim();
+    if (!secret) {
+      console.log('📧 testEmail: rejected (TEST_EMAIL_SECRET not set – test emails disabled)');
+      res.status(403).json({ success: false, error: 'Test email disabled. Set TEST_EMAIL_SECRET in Firebase to enable.' });
+      return;
+    }
+    if (provided !== secret) {
+      console.log('📧 testEmail: rejected (invalid or missing secret)');
+      res.status(403).json({ success: false, error: 'Invalid or missing secret. Use header X-Test-Email-Secret or query ?secret=.' });
+      return;
+    }
+    console.log('📧 Test Email Function triggered (authorized)');
     
     // Create transporter
     const transporter = nodemailer.createTransport(getSMTPConfig());
@@ -365,6 +379,7 @@ exports.scheduledBirthdayEmails = onSchedule({
     }
 
     const teamsSnapshot = await db.collection('teams').get();
+    const casinLogoUrl = `${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png`;
     let totalEmailsSent = 0;
     const allEmailResults = [];
 
@@ -440,27 +455,37 @@ exports.scheduledBirthdayEmails = onSchedule({
         }
 
         const emailHTML = `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-              <div style="text-align: center; margin-bottom: 30px;">
-                <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">🎂 ¡Feliz Cumpleaños! 🎂</h1>
-              </div>
-              <div style="text-align: center; margin-bottom: 30px; background-color: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
-                <h2 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">${firstName}</h2>
-              </div>
-              <div style="text-align: center; margin-bottom: 30px;">
-                <p style="color: #ffffff; font-size: 18px; line-height: 1.6; margin: 0;">${personalizedMessage}</p>
-              </div>
-              <div style="text-align: center; margin: 30px 0;"><span style="font-size: 48px;">🎉 🎈 🎁</span></div>
-              <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.3);">
-                <p style="color: #ffffff; font-size: 16px; margin: 0;">Con cariño,</p>
-                <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin: 10px 0 0 0;">${senderName}</p>
-              </div>
-            </div>
-            <div style="text-align: center; margin-top: 20px;">
-              <p style="color: #95a5a6; font-size: 12px; margin: 0;">Este mensaje fue enviado automáticamente por el sistema</p>
-            </div>
-          </div>
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#e8edf3;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;">
+      <tr><td style="padding:28px 32px 12px;text-align:center;background-color:#ffffff;">
+        <img src="${casinLogoUrl}" alt="${senderName}" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
+      </td></tr>
+      <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:-0.02em;">¡Feliz cumpleaños!</h1>
+        <p style="margin:10px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;color:#fde68a;text-align:center;">Un mensaje especial para ti</p>
+      </td></tr>
+      <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
+        <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${firstName}</h2>
+        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">${personalizedMessage}</p>
+        <p style="margin:0;font-size:44px;line-height:1.2;text-align:center;">🎉&nbsp;&nbsp;🎈&nbsp;&nbsp;🎁</p>
+        <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;font-size:15px;color:#64748b;">Con cariño,</p>
+          <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">${senderName}</p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:18px 32px 24px;background-color:#f1f5f9;text-align:center;font-family:Segoe UI,Tahoma,sans-serif;font-size:12px;color:#64748b;line-height:1.5;">
+        <p style="margin:0;">Este mensaje fue enviado automáticamente por el sistema.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>
         `;
 
         if (birthday.email) {
@@ -491,7 +516,7 @@ exports.scheduledBirthdayEmails = onSchedule({
               from: { name: `${senderName} - Notificación`, address: senderEmail },
               to: senderEmail,
               subject: `🎂 Cumpleaños de hoy: ${birthday.name} (sin email)`,
-              html: `<div><h1>🎂 Cumpleaños de Hoy</h1><p>${birthday.name} - No tiene email registrado</p></div>`
+              html: `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background-color:#e8edf3;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;"><tr><td style="padding:28px 32px 12px;text-align:center;"><img src="${casinLogoUrl}" alt="" width="72" height="72" style="display:block;margin:0 auto;border:0;"/></td></tr><tr><td style="height:4px;background-color:#ea580c;">&nbsp;</td></tr><tr><td style="padding:24px 32px;background-color:#123b66;text-align:center;"><h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;">Cumpleaños de hoy</h1></td></tr><tr><td style="padding:28px 32px;font-family:Segoe UI,Tahoma,sans-serif;"><h2 style="margin:0 0 12px;font-size:22px;color:#0f2840;">${birthday.name}</h2><p style="margin:0;font-size:16px;color:#475569;">No tiene correo electrónico registrado.</p></td></tr><tr><td style="padding:16px 32px;background-color:#f1f5f9;text-align:center;font-size:12px;color:#64748b;">${senderName} · notificación interna</td></tr></table></td></tr></table></body></html>`
             });
             emailsSent++;
             totalEmailsSent++;

@@ -823,6 +823,8 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     } catch (error) {
       console.log('⚠️  Could not check sent emails history:', error.message);
     }
+
+    const casinLogoUrl = `${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png`;
     
     for (const birthday of todaysBirthdays) {
       // Skip if already sent to this person today (by email or by name)
@@ -857,36 +859,37 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
           console.log(`📧 Sending birthday email to ${birthday.name} (${birthday.email})`);
           
           const emailHTML = `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">🎂 ¡Feliz Cumpleaños! 🎂</h1>
-                </div>
-                
-                <div style="text-align: center; margin-bottom: 30px; background-color: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
-                  <h2 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">${birthday.name}</h2>
-                </div>
-                
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <p style="color: #ffffff; font-size: 18px; line-height: 1.6; margin: 0;">
-                    ¡Que tengas un día maravilloso lleno de alegría y éxito!
-                  </p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <span style="font-size: 48px;">🎉 🎈 🎁</span>
-                </div>
-                
-                <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid rgba(255,255,255,0.3);">
-                  <p style="color: #ffffff; font-size: 16px; margin: 0;">Con cariño,</p>
-                  <p style="color: #ffffff; font-size: 18px; font-weight: 600; margin: 10px 0 0 0;">Equipo CASIN Seguros</p>
-                </div>
-              </div>
-              
-              <div style="text-align: center; margin-top: 20px;">
-                <p style="color: #95a5a6; font-size: 12px; margin: 0;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
-              </div>
-            </div>
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#e8edf3;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;">
+      <tr><td style="padding:28px 32px 12px;text-align:center;background-color:#ffffff;">
+        <img src="${casinLogoUrl}" alt="CASIN Seguros" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
+      </td></tr>
+      <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:-0.02em;">¡Feliz cumpleaños!</h1>
+        <p style="margin:10px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;color:#fde68a;text-align:center;">Un mensaje especial para ti</p>
+      </td></tr>
+      <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
+        <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${birthday.name}</h2>
+        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">¡Que tengas un día maravilloso lleno de alegría y éxito!</p>
+        <p style="margin:0;font-size:44px;line-height:1.2;text-align:center;">🎉&nbsp;&nbsp;🎈&nbsp;&nbsp;🎁</p>
+        <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;font-size:15px;color:#64748b;">Con cariño,</p>
+          <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">Equipo CASIN Seguros</p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:18px 32px 24px;background-color:#f1f5f9;text-align:center;font-family:Segoe UI,Tahoma,sans-serif;font-size:12px;color:#64748b;line-height:1.5;">
+        <p style="margin:0;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>
           `;
           
           // Use relative URL for internal API calls (works in both local and Heroku)
@@ -947,17 +950,30 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
         console.log(`⚠️  ${birthday.name} has no email. Sending notification to ztmarcos@gmail.com with BCC to casinseguros@gmail.com`);
         try {
           const notificationHTML = `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <h1 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0 0 10px 0;">🎂 Cumpleaños de Hoy</h1>
-                </div>
-                <div style="text-align: center; margin-bottom: 30px; background-color: rgba(255,255,255,0.15); border-radius: 8px; padding: 20px;">
-                  <h2 style="color: #ffffff; font-size: 24px; font-weight: 600; margin: 0;">${birthday.name}</h2>
-                  <p style="color: #ffffff; font-size: 16px; margin: 10px 0 0 0;">No tiene email registrado</p>
-                </div>
-              </div>
-            </div>
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#e8edf3;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;">
+      <tr><td style="padding:28px 32px 12px;text-align:center;background-color:#ffffff;">
+        <img src="${casinLogoUrl}" alt="CASIN Seguros" width="72" height="72" style="display:block;margin:0 auto;border:0;"/>
+      </td></tr>
+      <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:24px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;text-align:center;">Cumpleaños de hoy</h1>
+      </td></tr>
+      <tr><td style="padding:28px 32px;font-family:Segoe UI,Tahoma,sans-serif;">
+        <h2 style="margin:0 0 12px;font-size:22px;font-weight:600;color:#0f2840;">${birthday.name}</h2>
+        <p style="margin:0;font-size:16px;line-height:1.6;color:#475569;">No tiene correo electrónico registrado en el sistema. Considera actualizar sus datos de contacto.</p>
+      </td></tr>
+      <tr><td style="padding:16px 32px 22px;background-color:#fff7ed;border-top:1px solid #fed7aa;text-align:center;font-size:13px;color:#9a3412;font-family:Segoe UI,Tahoma,sans-serif;">
+        Notificación interna · CASIN Seguros
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>
           `;
           
           // Use relative URL for internal API calls (works in both local and Heroku)
@@ -3407,21 +3423,31 @@ app.post('/api/birthday/check-and-send', async (req, res) => {
         to: testEmail,
         subject: '🎂 Test - Sistema de Cumpleaños Automático',
         htmlContent: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #e74c3c; text-align: center;">🎂 Sistema de Cumpleaños Automático</h2>
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; color: white; text-align: center;">
-              <h3 style="margin: 0; font-size: 24px;">Test Automático Activado</h3>
-              <p style="font-size: 18px; margin: 20px 0;">El sistema de correos automáticos de cumpleaños está funcionando correctamente.</p>
-              <p style="font-size: 16px; margin: 20px 0;">Se encontraron ${todaysBirthdays.length} cumpleaños para hoy.</p>
-              <div style="margin: 30px 0;">
-                <span style="font-size: 40px;">🎉 🎈 🎁</span>
-              </div>
-              <p style="font-size: 16px; margin: 0;">Con cariño,<br><strong>Equipo CASIN Seguros</strong></p>
-            </div>
-            <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
-              <p>Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
-            </div>
-          </div>
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#e8edf3;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;">
+      <tr><td style="padding:28px 32px 12px;text-align:center;">
+        <img src="${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png" alt="CASIN Seguros" width="72" height="72" style="display:block;margin:0 auto;border:0;"/>
+      </td></tr>
+      <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:24px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);text-align:center;">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;">Sistema de cumpleaños · Test</h1>
+      </td></tr>
+      <tr><td style="padding:32px;font-family:Segoe UI,Tahoma,sans-serif;">
+        <h2 style="margin:0 0 12px;font-size:20px;color:#0f2840;">Test automático activado</h2>
+        <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#475569;">El sistema de correos automáticos de cumpleaños está funcionando correctamente.</p>
+        <p style="margin:0 0 20px;font-size:16px;color:#ea580c;font-weight:600;">Se encontraron ${todaysBirthdays.length} cumpleaños para hoy.</p>
+        <p style="margin:0;font-size:36px;text-align:center;">🎉 🎈 🎁</p>
+        <p style="margin:24px 0 0;font-size:15px;color:#64748b;text-align:center;">Con cariño,<br><strong style="color:#0f2840;">Equipo CASIN Seguros</strong></p>
+      </td></tr>
+      <tr><td style="padding:16px 32px 22px;background-color:#f1f5f9;text-align:center;font-size:12px;color:#64748b;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros.</td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>
         `,
         from: process.env.SMTP_USER_CASIN || 'casinseguros@gmail.com',
         fromPass: process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
@@ -5920,11 +5946,28 @@ function buildPolicyEmailFallback(data, ramo, tipo) {
   const vigenciaInicio = data.vigenciaInicio || 'N/A';
   const tipoLabel = tipo === 'nueva' ? 'nueva póliza' : tipo === 'recibo' ? 'recibo de cobro' : 'renovación';
   const vehiculo = data.vehiculoLinea || '';
-  const body = ramo === 'autos'
-    ? `<p><strong>Apreciable Asegurado ${name}</strong></p><p>Tengo el gusto de saludarle.</p><p>Me permito enviar su ${tipoLabel} del seguro del auto ${vehiculo ? `<strong>${vehiculo}</strong>` : ''} de la vigencia ${vigenciaInicio} al ${vigenciaFin} con no. de póliza <strong>${poliza}</strong>, asegurada en <strong>${aseguradora}</strong>.</p><p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${monto} pesos</strong>.</p><p>Cordialmente,<br><strong>CASIN Seguros</strong></p>`
-    : `<p><strong>Apreciable Asegurado ${name}</strong></p><p>Tengo el gusto de saludarle.</p><p>Me permito enviar su ${tipoLabel} con no. de póliza <strong>${poliza}</strong>, asegurada en <strong>${aseguradora}</strong>.</p><p>Anexo carátula y recibo por la cantidad de <strong>$${monto} pesos</strong>.</p><p>Cordialmente,<br><strong>CASIN Seguros</strong></p>`;
-  const subject = data.subjectOverride || `Póliza - ${name} - ${poliza}`;
-  return { subject, message: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">${body}</div>` };
+  const senderName = data.senderName || 'Michell Díaz';
+  
+  let body;
+  if (ramo === 'autos') {
+    body = `<p>Buen día ${name},</p>
+<p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+<p>Me permito enviar su ${tipoLabel} del seguro del auto ${vehiculo ? `<strong>${vehiculo}</strong>` : 'vehículo'} de la vigencia ${vigenciaInicio} al ${vigenciaFin} con no. de póliza <strong>${poliza}</strong> a su nombre, asegurada en <strong>${aseguradora}</strong>.</p>
+<p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${monto} pesos</strong>, para su revisión y amable programación de pago con fecha límite del ${vigenciaFin} antes de las 12 del día.</p>
+<p>Tenemos campaña de pago con tarjeta de crédito a 3 y 6 MSI o si desea puede pagarlo con débito o en ventanilla del banco en efectivo o cheque y por transferencia electrónica como pago de servicios.</p>
+<p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+<p>Cordialmente,<br>${senderName}<br>CASIN Seguros</p>`;
+  } else {
+    body = `<p>Buen día ${name},</p>
+<p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
+<p>Me permito enviar su ${tipoLabel} con no. de póliza <strong>${poliza}</strong> a su nombre, asegurada en <strong>${aseguradora}</strong>.</p>
+<p>Anexo carátula y recibo de cobro anual por la cantidad de <strong>$${monto} pesos</strong>, para su revisión y amable programación de pago.</p>
+<p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
+<p>Cordialmente,<br>${senderName}<br>CASIN Seguros</p>`;
+  }
+  
+  const subject = data.subjectOverride || `${tipo === 'nueva' ? 'Nueva Póliza' : tipo === 'recibo' ? 'Recibo de Cobro' : 'Renovación'} - ${name} - Póliza ${poliza}`;
+  return { subject, message: body };
 }
 
 // Additional GPT endpoints
@@ -5960,7 +6003,7 @@ app.post('/api/gpt/generate', async (req, res) => {
     let emailContent = {};
     
     if (type === 'policy_email') {
-      // GPT-generated policy email using validated data (destinatarioDisplay, montoFormateado, etc.)
+      // GPT-generated policy email using validated data
       const ramo = data.ramo || 'default';
       const tipo = data.tipo || 'renovacion';
       const ramoLabels = {
@@ -5976,20 +6019,49 @@ app.post('/api/gpt/generate', async (req, res) => {
       };
       const tipoLabel = tipo === 'nueva' ? 'nueva póliza' : tipo === 'recibo' ? 'recibo de cobro' : 'renovación';
       const ramoLabel = ramoLabels[ramo] || ramoLabels.default;
-      const systemPrompt = `Eres un asistente que redacta correos profesionales para una agencia de seguros (CASIN Seguros). 
-Genera ÚNICAMENTE el cuerpo del correo en HTML válido, sin head ni body. Usa solo estas etiquetas: div, p, strong, br, a, hr, span.
-Incluye estilos inline en el primer div: font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;
-El tono debe ser formal y cordial en español (México). No inventes datos: usa solo los que se te pasan.`;
-      const userPrompt = `Redacta un correo para el asegurado con los siguientes datos (usa exactamente estos valores):
-- Nombre del asegurado: ${data.destinatarioDisplay || 'Cliente'}
+      
+      const senderName = data.senderName || 'Michell Díaz';
+      const clientName = data.destinatarioDisplay || 'Cliente';
+      
+      const systemPrompt = `Eres ${senderName} de CASIN Seguros, una agente profesional que redacta correos personalizados para clientes de seguros.
+
+INSTRUCCIONES CRÍTICAS:
+- Genera ÚNICAMENTE el contenido HTML del correo (sin <html>, <head> o <body>)
+- Usa EXACTAMENTE el formato y tono profesional de una agente de seguros experimentada
+- Tono formal pero cordial, en español de México
+- NO inventes datos: usa EXACTAMENTE los valores proporcionados
+- SIEMPRE saluda al cliente por su nombre completo
+
+ESTRUCTURA OBLIGATORIA:
+1. Saludo personalizado: "Buen día ${clientName}," (nueva línea) "Tengo el gusto de saludarle, esperando se encuentre bien."
+2. Párrafo principal con detalles específicos del seguro (incluir vehículo completo si es auto)
+3. Párrafo del monto y fecha límite de pago
+4. Párrafo de opciones de pago (MSI, débito, transferencia, efectivo)
+5. Cierre cordial pidiendo confirmación de recibido
+6. Firma: "Cordialmente," (nueva línea) "${senderName}" (nueva línea) "CASIN Seguros"
+
+FORMATO HTML: Usa <p> para párrafos, <strong> para texto en negrita, <br> para saltos de línea.`;
+
+      const userPrompt = `Redacta un correo profesional usando estos datos EXACTOS:
+
+DATOS DEL CLIENTE:
+- Nombre completo: ${clientName}
+
+DATOS DE LA PÓLIZA:
 - Tipo: ${tipoLabel} de ${ramoLabel}
 - Número de póliza: ${data.numeroPoliza || 'N/A'}
 - Aseguradora: ${data.aseguradora || 'N/A'}
-- Monto a pagar (pesos): $${data.montoFormateado || 'N/A'}
-- Vigencia: ${data.vigenciaInicio || 'N/A'} al ${data.vigenciaFin || 'N/A'}
-${data.vehiculoLinea ? `- Vehículo: ${data.vehiculoLinea}` : ''}
-${data.direccion ? `- Domicilio: ${data.direccion}` : ''}
-Cierra con "Cordialmente, CASIN Seguros". No repitas el mismo dato dos veces.`;
+- Vigencia: del ${data.vigenciaInicio || 'N/A'} al ${data.vigenciaFin || 'N/A'}
+- Monto anual: $${data.montoFormateado || 'N/A'} pesos
+${data.vehiculoLinea ? `- Vehículo completo: ${data.vehiculoLinea}` : ''}
+${data.direccion ? `- Propiedad: ${data.direccion}` : ''}
+
+FECHA LÍMITE DE PAGO: ${data.vigenciaFinLong || data.vigenciaFin || 'N/A'}
+
+REMITENTE: ${senderName}
+
+Sigue EXACTAMENTE la estructura: saludo personalizado con el nombre completo del cliente, detalles específicos del seguro (mencionar vehículo completo si es auto), monto y fecha límite, opciones de pago (MSI, débito, transferencia), cierre profesional pidiendo confirmación, y firma completa con ${senderName}.`;
+
       if (openai && isOpenAIEnabled) {
         try {
           const completion = await openai.chat.completions.create({
@@ -5998,16 +6070,20 @@ Cierra con "Cordialmente, CASIN Seguros". No repitas el mismo dato dos veces.`;
               { role: 'system', content: systemPrompt },
               { role: 'user', content: userPrompt }
             ],
-            temperature: 0.4,
-            max_tokens: 1200
+            temperature: 0.3,
+            max_tokens: 1500
           });
+          
           const htmlBody = completion.choices[0]?.message?.content?.trim() || '';
-          const subject = data.subjectOverride || `Póliza ${ramoLabel} - ${data.destinatarioDisplay || 'Cliente'} - Póliza ${data.numeroPoliza || 'N/A'}`;
-          emailContent = { subject, message: htmlBody ? `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">${htmlBody}</div>` : '' };
+          const subject = data.subjectOverride || `${tipoLabel === 'nueva póliza' ? 'Nueva Póliza' : tipoLabel === 'recibo de cobro' ? 'Recibo de Cobro' : 'Renovación'} ${ramoLabel === 'seguro de auto' ? 'Auto' : ramoLabel} - ${data.destinatarioDisplay || 'Cliente'} - Póliza ${data.numeroPoliza || 'N/A'}`;
+          
+          emailContent = { 
+            subject, 
+            message: htmlBody
+          };
         } catch (gptErr) {
           console.warn('⚠️ GPT policy email failed, using fallback:', gptErr.message);
-          const fallback = buildPolicyEmailFallback(data, ramo, tipo);
-          emailContent = fallback;
+          emailContent = buildPolicyEmailFallback(data, ramo, tipo);
         }
       } else {
         emailContent = buildPolicyEmailFallback(data, ramo, tipo);
@@ -6233,45 +6309,26 @@ app.post('/api/support-chat', async (req, res) => {
 // ========================================
 // ChatGPT Endpoints - Full Database Access
 // ========================================
-
-// ChatGPT Message endpoint - Main chat interface
 app.post('/api/chat-gpt/message', async (req, res) => {
   try {
     console.log('🤖 ChatGPT message request');
-    const { message, context } = req.body;
-    
+    const { message, context, conversationHistory } = req.body;
     if (!message) {
-      return res.status(400).json({ 
-        error: 'Message is required' 
-      });
+      return res.status(400).json({ error: 'Message is required' });
     }
-
-    // Check user permissions
+    const history = Array.isArray(conversationHistory) ? conversationHistory : [];
     const userEmail = context?.userEmail;
     const allowedUsers = ['marcoszavala09@gmail.com', 'z.t.marcos@gmail.com'];
-    
     if (!allowedUsers.includes(userEmail)) {
-      return res.status(403).json({ 
-        error: 'Access denied. This feature is restricted to authorized users only.' 
-      });
+      return res.status(403).json({ error: 'Access denied. This feature is restricted to authorized users only.' });
     }
-
-    console.log('✅ User authorized:', userEmail);
-    console.log('📝 Processing message:', message.substring(0, 100) + '...');
-
-    // Initialize OpenAI
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
-
-    if (!openai.apiKey) {
-      throw new Error('OpenAI API key not configured');
+    const openaiApiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
-
-    // Get database context
+    const { OpenAI } = require('openai');
+    const openaiClient = new OpenAI({ apiKey: openaiApiKey });
     const databaseContext = await getChatGPTDatabaseContext(context?.teamId);
-    
-    // Build system prompt with full database access
     const systemPrompt = `Eres un asistente inteligente especializado en el CRM de seguros CASIN con acceso COMPLETO a toda la base de datos de Firebase.
 
 CONTEXTO DE LA BASE DE DATOS:
@@ -6279,6 +6336,7 @@ ${databaseContext}
 
 CAPACIDADES:
 - Acceso completo a Firebase: clientes, pólizas, cumpleaños, directorio
+- Reportes: vencimientos, pólizas activas/vencidas, por ramo, vencimientos del mes (misma data que la sección Reportes)
 - Análisis de datos y estadísticas
 - Cálculos complejos y reportes
 - Búsquedas avanzadas en todas las colecciones
@@ -6292,46 +6350,39 @@ INSTRUCCIONES:
 5. Cita fuentes de datos cuando sea relevante
 6. Si no tienes información suficiente, indícalo claramente
 
-DATOS DISPONIBLES:
-- Clientes y sus pólizas activas/expiradas
-- Cumpleaños extraídos de RFC y fechas explícitas
-- Directorio de contactos completo
-- Estadísticas de seguros por ramo
-- Información de aseguradoras y responsables
-- Fechas de vigencia y montos de pólizas
-
 Usuario actual: ${userEmail}
 Equipo: ${context?.teamId || 'CASIN'}
 
 Responde de manera útil y precisa basándote en los datos reales disponibles.`;
 
-    // Send request to OpenAI
-    const completion = await openai.chat.completions.create({
+    const historyMessages = history
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-24)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    const openaiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...historyMessages,
+      { role: 'user', content: message }
+    ];
+
+    const completion = await openaiClient.chat.completions.create({
       model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message }
-      ],
+      messages: openaiMessages,
       temperature: 0.7,
       max_tokens: 2000
     });
-
     const response = completion.choices[0]?.message?.content;
-    
     if (!response) {
       throw new Error('No response from OpenAI');
     }
-
-    console.log('✅ ChatGPT response generated successfully');
-    
-    // Log the interaction for analytics
-    if (isFirebaseEnabled) {
+    if (isFirebaseEnabled && admin && db) {
       try {
         await db.collection('chat_gpt_logs').add({
           userEmail,
           teamId: context?.teamId || 'CASIN',
-          message: message.substring(0, 500), // Truncate for storage
-          response: response.substring(0, 1000), // Truncate for storage
+          message: message.substring(0, 500),
+          response: response.substring(0, 1000),
           timestamp: admin.firestore.FieldValue.serverTimestamp(),
           tokensUsed: completion.usage?.total_tokens || 0
         });
@@ -6339,7 +6390,6 @@ Responde de manera útil y precisa basándote en los datos reales disponibles.`;
         console.warn('⚠️ Failed to log ChatGPT interaction:', logError);
       }
     }
-
     res.json({
       success: true,
       message: response,
@@ -6349,251 +6399,404 @@ Responde de manera útil y precisa basándote en los datos reales disponibles.`;
         timestamp: new Date().toISOString()
       }
     });
-
   } catch (error) {
     console.error('❌ ChatGPT message error:', error);
-    res.status(500).json({ 
-      error: 'Failed to process message', 
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Failed to process message', details: error.message });
   }
 });
 
-// Get database schema and available collections
 app.get('/api/chat-gpt/schema', async (req, res) => {
   try {
-    console.log('🗄️ ChatGPT schema request');
     const teamId = req.query.team;
-    
     const schema = await getChatGPTDatabaseSchema(teamId);
-    
-    res.json({
-      success: true,
-      schema,
-      timestamp: new Date().toISOString()
-    });
-
+    res.json({ success: true, schema, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('❌ ChatGPT schema error:', error);
-    res.status(500).json({ 
-      error: 'Failed to get database schema', 
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Failed to get database schema', details: error.message });
   }
 });
 
-// Query specific data from Firebase
 app.post('/api/chat-gpt/query', async (req, res) => {
   try {
-    console.log('🔍 ChatGPT query request');
     const { collection, filters, teamId } = req.body;
-    
     if (!collection) {
-      return res.status(400).json({ 
-        error: 'Collection name is required' 
-      });
+      return res.status(400).json({ error: 'Collection name is required' });
     }
-
     const data = await queryChatGPTData(collection, filters, teamId);
-    
-    res.json({
-      success: true,
-      data,
-      collection,
-      count: data.length,
-      timestamp: new Date().toISOString()
-    });
-
+    res.json({ success: true, data, collection, count: data.length, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('❌ ChatGPT query error:', error);
-    res.status(500).json({ 
-      error: 'Failed to query data', 
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Failed to query data', details: error.message });
   }
 });
 
-// Get system information and capabilities
 app.get('/api/chat-gpt/info', async (req, res) => {
   try {
-    console.log('ℹ️ ChatGPT info request');
-    
     res.json({
       success: true,
       info: {
         model: 'gpt-4o-mini',
-        capabilities: [
-          'Full Firebase database access',
-          'Client and policy analysis',
-          'Birthday and contact management',
-          'Insurance calculations',
-          'Advanced data queries',
-          'Statistical analysis'
-        ],
-        availableCollections: [
-          'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
-          'mascotas', 'transporte', 'rc', 'emant_caratula',
-          'gruposvida', 'gruposautos', 'directorio_contactos',
-          'clientes_metadata'
-        ],
+        capabilities: ['Full Firebase database access', 'Client and policy analysis', 'Birthday and contact management', 'Insurance calculations', 'Advanced data queries', 'Statistical analysis'],
+        availableCollections: ['autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos', 'mascotas', 'transporte', 'rc', 'emant_caratula', 'gruposvida', 'gruposautos', 'directorio_contactos', 'clientes_metadata'],
         restrictedTo: ['marcoszavala09@gmail.com', 'z.t.marcos@gmail.com'],
         firebaseEnabled: isFirebaseEnabled,
-        openaiEnabled: !!process.env.OPENAI_API_KEY
+        openaiEnabled: !!(process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY)
       },
       timestamp: new Date().toISOString()
     });
-
   } catch (error) {
     console.error('❌ ChatGPT info error:', error);
-    res.status(500).json({ 
-      error: 'Failed to get system info', 
-      details: error.message 
-    });
+    res.status(500).json({ error: 'Failed to get system info', details: error.message });
   }
 });
 
-// Helper function to get database context for ChatGPT
+// Equipo principal CASIN usa colecciones sin prefijo (igual que frontend)
+function isMainCasinTeam(teamId) {
+  return !teamId || teamId === 'CASIN' || teamId === '4JlUqhAvfJMlCDhQ4vgH';
+}
+
+// --- Birthday helpers (same logic as Birthdays.jsx / firebaseBirthdayService) ---
+function extractBirthdayFromRFC(rfc) {
+  if (!rfc) return null;
+  const cleanRFC = String(rfc).replace(/[.\s]/g, '').toUpperCase();
+  if (cleanRFC.length < 10) return null;
+  const dateStr = cleanRFC.substring(4, 10);
+  const year = parseInt(dateStr.substring(0, 2), 10);
+  const month = parseInt(dateStr.substring(2, 4), 10) - 1;
+  const day = parseInt(dateStr.substring(4, 6), 10);
+  const fullYear = year < 30 ? 2000 + year : 1900 + year;
+  const date = new Date(fullYear, month, day);
+  return isNaN(date.getTime()) ? null : date;
+}
+
+function calculateAge(birthday) {
+  if (!birthday) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birthday.getFullYear();
+  const monthDiff = today.getMonth() - birthday.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthday.getDate())) age--;
+  return age;
+}
+
+function isPersonalRFC(rfc) {
+  if (!rfc || typeof rfc !== 'string') return false;
+  const cleanRFC = rfc.trim().toUpperCase();
+  if (cleanRFC.length !== 13) return false;
+  return /^[A-Z]{4}\d{6}[A-Z0-9]{3}$/.test(cleanRFC);
+}
+
+function getNameFromDocument(doc, collectionName) {
+  const possibleNameFields = ['nombre_completo', 'nombre_contratante', 'contratante', 'asegurado', 'nombre', 'nombre_asegurado', 'cliente', 'nombre_cliente'];
+  for (const field of possibleNameFields) {
+    if (doc[field] && String(doc[field]).trim() !== '') return String(doc[field]).trim();
+  }
+  return 'Sin nombre';
+}
+
+function getBirthdayDetailsFromDoc(doc, collectionName) {
+  const details = [];
+  switch (collectionName) {
+    case 'directorio_contactos':
+      if (doc.status) details.push(doc.status);
+      if (doc.telefono_movil) details.push(doc.telefono_movil);
+      if (doc.origen) details.push(`Origen: ${doc.origen}`);
+      break;
+    case 'autos': details.push('Seguro de Autos'); if (doc.numero_poliza) details.push(`Póliza: ${doc.numero_poliza}`); if (doc.aseguradora) details.push(doc.aseguradora); break;
+    case 'vida': details.push('Seguro de Vida'); if (doc.numero_poliza) details.push(`Póliza: ${doc.numero_poliza}`); if (doc.aseguradora) details.push(doc.aseguradora); break;
+    case 'gmm': details.push('Gastos Médicos Mayores'); if (doc.numero_poliza) details.push(`Póliza: ${doc.numero_poliza}`); if (doc.aseguradora) details.push(doc.aseguradora); break;
+    default:
+      details.push(`Seguro ${collectionName.charAt(0).toUpperCase() + collectionName.slice(1)}`);
+      if (doc.numero_poliza) details.push(`Póliza: ${doc.numero_poliza}`);
+      if (doc.aseguradora) details.push(doc.aseguradora);
+  }
+  return details.join(' | ') || `Registro de ${collectionName}`;
+}
+
+function removeDuplicatesByRFC(birthdays) {
+  const rfcMap = new Map();
+  for (const b of birthdays) {
+    if (!b.rfc) continue;
+    const existing = rfcMap.get(b.rfc);
+    if (!existing || (!existing.email && b.email) || (b.source === 'directorio_contactos' && existing.source !== 'directorio_contactos')) {
+      rfcMap.set(b.rfc, b);
+    }
+  }
+  return Array.from(rfcMap.values());
+}
+
+function normalizeClientNameForLookup(name) {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/[.,]/g, '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+sa\s+de\s+cv\s*$/i, '')
+    .trim();
+}
+
+async function getBirthdaysForChatGPT(teamId) {
+  if (!isFirebaseEnabled || !db) return [];
+  const collections = ['directorio_contactos', 'autos', 'rc', 'vida', 'gmm', 'transporte', 'mascotas', 'diversos', 'negocio', 'gruposgmm'];
+  const prefix = isMainCasinTeam(teamId) ? '' : `team_${teamId}_`;
+  const metadataMap = new Map();
+  try {
+    const metaRef = db.collection(prefix + 'clientes_metadata');
+    const metaSnap = await metaRef.get();
+    metaSnap.forEach(d => {
+      const data = d.data();
+      metadataMap.set(d.id, data.emailPersonal || '');
+    });
+  } catch (e) { /* ignore */ }
+  const birthdays = [];
+  for (const collName of collections) {
+    try {
+      const ref = db.collection(prefix + collName);
+      const snap = await ref.get();
+      snap.forEach(docSnap => {
+        const doc = docSnap.data();
+        let birthdayData = null;
+        let birthdaySource = 'unknown';
+        if (doc.fecha_nacimiento) {
+          birthdayData = new Date(doc.fecha_nacimiento);
+          birthdaySource = 'fecha_nacimiento';
+        } else if (doc.rfc) {
+          birthdayData = extractBirthdayFromRFC(doc.rfc);
+          if (birthdayData) birthdaySource = 'rfc';
+        }
+        if (!birthdayData || isNaN(birthdayData.getTime())) return;
+        const name = getNameFromDocument(doc, collName);
+        const nameNorm = normalizeClientNameForLookup(name);
+        const emailPersonal = metadataMap.get(nameNorm) || '';
+        const otherEmail = (doc.email || doc.e_mail || '').trim();
+        const email = (emailPersonal && !/@gnp|@qualitas/i.test(emailPersonal)) ? emailPersonal : ((otherEmail && !/@gnp|@qualitas/i.test(otherEmail)) ? otherEmail : '');
+        birthdays.push({
+          id: docSnap.id,
+          name,
+          rfc: doc.rfc || '',
+          email,
+          date: birthdayData.toISOString(),
+          age: calculateAge(birthdayData),
+          details: getBirthdayDetailsFromDoc(doc, collName),
+          source: collName,
+          birthdaySource
+        });
+      });
+    } catch (err) {
+      console.warn('ChatGPT birthdays: error reading', collName, err.message);
+    }
+  }
+  const unique = removeDuplicatesByRFC(birthdays);
+  unique.sort((a, b) => {
+    const dA = new Date(a.date);
+    const dB = new Date(b.date);
+    const m = dA.getMonth() - dB.getMonth();
+    return m !== 0 ? m : dA.getDate() - dB.getDate();
+  });
+  return unique;
+}
+
 async function getChatGPTDatabaseContext(teamId) {
-  if (!isFirebaseEnabled) {
+  if (!isFirebaseEnabled || !db) {
     return 'Firebase no está disponible en este momento.';
   }
-
   try {
-    const collections = [
-      'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
-      'mascotas', 'transporte', 'rc', 'directorio_contactos'
-    ];
-    
+    const collections = ['autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos', 'mascotas', 'transporte', 'rc', 'directorio_contactos'];
     let context = 'RESUMEN DE BASE DE DATOS:\n\n';
-    let totalRecords = 0;
-    
     for (const collectionName of collections) {
       try {
-        const collectionRef = teamId && teamId !== 'CASIN' 
-          ? db.collection(`team_${teamId}_${collectionName}`)
-          : db.collection(collectionName);
-        
+        const collectionRef = isMainCasinTeam(teamId) ? db.collection(collectionName) : db.collection(`team_${teamId}_${collectionName}`);
         const snapshot = await collectionRef.limit(1).get();
-        const count = snapshot.size;
-        totalRecords += count;
-        
-        if (count > 0) {
+        if (snapshot.size > 0) {
           const sampleDoc = snapshot.docs[0].data();
           const fields = Object.keys(sampleDoc).slice(0, 10).join(', ');
-          context += `- ${collectionName}: ~${count}+ registros (campos: ${fields})\n`;
+          context += `- ${collectionName}: ~${snapshot.size}+ registros (campos: ${fields})\n`;
         }
-      } catch (error) {
-        context += `- ${collectionName}: Error accediendo (${error.message})\n`;
+      } catch (err) {
+        context += `- ${collectionName}: Error accediendo (${err.message})\n`;
       }
     }
-    
-    // Add clients metadata info
     try {
-      const metadataRef = teamId && teamId !== 'CASIN' 
-        ? db.collection(`team_${teamId}_clientes_metadata`)
-        : db.collection('clientes_metadata');
-      
+      const metadataRef = isMainCasinTeam(teamId) ? db.collection('clientes_metadata') : db.collection(`team_${teamId}_clientes_metadata`);
       const metadataSnapshot = await metadataRef.limit(1).get();
       if (metadataSnapshot.size > 0) {
         context += `- clientes_metadata: Datos personales adicionales de clientes\n`;
       }
-    } catch (error) {
-      // Ignore metadata errors
+    } catch (err) {}
+    context += `\nEQUIPO: ${teamId || 'CASIN'}\nFECHA: ${new Date().toLocaleDateString('es-MX')}\n`;
+
+    // Incluir lista de cumpleaños (misma fuente que la sección Cumpleaños / Birthdays.jsx)
+    try {
+      const birthdaysList = await getBirthdaysForChatGPT(teamId);
+      const personalOnly = birthdaysList.filter(b => isPersonalRFC(b.rfc));
+      context += '\n\n--- CUMLEAÑOS (personas físicas, misma data que la sección Cumpleaños) ---\n';
+      context += `Total con fecha de nacimiento (personas físicas): ${personalOnly.length}\n\n`;
+      if (personalOnly.length > 0) {
+        personalOnly.forEach(b => {
+          const d = new Date(b.date);
+          const dateStr = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+          context += `- ${b.name} | Fecha: ${dateStr} | Edad: ${b.age} años | RFC: ${b.rfc || 'N/A'} | Email: ${b.email || 'N/A'} | ${b.details}\n`;
+        });
+      }
+      context += '\n--- Fin lista cumpleaños ---\n';
+    } catch (birthdayErr) {
+      console.warn('ChatGPT: error loading birthdays for context', birthdayErr);
+      context += '\n(Cumpleaños no disponibles en este momento)\n';
     }
-    
-    context += `\nTOTAL ESTIMADO: ${totalRecords}+ registros en Firebase\n`;
-    context += `EQUIPO: ${teamId || 'CASIN'}\n`;
-    context += `FECHA: ${new Date().toLocaleDateString('es-MX')}\n`;
-    
+
+    // Incluir resumen de reportes/pólizas (misma fuente que Reports.jsx / firebaseReportsService)
+    try {
+      const reportsSummary = await getReportsSummaryForChatGPT(teamId);
+      context += '\n\n--- REPORTES / PÓLIZAS (misma data que la sección Reportes) ---\n';
+      context += reportsSummary;
+      context += '\n--- Fin resumen reportes ---\n';
+    } catch (reportsErr) {
+      console.warn('ChatGPT: error loading reports summary for context', reportsErr);
+      context += '\n(Resumen de pólizas no disponible en este momento)\n';
+    }
+
     return context;
-    
   } catch (error) {
     console.error('Error getting database context:', error);
     return `Error accediendo a la base de datos: ${error.message}`;
   }
 }
 
-// Helper function to get database schema
-async function getChatGPTDatabaseSchema(teamId) {
-  if (!isFirebaseEnabled) {
-    return { error: 'Firebase not available' };
+// --- Reports helpers (same logic as Reports.jsx / firebaseReportsService) ---
+function parseDateForReport(val) {
+  if (!val) return null;
+  if (val && typeof val.toDate === 'function') return val.toDate();
+  if (typeof val === 'number') {
+    if (val > 1e12) return new Date(val);
+    return new Date(val * 1000);
   }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
+}
 
-  const collections = [
-    'autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos',
-    'mascotas', 'transporte', 'rc', 'directorio_contactos', 'clientes_metadata'
-  ];
-  
-  const schema = {};
-  
-  for (const collectionName of collections) {
+function isPolicyExpiredForReport(policy) {
+  if (policy.expiration_override === 'activo') return false;
+  if (policy.expiration_override === 'vencido') return true;
+  const endDate = parseDateForReport(policy.fecha_fin);
+  if (!endDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return endDate < today;
+}
+
+function getRamoDisplayName(collName) {
+  const map = { autos: 'Autos', vida: 'Vida', gmm: 'GMM', hogar: 'Hogar', negocio: 'Negocio', diversos: 'Diversos', mascotas: 'Mascotas', transporte: 'Transporte', rc: 'RC', emant_caratula: 'Emant', gruposvida: 'Grupos Vida', gruposautos: 'Grupos Autos', gruposgmm: 'Grupos GMM' };
+  return map[collName] || collName;
+}
+
+function findBestDateFromDoc(doc, fields) {
+  for (const field of fields) {
+    const v = doc[field];
+    if (v != null && v !== '') return v;
+  }
+  return null;
+}
+
+async function getReportsSummaryForChatGPT(teamId) {
+  if (!isFirebaseEnabled || !db) return '(Reportes no disponibles)';
+  const collections = ['autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos', 'mascotas', 'transporte', 'rc'];
+  const prefix = isMainCasinTeam(teamId) ? '' : `team_${teamId}_`;
+  const policies = [];
+  for (const collName of collections) {
     try {
-      const collectionRef = teamId && teamId !== 'CASIN' 
-        ? db.collection(`team_${teamId}_${collectionName}`)
-        : db.collection(collectionName);
-      
-      const snapshot = await collectionRef.limit(3).get();
-      
-      if (snapshot.size > 0) {
-        const fields = new Set();
-        snapshot.docs.forEach(doc => {
-          Object.keys(doc.data()).forEach(field => fields.add(field));
-        });
-        
-        schema[collectionName] = {
-          count: snapshot.size,
-          fields: Array.from(fields),
-          available: true
+      const ref = db.collection(prefix + collName);
+      const snap = await ref.get();
+      snap.forEach(docSnap => {
+        const doc = docSnap.data();
+        const name = getNameFromDocument(doc, collName);
+        const fechaFin = findBestDateFromDoc(doc, ['fecha_fin', 'vigencia_fin', 'fecha_vencimiento', 'vigencia_hasta', 'vencimiento']);
+        const fechaInicio = findBestDateFromDoc(doc, ['fecha_inicio', 'vigencia_inicio', 'fecha_emision', 'vigencia_de', 'fecha_expedicion']);
+        const ramo = getRamoDisplayName(collName);
+        const policy = {
+          id: docSnap.id,
+          contratante: name,
+          numero_poliza: doc.numero_poliza || doc.poliza || 'N/A',
+          aseguradora: doc.aseguradora || 'N/A',
+          fecha_fin: fechaFin,
+          fecha_inicio: fechaInicio,
+          forma_pago: doc.forma_pago || doc.forma_de_pago || '',
+          ramo,
+          sourceTable: collName,
+          expiration_override: doc.expiration_override || null,
+          email: doc.email || doc.e_mail || ''
         };
-      } else {
-        schema[collectionName] = {
-          count: 0,
-          fields: [],
-          available: false
-        };
-      }
-    } catch (error) {
-      schema[collectionName] = {
-        error: error.message,
-        available: false
-      };
+        policies.push(policy);
+      });
+    } catch (err) {
+      console.warn('ChatGPT reports: error reading', collName, err.message);
     }
   }
-  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const currentMonth = today.getMonth();
+  let activas = 0;
+  let vencidas = 0;
+  const byRamo = {};
+  const vencimientosEsteMes = [];
+  policies.forEach(p => {
+    if (isPolicyExpiredForReport(p)) vencidas++; else activas++;
+    byRamo[p.ramo] = (byRamo[p.ramo] || 0) + 1;
+    const endDate = parseDateForReport(p.fecha_fin);
+    if (endDate && endDate.getMonth() === currentMonth) {
+      vencimientosEsteMes.push({ contratante: p.contratante, numero_poliza: p.numero_poliza, ramo: p.ramo, fecha_fin: p.fecha_fin });
+    }
+  });
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  let out = `Total pólizas: ${policies.length} | Activas: ${activas} | Vencidas: ${vencidas}\n`;
+  out += `Por ramo: ${Object.entries(byRamo).map(([r, c]) => `${r}: ${c}`).join(', ')}\n`;
+  out += `Vencimientos en ${monthNames[currentMonth]}: ${vencimientosEsteMes.length} póliza(s)\n`;
+  if (vencimientosEsteMes.length > 0) {
+    vencimientosEsteMes.slice(0, 25).forEach(v => {
+      const dateStr = v.fecha_fin && parseDateForReport(v.fecha_fin) ? parseDateForReport(v.fecha_fin).toLocaleDateString('es-MX') : String(v.fecha_fin);
+      out += `  - ${v.contratante} | ${v.numero_poliza} (${v.ramo}) vence: ${dateStr}\n`;
+    });
+    if (vencimientosEsteMes.length > 25) out += `  ... y ${vencimientosEsteMes.length - 25} más\n`;
+  }
+  return out;
+}
+
+async function getChatGPTDatabaseSchema(teamId) {
+  if (!isFirebaseEnabled || !db) {
+    return { error: 'Firebase not available' };
+  }
+  const collections = ['autos', 'vida', 'gmm', 'hogar', 'negocio', 'diversos', 'mascotas', 'transporte', 'rc', 'directorio_contactos', 'clientes_metadata'];
+  const schema = {};
+  for (const collectionName of collections) {
+    try {
+      const collectionRef = isMainCasinTeam(teamId) ? db.collection(collectionName) : db.collection(`team_${teamId}_${collectionName}`);
+      const snapshot = await collectionRef.limit(3).get();
+      if (snapshot.size > 0) {
+        const fields = new Set();
+        snapshot.docs.forEach(doc => { Object.keys(doc.data()).forEach(field => fields.add(field)); });
+        schema[collectionName] = { count: snapshot.size, fields: Array.from(fields), available: true };
+      } else {
+        schema[collectionName] = { count: 0, fields: [], available: false };
+      }
+    } catch (error) {
+      schema[collectionName] = { error: error.message, available: false };
+    }
+  }
   return schema;
 }
 
-// Helper function to query data for ChatGPT
-async function queryChatGPTData(collection, filters = {}, teamId) {
-  if (!isFirebaseEnabled) {
+async function queryChatGPTData(collection, filters, teamId) {
+  if (!isFirebaseEnabled || !db) {
     throw new Error('Firebase not available');
   }
-
-  const collectionRef = teamId && teamId !== 'CASIN' 
-    ? db.collection(`team_${teamId}_${collection}`)
-    : db.collection(collection);
-  
+  const collectionRef = isMainCasinTeam(teamId) ? db.collection(collection) : db.collection(`team_${teamId}_${collection}`);
   let query = collectionRef;
-  
-  // Apply filters if provided
-  if (filters.limit) {
-    query = query.limit(parseInt(filters.limit));
-  }
-  
-  if (filters.orderBy) {
-    query = query.orderBy(filters.orderBy, filters.orderDirection || 'asc');
-  }
-  
+  if (filters.limit) query = query.limit(parseInt(filters.limit));
+  if (filters.orderBy) query = query.orderBy(filters.orderBy, filters.orderDirection || 'asc');
   const snapshot = await query.get();
   const data = [];
-  
-  snapshot.forEach(doc => {
-    data.push({
-      id: doc.id,
-      ...doc.data()
-    });
-  });
-  
+  snapshot.forEach(doc => { data.push({ id: doc.id, ...doc.data() }); });
   return data;
 }
 

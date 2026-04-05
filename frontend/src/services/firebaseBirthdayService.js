@@ -354,6 +354,8 @@ class FirebaseBirthdayService {
    */
   async sendBirthdayEmailWithGmail(birthdayPerson, message = '') {
     try {
+      const logoBase = import.meta.env.VITE_PUBLIC_CRM_URL || 'https://casin-crm.web.app';
+      const casinLogoUrl = `${String(logoBase).replace(/\/$/, '')}/logo.png`;
       const response = await fetch(`${API_URL}/email/send-welcome`, {
         method: 'POST',
         headers: {
@@ -364,38 +366,40 @@ class FirebaseBirthdayService {
           bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
           subject: `Feliz Cumpleaños ${birthdayPerson.name}`,
           htmlContent: `
-            <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background-color: #f8f9fa;">
-              <div style="background-color: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 40px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <h1 style="color: #2c3e50; font-size: 28px; font-weight: 600; margin: 0 0 10px 0;">Feliz Cumpleaños</h1>
-                  <div style="width: 60px; height: 3px; background-color: #3498db; margin: 0 auto;"></div>
-                </div>
-                
-                <div style="text-align: center; margin-bottom: 30px;">
-                  <h2 style="color: #34495e; font-size: 22px; font-weight: 500; margin: 0;">${birthdayPerson.name}</h2>
-                </div>
-                
-                <div style="text-align: center; margin-bottom: 30px; padding: 20px 0;">
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 0;">
-                    En este día tan especial, queremos desearte que tengas un día maravilloso lleno de alegría y éxito.
-                  </p>
-                  <p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 15px 0 0 0;">
-                    Esperamos que este nuevo año de vida esté lleno de momentos gratificantes y logros importantes.
-                  </p>
-                  ${message ? `<p style="color: #555555; font-size: 16px; line-height: 1.6; margin: 15px 0 0 0; font-style: italic;">"${message}"</p>` : ''}
-                </div>
-                
-                <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 1px solid #e0e0e0;">
-                  <p style="color: #7f8c8d; font-size: 14px; margin: 0 0 10px 0;">Atentamente,</p>
-                  <p style="color: #2c3e50; font-size: 16px; font-weight: 600; margin: 0;">Equipo CASIN Seguros</p>
-                </div>
-              </div>
-              
-              <div style="text-align: center; margin-top: 20px;">
-                <p style="color: #95a5a6; font-size: 12px; margin: 0;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros</p>
-                ${birthdayPerson.details ? `<p style="color: #95a5a6; font-size: 12px; margin: 5px 0 0 0;">Detalles: ${birthdayPerson.details}</p>` : ''}
-              </div>
-            </div>
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background-color:#e8edf3;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;">
+      <tr><td style="padding:28px 32px 12px;text-align:center;background-color:#ffffff;">
+        <img src="${casinLogoUrl}" alt="CASIN Seguros" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
+      </td></tr>
+      <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;">¡Feliz cumpleaños!</h1>
+        <p style="margin:10px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;color:#fde68a;text-align:center;">Un mensaje especial para ti</p>
+      </td></tr>
+      <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
+        <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${birthdayPerson.name}</h2>
+        <p style="margin:0 0 12px;font-size:17px;line-height:1.65;color:#475569;">En este día tan especial, te deseamos un día maravilloso lleno de alegría y éxito.</p>
+        <p style="margin:0 0 12px;font-size:17px;line-height:1.65;color:#475569;">Que este nuevo año de vida esté lleno de momentos gratificantes y logros importantes.</p>
+        ${message ? `<p style="margin:0;font-size:17px;line-height:1.65;color:#475569;font-style:italic;">"${message}"</p>` : ''}
+        <p style="margin:16px 0 0;font-size:44px;line-height:1.2;text-align:center;">🎉&nbsp;&nbsp;🎈&nbsp;&nbsp;🎁</p>
+        <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
+          <p style="margin:0;font-size:15px;color:#64748b;">Atentamente,</p>
+          <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">Equipo CASIN Seguros</p>
+        </div>
+      </td></tr>
+      <tr><td style="padding:18px 32px 24px;background-color:#f1f5f9;text-align:center;font-family:Segoe UI,Tahoma,sans-serif;font-size:12px;color:#64748b;line-height:1.5;">
+        <p style="margin:0;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros.</p>
+        ${birthdayPerson.details ? `<p style="margin:8px 0 0;">Detalles: ${birthdayPerson.details}</p>` : ''}
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>
           `,
           from: import.meta.env.VITE_GMAIL_USERNAME || 'casinseguros@gmail.com',
           fromPass: import.meta.env.VITE_GMAIL_APP_PASSWORD,

@@ -229,6 +229,44 @@ const Birthdays = () => {
         </div>
       </div>
 
+      <section className="birthday-email-preview-section" aria-label="Vista previa del correo de cumpleaños">
+        <div className="birthday-email-preview-head">
+          <h3 className="birthday-email-preview-title">Vista previa del correo</h3>
+          <p className="birthday-email-preview-sub">
+            Diseño que usamos en los felicitaciones automáticas (colores institucionales y logo).
+          </p>
+        </div>
+        <div className="birthday-email-preview-frame">
+          <div className="birthday-email-preview-card">
+            <div className="birthday-email-preview-logo-wrap">
+              <img src="/logo.png" alt="CASIN Seguros" className="birthday-email-preview-logo" width={80} height={80} />
+            </div>
+            <div className="birthday-email-preview-accent" aria-hidden />
+            <div className="birthday-email-preview-hero">
+              <h4 className="birthday-email-preview-hero-title">¡Feliz cumpleaños!</h4>
+              <p className="birthday-email-preview-hero-tag">Un mensaje especial para ti</p>
+            </div>
+            <div className="birthday-email-preview-body">
+              <p className="birthday-email-preview-label">Para</p>
+              <p className="birthday-email-preview-name">María González López</p>
+              <p className="birthday-email-preview-message">
+                ¡Que tengas un día maravilloso lleno de alegría y éxito!
+              </p>
+              <p className="birthday-email-preview-emoji" aria-hidden>
+                🎉 🎈 🎁
+              </p>
+              <div className="birthday-email-preview-signoff">
+                <p className="birthday-email-preview-signoff-muted">Con cariño,</p>
+                <p className="birthday-email-preview-signoff-brand">Equipo CASIN Seguros</p>
+              </div>
+            </div>
+            <div className="birthday-email-preview-footer">
+              Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros.
+            </div>
+          </div>
+        </div>
+      </section>
+
       {emailStatus && (
         <div className={`email-status ${emailStatus.success ? 'success' : emailStatus.error ? 'error' : ''}`}>
           {emailStatus.message}
