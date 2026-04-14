@@ -190,32 +190,80 @@
 }
 
 .stat-card {
-  background: linear-gradient(135deg, #ffffff, #f8f9fa);
-  border: 1px solid #e1e5e9;
+  position: relative;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
   border-radius: 12px;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  padding: 18px 18px;
+  text-align: left;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.02), transparent 40%);
+  pointer-events: none;
+}
+
+.stat-card--clients {
+  border-left: 4px solid #0b4f74;
+}
+
+.stat-card--policies {
+  border-left: 4px solid #5b21b6;
+}
+
+.stat-card--active {
+  border-left: 4px solid #047857;
+}
+
+.stat-icon {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 1.25rem;
+  background: #f1f3f5;
+  border: 1px solid #dee2e6;
+  flex: 0 0 auto;
+}
+
+.stat-metric {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .stat-number {
-  font-size: 2.5rem;
+  font-size: 2.25rem;
   font-weight: 700;
-  color: #2c3e50;
-  margin-bottom: 8px;
+  color: #111827;
+  line-height: 1.05;
+  margin-bottom: 0;
 }
 
 .stat-label {
   font-size: 0.9rem;
-  color: #7f8c8d;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: #374151;
+  font-weight: 650;
+  text-transform: none;
+  letter-spacing: 0.2px;
 }
 
 /* Filters Section */
