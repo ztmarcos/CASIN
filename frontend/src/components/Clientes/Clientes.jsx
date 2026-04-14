@@ -379,17 +379,26 @@ const Clientes = () => {
       {/* Stats */}
       {stats && (
         <div className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-number">{stats.totalClients}</div>
-            <div className="stat-label">Total Clientes</div>
+          <div className="stat-card stat-card--clients">
+            <div className="stat-icon" aria-hidden="true">👥</div>
+            <div className="stat-metric">
+              <div className="stat-number">{stats.totalClients}</div>
+              <div className="stat-label">Total Clientes</div>
+            </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-number">{stats.totalPolicies}</div>
-            <div className="stat-label">Total Pólizas</div>
+          <div className="stat-card stat-card--policies">
+            <div className="stat-icon" aria-hidden="true">📄</div>
+            <div className="stat-metric">
+              <div className="stat-number">{stats.totalPolicies}</div>
+              <div className="stat-label">Total Pólizas</div>
+            </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-number">{stats.activePolicies}</div>
-            <div className="stat-label">Pólizas Activas</div>
+          <div className="stat-card stat-card--active">
+            <div className="stat-icon" aria-hidden="true">✅</div>
+            <div className="stat-metric">
+              <div className="stat-number">{stats.activePolicies}</div>
+              <div className="stat-label">Pólizas Activas</div>
+            </div>
           </div>
 
         </div>
