@@ -242,6 +242,14 @@ const Birthdays = () => {
               <img src="/logo.png" alt="CASIN Seguros" className="birthday-email-preview-logo" width={80} height={80} />
             </div>
             <div className="birthday-email-preview-accent" aria-hidden />
+            <div className="birthday-email-preview-cake">
+              <img
+                src="/emails/birthday-cake-hero.png"
+                alt=""
+                className="birthday-email-preview-cake-img"
+                width={600}
+              />
+            </div>
             <div className="birthday-email-preview-hero">
               <h4 className="birthday-email-preview-hero-title">¡Feliz cumpleaños!</h4>
               <p className="birthday-email-preview-hero-tag">Un mensaje especial para ti</p>
@@ -250,10 +258,7 @@ const Birthdays = () => {
               <p className="birthday-email-preview-label">Para</p>
               <p className="birthday-email-preview-name">María González López</p>
               <p className="birthday-email-preview-message">
-                ¡Que tengas un día maravilloso lleno de alegría y éxito!
-              </p>
-              <p className="birthday-email-preview-emoji" aria-hidden>
-                🎉 🎈 🎁
+                ¡Que tengas un día maravilloso lleno de alegría y buenos momentos!
               </p>
               <div className="birthday-email-preview-signoff">
                 <p className="birthday-email-preview-signoff-muted">Con cariño,</p>

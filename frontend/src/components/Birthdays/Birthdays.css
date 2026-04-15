@@ -477,6 +477,21 @@
   background: linear-gradient(90deg, #fb923c, #ea580c);
 }
 
+.birthday-email-preview-cake {
+  padding: 0;
+  line-height: 0;
+  background: #ffffff;
+}
+
+.birthday-email-preview-cake-img {
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  height: auto;
+  margin: 0 auto;
+  vertical-align: bottom;
+}
+
 .birthday-email-preview-hero {
   padding: 1.5rem 2rem;
   background: linear-gradient(160deg, #1a4d7a 0%, #0c2847 100%);
@@ -488,13 +503,15 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .birthday-email-preview-hero-tag {
-  margin: 0.5rem 0 0;
+  margin: 0.75rem 0 0;
   font-size: 0.9375rem;
-  color: #fde68a;
+  font-weight: 500;
+  color: #ffeb3b;
 }
 
 .birthday-email-preview-body {
@@ -524,13 +541,6 @@
   font-size: 1.05rem;
   line-height: 1.65;
   color: #475569;
-}
-
-.birthday-email-preview-emoji {
-  margin: 0;
-  font-size: 2.5rem;
-  line-height: 1.2;
-  text-align: center;
 }
 
 .birthday-email-preview-signoff {

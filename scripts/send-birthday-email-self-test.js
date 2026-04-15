@@ -31,6 +31,9 @@ const API_BASE =
 const API_URL = `${API_BASE.replace(/\/$/, '')}/api`;
 
 const casinLogoUrl = `${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png`;
+const birthdayHeroUrl =
+  process.env.BIRTHDAY_EMAIL_HERO_URL ||
+  'https://firebasestorage.googleapis.com/v0/b/casinbbdd.firebasestorage.app/o/public%2Femails%2Fbirthday-cake-hero.png?alt=media';
 
 const SAMPLE_NAME = 'Marcos (prueba de diseño)';
 
@@ -46,15 +49,17 @@ function buildBirthdayHtml(displayName) {
         <img src="${casinLogoUrl}" alt="CASIN Seguros" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
       </td></tr>
       <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:0;line-height:0;background-color:#ffffff;">
+        <img src="${birthdayHeroUrl}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;"/>
+      </td></tr>
       <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
-        <h1 style="margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:-0.02em;">¡Feliz cumpleaños!</h1>
-        <p style="margin:10px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;color:#fde68a;text-align:center;">Un mensaje especial para ti</p>
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:0.04em;text-transform:uppercase;">¡Feliz cumpleaños!</h1>
+        <p style="margin:12px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;font-weight:500;color:#ffeb3b;text-align:center;">Un mensaje especial para ti</p>
       </td></tr>
       <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
         <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
         <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${displayName}</h2>
-        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">¡Que tengas un día maravilloso lleno de alegría y éxito!</p>
-        <p style="margin:0;font-size:44px;line-height:1.2;text-align:center;">🎉&nbsp;&nbsp;🎈&nbsp;&nbsp;🎁</p>
+        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">¡Que tengas un día maravilloso lleno de alegría y buenos momentos!</p>
         <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="margin:0;font-size:15px;color:#64748b;">Con cariño,</p>
           <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">Equipo CASIN Seguros</p>
@@ -99,7 +104,7 @@ async function main() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       to: EMAIL,
-      subject: '🎂 Prueba diseño · cumpleaños CASIN',
+      subject: 'Prueba diseño · cumpleaños CASIN',
       htmlContent: buildBirthdayHtml(SAMPLE_NAME),
       from: EMAIL,
       fromPass,

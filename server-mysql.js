@@ -825,7 +825,10 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
     }
 
     const casinLogoUrl = `${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png`;
-    
+    const birthdayHeroUrl =
+      process.env.BIRTHDAY_EMAIL_HERO_URL ||
+      'https://firebasestorage.googleapis.com/v0/b/casinbbdd.firebasestorage.app/o/public%2Femails%2Fbirthday-cake-hero.png?alt=media';
+
     for (const birthday of todaysBirthdays) {
       // Skip if already sent to this person today (by email or by name)
       const nameKey = birthday.name.toLowerCase();
@@ -869,15 +872,17 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
         <img src="${casinLogoUrl}" alt="CASIN Seguros" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
       </td></tr>
       <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:0;line-height:0;background-color:#ffffff;">
+        <img src="${birthdayHeroUrl}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;"/>
+      </td></tr>
       <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
-        <h1 style="margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:-0.02em;">¡Feliz cumpleaños!</h1>
-        <p style="margin:10px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;color:#fde68a;text-align:center;">Un mensaje especial para ti</p>
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:0.04em;text-transform:uppercase;">¡Feliz cumpleaños!</h1>
+        <p style="margin:12px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;font-weight:500;color:#ffeb3b;text-align:center;">Un mensaje especial para ti</p>
       </td></tr>
       <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
         <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
         <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${birthday.name}</h2>
-        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">¡Que tengas un día maravilloso lleno de alegría y éxito!</p>
-        <p style="margin:0;font-size:44px;line-height:1.2;text-align:center;">🎉&nbsp;&nbsp;🎈&nbsp;&nbsp;🎁</p>
+        <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">¡Que tengas un día maravilloso lleno de alegría y buenos momentos!</p>
         <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="margin:0;font-size:15px;color:#64748b;">Con cariño,</p>
           <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">Equipo CASIN Seguros</p>
@@ -905,7 +910,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             body: JSON.stringify({
               to: birthday.email,
               bcc: 'ztmarcos@gmail.com,casinseguros@gmail.com',
-              subject: `🎂 ¡Feliz Cumpleaños ${birthday.name}!`,
+              subject: `¡Feliz cumpleaños, ${birthday.name}!`,
               htmlContent: emailHTML,
               from: 'casinseguros@gmail.com',
               fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
@@ -960,6 +965,9 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
         <img src="${casinLogoUrl}" alt="CASIN Seguros" width="72" height="72" style="display:block;margin:0 auto;border:0;"/>
       </td></tr>
       <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:0;line-height:0;background-color:#ffffff;">
+        <img src="${birthdayHeroUrl}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;"/>
+      </td></tr>
       <tr><td style="padding:24px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
         <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;text-align:center;">Cumpleaños de hoy</h1>
       </td></tr>
@@ -987,7 +995,7 @@ app.get('/api/cron/birthday-emails', async (req, res) => {
             body: JSON.stringify({
               to: 'ztmarcos@gmail.com',
               bcc: 'casinseguros@gmail.com',
-              subject: `🎂 Cumpleaños de hoy: ${birthday.name} (sin email)`,
+              subject: `Cumpleaños de hoy: ${birthday.name} (sin email)`,
               htmlContent: notificationHTML,
               from: 'casinseguros@gmail.com',
               fromPass: process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN || 'espajcgariyhsboq',
@@ -3417,11 +3425,15 @@ app.post('/api/birthday/check-and-send', async (req, res) => {
       const testCopy = req.body.testCopy || 'casinseguros@gmail.com';
       
       console.log(`📧 Sending test email to ${testEmail} with copy to ${testCopy}`);
+
+      const testBirthdayHeroUrl =
+        process.env.BIRTHDAY_EMAIL_HERO_URL ||
+        'https://firebasestorage.googleapis.com/v0/b/casinbbdd.firebasestorage.app/o/public%2Femails%2Fbirthday-cake-hero.png?alt=media';
       
       // Send test email using the existing email service
       const emailData = {
         to: testEmail,
-        subject: '🎂 Test - Sistema de Cumpleaños Automático',
+        subject: 'Test - Sistema de cumpleaños automático',
         htmlContent: `
 <!DOCTYPE html>
 <html><head><meta charset="UTF-8"></head>
@@ -3433,6 +3445,9 @@ app.post('/api/birthday/check-and-send', async (req, res) => {
         <img src="${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png" alt="CASIN Seguros" width="72" height="72" style="display:block;margin:0 auto;border:0;"/>
       </td></tr>
       <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
+      <tr><td style="padding:0;line-height:0;background-color:#ffffff;">
+        <img src="${testBirthdayHeroUrl}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;"/>
+      </td></tr>
       <tr><td style="padding:24px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);text-align:center;">
         <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;">Sistema de cumpleaños · Test</h1>
       </td></tr>
@@ -3440,7 +3455,6 @@ app.post('/api/birthday/check-and-send', async (req, res) => {
         <h2 style="margin:0 0 12px;font-size:20px;color:#0f2840;">Test automático activado</h2>
         <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#475569;">El sistema de correos automáticos de cumpleaños está funcionando correctamente.</p>
         <p style="margin:0 0 20px;font-size:16px;color:#ea580c;font-weight:600;">Se encontraron ${todaysBirthdays.length} cumpleaños para hoy.</p>
-        <p style="margin:0;font-size:36px;text-align:center;">🎉 🎈 🎁</p>
         <p style="margin:24px 0 0;font-size:15px;color:#64748b;text-align:center;">Con cariño,<br><strong style="color:#0f2840;">Equipo CASIN Seguros</strong></p>
       </td></tr>
       <tr><td style="padding:16px 32px 22px;background-color:#f1f5f9;text-align:center;font-size:12px;color:#64748b;">Este mensaje fue enviado automáticamente por el sistema de CASIN Seguros.</td></tr>
