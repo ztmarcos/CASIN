@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
  * Prueba del layout de correo de cumpleaños (naranja/azul + logo).
- * Envía desde ztmarcos@gmail.com hacia ztmarcos@gmail.com, sin BCC ni CC.
+ * Por defecto: desde z.t.marcos@gmail.com hacia z.t.marcos@gmail.com, sin BCC ni CC.
+ * (Sobrescribe con BIRTHDAY_TEST_EMAIL si hace falta.)
  *
- * Requiere contraseña de aplicación de la cuenta ztmarcos en el entorno:
+ * Contraseña de aplicación de esa cuenta Gmail:
  *   GMAIL_APP_PASSWORD_ZTMARCOS   (preferido)
  *   o ZTMARCOS_GMAIL_APP_PASSWORD
  *
@@ -21,7 +22,8 @@ try {
 
 const fetch = require('node-fetch');
 
-const EMAIL = 'ztmarcos@gmail.com';
+const EMAIL =
+  process.env.BIRTHDAY_TEST_EMAIL || 'z.t.marcos@gmail.com';
 const API_BASE =
   process.env.API_BASE_URL ||
   process.env.VITE_FIREBASE_API_BASE ||
@@ -69,14 +71,21 @@ function buildBirthdayHtml(displayName) {
 `;
 }
 
+function normalizeGmailAppPassword(p) {
+  if (!p || typeof p !== 'string') return p;
+  return p.replace(/\s+/g, '');
+}
+
 async function main() {
-  const fromPass =
+  const fromPass = normalizeGmailAppPassword(
     process.env.GMAIL_APP_PASSWORD_ZTMARCOS ||
-    process.env.ZTMARCOS_GMAIL_APP_PASSWORD;
+      process.env.ZTMARCOS_GMAIL_APP_PASSWORD ||
+      process.env.SMTP_PASS_MARCOS
+  );
 
   if (!fromPass) {
     console.error(
-      '❌ Define GMAIL_APP_PASSWORD_ZTMARCOS (contraseña de aplicación de ztmarcos@gmail.com).'
+      '❌ Define contraseña de aplicación (p. ej. SMTP_PASS_MARCOS o GMAIL_APP_PASSWORD_ZTMARCOS para z.t.marcos@gmail.com).'
     );
     process.exit(1);
   }
