@@ -18,6 +18,7 @@
     "deploy:firebase:all": "npm run build && firebase deploy",
     "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "create:test-team": "node create-test-team-admin.js",
+    "test:birthday-email-self": "node scripts/send-birthday-email-self-test.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
