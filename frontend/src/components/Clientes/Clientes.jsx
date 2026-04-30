@@ -397,7 +397,7 @@ const Clientes = () => {
             <div className="stat-icon" aria-hidden="true">✅</div>
             <div className="stat-metric">
               <div className="stat-number">{stats.activePolicies}</div>
-              <div className="stat-label">Pólizas Activas</div>
+              <div className="stat-label">Pólizas pvigentes</div>
             </div>
           </div>
 
@@ -423,7 +423,7 @@ const Clientes = () => {
             className="filter-select"
           >
             <option value="all">Todos los estados</option>
-            <option value="active">Solo activas</option>
+            <option value="active">Solo pvigentes</option>
             <option value="expired">Solo expiradas</option>
             <option value="mixed">Mixtas</option>
           </select>
@@ -447,7 +447,7 @@ const Clientes = () => {
             <option value="name">Ordenar por nombre</option>
             <option value="policies">Ordenar por pólizas</option>
 
-            <option value="active">Ordenar por activas</option>
+            <option value="active">Ordenar por pvigentes</option>
           </select>
 
           <button

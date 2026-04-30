@@ -15,7 +15,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const REPORT_TYPES = ['Vencimientos', 'Activas', 'Pagos Parciales', 'Matriz de Productos'];
+const REPORT_TYPES = ['Vencimientos', 'pvigentes', 'Pagos Parciales', 'Matriz de Productos'];
 
 // Utility function to check if a policy is expired
 const isPolicyExpired = (policy) => {
@@ -895,19 +895,19 @@ export default function Reports() {
           }
           return nextPaymentDate.getMonth() === selectedMonth;
         });
-      } else if (selectedType === 'Activas') {
-        const beforeActivas = filtered.length;
+      } else if (selectedType === 'pvigentes') {
+        const beforePvigentes = filtered.length;
         const activePolicies = filtered.filter(policy => !isPolicyExpired(policy));
-        const expiredCount = beforeActivas - activePolicies.length;
-        console.log(`📋 Activas filter: total policies=${beforeActivas}, activas=${activePolicies.length}, vencidas=${expiredCount}`);
-        if (beforeActivas > 0 && activePolicies.length === 0) {
+        const expiredCount = beforePvigentes - activePolicies.length;
+        console.log(`📋 pvigentes filter: total policies=${beforePvigentes}, pvigentes=${activePolicies.length}, vencidas=${expiredCount}`);
+        if (beforePvigentes > 0 && activePolicies.length === 0) {
           const sample = filtered.slice(0, 3).map(p => ({
             numero_poliza: p.numero_poliza,
             fecha_fin: p.fecha_fin,
             expiration_override: p.expiration_override,
             isExpired: isPolicyExpired(p)
           }));
-          console.warn('⚠️ Activas: no hay pólizas activas. Muestra de pólizas (¿todas vencidas?):', sample);
+          console.warn('⚠️ pvigentes: no hay pólizas pvigentes. Muestra de pólizas (¿todas vencidas?):', sample);
         }
         filtered = [...activePolicies].sort((a, b) => {
           const dateA = parseDate(a.fecha_fin) || parseDate(a.fecha_inicio) || new Date(0);
@@ -1524,7 +1524,7 @@ export default function Reports() {
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
-              {(selectedType !== 'Matriz de Productos' && selectedType !== 'Activas') && (
+              {(selectedType !== 'Matriz de Productos' && selectedType !== 'pvigentes') && (
                 <select
                   className="filter-select"
                   value={selectedMonth}
@@ -1537,7 +1537,7 @@ export default function Reports() {
               )}
             </div>
           )}
-          {(selectedType !== 'Matriz de Productos' && selectedType !== 'Activas') && (
+          {(selectedType !== 'Matriz de Productos' && selectedType !== 'pvigentes') && (
             <button
               className="send-email-btn"
               onClick={handleSendEmail}
