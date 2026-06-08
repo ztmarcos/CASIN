@@ -1,11 +1,12 @@
 import { API_URL } from '../config/api.js';
 
-const API_BASE_URL = API_URL.replace('/api', '/api/gpt');
+/** @example https://api-xxx.run.app/api/gpt */
+const GPT_API_BASE = `${API_URL}/gpt`;
 
 export const gptService = {
   async generatePolicyEmail(type, data) {
     try {
-      const response = await fetch(`${API_BASE_URL}/generate`, {
+      const response = await fetch(`${GPT_API_BASE}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, data }),
@@ -25,7 +26,7 @@ export const gptService = {
 
   async generateResponse(prompt, context = {}) {
     try {
-      const response = await fetch(`${API_BASE_URL}/generate`, {
+      const response = await fetch(`${GPT_API_BASE}/generate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,7 +52,7 @@ export const gptService = {
 
   async analyzeData(data, analysisType = 'general') {
     try {
-      const response = await fetch(`${API_BASE_URL}/analyze`, {
+      const response = await fetch(`${GPT_API_BASE}/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ export const gptService = {
 
   async generateInsights(tableData, tableName) {
     try {
-      const response = await fetch(`${API_BASE_URL}/insights`, {
+      const response = await fetch(`${GPT_API_BASE}/insights`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
