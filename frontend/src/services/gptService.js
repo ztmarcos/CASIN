@@ -3,6 +3,26 @@ import { API_URL } from '../config/api.js';
 const API_BASE_URL = API_URL.replace('/api', '/api/gpt');
 
 export const gptService = {
+  async generatePolicyEmail(type, data) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, data }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate policy email');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error generating policy email:', error);
+      throw error;
+    }
+  },
+
   async generateResponse(prompt, context = {}) {
     try {
       const response = await fetch(`${API_BASE_URL}/generate`, {
