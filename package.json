@@ -14,16 +14,22 @@
     "install:all": "npm install && cd frontend && npm install",
     "cron:birthdays": "node cron.js",
     "copy-api": "cp server-mysql.js functions/server-mysql-app.js",
+    "publish:autos-sync": "node scripts/publish-autos-sync-feed.js",
     "deploy:firebase": "npm run build && firebase deploy --only hosting",
+    "deploy:firebase:sync": "npm run publish:autos-sync && npm run build && firebase deploy --only hosting",
     "deploy:firebase:all": "npm run build && firebase deploy",
     "deploy:rules": "firebase deploy --only firestore:rules,storage",
     "create:test-team": "node create-test-team-admin.js",
     "test:birthday-email-self": "node scripts/send-birthday-email-self-test.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "report:csv-vs-firebase": "node scripts/report-csv-vs-firebase-clientes.js",
+    "report:mich-vs-firebase": "node scripts/report-mich-directorio-vs-firebase.js",
+    "apply:contact-enrichment": "node scripts/apply-contact-enrichment-from-report.js"
   },
   "dependencies": {
     "@notionhq/client": "^3.1.3",
     "cors": "^2.8.5",
+    "csv-parse": "^5.6.0",
     "debug": "^4.3.4",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",

@@ -1,0 +1,45 @@
+# Regenera /sync/autos.json desde Firestore y despliega a Firebase Hosting.
+# Horario: 06:00 Ciudad de México (12:00 UTC, CST).
+# Manual: Actions → "Autos sync feed" → Run workflow
+
+name: Autos sync feed
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (root)
+        run: npm install
+
+      - name: Install dependencies (frontend)
+        run: cd frontend && npm install
+
+      - name: Publish autos sync feed from Firestore
+        run: npm run publish:autos-sync
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CASINBBDD }}
+          AUTOS_SYNC_TOKEN: ${{ secrets.AUTOS_SYNC_TOKEN }}
+
+      - name: Build frontend
+        run: cd frontend && npm run build
+        env:
+          NODE_ENV: production
+
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CASINBBDD }}
+          channelId: live
+          projectId: casinbbdd
