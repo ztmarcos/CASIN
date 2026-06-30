@@ -483,38 +483,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
-  gap: 1.5rem;
+  padding: 3rem 2rem;
 }
 
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #e2e8f0;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.tables-loading-clock {
+  animation: loading-clock-pulse 1.6s ease-in-out infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  font-size: 1rem;
-  color: #64748b;
-  margin: 0;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
+@keyframes loading-clock-pulse {
   0%, 100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
   }
 }
 
@@ -838,13 +819,8 @@
   color: #f1f5f9;
 }
 
-[data-theme='dark'] .loading-spinner {
-  border-color: #334155;
-  border-top-color: #3b82f6;
-}
-
-[data-theme='dark'] .loading-text {
-  color: #94a3b8;
+[data-theme='dark'] .tables-loading-clock {
+  color: #f1f5f9;
 }
 
 [data-theme='dark'] .error-message {

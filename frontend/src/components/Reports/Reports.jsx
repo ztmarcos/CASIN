@@ -1486,14 +1486,14 @@ export default function Reports() {
 
       {!searchTerm.trim() && (
         <div className="reports-active-view" aria-live="polite">
-          <div className="reports-active-view__main">
-            <span className="reports-active-view__badge">{selectedType}</span>
-            <span className="reports-active-view__subtitle">
+          <div className="reports-active-view__text">
+            <h3 className="reports-active-view__title">{selectedType}</h3>
+            <p className="reports-active-view__subtitle">
               {REPORT_TYPE_META[selectedType]?.subtitle}
               {REPORT_TYPE_META[selectedType]?.usesMonth && (
                 <> · {MONTHS[selectedMonth]} {new Date().getFullYear()}</>
               )}
-            </span>
+            </p>
           </div>
           {!isLoading && !isStatusLoading && selectedType !== 'Matriz de Productos' && (
             <span className="reports-active-view__count">
