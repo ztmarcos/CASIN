@@ -1,15 +1,8 @@
-import { parseDate } from './dateUtils.js';
 import {
-  isPolicyExpired,
   isPorVencerProximosMeses,
+  isRecentlyExpiredPolicy,
 } from './policyExpiryBuckets.js';
 import { hasPartialPayments } from './policyPaymentReminder.js';
-
-/** Aproximación: capturas anteriores a esta fecha no tenían seguimiento Pagado/No Pagado. */
-export const PAYMENT_TRACKING_START_MS = new Date('2025-01-01T00:00:00').getTime();
-
-/** Pólizas por vencer dentro de esta ventana se tratan como legacy si nunca tuvieron seguimiento de pago. */
-export const LEGACY_POR_VENCER_MESES = 12;
 
 export const LEGACY_PAYMENT_STATUS = null;
 
@@ -40,6 +33,7 @@ export function getPolicyEntryTimestamp(policy) {
   return 0;
 }
 
+/** Tuvo interacción explícita con Pagado/No Pagado o cuotas en el CRM. */
 export function hasExplicitPaymentTracking(policy) {
   if (!policy) return false;
 
@@ -58,22 +52,12 @@ export function hasExplicitPaymentTracking(policy) {
 }
 
 /**
- * Pólizas capturadas antes del seguimiento de pagos, sin estado explícito.
- * No deben mostrarse como "No Pagado" ni recibir recordatorios automáticos.
+ * Sin seguimiento: por vencer (ventana operativa) o vencida reciente,
+ * y nunca se marcó Pagado/No Pagado en el CRM.
  */
 export function isLegacyUntrackedPolicy(policy) {
   if (!policy || hasExplicitPaymentTracking(policy)) return false;
-
-  if (isPolicyExpired(policy) || isPorVencerProximosMeses(policy, LEGACY_POR_VENCER_MESES)) {
-    return true;
-  }
-
-  const entryTimestamp = getPolicyEntryTimestamp(policy);
-  if (entryTimestamp > 0 && entryTimestamp < PAYMENT_TRACKING_START_MS) {
-    return true;
-  }
-
-  return false;
+  return isPorVencerProximosMeses(policy) || isRecentlyExpiredPolicy(policy);
 }
 
 /**

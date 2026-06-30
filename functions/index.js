@@ -866,6 +866,8 @@ exports.scheduledWeeklyResumen = onSchedule({
       paymentsPending: {
         total: paymentsPendingList.length,
         payments: paymentsPendingList.slice(0, 15),
+        currentMonth: pendingWithStats.currentMonth,
+        previousMonth: pendingWithStats.previousMonth,
         note: weeklyResumenHelpers.buildPaymentsPendingMonthNote(pendingReferenceDate),
       },
       paymentsMade: {
@@ -1206,9 +1208,11 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
           <!-- Pagos parciales pendientes (solo fraccionadas) -->
           ${summaryData.paymentsPending && summaryData.paymentsPending.total > 0 ? `
           <div style="margin-bottom: 30px;">
-            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pagos parciales del mes (${summaryData.paymentsPending.total})</h2>
-            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">${summaryData.paymentsPending.note || 'Solo pólizas vigentes con pago fraccionado.'}</p>
-            <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; border: 1px solid #fbbf24;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pagos parciales no pagados (${summaryData.paymentsPending.total})</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">${summaryData.paymentsPending.note || 'Mes en curso y mes anterior.'}</p>
+            ${summaryData.paymentsPending.previousMonth && summaryData.paymentsPending.previousMonth.total > 0 ? `
+            <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 16px;">Mes anterior — ${summaryData.paymentsPending.previousMonth.label} (${summaryData.paymentsPending.previousMonth.total})</h3>
+            <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; border: 1px solid #fbbf24; margin-bottom: 16px;">
               <table style="width: 100%; border-collapse: collapse;">
                 <thead>
                   <tr style="background-color: #fde68a; border-bottom: 2px solid #f59e0b;">
@@ -1220,7 +1224,7 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
                   </tr>
                 </thead>
                 <tbody>
-                  ${summaryData.paymentsPending.payments.slice(0, 15).map((p) => `
+                  ${summaryData.paymentsPending.previousMonth.policies.slice(0, 10).map((p) => `
                     <tr style="border-bottom: 1px solid #fed7aa;">
                       <td style="padding: 10px; font-size: 13px;">${p.numero_poliza || '-'}</td>
                       <td style="padding: 10px; font-size: 13px;">${p.contratante || '-'}</td>
@@ -1232,6 +1236,34 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
                 </tbody>
               </table>
             </div>
+            ` : ''}
+            ${summaryData.paymentsPending.currentMonth && summaryData.paymentsPending.currentMonth.total > 0 ? `
+            <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 16px;">Mes en curso — ${summaryData.paymentsPending.currentMonth.label} (${summaryData.paymentsPending.currentMonth.total})</h3>
+            <div style="background-color: #fef3c7; border-radius: 8px; padding: 16px; border: 1px solid #fbbf24;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #fde68a; border-bottom: 2px solid #f59e0b;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma pago</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de pago</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto parcial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.paymentsPending.currentMonth.policies.slice(0, 10).map((p) => `
+                    <tr style="border-bottom: 1px solid #fed7aa;">
+                      <td style="padding: 10px; font-size: 13px;">${p.numero_poliza || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.contratante || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.forma_pago || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.fecha_pago || p.fecha_proximo_pago || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">$${(p.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
           </div>
           ` : ''}
 

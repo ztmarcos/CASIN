@@ -22,6 +22,7 @@ import {
   isSinglePaymentForm,
   shouldTrackProximoPago,
   getProximoPagoRaw,
+  getDueDateForPolicy,
 } from '../../utils/policyPaymentReminder';
 import {
   buildPartialPaymentUpdate,
@@ -30,6 +31,7 @@ import {
   getPartialPaymentProgress,
   getPartialPaymentProgressLabel,
   getPartialPaymentProgressStyle,
+  isCurrentInstallmentPending,
 } from '../../utils/partialPaymentUpdates';
 import {
   isLegacyUntrackedPolicy,
@@ -88,10 +90,77 @@ const REPORT_TYPES = [
 /** Tipos que no filtran por mes del calendario */
 const REPORT_TYPES_WITHOUT_MONTH = new Set([
   'Recientes',
+  'Pagos Parciales',
   'Vencidas',
   'Archivo muerto',
-  'Matriz de Productos'
+  'Matriz de Productos',
 ]);
+
+const REPORT_TYPE_META = {
+  Recientes: {
+    subtitle: 'Ordenadas por ingreso al CRM (más recientes primero)',
+  },
+  'Pagos Parciales': {
+    subtitle: 'Cuotas no pagadas con vencimiento en el mes en curso o el mes anterior',
+  },
+  Vencimientos: {
+    subtitle: 'Pólizas cuya vigencia termina en el mes seleccionado',
+    usesMonth: true,
+  },
+  Vigentes: {
+    subtitle: 'Pólizas activas durante el mes seleccionado',
+    usesMonth: true,
+  },
+  Vencidas: {
+    subtitle: 'Pólizas vencidas recientemente',
+  },
+  'Archivo muerto': {
+    subtitle: `Pólizas vencidas hace más de ${ARCHIVE_DEAD_MONTHS} meses`,
+  },
+  'Matriz de Productos': {
+    subtitle: 'Cobertura por cliente, ramo y aseguradora',
+  },
+};
+
+function getPreviousCalendarMonth(referenceDate = new Date()) {
+  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const d = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  d.setMonth(d.getMonth() - 1);
+  return { monthIndex: d.getMonth(), year: d.getFullYear() };
+}
+
+function isDueInCalendarMonth(dueDate, monthIndex, year) {
+  if (!dueDate || isNaN(dueDate.getTime())) return false;
+  return dueDate.getMonth() === monthIndex && dueDate.getFullYear() === year;
+}
+
+/** 'current' | 'previous' | null — alineado con resumen semanal */
+function getDuePeriodForPolicy(policy, referenceDate = new Date()) {
+  const dueDate = getDueDateForPolicy(policy);
+  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const current = { monthIndex: ref.getMonth(), year: ref.getFullYear() };
+  const previous = getPreviousCalendarMonth(ref);
+  if (isDueInCalendarMonth(dueDate, current.monthIndex, current.year)) return 'current';
+  if (isDueInCalendarMonth(dueDate, previous.monthIndex, previous.year)) return 'previous';
+  return null;
+}
+
+function getMesCuotaLabel(policy, referenceDate = new Date()) {
+  const period = getDuePeriodForPolicy(policy, referenceDate);
+  if (!period) return '—';
+  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  if (period === 'current') {
+    return new Date(ref.getFullYear(), ref.getMonth(), 1).toLocaleDateString('es-MX', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+  const previous = getPreviousCalendarMonth(ref);
+  return new Date(previous.year, previous.monthIndex, 1).toLocaleDateString('es-MX', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
 
 /** Vigente y con vigencia que cubre el mes calendario seleccionado (año en curso). */
 function isPolicyVigenteInCalendarMonth(policy, monthIndex, year = new Date().getFullYear()) {
@@ -1129,22 +1198,18 @@ export default function Reports() {
           return matchesSelectedCalendarMonth(endDate, selectedMonth, reportYear);
         });
       } else if (selectedType === 'Pagos Parciales') {
-        const reportYear = new Date().getFullYear();
-        filtered = filtered.filter(policy => {
-          const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
-          if (!nextPaymentDate) {
-            // For annual policies, use fecha_fin instead of fecha_proximo_pago
-            if (isSinglePaymentForm(policy.forma_pago) && policy.fecha_fin) {
-              const endDate = parseDate(policy.fecha_fin);
-              if (endDate) {
-                console.log('ℹ️ Using fecha_fin for annual policy:', policy.numero_poliza);
-                return matchesSelectedCalendarMonth(endDate, selectedMonth, reportYear);
-              }
-            }
-            console.warn('⚠️ Pagos Parciales: Skipping policy with invalid fecha_proximo_pago:', policy.numero_poliza, policy.fecha_proximo_pago);
-            return false;
-          }
-          return matchesSelectedCalendarMonth(nextPaymentDate, selectedMonth, reportYear);
+        filtered = filtered.filter((policy) => {
+          if (isPolicyExpired(policy)) return false;
+          if (isLegacyUntrackedPolicy(policy)) return false;
+          if (resolvePolicyPaymentStatus(policy) === 'Pagado') return false;
+          if (!hasPartialPayments(policy.forma_pago)) return false;
+          if (!isCurrentInstallmentPending(policy)) return false;
+          return getDuePeriodForPolicy(policy) != null;
+        });
+        filtered.sort((a, b) => {
+          const dateA = getDueDateForPolicy(a) || new Date(0);
+          const dateB = getDueDateForPolicy(b) || new Date(0);
+          return dateB - dateA;
         });
       } else if (selectedType === 'Vigentes') {
         const reportYear = new Date().getFullYear();
@@ -1182,7 +1247,7 @@ export default function Reports() {
       }
     }
 
-    // Pagos Parciales: solo vigentes (excluye archivo muerto y pólizas vencidas)
+    // Pagos Parciales: solo vigentes (excluye pólizas vencidas — ya filtrado arriba)
     if (selectedType === 'Pagos Parciales') {
       filtered = filtered.filter((policy) => !isPolicyExpired(policy));
     }
@@ -1419,6 +1484,26 @@ export default function Reports() {
         </div>
       </div>
 
+      {!searchTerm.trim() && (
+        <div className="reports-active-view" aria-live="polite">
+          <div className="reports-active-view__main">
+            <span className="reports-active-view__badge">{selectedType}</span>
+            <span className="reports-active-view__subtitle">
+              {REPORT_TYPE_META[selectedType]?.subtitle}
+              {REPORT_TYPE_META[selectedType]?.usesMonth && (
+                <> · {MONTHS[selectedMonth]} {new Date().getFullYear()}</>
+              )}
+            </span>
+          </div>
+          {!isLoading && !isStatusLoading && selectedType !== 'Matriz de Productos' && (
+            <span className="reports-active-view__count">
+              {filteredPolicies.length}{' '}
+              {filteredPolicies.length === 1 ? 'póliza' : 'pólizas'}
+            </span>
+          )}
+        </div>
+      )}
+
       {error && (
         <div className="error-message">
           {error}
@@ -1523,6 +1608,7 @@ export default function Reports() {
                     <th>Fecha Inicio</th>
                     <th>Fecha Fin</th>
                     <th>Prima Total</th>
+                    {selectedType === 'Pagos Parciales' && <th>Mes cuota</th>}
                     {selectedType === 'Pagos Parciales' && <th>Pago Parcial</th>}
                     <th>Forma de Pago</th>
                     {selectedType === 'Pagos Parciales' && <th>Pagos</th>}
@@ -1582,6 +1668,15 @@ export default function Reports() {
                             )}
                         </td>
                         <td>${getPolicyTotalAmount(policy)?.toLocaleString() || '0'}</td>
+                        {selectedType === 'Pagos Parciales' && (
+                          <td>
+                            <span
+                              className={`mes-cuota-badge ${getDuePeriodForPolicy(policy) === 'previous' ? 'mes-anterior' : 'mes-actual'}`}
+                            >
+                              {getMesCuotaLabel(policy)}
+                            </span>
+                          </td>
+                        )}
                         {selectedType === 'Pagos Parciales' && (
                           <td>
                             {hasPartialPayments(policy.forma_pago) 

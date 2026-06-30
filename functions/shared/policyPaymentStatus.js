@@ -2,8 +2,8 @@
  * Shared payment status / legacy policy detection (frontend + Cloud Functions).
  */
 
-const POR_VENCER_MESES = 12;
-const PAYMENT_TRACKING_START_MS = new Date('2025-01-01T00:00:00').getTime();
+const ARCHIVE_DEAD_MONTHS = 4;
+const POR_VENCER_MESES = 2;
 
 const SHORT_MONTHS = [
   'ene', 'feb', 'mar', 'abr', 'may', 'jun',
@@ -50,6 +50,13 @@ function startOfToday() {
   return today;
 }
 
+function getArchiveCutoffDate() {
+  const cutoff = new Date();
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setMonth(cutoff.getMonth() - ARCHIVE_DEAD_MONTHS);
+  return cutoff;
+}
+
 function isPolicyExpired(policy) {
   if (!policy) return false;
   if (policy.expiration_override === 'activo') return false;
@@ -70,36 +77,11 @@ function isPorVencerProximosMeses(policy, meses = POR_VENCER_MESES) {
   return end <= limite;
 }
 
-function parseFirestoreTimestamp(value) {
-  if (!value) return null;
-  if (value._seconds) return value._seconds * 1000;
-  if (value.seconds) return value.seconds * 1000;
-  if (typeof value.toDate === 'function') return value.toDate().getTime();
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'string' || typeof value === 'number') {
-    const parsed = new Date(value).getTime();
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-}
-
-function getPolicyEntryTimestamp(policy) {
-  const candidates = [
-    policy?.createdAt,
-    policy?.created_at,
-    policy?.updatedAt,
-    policy?.updated_at,
-  ];
-  for (const value of candidates) {
-    const timestamp = parseFirestoreTimestamp(value);
-    if (timestamp) return timestamp;
-  }
-  return 0;
-}
-
-function hasPartialPayments(formaPago) {
-  const upper = (formaPago || '').toString().trim().toUpperCase();
-  return upper !== '' && upper !== 'ANUAL' && upper !== 'CONTADO';
+function isRecentlyExpiredPolicy(policy) {
+  if (!isPolicyExpired(policy)) return false;
+  const end = getPolicyEndDay(policy);
+  if (!end) return true;
+  return end >= getArchiveCutoffDate();
 }
 
 function hasExplicitPaymentTracking(policy) {
@@ -116,10 +98,7 @@ function hasExplicitPaymentTracking(policy) {
 
 function isLegacyUntrackedPolicy(policy) {
   if (!policy || hasExplicitPaymentTracking(policy)) return false;
-  if (isPolicyExpired(policy) || isPorVencerProximosMeses(policy)) return true;
-  const entryTimestamp = getPolicyEntryTimestamp(policy);
-  if (entryTimestamp > 0 && entryTimestamp < PAYMENT_TRACKING_START_MS) return true;
-  return false;
+  return isPorVencerProximosMeses(policy) || isRecentlyExpiredPolicy(policy);
 }
 
 function resolvePolicyPaymentStatus(policy) {
@@ -136,9 +115,7 @@ function resolvePolicyPaymentStatus(policy) {
 }
 
 module.exports = {
-  PAYMENT_TRACKING_START_MS,
   hasExplicitPaymentTracking,
   isLegacyUntrackedPolicy,
   resolvePolicyPaymentStatus,
-  getPolicyEntryTimestamp,
 };

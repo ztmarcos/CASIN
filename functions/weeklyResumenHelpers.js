@@ -185,9 +185,23 @@ async function fetchAllPolicies(db) {
   return all;
 }
 
-function mapAndSortPaymentsPendingRows(filteredPolicies) {
-  return filteredPolicies
-    .map((policy) => {
+function getPreviousCalendarMonth(referenceDate = new Date()) {
+  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const d = new Date(ref.getFullYear(), ref.getMonth(), 1);
+  d.setMonth(d.getMonth() - 1);
+  return { monthIndex: d.getMonth(), year: d.getFullYear() };
+}
+
+function getCalendarMonthLabel(monthIndex, year) {
+  return new Date(year, monthIndex, 1).toLocaleDateString('es-MX', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function mapAndSortPaymentsPendingRows(entries) {
+  return entries
+    .map(({ policy, duePeriod, mesCuota }) => {
       const dueDate = policyReminder.getDueDateForPolicy(policy);
       const fechaPago =
         dueDate && !Number.isNaN(dueDate.getTime())
@@ -203,6 +217,8 @@ function mapAndSortPaymentsPendingRows(filteredPolicies) {
         pago_parcial: policy.pago_parcial,
         fecha_proximo_pago: policy.fecha_proximo_pago,
         fecha_pago: fechaPago,
+        mes_cuota: mesCuota,
+        duePeriod,
         fecha_inicio:
           policy.vigencia_inicio ||
           policy.fecha_inicio ||
@@ -236,20 +252,33 @@ function isDueInCalendarMonth(policy, monthIndex, year) {
   return dueDate.getMonth() === monthIndex && dueDate.getFullYear() === year;
 }
 
+function isDueInCurrentOrPreviousMonth(policy, referenceDate = new Date()) {
+  const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+  const current = { monthIndex: ref.getMonth(), year: ref.getFullYear() };
+  const previous = getPreviousCalendarMonth(ref);
+  if (isDueInCalendarMonth(policy, current.monthIndex, current.year)) return 'current';
+  if (isDueInCalendarMonth(policy, previous.monthIndex, previous.year)) return 'previous';
+  return null;
+}
+
 function buildPaymentsPendingMonthNote(referenceDate = new Date()) {
   const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
-  const monthLabel = ref.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
-  return `Pólizas vigentes con pago fraccionado cuya cuota vence en ${monthLabel} (excluye otras pendientes de meses distintos).`;
+  const currentLabel = getCalendarMonthLabel(ref.getMonth(), ref.getFullYear());
+  const previous = getPreviousCalendarMonth(ref);
+  const previousLabel = getCalendarMonthLabel(previous.monthIndex, previous.year);
+  return `Pólizas fraccionadas no pagadas con cuota en ${previousLabel} o ${currentLabel}.`;
 }
 
 /**
- * Pagos parciales pendientes del mes calendario indicado (solo fraccionadas).
+ * Pagos parciales no pagados: mes en curso + mes anterior (solo fraccionadas).
  * Anuales y contado no entran aquí — se reportan en computeExpiringPolicies.
  */
 function computePaymentsPendingWithStats(allPolicies, referenceDate = new Date()) {
   const ref = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
-  const monthIndex = ref.getMonth();
-  const year = ref.getFullYear();
+  const currentMonth = { monthIndex: ref.getMonth(), year: ref.getFullYear() };
+  const previousMonth = getPreviousCalendarMonth(ref);
+  const currentLabel = getCalendarMonthLabel(currentMonth.monthIndex, currentMonth.year);
+  const previousLabel = getCalendarMonthLabel(previousMonth.monthIndex, previousMonth.year);
   const today = startOfToday();
 
   const stats = {
@@ -260,10 +289,12 @@ function computePaymentsPendingWithStats(allPolicies, referenceDate = new Date()
     excludedEndBeforeToday: 0,
     excludedNonPartialForm: 0,
     excludedNotPendingPorCobrar: 0,
-    excludedNotDueThisMonth: 0,
+    excludedNotDueInWindow: 0,
     includedFinal: 0,
-    monthIndex,
-    year,
+    includedCurrentMonth: 0,
+    includedPreviousMonth: 0,
+    currentMonth: currentLabel,
+    previousMonth: previousLabel,
     samplesExcludedNonPartial: [],
   };
 
@@ -301,16 +332,33 @@ function computePaymentsPendingWithStats(allPolicies, referenceDate = new Date()
       stats.excludedNotPendingPorCobrar++;
       continue;
     }
-    if (!isDueInCalendarMonth(policy, monthIndex, year)) {
-      stats.excludedNotDueThisMonth++;
+    const duePeriod = isDueInCurrentOrPreviousMonth(policy, ref);
+    if (!duePeriod) {
+      stats.excludedNotDueInWindow++;
       continue;
     }
-    filtered.push(policy);
+    const mesCuota = duePeriod === 'current' ? currentLabel : previousLabel;
+    filtered.push({ policy, duePeriod, mesCuota });
     stats.includedFinal++;
+    if (duePeriod === 'current') stats.includedCurrentMonth++;
+    else stats.includedPreviousMonth++;
   }
 
   const policies = mapAndSortPaymentsPendingRows(filtered);
-  return { policies, stats };
+  return {
+    policies,
+    stats,
+    currentMonth: {
+      label: currentLabel,
+      total: stats.includedCurrentMonth,
+      policies: policies.filter((p) => p.duePeriod === 'current'),
+    },
+    previousMonth: {
+      label: previousLabel,
+      total: stats.includedPreviousMonth,
+      policies: policies.filter((p) => p.duePeriod === 'previous'),
+    },
+  };
 }
 
 function computePaymentsPending(allPolicies, referenceDate = new Date()) {
@@ -445,6 +493,8 @@ module.exports = {
   computePaymentsPending,
   computePaymentsPendingWithStats,
   buildPaymentsPendingMonthNote,
+  getCalendarMonthLabel,
+  getPreviousCalendarMonth,
   computePartialPaymentsDue,
   computeExpiringPolicies,
   computeCancelledPolicies,
