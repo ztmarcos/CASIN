@@ -2,6 +2,8 @@
   position: relative;
   width: 100%;
   height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #ffffff;
@@ -218,13 +220,15 @@
   overflow: auto;
   position: relative;
   width: 100%;
+  min-height: 0;
   scrollbar-width: thin;
   scrollbar-color: #94a3b8 #f1f5f9;
 }
 
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.9rem;
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -243,7 +247,7 @@
 .data-table th {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
   background: #f8fafc;
   padding: 8px 12px;
   font-size: 0.75rem;
@@ -251,6 +255,7 @@
   text-transform: uppercase;
   letter-spacing: 0.025em;
   color: #1e293b;
+  box-shadow: 0 1px 0 #e2e8f0, 0 4px 6px -4px rgba(15, 23, 42, 0.12);
 }
 
 .data-table td {
@@ -2049,7 +2054,8 @@ td .edit-cell-input[type="select"] {
   background: var(--header-bg, #f8fafc);
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
+  box-shadow: 0 1px 0 #e2e8f0, 0 4px 6px -4px rgba(15, 23, 42, 0.12);
 }
 
 /* Table wrapper improvements */

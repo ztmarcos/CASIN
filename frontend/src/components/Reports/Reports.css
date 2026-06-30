@@ -430,28 +430,32 @@
 .table-container {
   overflow: auto;
   flex: 1;
+  min-height: 0;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   background: var(--bg-surface);
-  max-height: calc(100vh - 200px);
 }
 
 .reports-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.875rem;
 }
 
+.reports-table thead th,
 .reports-table th {
   padding: 0.5rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
   background-color: var(--bg-surface);
   position: sticky;
   top: 0;
+  z-index: 20;
   text-align: left;
   white-space: nowrap;
+  box-shadow: 0 1px 0 var(--border-color), 0 4px 6px -4px rgba(15, 23, 42, 0.12);
 }
 
 .reports-table td {
@@ -717,7 +721,8 @@
 
 .matrix-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.9rem;
 }
 
@@ -734,7 +739,8 @@
   color: var(--text-primary);
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 20;
+  box-shadow: 0 1px 0 var(--border-color), 0 4px 6px -4px rgba(15, 23, 42, 0.12);
 }
 
 .matrix-table tr:nth-child(even) {
