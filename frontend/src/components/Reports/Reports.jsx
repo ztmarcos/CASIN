@@ -36,6 +36,7 @@ import {
 import {
   isLegacyUntrackedPolicy,
   resolvePolicyPaymentStatus,
+  getPolicyEntryTimestamp,
 } from '../../utils/policyPaymentStatus';
 
 const MONTHS = [
@@ -47,34 +48,6 @@ const MONTHS = [
 function matchesSelectedCalendarMonth(date, monthIndex, year = new Date().getFullYear()) {
   if (!date || isNaN(date.getTime())) return false;
   return date.getMonth() === monthIndex && date.getFullYear() === year;
-}
-
-function parseFirestoreTimestamp(value) {
-  if (!value) return null;
-  if (value._seconds) return value._seconds * 1000;
-  if (value.seconds) return value.seconds * 1000;
-  if (typeof value.toDate === 'function') return value.toDate().getTime();
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === 'string' || typeof value === 'number') {
-    const parsed = new Date(value).getTime();
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-}
-
-/** Timestamp de ingreso al sistema (createdAt, con fallback a updatedAt). */
-function getPolicyEntryTimestamp(policy) {
-  const candidates = [
-    policy?.createdAt,
-    policy?.created_at,
-    policy?.updatedAt,
-    policy?.updated_at,
-  ];
-  for (const value of candidates) {
-    const timestamp = parseFirestoreTimestamp(value);
-    if (timestamp) return timestamp;
-  }
-  return 0;
 }
 
 const REPORT_TYPES = [

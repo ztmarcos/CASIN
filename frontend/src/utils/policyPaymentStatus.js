@@ -20,12 +20,7 @@ function parseFirestoreTimestamp(value) {
 }
 
 export function getPolicyEntryTimestamp(policy) {
-  const candidates = [
-    policy?.createdAt,
-    policy?.created_at,
-    policy?.updatedAt,
-    policy?.updated_at,
-  ];
+  const candidates = [policy?.createdAt, policy?.created_at];
   for (const value of candidates) {
     const timestamp = parseFirestoreTimestamp(value);
     if (timestamp) return timestamp;
