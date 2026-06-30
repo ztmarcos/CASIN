@@ -6,6 +6,7 @@ import { useTeam } from '../../context/TeamContext';
 import { getCleanTeamName } from '../../utils/teamUtils';
 import './DataSection.css';
 import { toast } from 'react-hot-toast';
+import TableCategoryIcon, { getTableDisplayName, getTableIconClassName } from './TableCategoryIcon';
 
 const DataSection = () => {
   const { userTeam, currentTeam } = useTeam();
@@ -299,8 +300,10 @@ const DataSection = () => {
                   onClick={() => handleTableSelect(table.name)}
                   disabled={isLoading}
                 >
-                  <div className="table-card-icon">📊</div>
-                  <div className="table-card-name">{table.name}</div>
+                  <div className={getTableIconClassName(table.name)} aria-hidden="true">
+                    <TableCategoryIcon tableName={table.name} />
+                  </div>
+                  <div className="table-card-name">{getTableDisplayName(table.name)}</div>
                 </button>
               ))}
             </div>

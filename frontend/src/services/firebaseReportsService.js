@@ -3,6 +3,8 @@ import firebaseTableService from './firebaseTableService.js';
 import { API_URL } from '../config/api.js';
 import localCacheService from './localCacheService.js';
 import { parseDate, toDDMMMYYYY } from '../utils/dateUtils.js';
+import { isSinglePaymentForm, shouldTrackProximoPago } from '../utils/policyPaymentReminder.js';
+import { resolvePolicyPaymentStatus } from '../utils/policyPaymentStatus.js';
 
 class FirebaseReportsService {
   constructor() {
@@ -117,9 +119,19 @@ class FirebaseReportsService {
               ...doc
             };
             
-            // Calculate next payment date if payment form is available
-            if (policy.fecha_inicio && policy.forma_pago) {
-              policy.fecha_proximo_pago = this.calculateNextPaymentDate(policy.fecha_inicio, policy.forma_pago);
+            if (
+              shouldTrackProximoPago(policy) &&
+              policy.fecha_inicio &&
+              policy.forma_pago &&
+              !doc.fecha_proximo_pago
+            ) {
+              policy.fecha_proximo_pago = this.calculateNextPaymentDate(
+                policy.fecha_inicio,
+                policy.forma_pago,
+              );
+            }
+            if (!shouldTrackProximoPago(policy)) {
+              policy.fecha_proximo_pago = null;
             }
             
             allPolicies.push(policy);
@@ -149,6 +161,9 @@ class FirebaseReportsService {
   calculateNextPaymentDate(startDate, paymentForm) {
     if (!startDate || !paymentForm) {
       console.log('ℹ️ calculateNextPaymentDate: Missing startDate or paymentForm');
+      return null;
+    }
+    if (isSinglePaymentForm(paymentForm)) {
       return null;
     }
     
@@ -306,8 +321,10 @@ class FirebaseReportsService {
             // Use the same key generation logic as the component
             const ramo = doc.ramo || doc.sourceTable || doc.table || collectionName;
             const policyKey = `${ramo.toLowerCase()}_${doc.id}`;
-            // Get payment status from document, default to 'No Pagado' if not set
-            statuses[policyKey] = doc.estado_pago || 'No Pagado';
+            const resolvedStatus = resolvePolicyPaymentStatus(doc);
+            if (resolvedStatus) {
+              statuses[policyKey] = resolvedStatus;
+            }
           }
           
         } catch (error) {

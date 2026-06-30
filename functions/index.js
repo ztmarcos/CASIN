@@ -9,6 +9,8 @@ const Busboy = require('busboy');
 // Initialize Firebase Admin (must be before requiring server-mysql-app so it reuses this instance)
 admin.initializeApp();
 const db = admin.firestore();
+const weeklyResumenHelpers = require('./weeklyResumenHelpers');
+const paymentReminderHelpers = require('./paymentReminderHelpers');
 
 // Secrets for the Express API (create with scripts/setup-firebase-secrets.mjs)
 const apiSecrets = [
@@ -379,10 +381,27 @@ exports.scheduledBirthdayEmails = onSchedule({
     }
 
     const teamsSnapshot = await db.collection('teams').get();
-    const casinLogoUrl = `${(process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '')}/logo.png`;
-    const birthdayHeroUrl =
-      process.env.BIRTHDAY_EMAIL_HERO_URL ||
-      'https://firebasestorage.googleapis.com/v0/b/casinbbdd.firebasestorage.app/o/public%2Femails%2Fbirthday-cake-hero.png?alt=media';
+    const publicCrmBase = (process.env.PUBLIC_CRM_URL || 'https://casin-crm.web.app').replace(/\/$/, '');
+    const casinLogoUrl = `${publicCrmBase}/logo.png`;
+    const escapeHtml = (text) => {
+      if (text == null || text === '') return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+    async function loadBirthdayTemplateForTeam(teamId) {
+      try {
+        const snap = await db.collection('team_configs').doc(teamId).get();
+        const t = snap.data()?.birthdayEmailTemplate;
+        return t && typeof t === 'object' ? t : {};
+      } catch (e) {
+        console.warn('birthday template load failed:', e.message);
+        return {};
+      }
+    }
     let totalEmailsSent = 0;
     const allEmailResults = [];
 
@@ -391,6 +410,18 @@ exports.scheduledBirthdayEmails = onSchedule({
       const teamData = teamDoc.data();
       const teamName = teamData.name || teamId;
       console.log(`🎂 Processing team: ${teamName} (${teamId})`);
+
+      const tpl = await loadBirthdayTemplateForTeam(teamId);
+      const birthdayHeroUrl =
+        (tpl.heroImageUrl && String(tpl.heroImageUrl).trim()) ||
+        process.env.BIRTHDAY_EMAIL_HERO_URL ||
+        `${publicCrmBase}/emails/birthday-hero-casin.jpg`;
+      const heroTitleHtml = escapeHtml(tpl.heroTitle || '¡Feliz cumpleaños!');
+      const heroSubtitleHtml = escapeHtml(tpl.heroSubtitle || 'Un mensaje especial para ti');
+      const footerNoteHtml = escapeHtml(
+        tpl.footerNote || 'Este mensaje fue enviado automáticamente por el sistema.'
+      );
+      const signoffLabelHtml = escapeHtml(tpl.signoffLabel || 'Con cariño,');
 
       const birthdays = await getBirthdaysForTeam(teamId, teamData);
       const todaysBirthdays = birthdays.filter(b => {
@@ -423,9 +454,10 @@ exports.scheduledBirthdayEmails = onSchedule({
         // Extract first name and generate personalized message with GPT-4o-mini
         let firstName = birthday.name;
         let personalizedMessage = '¡Que tengas un día maravilloso lleno de alegría y buenos momentos!';
-        
+        const customBody = tpl.mainMessage && String(tpl.mainMessage).trim();
+
         try {
-          if (openai) {
+          if (!customBody && openai) {
             console.log(`🤖 Generating personalized birthday message for ${birthday.name}...`);
             const gptResponse = await openai.chat.completions.create({
               model: "gpt-4o-mini",
@@ -448,8 +480,7 @@ exports.scheduledBirthdayEmails = onSchedule({
             firstName = gptResult.firstName || birthday.name.split(' ')[0];
             personalizedMessage = gptResult.message || personalizedMessage;
             console.log(`✅ GPT analyzed: "${birthday.name}" → First name: "${firstName}"`);
-          } else {
-            // Fallback: just take first word if GPT not available
+          } else if (!customBody) {
             firstName = birthday.name.split(' ')[0];
           }
         } catch (gptError) {
@@ -457,9 +488,24 @@ exports.scheduledBirthdayEmails = onSchedule({
           firstName = birthday.name.split(' ')[0];
         }
 
+        if (customBody) {
+          firstName = birthday.name.split(' ')[0];
+          personalizedMessage = escapeHtml(customBody).replace(/\n/g, '<br>');
+        } else {
+          personalizedMessage = escapeHtml(personalizedMessage);
+        }
+
+        const signoffBrandHtml = escapeHtml(
+          (tpl.signoffBrand && String(tpl.signoffBrand).trim()) || senderName
+        );
+
         const emailHTML = `
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"></head>
+<html lang="es"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>CASIN Seguros</title></head>
 <body style="margin:0;padding:0;background-color:#e8edf3;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;">
   <tr><td align="center">
@@ -468,24 +514,24 @@ exports.scheduledBirthdayEmails = onSchedule({
         <img src="${casinLogoUrl}" alt="${senderName}" width="80" height="80" style="display:block;margin:0 auto;border:0;"/>
       </td></tr>
       <tr><td style="height:4px;line-height:4px;background-color:#ea580c;background-image:linear-gradient(90deg,#fb923c,#ea580c);font-size:0;">&nbsp;</td></tr>
-      <tr><td style="padding:0;line-height:0;background-color:#ffffff;">
-        <img src="${birthdayHeroUrl}" alt="" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;margin:0;"/>
+      <tr><td style="padding:20px 24px 8px;text-align:center;background-color:#ffffff;">
+        <img src="${birthdayHeroUrl}" alt="" width="320" style="display:block;margin:0 auto;width:100%;max-width:320px;height:auto;border:0;"/>
       </td></tr>
-      <tr><td style="padding:26px 32px;background-color:#123b66;background-image:linear-gradient(160deg,#1a4d7a 0%,#0c2847 100%);">
-        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:26px;font-weight:700;color:#ffffff;text-align:center;letter-spacing:0.04em;text-transform:uppercase;">¡Feliz cumpleaños!</h1>
-        <p style="margin:12px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:15px;font-weight:500;color:#ffeb3b;text-align:center;">Un mensaje especial para ti</p>
+      <tr><td bgcolor="#0c2847" style="padding:26px 32px 28px;background-color:#0c2847;">
+        <h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:26px;font-weight:700;line-height:1.25;color:#ffffff !important;-webkit-text-fill-color:#ffffff;text-align:center;letter-spacing:0.04em;text-transform:uppercase;">${heroTitleHtml}</h1>
+        <p style="margin:14px 0 0;font-family:Segoe UI,Tahoma,sans-serif;font-size:16px;font-weight:600;line-height:1.45;color:#fff176 !important;-webkit-text-fill-color:#fff176;text-align:center;">${heroSubtitleHtml}</p>
       </td></tr>
       <tr><td style="padding:32px 32px 28px;font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;">
         <p style="margin:0 0 8px;font-size:13px;font-weight:600;color:#ea580c;text-transform:uppercase;letter-spacing:0.06em;">Para</p>
         <h2 style="margin:0 0 20px;font-size:24px;font-weight:600;color:#0f2840;line-height:1.3;">${firstName}</h2>
         <p style="margin:0 0 16px;font-size:17px;line-height:1.65;color:#475569;">${personalizedMessage}</p>
         <div style="margin-top:28px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:center;">
-          <p style="margin:0;font-size:15px;color:#64748b;">Con cariño,</p>
-          <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">${senderName}</p>
+          <p style="margin:0;font-size:15px;color:#64748b;">${signoffLabelHtml}</p>
+          <p style="margin:8px 0 0;font-size:17px;font-weight:600;color:#0f2840;">${signoffBrandHtml}</p>
         </div>
       </td></tr>
       <tr><td style="padding:18px 32px 24px;background-color:#f1f5f9;text-align:center;font-family:Segoe UI,Tahoma,sans-serif;font-size:12px;color:#64748b;line-height:1.5;">
-        <p style="margin:0;">Este mensaje fue enviado automáticamente por el sistema.</p>
+        <p style="margin:0;">${footerNoteHtml}</p>
       </td></tr>
     </table>
   </td></tr>
@@ -521,7 +567,7 @@ exports.scheduledBirthdayEmails = onSchedule({
               from: { name: `${senderName} - Notificación`, address: senderEmail },
               to: senderEmail,
               subject: `Cumpleaños de hoy: ${birthday.name} (sin email)`,
-              html: `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background-color:#e8edf3;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 30px rgba(15,40,64,0.12);border:1px solid #dbe2ea;"><tr><td style="padding:28px 32px 12px;text-align:center;"><img src="${casinLogoUrl}" alt="" width="72" height="72" style="display:block;margin:0 auto;border:0;"/></td></tr><tr><td style="height:4px;background-color:#ea580c;">&nbsp;</td></tr><tr><td style="padding:24px 32px;background-color:#123b66;text-align:center;"><h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff;">Cumpleaños de hoy</h1></td></tr><tr><td style="padding:28px 32px;font-family:Segoe UI,Tahoma,sans-serif;"><h2 style="margin:0 0 12px;font-size:22px;color:#0f2840;">${birthday.name}</h2><p style="margin:0;font-size:16px;color:#475569;">No tiene correo electrónico registrado.</p></td></tr><tr><td style="padding:16px 32px;background-color:#f1f5f9;text-align:center;font-size:12px;color:#64748b;">${senderName} · notificación interna</td></tr></table></td></tr></table></body></html>`
+              html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"></head><body style="margin:0;padding:0;background-color:#e8edf3;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#e8edf3;padding:24px 12px;"><tr><td align="center"><table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #dbe2ea;"><tr><td style="padding:28px 32px 12px;text-align:center;background:#fff;"><img src="${casinLogoUrl}" alt="" width="72" height="72" style="display:block;margin:0 auto;border:0;"/></td></tr><tr><td style="height:4px;background-color:#ea580c;">&nbsp;</td></tr><tr><td style="padding:20px 24px 8px;text-align:center;background:#fff;"><img src="${birthdayHeroUrl}" alt="" width="320" style="display:block;margin:0 auto;max-width:320px;width:100%;height:auto;border:0;"/></td></tr><tr><td bgcolor="#0c2847" style="padding:24px 32px;background-color:#0c2847;text-align:center;"><h1 style="margin:0;font-family:Segoe UI,Tahoma,sans-serif;font-size:22px;font-weight:700;color:#ffffff !important;-webkit-text-fill-color:#ffffff;">Cumpleaños de hoy</h1></td></tr><tr><td style="padding:28px 32px;font-family:Segoe UI,Tahoma,sans-serif;"><h2 style="margin:0 0 12px;font-size:22px;color:#0f2840;">${birthday.name}</h2><p style="margin:0;font-size:16px;color:#475569;">No tiene correo electrónico registrado.</p></td></tr><tr><td style="padding:16px 32px;background-color:#f1f5f9;text-align:center;font-size:12px;color:#64748b;">${senderName} · notificación interna</td></tr></table></td></tr></table></body></html>`
             });
             emailsSent++;
             totalEmailsSent++;
@@ -560,6 +606,37 @@ exports.scheduledBirthdayEmails = onSchedule({
     
   } catch (error) {
     console.error('❌ Error processing birthday emails:', error);
+    throw error;
+  }
+});
+
+/**
+ * Scheduled Payment Reminders - Runs daily at 9:00 AM CST
+ * Sends fixed-template payment reminders when today's slot matches and estado_pago !== Pagado
+ */
+exports.scheduledPaymentReminders = onSchedule({
+  schedule: '0 9 * * *',
+  timeZone: 'America/Mexico_City',
+  region: 'us-central1',
+  secrets: apiSecrets,
+}, async () => {
+  console.log('💳 Scheduled Payment Reminders triggered');
+
+  for (const ref of apiSecrets) {
+    try {
+      const val = ref.value();
+      if (val != null && val !== '') process.env[ref.name] = val;
+    } catch (_) {}
+  }
+
+  try {
+    const result = await paymentReminderHelpers.runPaymentRemindersJob(db, {
+      getTransporterForTeam,
+    });
+    console.log('💳 Payment reminders result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error in scheduledPaymentReminders:', error);
     throw error;
   }
 });
@@ -629,59 +706,33 @@ exports.scheduledWeeklyResumen = onSchedule({
     
     console.log(`📊 Found ${activities.length} activities in date range`);
     
-    // Get expiring policies (next 7 days)
-    const expiringEndDate = new Date();
-    expiringEndDate.setDate(expiringEndDate.getDate() + 7);
-    
-    // Get all insurance collections
-    const insuranceCollections = ['autos', 'hogar', 'vida', 'gmm', 'accidentes', 'responsabilidad_civil'];
-    const expiringPolicies = [];
-    const partialPayments = [];
-    const capturedPolicies = [];
-    const cancelledPolicies = [];
-    
-    for (const collectionName of insuranceCollections) {
-      try {
-        const collectionData = await db.collection(collectionName).get();
-        collectionData.forEach(doc => {
-          const policy = { id: doc.id, ...doc.data(), tabla: collectionName };
-          
-          // Check for expiring policies (exclude cancelled)
-          if (policy.fecha_fin) {
-            const isCancelled = policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo';
-            if (!isCancelled) {
-              const expirationDate = policy.fecha_fin.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
-              if (expirationDate >= new Date() && expirationDate <= expiringEndDate) {
-                expiringPolicies.push(policy);
-              }
-            }
-          }
-          
-          // Check for partial payments
-          if (policy.pago_parcial && policy.pago_parcial > 0) {
-            const isCancelled = policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo';
-            if (!isCancelled) {
-              partialPayments.push(policy);
-            }
-          }
-          
-          // Check for captured policies
-          if (policy.createdAt) {
-            const createdDate = policy.createdAt.toDate ? policy.createdAt.toDate() : new Date(policy.createdAt);
-            if (createdDate >= startDate && createdDate <= endDate) {
-              capturedPolicies.push(policy);
-            }
-          }
-          
-          // Check for cancelled policies
-          if (policy.estado_cap === 'Inactivo' || policy.estado_cfp === 'Inactivo') {
-            cancelledPolicies.push(policy);
-          }
-        });
-      } catch (error) {
-        console.log(`⚠️  Error fetching ${collectionName}:`, error.message);
-      }
-    }
+    // All policies from Firestore (weeklyResumenHelpers filters: vigentes-only pending, etc.)
+    const allPolicies = await weeklyResumenHelpers.fetchAllPolicies(db);
+    console.log(`📊 Weekly resumen: loaded ${allPolicies.length} policies from collections`);
+
+    const expiringPolicies = weeklyResumenHelpers.computeExpiringPolicies(allPolicies, 7).map((p) => ({
+      ...p,
+      tabla: p.tabla || p.sourceTable || p.ramo || 'General',
+    }));
+
+    const partialPayments = weeklyResumenHelpers.computePartialPaymentsDue(allPolicies, new Date(), (() => {
+      const t = new Date();
+      t.setDate(t.getDate() + 7);
+      t.setHours(23, 59, 59, 999);
+      return t;
+    })());
+
+    const pendingReferenceDate = new Date();
+    const pendingWithStats = weeklyResumenHelpers.computePaymentsPendingWithStats(
+      allPolicies,
+      pendingReferenceDate,
+    );
+    const paymentsPendingList = pendingWithStats.policies;
+    console.log('📊 [weekly-resumen] paymentsPending pipeline:', JSON.stringify(pendingWithStats.stats, null, 2));
+    const totalPartialAmount = weeklyResumenHelpers.calculateTotalPartialAmount(partialPayments);
+
+    const capturedPolicies = weeklyResumenHelpers.computeCapturedInRange(allPolicies, startDate, endDate);
+    const cancelledPoliciesFull = weeklyResumenHelpers.computeCancelledPolicies(allPolicies);
     
     // Get team activities (daily activities)
     const teamActivitiesSnapshot = await db.collection('daily_activities')
@@ -700,10 +751,18 @@ exports.scheduledWeeklyResumen = onSchedule({
       teamActivities.push(activity);
     });
     
-    // Calculate user activity stats
+    // Calculate user activity stats (exclude ONLY system bots, keep all real users)
+    const SYSTEM_USERS_TO_EXCLUDE = ['automated system', 'sistema crm'];
     const userActivity = {};
     activities.forEach(act => {
       const userName = act.userName || 'Unknown';
+      const userNameLower = userName.toLowerCase().trim();
+      
+      // Skip ONLY automated/system bots (keep Lorena, Michelle, all real users)
+      if (SYSTEM_USERS_TO_EXCLUDE.some(sys => userNameLower.includes(sys))) {
+        return;
+      }
+      
       if (!userActivity[userName]) {
         userActivity[userName] = {
           email_sent: 0,
@@ -720,6 +779,7 @@ exports.scheduledWeeklyResumen = onSchedule({
       if (act.action === 'daily_activity') userActivity[userName].daily_activity++;
       userActivity[userName].total++;
     });
+    console.log('📊 [weekly-resumen] userActivity keys (excl. CRM/bots):', Object.keys(userActivity).join(', ') || '(ninguno)', `| actividades en rango: ${activities.length}`);
     
     // Count metrics
     const policiesCaptured = activities.filter(act => act.action === 'data_captured').length;
@@ -731,16 +791,31 @@ exports.scheduledWeeklyResumen = onSchedule({
     ).length;
     const emailsSent = activities.filter(act => act.action === 'email_sent').length;
     const dataUpdates = activities.filter(act => act.action === 'data_updated').length;
-    const systemUpdates = activities.filter(act => 
-      act.action === 'system_deployment' || 
-      (act.action === 'system_update' && act.details?.type === 'firebase_deploy')
-    ).length;
-    
-    // Calculate partial payments total
-    const totalPartialAmount = partialPayments.reduce((sum, p) => sum + (parseFloat(p.pago_parcial) || 0), 0);
-    
-    // Count pending payments (policies without first payment)
-    const policiesPending = capturedPolicies.filter(p => !p.primer_pago_realizado).length;
+    const systemUpdateItems = weeklyResumenHelpers.buildSystemUpdateItems(activities);
+    const systemUpdates = systemUpdateItems.length;
+    const policiesPending = paymentsPendingList.length;
+
+    const paymentsMarkedPaid = activities
+      .filter(
+        (act) =>
+          (act.action === 'data_updated' &&
+            act.details &&
+            act.details.field === 'estado_pago' &&
+            act.details.newValue === 'Pagado') ||
+          (act.action === 'data_updated' &&
+            act.details &&
+            act.details.field === 'primer_pago_realizado' &&
+            act.details.newValue === true),
+      )
+      .slice(0, 25)
+      .map((act) => ({
+        numero_poliza: act.details?.dataPreview?.[0] || act.details?.numero_poliza || '-',
+        contratante: act.details?.contratante || act.details?.nombre_contratante || '-',
+        ramo: act.tableName || '-',
+        fecha_inicio: act.details?.fecha_inicio || '-',
+        aseguradora: act.details?.aseguradora || '-',
+        paidBy: act.userName || '-',
+      }));
     
     // Build summary data object
     const summaryData = {
@@ -770,26 +845,43 @@ exports.scheduledWeeklyResumen = onSchedule({
       },
       capturedPolicies: {
         total: capturedPolicies.length,
-        policies: capturedPolicies.slice(0, 10).map(p => ({
+        policies: capturedPolicies.slice(0, 10).map((p) => ({
           numero_poliza: p.numero_poliza || '-',
           contratante: p.contratante || p.nombre_contratante || '-',
-          ramo: p.tabla || '-',
-          fecha_inicio: p.fecha_inicio || 'N/A',
-          capturedBy: p.createdBy || '-'
-        }))
+          ramo: p.tabla || p.sourceTable || '-',
+          aseguradora: p.aseguradora || '-',
+          fecha_inicio:
+            p.vigencia_inicio ||
+            p.fecha_inicio ||
+            p.fecha_inicio_poliza ||
+            p.fecha_emision ||
+            'N/A',
+          capturedBy: p.createdBy || '-',
+        })),
       },
       cancelledPolicies: {
-        total: cancelledPolicies.length,
-        policies: cancelledPolicies.slice(0, 10).map(p => ({
-          numero_poliza: p.numero_poliza || '-',
-          contratante: p.contratante || p.nombre_contratante || '-',
-          ramo: p.tabla || '-',
-          estado_cap: p.estado_cap || '-',
-          estado_cfp: p.estado_cfp || '-'
-        }))
+        total: cancelledPoliciesFull.length,
+        policies: cancelledPoliciesFull.slice(0, 10),
+      },
+      paymentsPending: {
+        total: paymentsPendingList.length,
+        payments: paymentsPendingList.slice(0, 15),
+        note: weeklyResumenHelpers.buildPaymentsPendingMonthNote(pendingReferenceDate),
+      },
+      paymentsMade: {
+        total: paymentsMarkedPaid.length,
+        payments: paymentsMarkedPaid,
+      },
+      systemUpdates: {
+        total: systemUpdates,
+        items: systemUpdateItems,
+        description:
+          systemUpdates > 0
+            ? `Se realizaron ${systemUpdates} cambio${systemUpdates > 1 ? 's' : ''} en el sistema.`
+            : 'Sin actualizaciones registradas en el período (bitácora: system_update / system_deployment u otros eventos de sistema).',
       },
       teamActivities: teamActivities.slice(0, 20),
-      userActivity
+      userActivity,
     };
     
     console.log('📊 Summary data generated');
@@ -799,12 +891,29 @@ exports.scheduledWeeklyResumen = onSchedule({
       `${p.numero_poliza} (${p.tabla}) - ${p.contratante || p.nombre_contratante}`
     ).join(', ') || 'Ninguna';
     
-    const expiringDetails = expiringPolicies.slice(0, 5).map(p =>
-      `${p.numero_poliza} (${p.tabla}) - ${p.contratante || p.nombre_contratante} - Vence: ${new Date(p.fecha_fin).toLocaleDateString('es-MX')}`
-    ).join(', ') || 'Ninguno';
-    
+    const expiringDetails =
+      expiringPolicies
+        .slice(0, 5)
+        .map((p) => {
+          const fd = weeklyResumenHelpers.policyEndDate(p);
+          const fdStr = fd ? fd.toLocaleDateString('es-MX') : '?';
+          return `${p.numero_poliza} (${p.tabla}) - ${p.contratante || p.nombre_contratante} - Vence: ${fdStr}`;
+        })
+        .join(', ') || 'Ninguno';
+
+    const pendingDetails =
+      paymentsPendingList
+        .slice(0, 5)
+        .map((p) => `${p.numero_poliza} (${p.ramo}) - ${p.contratante}`)
+        .join(', ') || 'Ninguno';
+
+    const systemUpdatesForPrompt =
+      systemUpdateItems.length > 0
+        ? systemUpdateItems.map((i) => i.message).join(' | ')
+        : 'Ninguna registrada en bitácora (system_update / system_deployment).';
+
     // Call GPT for analysis
-    const fallbackSummary = `Resumen del período ${startDate.toLocaleDateString('es-MX')} - ${endDate.toLocaleDateString('es-MX')}:\n\n• Pólizas capturadas: ${policiesCaptured}\n  → ${capturedDetails}\n• Pólizas por vencer (próximos 7 días): ${expiringPolicies.length}\n  → ${expiringDetails}\n• Pagos realizados: ${policiesPaid} | Pagos pendientes: ${policiesPending}\n• Pagos parciales pendientes: ${partialPayments.length} (total $${totalPartialAmount.toLocaleString('es-MX')})\n• Emails enviados: ${emailsSent}\n• Actualizaciones de datos: ${dataUpdates}\n• Actualizaciones del sistema: ${systemUpdates}\n• Usuarios activos: ${Object.keys(userActivity).length}\n\n(Análisis GPT no disponible: configurar OPENAI_API_KEY en Firebase y volver a desplegar las functions.)`;
+    const fallbackSummary = `Resumen del período ${startDate.toLocaleDateString('es-MX')} - ${endDate.toLocaleDateString('es-MX')}:\n\n• Pólizas capturadas (bitácora): ${policiesCaptured}\n  → ${capturedDetails}\n• Pólizas por vencer (próximos 7 días): ${expiringPolicies.length}\n  → ${expiringDetails}\n• Pagos realizados (bitácora): ${policiesPaid}\n• Por cobrar del mes en curso (pagos fraccionados): ${policiesPending}\n  → ${pendingDetails}\n• Pagos parciales con fecha en próximos 7 días (vigentes): ${partialPayments.length} (total $${totalPartialAmount.toLocaleString('es-MX')})\n• Emails enviados: ${emailsSent}\n• Actualizaciones de datos: ${dataUpdates}\n• Actualizaciones del sistema (bitácora): ${systemUpdates}\n  → ${systemUpdatesForPrompt}\n• Usuarios activos: ${Object.keys(userActivity).length}\n\n(Análisis GPT no disponible: configurar OPENAI_API_KEY en Firebase y volver a desplegar las functions.)`;
     let gptSummary = { summary: fallbackSummary };
 
     if (openai) {
@@ -829,12 +938,14 @@ MÉTRICAS CLAVE:
   → Detalles: ${capturedDetails}
 - Pólizas por vencer (próximos 7 días): ${expiringPolicies.length}
   → Detalles: ${expiringDetails}
-- Pagos parciales pendientes: ${partialPayments.length} ($${totalPartialAmount.toLocaleString('es-MX')})
-- Pagos realizados en el período: ${policiesPaid}
-- Pagos pendientes de primer pago: ${policiesPending}
+- Pagos parciales con fecha en próximos 7 días (solo vigentes): ${partialPayments.length} ($${totalPartialAmount.toLocaleString('es-MX')})
+- Pagos realizados en el período (bitácora): ${policiesPaid}
+- Pagos fraccionados pendientes del mes en curso: ${policiesPending}
+  → Detalles: ${pendingDetails}
 - Emails enviados: ${emailsSent}
 - Actualizaciones de datos: ${dataUpdates}
-- Actualizaciones del sistema (deployments): ${systemUpdates}
+- Actualizaciones del sistema (bitácora): ${systemUpdates}
+  → ${systemUpdatesForPrompt}
 - Usuarios activos: ${Object.keys(userActivity).length}
 - Actividades diarias registradas: ${teamActivities.length}
 
@@ -860,7 +971,7 @@ Escribe en tono profesional pero cercano, usa nombres de clientes cuando sea rel
       } catch (error) {
         console.error('❌ Error calling OpenAI:', error);
         gptSummary = {
-          summary: `Resumen de la semana:\n\nSe capturaron ${policiesCaptured} pólizas nuevas (${capturedDetails}).\n\n${expiringPolicies.length} pólizas vencen en los próximos 7 días (${expiringDetails}).\n\nHay ${partialPayments.length} pagos parciales pendientes por un total de $${totalPartialAmount.toLocaleString('es-MX')}.\n\nSe realizaron ${policiesPaid} pagos y quedan ${policiesPending} pagos pendientes.\n\nEl equipo realizó ${emailsSent} envíos de email y ${dataUpdates} actualizaciones de datos.${systemUpdates > 0 ? `\n\nSe realizaron ${systemUpdates} actualizaciones del sistema.` : ''}`
+          summary: `Resumen de la semana:\n\nSe registraron ${policiesCaptured} capturas en bitácora (${capturedDetails}).\n\n${expiringPolicies.length} pólizas vencen en los próximos 7 días (${expiringDetails}).\n\nHay ${partialPayments.length} pagos parciales con fecha en los próximos 7 días (vigentes) por un total de $${totalPartialAmount.toLocaleString('es-MX')}.\n\nSe realizaron ${policiesPaid} pagos marcados en bitácora y hay ${policiesPending} pagos fraccionados pendientes con vencimiento este mes: ${pendingDetails}.\n\nEl equipo realizó ${emailsSent} envíos de email y ${dataUpdates} actualizaciones de datos.${systemUpdates > 0 ? `\n\nCambios en el sistema: ${systemUpdatesForPrompt}` : `\n\nActualizaciones del sistema: ${systemUpdatesForPrompt}`}`
         };
       }
     }
@@ -953,6 +1064,74 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
               ${gptSummary.summary ? gptSummary.summary.replace(/\n/g, '<br>') : 'No hay análisis disponible'}
             </div>
           </div>
+
+          <!-- Paid policies (activity log in period) -->
+          ${summaryData.paymentsMade && summaryData.paymentsMade.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">✅ Pólizas marcadas como pagadas (${summaryData.paymentsMade.total})</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">Registrado en bitácora del período (detalle depende de lo que guarde cada acción).</p>
+            <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; border: 1px solid #86efac;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #dcfce7; border-bottom: 2px solid #22c55e;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Nombre</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha inicio</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Compañía</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.paymentsMade.payments.slice(0, 15).map((row) => {
+                    const fi = row.fecha_inicio && row.fecha_inicio !== '-' ? new Date(row.fecha_inicio) : null;
+                    const fiStr = fi && !isNaN(fi.getTime()) ? fi.toLocaleDateString('es-MX') : '-';
+                    return `
+                      <tr style="border-bottom: 1px solid #d1fae5;">
+                        <td style="padding: 10px; font-size: 13px;">${row.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${row.ramo || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${fiStr}</td>
+                        <td style="padding: 10px; font-size: 13px;">${row.aseguradora || '-'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- Captured policies (createdAt in Firestore during period) -->
+          ${summaryData.capturedPolicies && summaryData.capturedPolicies.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pólizas nuevas en el período (${summaryData.capturedPolicies.total})</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">Por fecha de alta en Firestore (createdAt).</p>
+            <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Nombre</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Ramo</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha inicio</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Compañía</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.capturedPolicies.policies.slice(0, 15).map((policy) => {
+                    const fi = policy.fecha_inicio && policy.fecha_inicio !== 'N/A' ? new Date(policy.fecha_inicio) : null;
+                    const fiStr = fi && !isNaN(fi.getTime()) ? fi.toLocaleDateString('es-MX') : '-';
+                    return `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.ramo || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${fiStr}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.aseguradora || '-'}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          ` : ''}
           
           <!-- Expiring Policies -->
           ${summaryData.expiringPolicies.total > 0 ? `
@@ -970,13 +1149,14 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
                 </thead>
                 <tbody>
                   ${summaryData.expiringPolicies.policies.slice(0, 5).map(policy => {
-                    const fechaFin = policy.fecha_fin?.toDate ? policy.fecha_fin.toDate() : new Date(policy.fecha_fin);
+                    const fechaFin = weeklyResumenHelpers.policyEndDate(policy);
+                    const fechaStr = fechaFin && !isNaN(fechaFin.getTime()) ? fechaFin.toLocaleDateString('es-MX') : '-';
                     return `
                       <tr style="border-bottom: 1px solid #e5e5e5;">
                         <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
                         <td style="padding: 10px; font-size: 13px;">${policy.tabla || '-'}</td>
-                        <td style="padding: 10px; font-size: 13px;">${fechaFin.toLocaleDateString('es-MX')}</td>
+                        <td style="padding: 10px; font-size: 13px;">${fechaStr}</td>
                       </tr>
                     `;
                   }).join('')}
@@ -986,18 +1166,96 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
           </div>
           ` : ''}
           
-          <!-- Partial Payments -->
+          <!-- Partial Payments (next 7 days, vigentes) -->
           ${summaryData.partialPayments.total > 0 ? `
           <div style="margin-bottom: 30px;">
-            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pagos Parciales Pendientes</h2>
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">Pagos parciales — próximos 7 días</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">Solo pólizas vigentes; fecha según próximo pago.</p>
             <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; border: 1px solid #e5e5e5;">
               <p style="margin: 0 0 15px 0; color: #000000; font-weight: bold;">
                 Total estimado: $${summaryData.partialPayments.totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </p>
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #f5f5f5; border-bottom: 2px solid #000000;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Próximo pago</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.partialPayments.payments.slice(0, 10).map((policy) => {
+                    const np = weeklyResumenHelpers.toJsDate(policy.fecha_proximo_pago) || weeklyResumenHelpers.parsePolicyDate(policy.fecha_proximo_pago);
+                    const npStr = np && !isNaN(np.getTime()) ? np.toLocaleDateString('es-MX') : '-';
+                    return `
+                      <tr style="border-bottom: 1px solid #e5e5e5;">
+                        <td style="padding: 10px; font-size: 13px;">${policy.nombre_contratante || policy.contratante || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">${policy.numero_poliza || '-'}</td>
+                        <td style="padding: 10px; font-size: 13px;">$${(policy.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                        <td style="padding: 10px; font-size: 13px;">${npStr}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
             </div>
           </div>
           ` : ''}
-          
+
+          <!-- Pagos parciales pendientes (solo fraccionadas) -->
+          ${summaryData.paymentsPending && summaryData.paymentsPending.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pagos parciales del mes (${summaryData.paymentsPending.total})</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">${summaryData.paymentsPending.note || 'Solo pólizas vigentes con pago fraccionado.'}</p>
+            <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; border: 1px solid #fbbf24;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="background-color: #fde68a; border-bottom: 2px solid #f59e0b;">
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma pago</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de pago</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto parcial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${summaryData.paymentsPending.payments.slice(0, 15).map((p) => `
+                    <tr style="border-bottom: 1px solid #fed7aa;">
+                      <td style="padding: 10px; font-size: 13px;">${p.numero_poliza || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.contratante || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.forma_pago || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.fecha_pago || p.fecha_proximo_pago || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">$${(p.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          ` : ''}
+
+          <!-- System updates -->
+          ${summaryData.systemUpdates && summaryData.systemUpdates.total > 0 ? `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">🔄 Actualizaciones del sistema (${summaryData.systemUpdates.total})</h2>
+            <div style="background-color: #dbeafe; border-radius: 8px; padding: 20px; border: 1px solid #60a5fa;">
+              <ul style="margin: 0; padding-left: 18px; color: #1e40af; font-size: 15px; line-height: 1.6;">
+                ${(summaryData.systemUpdates.items || []).map((item) => `
+                  <li style="margin: 6px 0;">${item.message}</li>
+                `).join('')}
+              </ul>
+            </div>
+          </div>
+          ` : `
+          <div style="margin-bottom: 30px;">
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">🔄 Actualizaciones del sistema</h2>
+            <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb;">
+              <p style="margin: 0; font-size: 14px; color: #374151;">${summaryData.systemUpdates?.description || 'Sin registros de actualizaciones de sistema en este período.'}</p>
+            </div>
+          </div>
+          `}
+
           <!-- Team Activities -->
           ${summaryData.teamActivities && summaryData.teamActivities.length > 0 ? `
           <div style="margin-bottom: 30px;">
@@ -1531,7 +1789,7 @@ MÉTRICAS CLAVE:
 - Pagos realizados en el período: ${summary.policiesPaid || 0}
 - Emails enviados: ${summary.emailsSent || 0}
 - Actualizaciones de datos: ${summary.dataUpdates || 0}
-- Actualizaciones del sistema (deployments): ${summary.systemUpdates || 0}
+- Actualizaciones del sistema (bitácora): ${summary.systemUpdates || 0}
 - Usuarios activos: ${summary.activeUsers || 0}
 - Actividades diarias registradas: ${summary.totalDailyActivities || 0}
 
@@ -1615,6 +1873,22 @@ exports.updateResumenConfig = onRequest({
       enabled: enabled === true,
       updatedAt: new Date().toISOString()
     }, { merge: true });
+
+    await db.collection('activity_logs').add({
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userEmail: 'system',
+      userName: 'Configuración CRM',
+      action: 'system_update',
+      tableName: null,
+      details: {
+        type: 'resumen_config',
+        description: enabled
+          ? 'Se activó el envío automático del resumen semanal por correo.'
+          : 'Se desactivó el envío automático del resumen semanal por correo.',
+      },
+      metadata: { source: 'updateResumenConfig' },
+    });
     
     console.log(`⚙️  Resumen auto-generate ${enabled ? 'enabled' : 'disabled'}`);
     

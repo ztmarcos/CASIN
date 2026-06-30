@@ -16,6 +16,35 @@ function loadWeeklyResumenHelpers() {
   }
   throw new Error('weeklyResumenHelpers.js not found (expected functions/weeklyResumenHelpers.js)');
 }
+
+function loadPaymentReminderHelpers() {
+  const candidates = [
+    path.join(__dirname, 'functions', 'paymentReminderHelpers.js'),
+    path.join(__dirname, 'paymentReminderHelpers.js'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      return require(p);
+    }
+  }
+  throw new Error('paymentReminderHelpers.js not found');
+}
+
+function getTransporterForTeamCron(teamId, teamData) {
+  const senderEmail = teamData?.emailConfig?.senderEmail || 'casinseguros@gmail.com';
+  const isCASIN = teamData?.isMainTeam === true || teamId === '4JlUqhAvfJMlCDhQ4vgH';
+  const envKey = 'SMTP_PASS_TEAM_' + teamId.toUpperCase().replace(/-/g, '_');
+  const pass = isCASIN
+    ? (process.env.SMTP_PASS || process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS_CASIN)
+    : process.env[envKey];
+  if (!pass && !isCASIN) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: false,
+    auth: { user: senderEmail, pass: pass || process.env.SMTP_PASS },
+  });
+}
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const fetch = require('node-fetch');
@@ -183,15 +212,20 @@ if (!isCloudFunctions && mysql) {
   }
 }
 
-// Middleware - permitir frontend en Firebase Hosting (producción: casin-crm.web.app)
+// Middleware - permitir frontend en Firebase Hosting y dev local (cualquier puerto localhost)
+const PRODUCTION_ORIGINS = [
+  'https://casin-crm.web.app',
+  'https://casin.web.app',
+  'https://casinbbdd.web.app',
+];
+
 app.use(cors({
-  origin: [
-    'https://casin-crm.web.app',
-    'https://casin.web.app',
-    'https://casinbbdd.web.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (PRODUCTION_ORIGINS.includes(origin)) return callback(null, true);
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
@@ -1202,6 +1236,105 @@ app.put('/api/app-config/resumen-auto-generate', async (req, res) => {
   }
 });
 
+// App config endpoints for automatic payment reminders
+app.get('/api/app-config/payment-reminders-auto', async (req, res) => {
+  try {
+    if (!isFirebaseEnabled || !db) {
+      return res.status(500).json({ error: 'Firebase not initialized' });
+    }
+    const configSnapshot = await db.collection('app_config').doc('payment-reminders-auto').get();
+    const config = configSnapshot.exists
+      ? configSnapshot.data()
+      : { enabled: false, dryRun: true, maxEmailsPerRun: 100 };
+    res.json(config);
+  } catch (error) {
+    console.error('❌ Error getting payment-reminders config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.put('/api/app-config/payment-reminders-auto', async (req, res) => {
+  try {
+    if (!isFirebaseEnabled || !db) {
+      return res.status(500).json({ error: 'Firebase not initialized' });
+    }
+    const { enabled, dryRun, maxEmailsPerRun, redirectAllTo } = req.body;
+    const payload = {
+      enabled: enabled === true,
+      dryRun: dryRun === true,
+      maxEmailsPerRun: Number(maxEmailsPerRun) || 100,
+      schedule: '0 9 * * *',
+      updatedAt: new Date().toISOString(),
+    };
+    if (redirectAllTo !== undefined) {
+      const r = (redirectAllTo || '').toString().trim();
+      payload.redirectAllTo = r || null;
+    }
+    await db.collection('app_config').doc('payment-reminders-auto').set(payload, { merge: true });
+
+    await db.collection('activity_logs').add({
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userEmail: 'system',
+      userName: 'Configuración CRM',
+      action: 'system_update',
+      tableName: null,
+      details: {
+        type: 'payment_reminders_config',
+        description: enabled
+          ? 'Se activaron los recordatorios automáticos de pago por correo.'
+          : 'Se desactivaron los recordatorios automáticos de pago por correo.',
+      },
+      metadata: { source: 'app-config-payment-reminders-auto' },
+    });
+
+    res.json({
+      success: true,
+      enabled: enabled === true,
+      dryRun: dryRun === true,
+      maxEmailsPerRun: Number(maxEmailsPerRun) || 100,
+      redirectAllTo: payload.redirectAllTo ?? undefined,
+    });
+  } catch (error) {
+    console.error('❌ Error updating payment-reminders config:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/cron/payment-reminders/test-send', async (req, res) => {
+  try {
+    if (!isFirebaseEnabled || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    const paymentReminderHelpers = loadPaymentReminderHelpers();
+    const toEmail = (req.body?.toEmail || req.query?.to || 'ztmarcos@gmail.com').toString().trim();
+    const result = await paymentReminderHelpers.sendOneTestPaymentReminder(db, {
+      getTransporterForTeam: getTransporterForTeamCron,
+    }, { toEmail });
+    res.json({ ...result, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('❌ payment-reminders test-send:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/cron/payment-reminders', async (req, res) => {
+  try {
+    console.log('💳 Cron job: Triggering payment reminders...');
+    if (!isFirebaseEnabled || !db) {
+      throw new Error('Firebase not initialized');
+    }
+    const paymentReminderHelpers = loadPaymentReminderHelpers();
+    const result = await paymentReminderHelpers.runPaymentRemindersJob(db, {
+      getTransporterForTeam: getTransporterForTeamCron,
+    });
+    res.json({ ...result, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('❌ Error in payment-reminders cron:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint for cron job to trigger weekly resumen email (Fridays at 5pm CST)
 app.get('/api/cron/weekly-resumen', async (req, res) => {
   try {
@@ -1272,7 +1405,11 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
       return t;
     })());
 
-    const pendingWithStats = weeklyResumenHelpers.computePaymentsPendingWithStats(allPolicies);
+    const pendingReferenceDate = new Date();
+    const pendingWithStats = weeklyResumenHelpers.computePaymentsPendingWithStats(
+      allPolicies,
+      pendingReferenceDate,
+    );
     const paymentsPendingList = pendingWithStats.policies;
     console.log('📊 [weekly-resumen] paymentsPending pipeline:', JSON.stringify(pendingWithStats.stats, null, 2));
     const totalPartialAmount = weeklyResumenHelpers.calculateTotalPartialAmount(partialPayments);
@@ -1414,8 +1551,7 @@ app.get('/api/cron/weekly-resumen', async (req, res) => {
       paymentsPending: {
         total: paymentsPendingList.length,
         payments: paymentsPendingList.slice(0, 15),
-        note:
-          'Vigentes, no canceladas. Incluye fraccionadas con pago parcial/cuotas; anuales o solo primer pago solo si inicio o alta en los últimos ~6 meses o próximo pago en 30 días (evita anuales viejas sin marcar Pagado antes del botón).',
+        note: weeklyResumenHelpers.buildPaymentsPendingMonthNote(pendingReferenceDate),
       },
       paymentsMade: {
         total: paymentsMarkedPaid.length,
@@ -1705,11 +1841,11 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
           </div>
           ` : ''}
 
-          <!-- Pending collection (vigentes only) -->
+          <!-- Pagos parciales pendientes (solo fraccionadas) -->
           ${summaryData.paymentsPending && summaryData.paymentsPending.total > 0 ? `
           <div style="margin-bottom: 30px;">
-            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Por cobrar / pendientes (${summaryData.paymentsPending.total})</h2>
-            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">${summaryData.paymentsPending.note || 'Solo pólizas vigentes.'}</p>
+            <h2 style="color: #000000; margin: 0 0 15px 0; font-size: 22px;">⚠️ Pagos parciales del mes (${summaryData.paymentsPending.total})</h2>
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666;">${summaryData.paymentsPending.note || 'Solo pólizas vigentes con pago fraccionado.'}</p>
             <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; border: 1px solid #fbbf24;">
               <table style="width: 100%; border-collapse: collapse;">
                 <thead>
@@ -1717,6 +1853,7 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
                     <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Póliza</th>
                     <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Contratante</th>
                     <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Forma pago</th>
+                    <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Fecha de pago</th>
                     <th style="padding: 10px; text-align: left; font-size: 14px; font-weight: bold;">Monto parcial</th>
                   </tr>
                 </thead>
@@ -1726,6 +1863,7 @@ function generateResumenEmailHTML(gptSummary, summaryData, dateRangeText) {
                       <td style="padding: 10px; font-size: 13px;">${p.numero_poliza || '-'}</td>
                       <td style="padding: 10px; font-size: 13px;">${p.contratante || '-'}</td>
                       <td style="padding: 10px; font-size: 13px;">${p.forma_pago || '-'}</td>
+                      <td style="padding: 10px; font-size: 13px;">${p.fecha_pago || p.fecha_proximo_pago || '-'}</td>
                       <td style="padding: 10px; font-size: 13px;">$${(p.pago_parcial || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
                     </tr>
                   `).join('')}
@@ -6196,7 +6334,6 @@ function buildPaymentConfirmationFallback(data) {
 
   const body = `<p><strong>Apreciable ${name}</strong></p>
 <p>Buen día</p>
-<p>El presente correo es únicamente informativo, no se dará seguimiento a correos enviados a esta dirección.</p>
 <p>De acuerdo a sus indicaciones, le informo que ${pagoText}</p>
 <p>${attachmentsText}</p>
 <p>Cordialmente,<br>${senderName}<br>CASIN Seguros</p>`;
@@ -6210,6 +6347,11 @@ function buildPaymentConfirmationFallback(data) {
   return { subject: data.subjectOverride || subjectMap[variant] || subjectMap.completo, message: body };
 }
 
+const {
+  getPaymentReminderAutoNoticeHtml,
+  prependPaymentReminderAutoNotice,
+} = require('./shared/paymentReminderEmailTemplate');
+
 function buildPaymentReminderFallback(data) {
   const name = data.destinatarioDisplay || data.destinatario || 'Cliente';
   const poliza = data.numeroPoliza || 'N/A';
@@ -6217,7 +6359,6 @@ function buildPaymentReminderFallback(data) {
   const senderName = data.senderName || 'Michell Díaz';
   const ctx = data.paymentReminderContext || {};
   const isPartial = ctx.isPartial;
-  const amount = ctx.amount || data.montoFormateado || 'N/A';
   const dueDateLong = ctx.dueDateLong || data.vigenciaFinLong || 'N/A';
   const daysUntilDue = ctx.daysUntilDue;
   const daysText =
@@ -6225,14 +6366,16 @@ function buildPaymentReminderFallback(data) {
       ? `Faltan <strong>${daysUntilDue}</strong> día${daysUntilDue !== 1 ? 's' : ''} para la fecha límite.`
       : '';
 
-  const montoLine = isPartial
-    ? `El monto del ${ctx.paymentLabel || 'pago parcial'} es de <strong>$${amount} pesos</strong>.`
-    : `El monto total de la póliza es de <strong>$${amount} pesos</strong>.`;
+  const montoLine =
+    ctx.hasAmount && ctx.amount && parseFloat(String(ctx.amount).replace(/,/g, '')) > 0
+      ? `<p>El monto del ${ctx.paymentLabel || 'pago parcial'} es de <strong>$${ctx.amount} pesos</strong>.</p>`
+      : '';
 
-  const body = `<p><strong>Apreciable ${name}</strong></p>
+  const body = `${getPaymentReminderAutoNoticeHtml()}
+<p><strong>Apreciable ${name}</strong></p>
 <p>Tengo el gusto de saludarle, esperando se encuentre bien.</p>
 <p>Me permito enviarle este recordatorio de pago de su póliza <strong>${poliza}</strong>, asegurada en <strong>${aseguradora}</strong>, con fecha límite el <strong>${dueDateLong}</strong>.</p>
-<p>${montoLine}</p>
+${montoLine}
 ${daysText ? `<p>${daysText}</p>` : ''}
 <p>Tenemos campaña de pago con tarjeta de crédito a 3 y 6 MSI o si desea puede pagarlo con débito o en ventanilla del banco en efectivo o cheque y por transferencia electrónica como pago de servicios.</p>
 <p>Quedando atenta a su amable confirmación de recibido, le agradezco su amable atención.</p>
@@ -6399,10 +6542,10 @@ INSTRUCCIONES:
 ESTRUCTURA OBLIGATORIA:
 1. "Apreciable [nombre]" (puede incluir título Lic./Sr./Sra. si aplica)
 2. "Buen día"
-3. Disclaimer: "El presente correo es únicamente informativo, no se dará seguimiento a correos enviados a esta dirección."
-4. Confirmación del pago realizado (mencionar vehículo si es auto)
-5. Qué documentos se comparten (${variantInstructions[variant]})
-6. Cierre: Cordialmente, ${senderName}, CASIN Seguros`;
+3. Confirmación del pago realizado (mencionar vehículo si es auto)
+4. Qué documentos se comparten (${variantInstructions[variant]})
+5. Cierre cordial invitando a responder si requieren algo; firma: Cordialmente, ${senderName}, CASIN Seguros
+NO incluyas avisos de que no se dará seguimiento al correo ni que es solo informativo sin respuesta.`;
 
       const userPrompt = `Redacta correo post-pago (${variant}) con estos datos EXACTOS:
 - Cliente: ${clientName}
@@ -6441,10 +6584,13 @@ INSTRUCCIONES:
 - Tono formal y cordial, estilo agente de seguros CASIN
 - Incluir opciones de pago: MSI 3 y 6, débito, ventanilla, transferencia
 - Al final incluir NOTA sobre constancia fiscal si requiere factura
+- NO incluyas el aviso de correo automatizado (se agrega automáticamente al inicio)
+- Incluir monto en el correo SOLO si en los datos aparece "Monto (pago parcial capturado)"; si dice "no indicado", NO menciones cantidad alguna
+- NUNCA escribas monto $0, cantidad cero ni uses monto anual/prima total
 
 ESTRUCTURA:
 1. Saludo personalizado
-2. Recordatorio de pago con fecha límite y monto
+2. Recordatorio de pago con fecha límite (y monto solo si está indicado)
 3. Días restantes si aplica
 4. Opciones de pago
 5. Cierre cordial y firma ${senderName}, CASIN Seguros`;
@@ -6457,7 +6603,7 @@ ESTRUCTURA:
 - Forma de pago: ${ctx.formaPago || data.formaPago || 'ANUAL'}
 - Es pago parcial: ${ctx.isPartial ? 'Sí' : 'No'}
 ${ctx.isPartial ? `- Cuota: ${ctx.currentPayment}/${ctx.totalPayments}` : ''}
-- Monto a pagar: $${ctx.amount || data.montoFormateado || 'N/A'} pesos
+${ctx.hasAmount ? `- Monto (pago parcial capturado): $${ctx.amount} pesos` : '- Monto (pago parcial): no indicado — NO mencionar cantidad en el correo'}
 - Fecha límite: ${ctx.dueDateLong || data.vigenciaFinLong || 'N/A'}
 ${ctx.daysUntilDue != null ? `- Días restantes: ${ctx.daysUntilDue}` : ''}
 ${data.vehiculoLinea ? `- Vehículo: ${data.vehiculoLinea}` : ''}`;
@@ -6467,7 +6613,7 @@ ${data.vehiculoLinea ? `- Vehículo: ${data.vehiculoLinea}` : ''}`;
         if (htmlBody) {
           emailContent = {
             subject: `Recordatorio de Pago - Póliza ${data.numeroPoliza || 'N/A'} - ${clientName}`,
-            message: htmlBody,
+            message: prependPaymentReminderAutoNotice(htmlBody),
           };
         } else {
           emailContent = buildPaymentReminderFallback(data);

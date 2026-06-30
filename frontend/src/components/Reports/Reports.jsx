@@ -20,6 +20,8 @@ import {
   hasPartialPayments,
   calculateTotalPayments,
   isSinglePaymentForm,
+  shouldTrackProximoPago,
+  getProximoPagoRaw,
 } from '../../utils/policyPaymentReminder';
 import {
   buildPartialPaymentUpdate,
@@ -29,28 +31,152 @@ import {
   getPartialPaymentProgressLabel,
   getPartialPaymentProgressStyle,
 } from '../../utils/partialPaymentUpdates';
+import {
+  isLegacyUntrackedPolicy,
+  resolvePolicyPaymentStatus,
+} from '../../utils/policyPaymentStatus';
 
 const MONTHS = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
 ];
 
+/** Mes del calendario en el año en curso (p. ej. Junio 2026, no Junio 2027). */
+function matchesSelectedCalendarMonth(date, monthIndex, year = new Date().getFullYear()) {
+  if (!date || isNaN(date.getTime())) return false;
+  return date.getMonth() === monthIndex && date.getFullYear() === year;
+}
+
+function parseFirestoreTimestamp(value) {
+  if (!value) return null;
+  if (value._seconds) return value._seconds * 1000;
+  if (value.seconds) return value.seconds * 1000;
+  if (typeof value.toDate === 'function') return value.toDate().getTime();
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'string' || typeof value === 'number') {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+/** Timestamp de ingreso al sistema (createdAt, con fallback a updatedAt). */
+function getPolicyEntryTimestamp(policy) {
+  const candidates = [
+    policy?.createdAt,
+    policy?.created_at,
+    policy?.updatedAt,
+    policy?.updated_at,
+  ];
+  for (const value of candidates) {
+    const timestamp = parseFirestoreTimestamp(value);
+    if (timestamp) return timestamp;
+  }
+  return 0;
+}
+
 const REPORT_TYPES = [
+  'Recientes',
+  'Pagos Parciales',
   'Vencimientos',
   'Vigentes',
   'Vencidas',
   'Archivo muerto',
-  'Pagos Parciales',
   'Matriz de Productos'
 ];
 
 /** Tipos que no filtran por mes del calendario */
 const REPORT_TYPES_WITHOUT_MONTH = new Set([
-  'Vigentes',
+  'Recientes',
   'Vencidas',
   'Archivo muerto',
   'Matriz de Productos'
 ]);
+
+/** Vigente y con vigencia que cubre el mes calendario seleccionado (año en curso). */
+function isPolicyVigenteInCalendarMonth(policy, monthIndex, year = new Date().getFullYear()) {
+  if (isPolicyExpired(policy)) return false;
+  const endDate = parseDate(policy.fecha_fin);
+  if (!endDate || isNaN(endDate.getTime())) return false;
+
+  const monthStart = new Date(year, monthIndex, 1);
+  const monthEnd = new Date(year, monthIndex + 1, 0);
+  monthStart.setHours(0, 0, 0, 0);
+  monthEnd.setHours(23, 59, 59, 999);
+
+  const startDate = parseDate(policy.fecha_inicio);
+  const vigenciaStart = startDate && !isNaN(startDate.getTime()) ? startDate : monthStart;
+  vigenciaStart.setHours(0, 0, 0, 0);
+
+  const endDay = new Date(endDate);
+  endDay.setHours(23, 59, 59, 999);
+
+  return vigenciaStart <= monthEnd && endDay >= monthStart;
+}
+
+/** Sin próximo pago: anual/contado, vencida, por vencer o última cuota ya pagada. */
+function getReportProximoPagoLabel(policy, dateFormat) {
+  const raw = getProximoPagoRaw(policy);
+  if (!raw) return '';
+  return formatDate(raw, dateFormat);
+}
+
+function isPaymentRegistrationClosed(policy) {
+  return isPolicyExpired(policy) || isArchiveDeadPolicy(policy);
+}
+
+function ClosedPaymentProgressBadge({ policy }) {
+  const label = hasPartialPayments(policy.forma_pago || policy.forma_de_pago)
+    ? getPartialPaymentProgressLabel(policy)
+    : (policy.primer_pago_realizado ? 'Pago único ✓' : 'Sin pago');
+  const hint = isArchiveDeadPolicy(policy) ? 'Archivo' : 'Vencida';
+
+  return (
+    <span
+      className="installment-progress-static expired"
+      title="Póliza cerrada — solo consulta, no se pueden registrar pagos"
+    >
+      <span className="installment-progress-static__count">{label}</span>
+      <span className="installment-progress-static__hint">{hint}</span>
+    </span>
+  );
+}
+
+function LegacyPaymentStatusBadge() {
+  return (
+    <span
+      className="status-badge sin-seguimiento"
+      title="Capturada antes del seguimiento de pagos en el CRM"
+    >
+      Sin seguimiento
+    </span>
+  );
+}
+
+function ReportPaymentStatusCell({ policy, onToggle, reminderLabel }) {
+  const status = resolvePolicyPaymentStatus(policy);
+
+  if (isLegacyUntrackedPolicy(policy) || status === null) {
+    return <LegacyPaymentStatusBadge />;
+  }
+
+  return (
+    <div className="payment-status-cell">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`status-toggle ${status.toLowerCase().replace(' ', '-')}`}
+      >
+        {status}
+      </button>
+      {reminderLabel && (
+        <span className="payment-reminder-badge" title="Recordatorio enviado">
+          {reminderLabel}
+        </span>
+      )}
+    </div>
+  );
+}
 
 // Utility function to get the total amount from a policy, handling multiple field variations
 const getPolicyTotalAmount = (policy) => {
@@ -276,7 +402,7 @@ export default function Reports() {
   const { userTeam, currentTeam } = useTeam();
   const [viewMode, setViewMode] = useState('table');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedType, setSelectedType] = useState('Vencimientos');
+  const [selectedType, setSelectedType] = useState('Recientes');
   const [filteredPolicies, setFilteredPolicies] = useState([]);
   const [policies, setPolicies] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -391,8 +517,9 @@ export default function Reports() {
       
       allPolicies.forEach(policy => {
         const policyKey = getPolicyKey(policy);
-        if (policy.estado_pago) {
-          policyStatusesFromData[policyKey] = policy.estado_pago;
+        const resolvedStatus = resolvePolicyPaymentStatus(policy);
+        if (resolvedStatus) {
+          policyStatusesFromData[policyKey] = resolvedStatus;
         }
         if (policy.estado_renovacion) {
           policyStatusesFromData[`${policyKey}_renovacion`] = policy.estado_renovacion;
@@ -534,6 +661,11 @@ export default function Reports() {
   // Handle primer pago toggle for policies
   const handleTogglePrimerPago = async (policy) => {
     try {
+      if (isPaymentRegistrationClosed(policy)) {
+        toast.error('Póliza vencida: no se pueden registrar pagos.');
+        return;
+      }
+
       // Validate policy data
       if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
         console.error('❌ Invalid policy data for primer pago toggle:', policy);
@@ -664,6 +796,10 @@ export default function Reports() {
   // Handle payment status toggle for policies
   const handleToggleStatus = async (policy) => {
     try {
+      if (isLegacyUntrackedPolicy(policy)) {
+        return;
+      }
+
       // Validate policy data
       if (!policy || !policy.ramo || !(policy.id || policy.firebase_doc_id)) {
         console.error('❌ Invalid policy data for status toggle:', policy);
@@ -672,6 +808,7 @@ export default function Reports() {
       }
 
       const currentStatus = getPolicyStatus(policy);
+      if (!currentStatus) return;
       const newStatus = currentStatus === 'Pagado' ? 'No Pagado' : 'Pagado';
       
       console.log(`🔄 Updating policy ${policy.numero_poliza} payment status from ${currentStatus} to ${newStatus}`);
@@ -974,7 +1111,12 @@ export default function Reports() {
       });
     } else {
       // Only apply month and type filters if there's no search term
-      if (selectedType === 'Vencimientos') {
+      if (selectedType === 'Recientes') {
+        filtered = [...filtered].sort(
+          (a, b) => getPolicyEntryTimestamp(b) - getPolicyEntryTimestamp(a),
+        );
+      } else if (selectedType === 'Vencimientos') {
+        const reportYear = new Date().getFullYear();
         filtered = filtered.filter(policy => {
           if (isArchiveDeadPolicy(policy)) {
             return false;
@@ -984,9 +1126,10 @@ export default function Reports() {
             console.warn('⚠️ Vencimientos: Skipping policy with invalid fecha_fin:', policy.numero_poliza, policy.fecha_fin);
             return false;
           }
-          return endDate.getMonth() === selectedMonth;
+          return matchesSelectedCalendarMonth(endDate, selectedMonth, reportYear);
         });
       } else if (selectedType === 'Pagos Parciales') {
+        const reportYear = new Date().getFullYear();
         filtered = filtered.filter(policy => {
           const nextPaymentDate = parseDate(policy.fecha_proximo_pago);
           if (!nextPaymentDate) {
@@ -995,32 +1138,34 @@ export default function Reports() {
               const endDate = parseDate(policy.fecha_fin);
               if (endDate) {
                 console.log('ℹ️ Using fecha_fin for annual policy:', policy.numero_poliza);
-                return endDate.getMonth() === selectedMonth;
+                return matchesSelectedCalendarMonth(endDate, selectedMonth, reportYear);
               }
             }
             console.warn('⚠️ Pagos Parciales: Skipping policy with invalid fecha_proximo_pago:', policy.numero_poliza, policy.fecha_proximo_pago);
             return false;
           }
-          return nextPaymentDate.getMonth() === selectedMonth;
+          return matchesSelectedCalendarMonth(nextPaymentDate, selectedMonth, reportYear);
         });
       } else if (selectedType === 'Vigentes') {
+        const reportYear = new Date().getFullYear();
         const beforeVigentes = filtered.length;
-        const activePolicies = filtered.filter(policy => !isPolicyExpired(policy));
-        const expiredCount = beforeVigentes - activePolicies.length;
-        console.log(`📋 Vigentes filter: total policies=${beforeVigentes}, vigentes=${activePolicies.length}, vencidas=${expiredCount}`);
+        const activePolicies = filtered.filter((policy) =>
+          isPolicyVigenteInCalendarMonth(policy, selectedMonth, reportYear)
+        );
+        console.log(`📋 Vigentes filter (${MONTHS[selectedMonth]} ${reportYear}): total=${beforeVigentes}, vigentes en mes=${activePolicies.length}`);
         if (beforeVigentes > 0 && activePolicies.length === 0) {
           const sample = filtered.slice(0, 3).map(p => ({
             numero_poliza: p.numero_poliza,
+            fecha_inicio: p.fecha_inicio,
             fecha_fin: p.fecha_fin,
-            expiration_override: p.expiration_override,
             isExpired: isPolicyExpired(p)
           }));
-          console.warn('⚠️ Vigentes: no hay pólizas vigentes. Muestra de pólizas (¿todas vencidas?):', sample);
+          console.warn('⚠️ Vigentes: no hay pólizas vigentes en el mes seleccionado. Muestra:', sample);
         }
         filtered = [...activePolicies].sort((a, b) => {
           const dateA = parseDate(a.fecha_fin) || parseDate(a.fecha_inicio) || new Date(0);
           const dateB = parseDate(b.fecha_fin) || parseDate(b.fecha_inicio) || new Date(0);
-          return dateB - dateA; // más reciente primero
+          return dateB - dateA;
         });
       } else if (selectedType === 'Vencidas') {
         filtered = [...filtered.filter(isRecentlyExpiredPolicy)].sort((a, b) => {
@@ -1079,7 +1224,11 @@ export default function Reports() {
   // Get payment status for a policy
   const getPolicyStatus = (policy) => {
     const policyKey = getPolicyKey(policy);
-    return policyStatuses[policyKey] || 'No Pagado';
+    const mergedPolicy = {
+      ...policy,
+      estado_pago: policyStatuses[policyKey] ?? policy.estado_pago,
+    };
+    return resolvePolicyPaymentStatus(mergedPolicy);
   };
 
   const getLastPaymentReminderLabel = (policy) => {
@@ -1111,13 +1260,15 @@ export default function Reports() {
     }
     
     // If no renewal status exists, convert from existing payment status
-    const paymentStatus = policyStatuses[policyKey] || policy.estado_pago;
+    const paymentStatus = getPolicyStatus(policy);
     if (paymentStatus === 'Pagado') {
       console.log(`✅ Converting Pagado to Renovado for policy ${policy.numero_poliza}`);
       return 'Renovado';
     } else if (paymentStatus === 'No Pagado') {
       console.log(`✅ Converting No Pagado to No Renovado for policy ${policy.numero_poliza}`);
       return 'No Renovado';
+    } else if (paymentStatus === null) {
+      return 'Sin seguimiento';
     }
     
     // Default fallback
@@ -1127,6 +1278,10 @@ export default function Reports() {
 
   // Open payment modal for partial payments
   const handleOpenPaymentModal = (policy) => {
+    if (isPaymentRegistrationClosed(policy)) {
+      toast.error('Póliza vencida: no se pueden registrar pagos.');
+      return;
+    }
     console.log('🔍 Opening payment modal for policy:', policy.numero_poliza);
     setSelectedPolicyForPayment(policy);
     setShowPaymentModal(true);
@@ -1374,7 +1529,7 @@ export default function Reports() {
                     {!hideProximoPagoInReport && <th>Próximo Pago</th>}
                     <th>Vencimiento</th>
                     {selectedType === 'Vencimientos' && <th>Cuota / Pago</th>}
-                    {(['Vigentes', 'Vencidas', 'Archivo muerto'].includes(selectedType)) && <th>Estado Pago</th>}
+                    {(['Recientes', 'Vigentes', 'Vencidas', 'Archivo muerto'].includes(selectedType)) && <th>Estado Pago</th>}
                     <th>CAP</th>
                     <th>CFP</th>
                   </tr>
@@ -1438,17 +1593,21 @@ export default function Reports() {
                         <td>{policy.forma_pago}</td>
                         {selectedType === 'Pagos Parciales' && hasPartialPayments(policy.forma_pago) && (
                           <td>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenPaymentModal(policy);
-                              }}
-                              className={`installment-progress-btn ${getPartialPaymentProgressStyle(policy)}`}
-                              title="Ver y marcar pagos"
-                            >
-                              {getPartialPaymentProgressLabel(policy)}
-                            </button>
+                            {isPaymentRegistrationClosed(policy) ? (
+                              <ClosedPaymentProgressBadge policy={policy} />
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenPaymentModal(policy);
+                                }}
+                                className={`installment-progress-btn ${getPartialPaymentProgressStyle(policy)}`}
+                                title="Ver y marcar pagos"
+                              >
+                                {getPartialPaymentProgressLabel(policy)}
+                              </button>
+                            )}
                           </td>
                         )}
                         {selectedType === 'Pagos Parciales' && !hasPartialPayments(policy.forma_pago) && (
@@ -1458,13 +1617,7 @@ export default function Reports() {
                         )}
                         {!hideProximoPagoInReport && (
                           <td>
-                            {policy.fecha_proximo_pago 
-                              ? formatDate(policy.fecha_proximo_pago, dateFormat) 
-                              : (hasPartialPayments(policy.forma_pago) 
-                                  ? 'N/A' 
-                                  : (policy.fecha_fin ? formatDate(policy.fecha_fin, dateFormat) : 'N/A')
-                                )
-                            }
+                            {getReportProximoPagoLabel(policy, dateFormat) || '—'}
                           </td>
                         )}
                         <td>
@@ -1482,17 +1635,21 @@ export default function Reports() {
                           <td>
                             {hasPartialPayments(policy.forma_pago) ? (
                               <div className="payment-status-cell">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenPaymentModal(policy);
-                                  }}
-                                  className={`installment-progress-btn ${getPartialPaymentProgressStyle(policy)}`}
-                                  title="Ver y marcar pagos"
-                                >
-                                  {getPartialPaymentProgressLabel(policy)}
-                                </button>
+                                {isPaymentRegistrationClosed(policy) ? (
+                                  <ClosedPaymentProgressBadge policy={policy} />
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenPaymentModal(policy);
+                                    }}
+                                    className={`installment-progress-btn ${getPartialPaymentProgressStyle(policy)}`}
+                                    title="Ver y marcar pagos"
+                                  >
+                                    {getPartialPaymentProgressLabel(policy)}
+                                  </button>
+                                )}
                                 {getLastPaymentReminderLabel(policy) && (
                                   <span
                                     className="payment-reminder-badge"
@@ -1506,6 +1663,10 @@ export default function Reports() {
                                   </span>
                                 )}
                               </div>
+                            ) : isPaymentRegistrationClosed(policy) ? (
+                              <ClosedPaymentProgressBadge policy={policy} />
+                            ) : isLegacyUntrackedPolicy(policy) ? (
+                              <LegacyPaymentStatusBadge />
                             ) : (
                               <button
                                 onClick={(e) => {
@@ -1519,27 +1680,19 @@ export default function Reports() {
                             )}
                           </td>
                         )}
-                        {['Vigentes', 'Vencidas', 'Archivo muerto'].includes(selectedType) && (
+                        {['Recientes', 'Vigentes', 'Vencidas', 'Archivo muerto'].includes(selectedType) && (
                           <td>
-                            <div className="payment-status-cell">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleToggleStatus(policy);
-                                }}
-                                className={`status-toggle ${getPolicyStatus(policy).toLowerCase().replace(' ', '-')}`}
-                              >
-                                {getPolicyStatus(policy)}
-                              </button>
-                              {getLastPaymentReminderLabel(policy) && (
-                                <span
-                                  className="payment-reminder-badge"
-                                  title={policy.payment_reminders_log?.[policy.payment_reminders_log.length - 1]?.reminderType || 'Recordatorio enviado'}
-                                >
-                                  {getLastPaymentReminderLabel(policy)}
-                                </span>
-                              )}
-                            </div>
+                            <ReportPaymentStatusCell
+                              policy={{
+                                ...policy,
+                                estado_pago: policyStatuses[getPolicyKey(policy)] ?? policy.estado_pago,
+                              }}
+                              reminderLabel={getLastPaymentReminderLabel(policy)}
+                              onToggle={(e) => {
+                                e.stopPropagation();
+                                handleToggleStatus(policy);
+                              }}
+                            />
                           </td>
                         )}
                         <td>
@@ -1602,6 +1755,9 @@ export default function Reports() {
                       <h3>{policy.numero_poliza}</h3>
                     </div>
                     <div className="card-status-buttons">
+                      {isLegacyUntrackedPolicy(policy) || getPolicyStatus(policy) === null ? (
+                        <LegacyPaymentStatusBadge />
+                      ) : (
                       <div className="payment-status-cell">
                         <button 
                           onClick={(e) => {
@@ -1618,6 +1774,7 @@ export default function Reports() {
                           </span>
                         )}
                       </div>
+                      )}
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1651,8 +1808,7 @@ export default function Reports() {
                     <div className="card-details">
                       {!expandedCards[`${policy.id}-${policy.numero_poliza}`] ? (
                         <>
-                          <p>
-                            <span>Vencimiento:</span> {formatDate(policy.fecha_fin)}
+                          <p><span>Vencimiento:</span> {formatDate(policy.fecha_fin)}
                             {isArchiveDeadPolicy(policy) && (
                               <span className="archive-indicator" title={`Archivo muerto: vencida hace más de ${ARCHIVE_DEAD_MONTHS} meses`}>
                                 📦 ARCHIVO
@@ -1722,12 +1878,7 @@ export default function Reports() {
                             )}
                             {!hideProximoPagoInReport && (
                               <p><span>Próximo Pago:</span> {
-                                policy.fecha_proximo_pago 
-                                  ? formatDate(policy.fecha_proximo_pago) 
-                                  : (hasPartialPayments(policy.forma_pago) 
-                                      ? 'N/A' 
-                                      : (policy.fecha_fin ? formatDate(policy.fecha_fin) : 'N/A')
-                                    )
+                                getReportProximoPagoLabel(policy) || '—'
                               }</p>
                             )}
                           </div>

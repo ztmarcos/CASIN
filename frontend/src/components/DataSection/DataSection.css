@@ -419,9 +419,10 @@
   padding: 2rem 1.5rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-rows: 56px auto;
+  justify-items: center;
+  align-content: start;
   gap: 1rem;
   min-height: 140px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -443,16 +444,37 @@
 }
 
 .table-card-icon {
-  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  color: #0f172a;
   line-height: 1;
 }
 
+.table-card-icon svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+
+.table-card-icon--autos svg {
+  width: 52px;
+  height: 52px;
+}
+
 .table-card-name {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #1e293b;
   text-align: center;
-  text-transform: capitalize;
+  line-height: 1.25;
+  max-width: 9rem;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 /* Tables Loading */
@@ -809,6 +831,10 @@
 }
 
 [data-theme='dark'] .table-card-name {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .table-card-icon {
   color: #f1f5f9;
 }
 
